@@ -87,11 +87,14 @@ func (a CodexAdapter) Uninstall(ctx Context) (InstallResult, error) {
 func codexManagedBlockTemplate() string {
 	return codexManagedBlockStart + "\n" +
 		"## CCP Integration (Managed)\n\n" +
-		"Prefer running shell commands through `ccp`.\n\n" +
+		"Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.\n\n" +
 		"Examples:\n" +
-		"- `ccp go test ./...`\n" +
-		"- `ccp git status`\n" +
-		"- `ccp ls -la`\n\n" +
+		"- `ccp ls -la`\n" +
+		"- `ccp git status --short`\n" +
+		"- `ccp go test -count=1 ./...`\n" +
+		"- `ccp echo chain-ok && ccp echo chain-done`\n" +
+		"- `ccp false || ccp echo chain-recovered`\n" +
+		"- `ccp nl -ba spec.md | ccp sed -n '1,260p'`\n\n" +
 		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n" +
 		codexManagedBlockEnd + "\n"
 }

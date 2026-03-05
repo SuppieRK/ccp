@@ -296,6 +296,12 @@ func TestCodexManagedBlockHelpers(t *testing.T) {
 	if !strings.Contains(updated, codexManagedBlockStart) {
 		t.Fatalf("missing block in %q", updated)
 	}
+	if !strings.Contains(updated, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
+		t.Fatalf("missing ccp prefix guidance in %q", updated)
+	}
+	if !strings.Contains(updated, "`ccp echo chain-ok && ccp echo chain-done`") {
+		t.Fatalf("missing chaining example in %q", updated)
+	}
 	if got := normalizeManagedFile(base); got != "hello\n" {
 		t.Fatalf("unexpected normalized output %q", got)
 	}

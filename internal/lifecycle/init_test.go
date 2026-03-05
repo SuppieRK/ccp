@@ -346,11 +346,17 @@ func TestRunInitCodexUsesGlobalAgentsManagedBlock(t *testing.T) {
 	if !strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || !strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
 		t.Fatalf("expected managed markers, got: %s", s)
 	}
-	if !strings.Contains(s, "Prefer running shell commands through `ccp`.") {
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
 		t.Fatalf("expected preferred ccp wording, got: %s", s)
 	}
-	if !strings.Contains(s, "`ccp go test ./...`") {
+	if !strings.Contains(s, "`ccp ls -la`") {
 		t.Fatalf("expected canonical examples, got: %s", s)
+	}
+	if !strings.Contains(s, "`ccp echo chain-ok && ccp echo chain-done`") {
+		t.Fatalf("expected chaining examples, got: %s", s)
+	}
+	if !strings.Contains(s, "`ccp nl -ba spec.md | ccp sed -n '1,260p'`") {
+		t.Fatalf("expected tested pipeline example, got: %s", s)
 	}
 	if !strings.Contains(s, "If `ccp` is unavailable, run the original command and note that CCP is not installed.") {
 		t.Fatalf("expected fallback wording, got: %s", s)
