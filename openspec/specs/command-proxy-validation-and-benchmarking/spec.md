@@ -144,6 +144,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** each tool run provides a `-previous-report` baseline input from persisted benchmark history
 - **AND** successful push-to-main runs refresh per-tool history used for future comparisons.
 
+#### Scenario: Main benchmark cache cleanup is non-blocking
+- **WHEN** main validation attempts to delete an existing benchmark-history cache key before saving a refreshed entry
+- **THEN** cache deletion failures (for example missing key responses) MUST NOT fail the workflow job
+- **AND** benchmark artifact publication and subsequent cache save steps still run.
+
 #### Scenario: Main benchmark executes one parallel job per tool
 - **WHEN** main validation benchmark runs for discovered tool fixtures
 - **THEN** CI schedules one benchmark matrix job per tool
