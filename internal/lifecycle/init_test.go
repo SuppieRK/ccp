@@ -269,6 +269,15 @@ func TestRunInitOpencodeInstallsLocalPlugin(t *testing.T) {
 	if !strings.Contains(s, `trimmed === "ccp"`) {
 		t.Fatalf("expected bare ccp guard in plugin, got: %s", s)
 	}
+	if !strings.Contains(s, `if (/['"\\]|\$\(|\$\{|<</.test(command))`) {
+		t.Fatalf("expected conservative complexity fallback guard in plugin, got: %s", s)
+	}
+	if !strings.Contains(s, `command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ")`) {
+		t.Fatalf("expected chained-segment rewrite rule in plugin, got: %s", s)
+	}
+	if !strings.Contains(s, `output.args.command = rewritten;`) {
+		t.Fatalf("expected rewritten command assignment in plugin, got: %s", s)
+	}
 }
 
 func TestRunInitOpencodeGlobalInstallsPluginUnderConfig(t *testing.T) {

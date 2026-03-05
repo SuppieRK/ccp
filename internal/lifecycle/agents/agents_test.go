@@ -425,6 +425,22 @@ func TestOpenCodeVerifyErrorBranchesAndGlobalRoot(t *testing.T) {
 	}
 }
 
+func TestOpenCodePluginScriptUsesSafeChainRewrite(t *testing.T) {
+	script := opencodePluginContent()
+	if !strings.Contains(script, `if (/['"\\]|\$\(|\$\{|<</.test(command))`) {
+		t.Fatalf("expected conservative complexity fallback guard in OpenCode plugin, got: %s", script)
+	}
+	if !strings.Contains(script, `command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ")`) {
+		t.Fatalf("expected chained-segment rewrite rule in OpenCode plugin, got: %s", script)
+	}
+	if !strings.Contains(script, `if (rewritten === command)`) {
+		t.Fatalf("expected no-op guard when rewrite does not change command, got: %s", script)
+	}
+	if !strings.Contains(script, `output.args.command = rewritten;`) {
+		t.Fatalf("expected OpenCode plugin to persist rewritten command, got: %s", script)
+	}
+}
+
 func TestClaudeHookRemovalNoChangeBranches(t *testing.T) {
 	tmp := t.TempDir()
 	settings := filepath.Join(tmp, "settings.json")

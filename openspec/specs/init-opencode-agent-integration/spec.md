@@ -50,3 +50,24 @@ OpenCode adapter SHALL be idempotent on repeated runs.
 - **WHEN** `ccp init --tools opencode` is run twice
 - **THEN** second run reports no-op or already configured state
 - **AND** does not duplicate plugin files or duplicate rewrite logic.
+
+### Requirement: OpenCode Chained Command Rewrite Parity
+OpenCode rewrite integration SHALL preserve CCP routing across chained and piped shell command segments.
+
+#### Scenario: chained command segments are all prefixed
+- **WHEN** OpenCode rewrite plugin receives a bash command containing `&&`, `||`, `|`, or `;`
+- **THEN** rewrite output prefixes each command segment with `ccp`
+- **AND** segments already starting with `ccp` are not double-prefixed.
+
+#### Scenario: mixed prefixed and unprefixed chains are normalized
+- **WHEN** OpenCode rewrite plugin receives a command where only the first chain segment is prefixed with `ccp`
+- **THEN** rewrite output keeps the existing prefixed segment
+- **AND** prefixes remaining unprefixed chain segments with `ccp`.
+
+### Requirement: OpenCode Rewrite Safety Fallback
+OpenCode rewrite integration SHALL fail safe to passthrough for command shapes that are not safely normalizable by the chain-prefix rewriter.
+
+#### Scenario: complex quoting or substitution bypasses rewrite
+- **WHEN** OpenCode rewrite plugin receives a command containing complex quoting, shell substitution, escapes, or heredoc markers
+- **THEN** plugin does not mutate the command
+- **AND** command execution remains native passthrough.
