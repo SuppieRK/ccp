@@ -1,0 +1,283 @@
+name: Main Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Run go vet
+        shell: bash
+        run: |
+          go vet ./...
+
+      - name: Run tests
+        shell: bash
+        run: |
+          go test -count=1 ./...
+
+      - name: Run race detector
+        shell: bash
+        run: |
+          go test -count=1 -race ./...
+
+      - name: Generate internal coverage profile
+        shell: bash
+        run: |
+          mkdir -p .artifacts/coverage
+          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
+
+      - name: Enforce internal coverage gate (package + module)
+        shell: bash
+        run: |
+          go run ./cmd/coverage-gate \
+            -coverprofile .artifacts/coverage/internal.cover \
+            -module go-command-compression-proxy \
+            -internal-prefix internal/ \
+            -threshold 80 \
+            -summary-out .artifacts/coverage/summary.md
+
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" && -f .artifacts/coverage/summary.md ]]; then
+            cat .artifacts/coverage/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  benchmark-discover:
+    name: Benchmark Discover
+    runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.tools.outputs.tools }}
+      cache_epoch: ${{ steps.cache-epoch.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Compute benchmark cache epoch
+        id: cache-epoch
+        shell: bash
+        run: |
+          echo "value=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Discover benchmark tools
+        id: tools
+        shell: bash
+        run: |
+          tools_json=$(find testdata/tool-fixtures -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -R -s -c 'split("\n")[:-1]')
+          if [[ "${tools_json}" == "[]" ]]; then
+            echo "No benchmark tools found under testdata/tool-fixtures" >&2
+            exit 1
+          fi
+          echo "tools=${tools_json}" >> "$GITHUB_OUTPUT"
+
+  benchmark-tool:
+    name: Benchmark (informational) / ${{ matrix.tool }}
+    needs: [validate, benchmark-discover]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: ${{ fromJson(needs.benchmark-discover.outputs.tools) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Rust (cargo)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm --version
+
+      - name: Setup kind
+        uses: helm/kind-action@v1.14.0
+        with:
+          install_only: true
+
+      - name: Build ccp binary
+        shell: bash
+        run: |
+          mkdir -p .bin
+          go build -o .bin/ccp ./cmd/ccp
+          echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
+
+      - name: Pre-pull Docker benchmark images
+        shell: bash
+        run: |
+          docker pull nginx:alpine
+          docker pull alpine:latest
+
+      - name: Restore benchmark history cache
+        id: benchmark-history-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .artifacts/benchmark-history/${{ matrix.tool }}
+          key: benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}
+          restore-keys: |
+            benchmark-report-main-${{ matrix.tool }}-v1-
+
+      - name: Run benchmark harness for tool
+        id: run-benchmark
+        shell: bash
+        env:
+          BENCH_YELLOW_OVERHEAD_ABS_MS: ${{ vars.BENCH_YELLOW_OVERHEAD_ABS_MS || '20' }}
+          BENCH_YELLOW_OVERHEAD_REL_PCT: ${{ vars.BENCH_YELLOW_OVERHEAD_REL_PCT || '25' }}
+          BENCH_YELLOW_MIN_NATIVE_MS: ${{ vars.BENCH_YELLOW_MIN_NATIVE_MS || '50' }}
+        run: |
+          set -euo pipefail
+          tool="${{ matrix.tool }}"
+          out_dir="${GITHUB_WORKSPACE}/.artifacts/benchmark/${tool}"
+          history_dir="${GITHUB_WORKSPACE}/.artifacts/benchmark-history/${tool}"
+          prev_report="${history_dir}/report.json"
+          mkdir -p "$out_dir" "$history_dir"
+
+          (
+            cd tools/benchmark
+            go run ./cmd/ccp-ci \
+              -fixtures-root "${GITHUB_WORKSPACE}/testdata/tool-fixtures" \
+              -artifacts-dir "$out_dir" \
+              -previous-report "$prev_report" \
+              -tool "$tool" \
+              -max-artifact-bytes 5242880
+          )
+
+          if [[ -f "${out_dir}/report.json" ]]; then
+            cp "${out_dir}/report.json" "${history_dir}/report.json"
+          fi
+
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            echo "## Main Benchmark Summary (${tool})" >> "${GITHUB_STEP_SUMMARY}"
+            echo "" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- Result: success" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Delete benchmark history cache key
+        if: always() && steps.run-benchmark.outcome == 'success' && github.event_name == 'push' && github.ref_name == 'main'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          key="benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}"
+          curl --silent --show-error --fail-with-body \
+            -X DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}&ref=refs/heads/main"
+
+      - name: Save benchmark history cache
+        uses: actions/cache/save@v5
+        if: always() && steps.run-benchmark.outcome == 'success' && github.event_name == 'push' && github.ref_name == 'main'
+        with:
+          path: .artifacts/benchmark-history/${{ matrix.tool }}
+          key: benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy-benchmark-main-${{ matrix.tool }}
+          path: .artifacts/benchmark/${{ matrix.tool }}
+          retention-days: 14
+
+  sonarqube-scan:
+    name: SonarQube Scan (informational)
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Generate internal coverage profile for Sonar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/coverage
+          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
+
+      - name: Validate SonarQube configuration
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo "SONAR_TOKEN is not configured. Add SONAR_TOKEN in repository secrets/environment to run SonarQube scan." >&2
+            exit 1
+          fi
+          if [[ ! -f sonar-project.properties ]]; then
+            echo "sonar-project.properties is missing from repository root." >&2
+            exit 1
+          fi
+          if [[ ! -f .artifacts/coverage/internal.cover ]]; then
+            echo "coverage profile missing at .artifacts/coverage/internal.cover." >&2
+            exit 1
+          fi
+
+      - name: Run SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

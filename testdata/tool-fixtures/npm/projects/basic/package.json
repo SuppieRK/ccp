@@ -1,0 +1,12 @@
+{
+  "name": "ccp-npm-benchmark-basic",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real npm run benchmark fixture project",
+  "scripts": {
+    "success-noisy": "node --test test/success.test.js",
+    "failure-diagnostics": "node --test test/failure.test.js",
+    "warning-actionable": "node scripts/warning_actionable.js",
+    "spinner-cr": "node scripts/spinner_cr.js"
+  }
+}

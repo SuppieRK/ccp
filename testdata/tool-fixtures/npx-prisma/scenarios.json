@@ -1,0 +1,41 @@
+[
+  {
+    "name": "success-validate",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prisma", "validate", "--schema", "prisma/schema.prisma"],
+    "expect_exit": 0,
+    "must_contain": ["prisma validate: ok"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure-validate",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prisma", "validate", "--schema", "prisma/bad.prisma"],
+    "expect_exit": 1,
+    "must_contain": ["Error", "schema validation", "bad.prisma"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "success",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prisma", "format", "--schema", "prisma/format.prisma"],
+    "expect_exit": 0,
+    "must_contain": ["prisma format: ok prisma/format.prisma"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

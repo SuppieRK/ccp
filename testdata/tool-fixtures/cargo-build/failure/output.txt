@@ -1,0 +1,3 @@
+cargo build: 2 diagnostics
+error[E0425]: cannot find value `missing_symbol` in this scope
+--> src/main.rs:2:13

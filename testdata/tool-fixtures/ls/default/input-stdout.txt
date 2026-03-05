@@ -1,0 +1,9 @@
+00000|README.md
+00001|docs
+00002|emptydir
+00003|file-0.bin
+00004|file-1.bin
+00005|file-2.bin
+00006|link-to-main.txt
+00007|node_modules
+00008|src

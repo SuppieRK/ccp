@@ -1,0 +1,11 @@
+00005|> Task :compileJava NO-SOURCE
+00006|> Task :processResources NO-SOURCE
+00007|> Task :classes UP-TO-DATE
+00008|> Task :compileTestJava UP-TO-DATE
+00009|> Task :processTestResources NO-SOURCE
+00010|> Task :testClasses UP-TO-DATE
+00011|> Task :test UP-TO-DATE
+00012|
+00013|BUILD SUCCESSFUL in 641ms
+00014|2 actionable tasks: 2 up-to-date
+00015|Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.0/userguide/configuration_cache_enabling.html

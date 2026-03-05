@@ -1,0 +1,10 @@
+00000|Name: pip
+00001|Version: 24.0
+00002|Summary: The PyPA recommended tool for installing Python packages.
+00003|Home-page: 
+00004|Author: 
+00005|Author-email: The pip developers <distutils-sig@python.org>
+00006|License: MIT
+00007|Location: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/pip/projects/basic/.venv/lib/python3.12/site-packages
+00008|Requires: 
+00009|Required-by: 

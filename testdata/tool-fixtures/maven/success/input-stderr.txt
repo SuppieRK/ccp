@@ -1,0 +1,4 @@
+00000|WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+00001|WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/home/suppie/.m2/wrapper/dists/apache-maven-3.9.11/a2d47e15/lib/guice-5.1.0-classes.jar)
+00002|WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+00003|WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release

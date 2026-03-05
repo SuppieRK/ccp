@@ -1,0 +1,6 @@
+00000|
+00001|> ccp-npm-benchmark-basic@1.0.0 spinner-cr
+00002|> node scripts/spinner_cr.js
+00003|
+00004|⠋ [1/2] compiling calculator.js...⠋ [2/2] compiling legacy.js...
+00005|Done

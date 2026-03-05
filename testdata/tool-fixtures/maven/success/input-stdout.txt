@@ -1,0 +1,38 @@
+00004|[INFO] Scanning for projects...
+00005|[INFO] 
+00006|[INFO] --------------------------< example:example >---------------------------
+00007|[INFO] Building example 1.0-SNAPSHOT
+00008|[INFO]   from pom.xml
+00009|[INFO] --------------------------------[ jar ]---------------------------------
+00010|[INFO] 
+00011|[INFO] --- resources:3.3.1:resources (default-resources) @ example ---
+00012|[INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/main/resources
+00013|[INFO] 
+00014|[INFO] --- compiler:3.13.0:compile (default-compile) @ example ---
+00015|[INFO] No sources to compile
+00016|[INFO] 
+00017|[INFO] --- resources:3.3.1:testResources (default-testResources) @ example ---
+00018|[INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/test/resources
+00019|[INFO] 
+00020|[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ example ---
+00021|[INFO] Nothing to compile - all classes are up to date.
+00022|[INFO] 
+00023|[INFO] --- surefire:3.2.5:test (default-test) @ example ---
+00024|[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+00025|[INFO] 
+00026|[INFO] -------------------------------------------------------
+00027|[INFO]  T E S T S
+00028|[INFO] -------------------------------------------------------
+00029|[INFO] Running example.SuccessTest
+00030|[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.052 s -- in example.SuccessTest
+00031|[INFO] 
+00032|[INFO] Results:
+00033|[INFO] 
+00034|[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+00035|[INFO] 
+00036|[INFO] ------------------------------------------------------------------------
+00037|[INFO] BUILD SUCCESS
+00038|[INFO] ------------------------------------------------------------------------
+00039|[INFO] Total time:  1.379 s
+00040|[INFO] Finished at: 2026-02-27T23:32:27+01:00
+00041|[INFO] ------------------------------------------------------------------------

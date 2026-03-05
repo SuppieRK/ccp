@@ -1,0 +1,26 @@
+00000|60f15a314e2ccb08746086cb01886fb3b190d1e9 1 1 2
+00001|author bench
+00002|author-mail <bench@example.com>
+00003|author-time 1704067200
+00004|author-tz +0000
+00005|committer bench
+00006|committer-mail <bench@example.com>
+00007|committer-time 1704067200
+00008|committer-tz +0000
+00009|summary seed
+00010|boundary
+00011|filename tracked.txt
+00012|	blame-line-1
+00013|60f15a314e2ccb08746086cb01886fb3b190d1e9 2 2
+00014|author bench
+00015|author-mail <bench@example.com>
+00016|author-time 1704067200
+00017|author-tz +0000
+00018|committer bench
+00019|committer-mail <bench@example.com>
+00020|committer-time 1704067200
+00021|committer-tz +0000
+00022|summary seed
+00023|boundary
+00024|filename tracked.txt
+00025|	blame-line-2

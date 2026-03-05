@@ -1,0 +1,94 @@
+# init-integration-framework Specification
+
+## Purpose
+Define `ccp init` behavior for coding-agent detection, installation, and persisted initialization state.
+
+## Requirements
+### Requirement: Init Flags
+`ccp init` SHALL support local/global scope selection and explicit tool selection.
+
+### Requirement: Tool Resolution Order
+`ccp init` SHALL resolve tools from explicit selection first, then fall back to adapter-driven detection.
+
+#### Scenario: explicit tools take precedence
+- **WHEN** user provides `--tools`
+- **THEN** init uses parsed `--tools` values and does not replace them with detected tools.
+
+#### Scenario: parsed tools are normalized
+- **WHEN** user provides comma-separated tool IDs in `--tools`
+- **THEN** init lowercases, trims whitespace, deduplicates, and sorts selected tool IDs before validation.
+
+#### Scenario: auto-detect when tools flag omitted
+- **WHEN** `--tools` is omitted
+- **THEN** init detects tools using registered adapters for the selected scope root.
+
+#### Scenario: detect tool by known directory
+- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`)
+- **THEN** that tool is included in detected candidates for init selection.
+
+#### Scenario: ignore non-directory collisions
+- **WHEN** a known tool path exists as a file instead of a directory
+- **THEN** detection ignores that path and does not treat it as a detected tool.
+
+#### Scenario: no detections without explicit selection
+- **WHEN** `--tools` is omitted and no tools are detected
+- **THEN** init fails with `no tools detected; specify --tools (...)` guidance.
+
+### Requirement: Tool Validation
+`ccp init` SHALL reject unsupported tool IDs before adapter installation.
+
+#### Scenario: unsupported tool request
+- **WHEN** user selects a tool without a registered adapter
+- **THEN** init fails with `unsupported tool` diagnostics.
+
+### Requirement: Adapter Installation Semantics
+`ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
+
+#### Scenario: per-tool state reporting
+- **WHEN** adapter installation completes for a tool
+- **THEN** init records and persists tool state with `status` of `applied`, `noop`, or `failed`
+- **AND** includes a reason string.
+
+#### Scenario: adapter failure short-circuits run
+- **WHEN** adapter install or verify fails for a selected tool
+- **THEN** init returns an error after recording failed state for that tool.
+
+### Requirement: Agent-Specific Artifacts Are Out of Scope
+This framework spec SHALL define only generic init orchestration behavior.
+
+#### Scenario: per-agent install details delegated to dedicated specs
+- **WHEN** validating concrete artifact paths/content for specific agents
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`)
+- **AND** this framework spec remains agent-agnostic.
+
+### Requirement: Idempotent and Safe Writes
+The framework SHALL mutate managed files using idempotent, backup-safe, atomic write semantics.
+
+#### Scenario: unchanged content is no-op
+- **WHEN** target file content already matches desired state
+- **THEN** framework reports `noop` and does not rewrite the file.
+
+#### Scenario: changed content creates backup then atomically replaces
+- **WHEN** target file requires update
+- **THEN** framework creates a backup of previous content
+- **AND** applies replacement atomically.
+
+### Requirement: Init Configuration Persistence and Local Gitignore Management
+`ccp init` SHALL persist init configuration and manage local `.gitignore` for `.ccp`.
+
+#### Scenario: persisted init config shape
+- **WHEN** init succeeds
+- **THEN** it writes config JSON containing `scope`, `tools`, and `state`.
+
+#### Scenario: local scope writes under repository
+- **WHEN** init runs without `--global`
+- **THEN** config path is `.ccp/init.json` under current working directory.
+
+#### Scenario: global scope writes under home config
+- **WHEN** init runs with `--global`
+- **THEN** config path is `~/.config/ccp/init.json`.
+
+#### Scenario: local scope gitignore integration
+- **WHEN** init persists local configuration successfully
+- **THEN** `.ccp` is ensured in repository `.gitignore` without duplication
+- **AND** `.gitignore` is left absent when it does not already exist.

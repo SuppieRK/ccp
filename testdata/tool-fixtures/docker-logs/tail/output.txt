@@ -1,0 +1,3 @@
+stderr-line-1
+WARN retrying connection
+ERROR final failure

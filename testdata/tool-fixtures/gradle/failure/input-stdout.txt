@@ -1,0 +1,12 @@
+00005|> Task :compileJava NO-SOURCE
+00006|> Task :processResources NO-SOURCE
+00007|> Task :classes UP-TO-DATE
+00008|> Task :compileTestJava UP-TO-DATE
+00009|> Task :processTestResources NO-SOURCE
+00010|> Task :testClasses UP-TO-DATE
+00011|
+00012|> Task :test FAILED
+00013|
+00014|FailureTest > test() FAILED
+00015|    org.opentest4j.AssertionFailedError at FailureTest.java:9
+00016|2 actionable tasks: 1 executed, 1 up-to-date

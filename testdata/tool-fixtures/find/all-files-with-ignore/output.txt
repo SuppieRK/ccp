@@ -1,0 +1,32 @@
+./
+  .gitignore
+  README.md
+  main.go
+  notes.tmp
+.hidden/
+  secret.go
+docs/
+  design.md
+internal/engine/
+  engine_case_01.go
+  engine_case_02.go
+  engine_case_03.go
+  engine_case_04.go
+internal/runner/
+  runner_case_01.go
+  runner_case_02.go
+  runner_case_03.go
+pkg/a/
+  a.go
+  readme.md
+pkg/b/
+  b.go
+pkg/calc/
+  component_01_very_long_name_for_find_compaction.go
+  component_02_very_long_name_for_find_compaction.go
+  component_03_very_long_name_for_find_compaction.go
+  component_04_very_long_name_for_find_compaction.go
+  component_05_very_long_name_for_find_compaction.go
+  component_06_very_long_name_for_find_compaction.go
+vendor/x/
+  ignored.go

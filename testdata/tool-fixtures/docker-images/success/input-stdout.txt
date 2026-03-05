@@ -1,0 +1,15 @@
+00000|REPOSITORY                           TAG            IMAGE ID       CREATED         SIZE
+00001|mysql                                8.4            a2d126916bc2   8 days ago      1.08GB
+00002|postgres                             16-alpine      97ff59a4e30e   2 weeks ago     395MB
+00003|nginx                                alpine         1d13701a5f9f   3 weeks ago     92.5MB
+00004|alpine                               latest         25109184c71b   4 weeks ago     13MB
+00005|quay.io/keycloak/keycloak            26.5           b80a48090594   6 weeks ago     730MB
+00006|ghcr.io/open-webui/open-webui        main           000b87a6ae72   6 weeks ago     6.2GB
+00007|kindest/node                         <none>         452d707d4862   2 months ago    1.35GB
+00008|postgres                             18-alpine      154ea39af68f   3 months ago    401MB
+00009|postgres                             17-alpine      9a78577340f3   3 months ago    398MB
+00010|testcontainers/ryuk                  0.13.0         31b31269d066   5 months ago    14.4MB
+00011|testcontainers/ryuk                  0.12.0         dd3f023a6ed7   9 months ago    29MB
+00012|openapitools/openapi-generator-cli   v7.6.0         f86ca8242936   21 months ago   443MB
+00013|redis                                7.2.4-alpine   c8bb255c3559   21 months ago   67.9MB
+00014|quay.io/keycloak/keycloak            24.0.2         b8a3f00fc433   23 months ago   730MB

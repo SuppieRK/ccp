@@ -1,0 +1,4 @@
+INFO retrying connection
+WARN retrying connection
+stderr-line-1
+ERROR final failure

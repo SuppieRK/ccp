@@ -1,0 +1,16 @@
+00000|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/unhandled_rejection.js:2
+00001|Promise.reject(new Error("boom"));
+00002|               ^
+00003|
+00004|Error: boom
+00005|    at Object.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/unhandled_rejection.js:2:16)
+00006|    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+00007|    at Object..js (node:internal/modules/cjs/loader:1839:10)
+00008|    at Module.load (node:internal/modules/cjs/loader:1441:32)
+00009|    at Function._load (node:internal/modules/cjs/loader:1263:12)
+00010|    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+00011|    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+00012|    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+00013|    at node:internal/main/run_main_module:36:49
+00014|
+00015|Node.js v22.20.0

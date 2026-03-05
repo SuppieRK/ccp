@@ -1,0 +1,9 @@
+eslint: 3 errors, 0 warnings in 1 files
+top rules:
+- semi (2)
+- no-unused-vars (1)
+top files:
+- src/lint_fail.js (3 issues)
+  - 1:7 error no-unused-vars 'unused' is assigned a value but never used.
+  - 1:17 error semi Missing semicolon.
+  - 4:15 error semi Missing semicolon.

@@ -1,0 +1,62 @@
+00004|[INFO] Scanning for projects...
+00005|[INFO] 
+00006|[INFO] --------------------------< example:example >---------------------------
+00007|[INFO] Building example 1.0-SNAPSHOT
+00008|[INFO]   from pom.xml
+00009|[INFO] --------------------------------[ jar ]---------------------------------
+00010|[INFO] 
+00011|[INFO] --- resources:3.3.1:resources (default-resources) @ example ---
+00012|[INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/main/resources
+00013|[INFO] 
+00014|[INFO] --- compiler:3.13.0:compile (default-compile) @ example ---
+00015|[INFO] No sources to compile
+00016|[INFO] 
+00017|[INFO] --- resources:3.3.1:testResources (default-testResources) @ example ---
+00018|[INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/test/resources
+00019|[INFO] 
+00020|[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ example ---
+00021|[INFO] Nothing to compile - all classes are up to date.
+00022|[INFO] 
+00023|[INFO] --- surefire:3.2.5:test (default-test) @ example ---
+00024|[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+00025|[INFO] 
+00026|[INFO] -------------------------------------------------------
+00027|[INFO]  T E S T S
+00028|[INFO] -------------------------------------------------------
+00029|[INFO] Running example.FailureTest
+00030|[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.059 s <<< FAILURE! -- in example.FailureTest
+00031|[ERROR] example.FailureTest.test -- Time elapsed: 0.035 s <<< FAILURE!
+00032|org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+00033|	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+00034|	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:139)
+00035|	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:69)
+00036|	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:41)
+00037|	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:35)
+00038|	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:195)
+00039|	at example.FailureTest.test(FailureTest.java:9)
+00040|
+00041|[INFO] 
+00042|[INFO] Results:
+00043|[INFO] 
+00044|[ERROR] Failures: 
+00045|[ERROR]   FailureTest.test:9 expected: <true> but was: <false>
+00046|[INFO] 
+00047|[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+00048|[INFO] 
+00049|[INFO] ------------------------------------------------------------------------
+00050|[INFO] BUILD FAILURE
+00051|[INFO] ------------------------------------------------------------------------
+00052|[INFO] Total time:  1.339 s
+00053|[INFO] Finished at: 2026-02-27T23:32:18+01:00
+00054|[INFO] ------------------------------------------------------------------------
+00055|[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project example: There are test failures.
+00056|[ERROR] 
+00057|[ERROR] Please refer to /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/target/surefire-reports for the individual test results.
+00058|[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+00059|[ERROR] -> [Help 1]
+00060|[ERROR] 
+00061|[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+00062|[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+00063|[ERROR] 
+00064|[ERROR] For more information about the errors and possible solutions, please read the following articles:
+00065|[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

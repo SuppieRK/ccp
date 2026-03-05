@@ -1,0 +1,12 @@
+CUSTOM                                                COLS      HERE
+ccp-broken                                            Pending   ccp-benchmark-control-plane
+ccp-healthy                                           Running   ccp-benchmark-control-plane
+coredns-7d764666f9-4bj5s                              Running   ccp-benchmark-control-plane
+coredns-7d764666f9-m6gwl                              Running   ccp-benchmark-control-plane
+etcd-ccp-benchmark-control-plane                      Running   ccp-benchmark-control-plane
+kindnet-52r77                                         Running   ccp-benchmark-control-plane
+kube-apiserver-ccp-benchmark-control-plane            Running   ccp-benchmark-control-plane
+kube-controller-manager-ccp-benchmark-control-plane   Running   ccp-benchmark-control-plane
+kube-proxy-xlx66                                      Running   ccp-benchmark-control-plane
+kube-scheduler-ccp-benchmark-control-plane            Running   ccp-benchmark-control-plane
+local-path-provisioner-67b8995b4b-mv25k               Running   ccp-benchmark-control-plane

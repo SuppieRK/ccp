@@ -1,0 +1,16 @@
+00000|On branch main
+00001|Changes to be committed:
+00002|  (use "git restore --staged <file>..." to unstage)
+00003|	modified:   staged.txt
+00004|
+00005|Changes not staged for commit:
+00006|  (use "git add <file>..." to update what will be committed)
+00007|  (use "git restore <file>..." to discard changes in working directory)
+00008|	modified:   modified.txt
+00009|
+00010|Untracked files:
+00011|  (use "git add <file>..." to include in what will be committed)
+00012|	.ccp/
+00013|	scripts/
+00014|	untracked.txt
+00015|

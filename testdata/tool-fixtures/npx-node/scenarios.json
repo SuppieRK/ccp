@@ -1,0 +1,24 @@
+[
+  {
+    "name": "warning",
+    "tool": "npx",
+    "project": "projects/basic",
+    "native": ["npx", "node", "warning_dedupe.js"],
+    "expect_exit": 0,
+    "must_contain": ["ExperimentalWarning: x", "application payload"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "npx",
+    "project": "projects/basic",
+    "native": ["npx", "node", "runtime_failure.js"],
+    "expect_exit": 1,
+    "must_contain": ["Error: boom", "runtime failure marker"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": true
+  }
+]

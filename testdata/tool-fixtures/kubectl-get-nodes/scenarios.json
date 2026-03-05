@@ -1,0 +1,28 @@
+[
+  {
+    "name": "success",
+    "tool": "kubectl",
+    "project": "project",
+    "before_start": [["./scripts/setup_nodes_fold.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./kubectl", "get", "nodes"],
+    "expect_exit": 0,
+    "must_contain": ["node-c NotReady", "[2] nodes: Ready worker v1.29.0"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "unknown-headers",
+    "tool": "kubectl",
+    "project": "project",
+    "before_start": [["./scripts/setup_unknown_header.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./kubectl", "get", "nodes"],
+    "expect_exit": 0,
+    "must_contain": ["CUSTOM COLS HERE", "x y z"],
+    "must_not_contain": ["["],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

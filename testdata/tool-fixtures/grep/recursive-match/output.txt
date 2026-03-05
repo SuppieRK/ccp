@@ -1,0 +1,39 @@
+./docs/notes.txt (5 matches)
+  1: needle: docs line one repeated deterministic payload for compression in benchmark output.
+  2: needle: docs line two repeated deterministic payload for compression in benchmark output.
+  3: needle: docs line three repeated deterministic payload for compression in benchmark output.
+  4: needle: docs line four repeated deterministic payload for compression in benchmark output.
+  5: needle: docs line five repeated deterministic payload for compression in benchmark output.
+./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt (20 matches)
+  1: needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+  2: needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+  3: needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+  4: needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+  5: needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+  6: needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+  7: needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+  8: needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+  9: needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+  10: needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+  11: needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+  12: needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+  13: needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+  14: needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+  15: needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+  16: needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+  17: needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+  18: needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+  19: needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+  20: needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+./src/helpers.go (5 matches)
+  5: 		"needle: helper one with repeated deterministic payload for compression",
+  6: 		"needle: helper two with repeated deterministic payload for compression",
+  7: 		"needle: helper three with repeated deterministic payload for compression",
+  8: 		"needle: helper four with repeated deterministic payload for compression",
+  9: 		"needle: helper five with repeated deterministic payload for compression",
+./src/main.go (5 matches)
+  6: 	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+  7: 	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+  8: 	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+  9: 	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+  10: 	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")

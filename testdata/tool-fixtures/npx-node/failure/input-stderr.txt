@@ -1,0 +1,16 @@
+00001|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/npx-node/projects/basic/runtime_failure.js:2
+00002|throw new Error("boom");
+00003|^
+00004|
+00005|Error: boom
+00006|    at Object.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/npx-node/projects/basic/runtime_failure.js:2:7)
+00007|    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+00008|    at Object..js (node:internal/modules/cjs/loader:1839:10)
+00009|    at Module.load (node:internal/modules/cjs/loader:1441:32)
+00010|    at Function._load (node:internal/modules/cjs/loader:1263:12)
+00011|    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+00012|    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+00013|    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+00014|    at node:internal/main/run_main_module:36:49
+00015|
+00016|Node.js v22.20.0

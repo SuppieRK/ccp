@@ -1,0 +1,9 @@
+[ok] :compileJava
+[ok] :processResources
+[ok] :classes
+[ok] :compileTestJava
+[ok] :processTestResources
+[ok] :testClasses
+[ok] :test
+BUILD SUCCESSFUL in 649ms
+2 actionable tasks: 2 up-to-date

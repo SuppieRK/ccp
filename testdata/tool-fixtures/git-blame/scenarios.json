@@ -1,0 +1,53 @@
+[
+  {
+    "name": "line-porcelain",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_success.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "blame", "--line-porcelain", "tracked.txt"],
+    "expect_exit": 0,
+    "must_contain": ["git blame: 2 lines", "tracked.txt:1 author=bench", "blame-line-1"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "success",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_success.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "blame", "tracked.txt"],
+    "expect_exit": 0,
+    "must_contain": ["blame-line-1", "blame-line-2", "bench"],
+    "must_not_contain": ["git blame: "],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_failure.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "blame", "missing.txt"],
+    "expect_exit": 128,
+    "must_contain": ["fatal:", "no such path"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

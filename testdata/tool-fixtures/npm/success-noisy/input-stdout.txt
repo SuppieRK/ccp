@@ -1,0 +1,26 @@
+00000|
+00001|> ccp-npm-benchmark-basic@1.0.0 success-noisy
+00002|> node --test test/success.test.js
+00003|
+00004|TAP version 13
+00005|# Subtest: add computes sums
+00006|ok 1 - add computes sums
+00007|  ---
+00008|  duration_ms: 0.366266
+00009|  type: 'test'
+00010|  ...
+00011|# Subtest: divide computes quotient
+00012|ok 2 - divide computes quotient
+00013|  ---
+00014|  duration_ms: 0.067165
+00015|  type: 'test'
+00016|  ...
+00017|1..2
+00018|# tests 2
+00019|# suites 0
+00020|# pass 2
+00021|# fail 0
+00022|# cancelled 0
+00023|# skipped 0
+00024|# todo 0
+00025|# duration_ms 37.905034

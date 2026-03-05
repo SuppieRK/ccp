@@ -1,0 +1,3 @@
+00000|CUSTOM   COLS        HERE
+00001|svc-a    ClusterIP   10.96.28.45
+00002|svc-b    ClusterIP   10.96.102.22

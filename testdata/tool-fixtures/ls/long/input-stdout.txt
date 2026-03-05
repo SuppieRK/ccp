@@ -1,0 +1,10 @@
+00000|total 0
+00001|-rwxrwxrwx 1 suppie suppie   59 Feb 26 11:50 README.md
+00002|drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 docs
+00003|drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 emptydir
+00004|-rwxrwxrwx 1 suppie suppie   21 Feb 26 11:50 file-0.bin
+00005|-rwxrwxrwx 1 suppie suppie   26 Feb 26 11:50 file-1.bin
+00006|-rwxrwxrwx 1 suppie suppie   35 Feb 26 11:50 file-2.bin
+00007|-rwxrwxrwx 1 suppie suppie   29 Feb 26 11:50 link-to-main.txt
+00008|drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 node_modules
+00009|drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 src

@@ -1,0 +1,227 @@
+name: Release Distribution
+
+on:
+  push:
+    tags:
+      - '[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag without v prefix (for example: 1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve-tag.outputs.tag }}
+    steps:
+      - name: Resolve and validate release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          if [[ -z "${TAG}" ]]; then
+            echo "release tag is required" >&2
+            exit 1
+          fi
+          if [[ "${TAG}" == v* ]]; then
+            echo "release tag must not start with 'v': ${TAG}" >&2
+            exit 1
+          fi
+          if [[ ! "${TAG}" =~ ^[0-9] ]]; then
+            echo "release tag must start with a digit: ${TAG}" >&2
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if release already exists for tag
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
+          status=$(curl -sS -o /tmp/release.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API_URL}")
+          if [[ "$status" == "200" ]]; then
+            echo "release already exists for tag ${TAG}; refusing to overwrite"
+            cat /tmp/release.json
+            exit 1
+          fi
+          if [[ "$status" != "404" ]]; then
+            echo "unexpected API status while checking tag ${TAG}: ${status}"
+            cat /tmp/release.json || true
+            exit 1
+          fi
+
+  build-artifacts:
+    needs: preflight
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Build archive
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          bin_name="ccp"
+          if [[ "$GOOS" == "windows" ]]; then
+            bin_name="ccp.exe"
+          fi
+          out_bin="dist/${bin_name}"
+          CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+            go build -trimpath -ldflags "-s -w -X go-command-compression-proxy/internal/version.Version=${TAG}" \
+            -o "$out_bin" ./cmd/ccp
+          asset="ccp_${TAG}_${GOOS}_${GOARCH}.zip"
+          (
+            cd dist
+            zip -q "$asset" "$bin_name"
+          )
+          rm -f "$out_bin"
+
+      - name: Upload matrix asset
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*.zip
+          retention-days: 1
+
+  publish:
+    needs: [preflight, build-artifacts]
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all assets
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+
+      - name: Flatten artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find dist -type f -name '*.zip' -exec cp {} release/ \;
+
+      - name: Generate checksums for release archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd release
+            # Keep this aligned with .goreleaser.yaml checksum configuration.
+            sha256sum ./*.zip > ./ccp_checksums.txt
+          )
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ needs.preflight.outputs.tag }}
+          tag_name: ${{ needs.preflight.outputs.tag }}
+          fail_on_unmatched_files: true
+          files: |
+            ./release/*.zip
+            ./release/ccp_checksums.txt
+
+      - name: Generate binary archive attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: ./release/*.zip
+          predicate-type: https://schemas.go-command-compression-proxy.dev/release/binary-archive-attestation/v1
+          predicate: |
+            {
+              "repository": "${{ github.repository }}",
+              "workflow": "release-distribution",
+              "scope": "binary-archives-only",
+              "attestationActionRef": "actions/attest@v4"
+            }
+
+      - name: Record periodic review reminder for attest action major pin
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            {
+              echo "### Attestation action version review"
+              echo "- Current pin: \`actions/attest@v2\`"
+              echo "- Review cadence: quarterly"
+              echo "- Scope reminder: binary archives only (\`release/*.zip\`)."
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  smoke-install:
+    needs: [preflight, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run install script smoke test (Unix)
+        if: runner.os != 'Windows'
+        env:
+          VERSION: ${{ needs.preflight.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh ./scripts/install.sh
+          if [[ -x "/usr/local/bin/ccp" ]]; then
+            /usr/local/bin/ccp --version
+          elif [[ -x "$HOME/.local/bin/ccp" ]]; then
+            "$HOME/.local/bin/ccp" --version
+          elif [[ -x "$PWD/bin/ccp" ]]; then
+            "$PWD/bin/ccp" --version
+          else
+            echo "ccp binary not found in expected install targets" >&2
+            exit 1
+          fi
+
+      - name: Run install smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.preflight.outputs.tag }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $asset = "ccp_${env:VERSION}_windows_amd64.zip"
+          $url = "https://github.com/$env:REPO/releases/download/$env:VERSION/$asset"
+          $outDir = Join-Path $PWD "test-bin"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          $zipPath = Join-Path $PWD $asset
+          Invoke-WebRequest -Uri $url -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $outDir -Force
+          & (Join-Path $outDir "ccp.exe") --version

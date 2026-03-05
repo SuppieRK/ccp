@@ -1,0 +1,35 @@
+[
+  {
+    "name": "warnings-deduplication",
+    "tool": "node",
+    "project": "projects/basic",
+    "native": ["node", "warning_dedupe.js"],
+    "expect_exit": 0,
+    "must_contain": ["ExperimentalWarning: x", "application payload"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "node",
+    "project": "projects/basic",
+    "native": ["node", "runtime_failure.js"],
+    "expect_exit": 1,
+    "must_contain": ["Error: boom", "cause: Error: root-cause"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure-reject",
+    "tool": "node",
+    "project": "projects/basic",
+    "native": ["node", "unhandled_rejection.js"],
+    "expect_exit": 1,
+    "must_contain": ["Error: boom", "unhandled_rejection.js"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

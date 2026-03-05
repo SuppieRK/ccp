@@ -1,0 +1,559 @@
+12:04:26 PM: Executing 'clean spotlessApply build'…
+
+> Task :clean
+> Task :spotlessInternalRegisterDependencies
+
+> Task :spotlessGroovyGradle
+Missing required bundle org.eclipse.jdt.debug needed by [org.eclipse.jdt.launching, org.eclipse.jdt.launching.macosx]
+Missing required capability osgi.extender:osgi.extender=osgi.serviceloader.processor needed by org.apache.commons.commons-logging
+Missing required capability osgi.serviceloader:osgi.serviceloader=org.apache.commons.logging.LogFactory needed by org.apache.commons.commons-logging
+Recommend setting osgi.configuration.area to a directory, getDataFile will return null
+Starting Groovy-Eclipse compiler resolver. Specified compiler level: unspecified
+ 20 org.codehaus.groovy_5.0.0.v202503311943-e2503 RESOLVED
+
+> Task :spotlessGroovyGradleApply
+> Task :spotlessJava
+> Task :spotlessJavaApply
+> Task :spotlessSql
+> Task :spotlessSqlApply
+> Task :spotlessApply
+> Task :generateJooq SKIPPED
+> Task :processResources
+> Task :verifyJooqCodegenConfiguration SKIPPED
+
+> Task :generateMainDatabaseClasses
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 1459; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSynonyms}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":java, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":properties, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":regexFlags, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeSql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSequences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeIndexes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includePrimaryKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeUniqueKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeForeignKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeCheckConstraints, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSystemTables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSystemIndexes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSystemCheckConstraints, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSystemSequences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeSystemUDTs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeInvisibleColumns, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":recordVersionFields, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":recordTimestampFields, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":comments, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":syntheticObjects, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":syntheticIdentities, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":syntheticPrimaryKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":overridePrimaryKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":dateAsTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":ignoreProcedureReturnValues, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":unsignedTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":integerDisplayWidths, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":inputCatalog, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":outputCatalog, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":outputCatalogToDefault, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":inputSchema, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":outputSchema, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":outputSchemaToDefault, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":catalogs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":schemata, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":schemaVersionProvider, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":catalogVersionProvider, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":orderProvider, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":embeddables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":embeddablePrimaryKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":embeddableUniqueKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":embeddableDomains, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":readonlyIdentities, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":readonlyComputedColumns, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":readonlyNonUpdatableColumns, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":customTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":forcedTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":forcedTypesForBuiltinDataTypeExtensions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":forcedTypesForXMLSchemaCollections, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":forceIntegerTypesOnZeroScaleDecimals, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":tableValuedFunctions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":oracleUseDBAViews, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":logSlowQueriesAfterSeconds, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":logSlowResultsAfterSeconds}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 3518; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 3839; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 4183; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 4602; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 5012; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 5411; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":hidden}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":name, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generator, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditInsertUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateTimestamp, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":auditUpdateUser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":converter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":autoConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":lambdaConverter, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":binding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":genericBinding, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeExpression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expression, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":expressions, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sql, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":excludeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":includeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":types, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullability, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":objectType}' is expected.
+12:04:38 WARNING org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 6048; cvc-complex-type.2.4.a: Invalid content was found starting with element '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":implicitJoinPathsManyToMany}'. One of '{"http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":implicitJoinPathTableSubtypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":implicitJoinPathUnusedConstructors, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":implicitJoinPathsUseTableNameForUnambiguousFKs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":implicitJoinPathsAsKotlinProperties, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":deprecated, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":deprecationOnUnknownTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":instanceFields, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":visibilityModifier, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generatedAnnotation, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generatedAnnotationType, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generatedAnnotationDate, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generatedAnnotationJooqVersion, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nonnullAnnotation, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nonnullAnnotationType, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullableAnnotation, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":nullableAnnotationType, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":constructorPropertiesAnnotation, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":constructorPropertiesAnnotationOnPojos, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":constructorPropertiesAnnotationOnRecords, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":routines, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sequences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":triggers, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":udts, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":queues, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":links, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":keys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":tables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":embeddables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":records, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":recordsImplementingRecordN, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":enumsAsScalaSealedTraits, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojos, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojosEqualsAndHashCode, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojosToString, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojosAsJavaRecordClasses, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojosAsScalaCaseClasses, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":pojosAsKotlinDataClasses, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":immutablePojos, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":serializablePojos, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":interfaces, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":immutableInterfaces, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":serializableInterfaces, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":daos, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jooqVersionReference, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jpaAnnotations, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jpaVersion, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":validationAnnotations, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":springAnnotations, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":springDao, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinSetterJvmNameAnnotationsOnIsPrefix, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinNotNullPojoAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinNotNullRecordAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinNotNullInterfaceAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinDefaultedNullablePojoAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":kotlinDefaultedNullableRecordAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalObjectNames, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalObjectReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalCatalogReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalSchemaReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalDomainReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalTriggerReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalTableReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalSequenceReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalUDTReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalRoutineReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalQueueReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalLinkReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalKeyReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":globalIndexReferences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":defaultCatalog, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":defaultSchema, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":javadoc, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":comments, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnCatalogs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnSchemas, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnTables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnColumns, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnEmbeddables, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnUDTs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnAttributes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnPackages, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnRoutines, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnParameters, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnSequences, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnLinks, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnQueues, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":commentsOnKeys, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sources, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":sourcesOnViews, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":fluentSetters, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":javaBeansGettersAndSetters, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":varargSetters, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":generatedSerialVersionUID, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":maxMembersPerInitialiser, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":fullyQualifiedTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":emptyCatalogs, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":emptySchemas, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":javaTimeTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":spatialTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":xmlTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":jsonTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":intervalTypes, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":newline, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":indentation, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":printMarginForBlockComment, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":textBlocks, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":whereMethodOverrides, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":renameMethodOverrides, "http://www.jooq.org/xsd/jooq-codegen-3.19.28.xsd":asMethodOverrides}' is expected.
+12:04:38 INFO Initialising properties  : C:\Users\suppi\IdeaProjects\spring-modulith-template\build\tmp\generateJooq\config.xml
+12:04:39 INFO
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@  @@        @@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@        @@@@@@@@@@
+@@@@@@@@@@@@@@@@  @@  @@    @@@@@@@@@@
+@@@@@@@@@@  @@@@  @@  @@    @@@@@@@@@@
+@@@@@@@@@@        @@        @@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@        @@        @@@@@@@@@@
+@@@@@@@@@@    @@  @@  @@@@  @@@@@@@@@@
+@@@@@@@@@@    @@  @@  @@@@  @@@@@@@@@@
+@@@@@@@@@@        @@  @  @  @@@@@@@@@@
+@@@@@@@@@@        @@        @@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@  @@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  Thank you for using jOOQ 3.19.29 (Build date: 2025-12-05T09:11:16Z)
+
+12:04:39 INFO
+
+jOOQ tip of the day: If you're using Liquibase to migrate your schema, the jOOQ code generator can simulate a Liquibase migration to produce its generated code, rather than connecting to an actual database: https://www.jooq.org/doc/latest/manual/code-generation/codegen-liquibase/
+
+12:04:39 INFO No <inputCatalog/> was provided. Generating ALL available catalogs instead.
+12:04:39 INFO License parameters
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO   Thank you for using jOOQ and jOOQ's code generator
+12:04:39 INFO
+12:04:39 INFO Database parameters
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO   dialect                : POSTGRES
+12:04:39 INFO   URL                    : jdbc:postgresql://localhost:57003/test?loggerLevel=OFF
+12:04:39 INFO   target dir             : C:\Users\suppi\IdeaProjects\spring-modulith-template\build\generated-src\jooq\main
+12:04:39 INFO   target package         : pm.be.db
+12:04:39 INFO   includes               : []
+12:04:39 INFO   excludes               : [(?i)(?:^|.*\.)\Qflyway_schema_history\E$]
+12:04:39 INFO   includeExcludeColumns  : false
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO
+12:04:39 INFO JavaGenerator parameters
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO annotations
+12:04:39 INFO   generated              : false
+12:04:39 INFO   JPA                    : false
+12:04:39 INFO   JPA version            :
+12:04:39 INFO   validation             : false
+12:04:39 INFO   spring                 : false
+12:04:39 INFO comments
+12:04:39 INFO   comments               : true
+12:04:39 INFO   on attributes          : true
+12:04:39 INFO   on catalogs            : true
+12:04:39 INFO   on columns             : true
+12:04:39 INFO   on embeddables         : true
+12:04:39 INFO   on keys                : true
+12:04:39 INFO   on links               : true
+12:04:39 INFO   on packages            : true
+12:04:39 INFO   on parameters          : true
+12:04:39 INFO   on queues              : true
+12:04:39 INFO   on routines            : true
+12:04:39 INFO   on schemas             : true
+12:04:39 INFO   on sequences           : true
+12:04:39 INFO   on tables              : true
+12:04:39 INFO   on udts                : true
+12:04:39 INFO sources
+12:04:39 INFO   sources                : true
+12:04:39 INFO   sources on views       : true
+12:04:39 INFO global references
+12:04:39 INFO   global references      : true
+12:04:39 INFO   catalogs               : true
+12:04:39 INFO   domains                : true
+12:04:39 INFO   indexes                : true
+12:04:39 INFO   keys                   : true
+12:04:39 INFO   links                  : true
+12:04:39 INFO   queues                 : true
+12:04:39 INFO   routines               : true
+12:04:39 INFO   schemas                : true
+12:04:39 INFO   sequences              : true
+12:04:39 INFO   tables                 : true
+12:04:39 INFO   udts                   : true
+12:04:39 INFO object types
+12:04:39 INFO   daos                   : false
+12:04:39 INFO   indexes                : true
+12:04:39 INFO   instance fields        : true
+12:04:39 INFO   interfaces             : false
+12:04:39 INFO   interfaces (immutable) : false
+12:04:39 INFO   javadoc                : true
+12:04:39 INFO   keys                   : true
+12:04:39 INFO   links                  : true
+12:04:39 INFO   pojos                  : false
+12:04:39 INFO   pojos (immutable)      : false
+12:04:39 INFO   queues                 : true
+12:04:39 INFO   records                : true
+12:04:39 INFO   routines               : true
+12:04:39 INFO   sequences              : true
+12:04:39 INFO   sequenceFlags          : true
+12:04:39 INFO   table-valued functions : true
+12:04:39 INFO   tables                 : true
+12:04:39 INFO   udts                   : true
+12:04:39 INFO   relations              : true
+12:04:39 INFO other
+12:04:39 INFO   deprecated code        : true
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO
+12:04:39 INFO Generation remarks
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO Generating catalogs      : Total: 1
+12:04:39 INFO Version                  : Database version is supported by dialect POSTGRES: 18.1
+12:04:39 INFO ARRAYs fetched           : 0 (0 included, 0 excluded)
+12:04:39 INFO Domains fetched          : 0 (0 included, 0 excluded)
+12:04:39 INFO Tables fetched           : 10 (9 included, 1 excluded)
+12:04:39 INFO Embeddables fetched      : 0 (0 included, 0 excluded)
+12:04:39 INFO Enums fetched            : 1 (1 included, 0 excluded)
+12:04:39 INFO No schema version is applied for catalog . Regenerating.
+12:04:39 INFO
+12:04:39 INFO Generating catalog       : DefaultCatalog.java
+12:04:39 INFO ==========================================================
+12:04:39 INFO Comments fetched         : 0 (0 included, 0 excluded)
+12:04:39 INFO Generating schemata      : Total: 1
+12:04:39 INFO No schema version is applied for schema public. Regenerating.
+12:04:39 INFO Generating schema        : Public.java
+12:04:39 INFO ----------------------------------------------------------
+12:04:39 INFO Sequences fetched        : 0 (0 included, 0 excluded)
+12:04:39 INFO UDTs fetched             : 0 (0 included, 0 excluded)
+12:04:39 INFO Routines fetched         : 0 (0 included, 0 excluded)
+12:04:39 INFO Generating tables
+12:04:39 INFO Indexes fetched          : 6 (6 included, 0 excluded)
+12:04:39 INFO Generating table         : DefaultEffortUnits.java [input=default_effort_units, pk=default_effort_units_pkey]
+12:04:39 INFO Forcing type             : public.default_effort_units.id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.EffortUnitId</userType><converter>pm.be.pmbe2.shared.type.id.EffortUnitId.getJooqConverter()</converter><includeExpression>.*?\.default_effort_units\.id | .*?\.user_effort_units\.effort_unit_id | .*?\.effort_unit_id | .*?\_effort_unit_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Generating table         : Organizations.java [input=organizations, pk=organizations_pkey]
+12:04:39 INFO Forcing type             : public.organizations.id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.OrganizationId</userType><converter>pm.be.pmbe2.shared.type.id.OrganizationId.getJooqConverter()</converter><includeExpression>.*?\.organizations\.id | .*?\.organization_id | .*?\_organization_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.organizations.owner_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.UserId</userType><converter>pm.be.pmbe2.shared.type.id.UserId.getJooqConverter()</converter><includeExpression>.*?\.users\.id | .*?\.user_id | .*?\.owner_id | .*?\.created_by | .*?\.assignee_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Generating table         : ScheduledTasks.java [input=scheduled_tasks, pk=scheduled_tasks_pkey]
+12:04:39 INFO Generating table         : SpringSession.java [input=spring_session, pk=spring_session_pk]
+12:04:39 INFO Generating table         : SpringSessionAttributes.java [input=spring_session_attributes, pk=spring_session_attributes_pk]
+12:04:39 INFO Generating table         : UserEffortUnits.java [input=user_effort_units, pk=user_effort_units_pkey]
+12:04:39 INFO Forcing type             : public.user_effort_units.user_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.UserId</userType><converter>pm.be.pmbe2.shared.type.id.UserId.getJooqConverter()</converter><includeExpression>.*?\.users\.id | .*?\.user_id | .*?\.owner_id | .*?\.created_by | .*?\.assignee_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.user_effort_units.effort_unit_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.EffortUnitId</userType><converter>pm.be.pmbe2.shared.type.id.EffortUnitId.getJooqConverter()</converter><includeExpression>.*?\.default_effort_units\.id | .*?\.user_effort_units\.effort_unit_id | .*?\.effort_unit_id | .*?\_effort_unit_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Generating table         : UserPreferences.java [input=user_preferences, pk=user_preferences_pkey]
+12:04:39 INFO Forcing type             : public.user_preferences.user_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.UserId</userType><converter>pm.be.pmbe2.shared.type.id.UserId.getJooqConverter()</converter><includeExpression>.*?\.users\.id | .*?\.user_id | .*?\.owner_id | .*?\.created_by | .*?\.assignee_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.user_preferences.avatar_url to <priority>0</priority><userType>java.net.URI</userType><converter>pm.be.pmbe2.shared.type.converter.UriConverter.getInstance()</converter><includeExpression>.*?_url</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.user_preferences.last_workspace_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.WorkspaceId</userType><converter>pm.be.pmbe2.shared.type.id.WorkspaceId.getJooqConverter()</converter><includeExpression>.*?\.workspaces\.id | .*?\.workspace_id | .*?\_workspace_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Generating table         : Users.java [input=users, pk=users_pkey]
+12:04:39 INFO Forcing type             : public.users.id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.UserId</userType><converter>pm.be.pmbe2.shared.type.id.UserId.getJooqConverter()</converter><includeExpression>.*?\.users\.id | .*?\.user_id | .*?\.owner_id | .*?\.created_by | .*?\.assignee_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.users.email to <priority>0</priority><userType>pm.be.pmbe2.shared.type.common.EMail</userType><converter>pm.be.pmbe2.shared.type.common.EMail.getJooqConverter()</converter><includeExpression>.*?\.email</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Generating table         : Workspaces.java [input=workspaces, pk=workspaces_pkey]
+12:04:39 INFO Forcing type             : public.workspaces.id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.WorkspaceId</userType><converter>pm.be.pmbe2.shared.type.id.WorkspaceId.getJooqConverter()</converter><includeExpression>.*?\.workspaces\.id | .*?\.workspace_id | .*?\_workspace_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.workspaces.organization_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.OrganizationId</userType><converter>pm.be.pmbe2.shared.type.id.OrganizationId.getJooqConverter()</converter><includeExpression>.*?\.organizations\.id | .*?\.organization_id | .*?\_organization_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Forcing type             : public.workspaces.owner_id to <priority>0</priority><userType>pm.be.pmbe2.shared.type.id.UserId</userType><converter>pm.be.pmbe2.shared.type.id.UserId.getJooqConverter()</converter><includeExpression>.*?\.users\.id | .*?\.user_id | .*?\.owner_id | .*?\.created_by | .*?\.assignee_id</includeExpression><nullability>ALL</nullability><objectType>ALL</objectType>
+12:04:39 INFO Tables generated         : Total: 430.06ms
+12:04:39 INFO Generating table records
+12:04:39 INFO Generating record        : DefaultEffortUnitsRecord.java
+12:04:39 INFO Generating record        : OrganizationsRecord.java
+12:04:39 INFO Generating record        : ScheduledTasksRecord.java
+12:04:39 INFO Generating record        : SpringSessionRecord.java
+12:04:39 INFO Generating record        : SpringSessionAttributesRecord.java
+12:04:39 INFO Generating record        : UserEffortUnitsRecord.java
+12:04:39 INFO Generating record        : UserPreferencesRecord.java
+12:04:39 INFO Generating record        : UsersRecord.java
+12:04:39 INFO Generating record        : WorkspacesRecord.java
+12:04:39 INFO Table records generated  : Total: 466.354ms, +36.294ms
+12:04:39 INFO Generating table references
+12:04:39 INFO Table refs generated     : Total: 467.847ms, +1.492ms
+12:04:39 INFO Generating Keys
+12:04:39 INFO Keys generated           : Total: 469.912ms, +2.065ms
+12:04:39 INFO Generating Indexes
+12:04:39 INFO Indexes generated        : Total: 470.808ms, +0.895ms
+12:04:39 INFO Generating ENUMs
+12:04:39 INFO Generating ENUM          : EffortUnitLabel.java
+12:04:39 INFO Enums generated          : Total: 472.202ms, +1.394ms
+12:04:39 INFO Generation finished: public: Total: 472.364ms, +0.161ms
+12:04:39 INFO
+12:04:39 INFO Affected files: 24
+12:04:39 INFO Modified files: 24
+12:04:39 INFO Removing excess files
+
+> Task :compileJava
+> Task :classes
+> Task :resolveMainClassName
+
+> Task :processAot
+2026-02-24T12:04:45.493+01:00  INFO 6012 --- [           main] pm.be.pmbe2.Application                  : Starting Application using Java 25.0.2 with PID 6012 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\main started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+2026-02-24T12:04:45.495+01:00  INFO 6012 --- [           main] pm.be.pmbe2.Application                  : No active profile set, falling back to 1 default profile: "default"
+2026-02-24T12:04:46.434+01:00  INFO 6012 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=39a29b78-e416-345d-90bf-c965f65ac1a4
+2026-02-24T12:04:47.660+01:00  INFO 6012 --- [cTaskExecutor-1] com.tngtech.archunit.core.PluginLoader   : Detected Java version 25.0.2
+2026-02-24T12:04:48.802+01:00  INFO 6012 --- [           main] pplicationModulesFileGeneratingProcessor : Generating application modules information to META-INF/spring-modulith/application-modules.json
+
+> Task :compileAotJava
+Note: C:\Users\suppi\IdeaProjects\spring-modulith-template\build\generated\aotSources\org\springframework\modulith\events\config\EventPublicationAutoConfiguration__BeanDefinitions.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processAotResources
+> Task :aotClasses
+> Task :collectReachabilityMetadata
+> Task :bootJar
+> Task :jar
+> Task :assemble
+> Task :checkstyleAot SKIPPED
+> Task :compileTestFixturesJava
+
+> Task :compileTestJava
+C:\Users\suppi\IdeaProjects\spring-modulith-template\src\test\java\pm\be\pmbe2\workspace\controller\OrganizationControllerTest.java:56: warning: [UnusedVariable] The field 'identityApi' is never read.
+  @MockitoBean private IdentityApi identityApi;
+                                   ^
+    (see https://errorprone.info/bugpattern/UnusedVariable)
+  Did you mean to remove this line?
+1 warning
+
+> Task :processTestResources
+> Task :testClasses
+> Task :processTestFixturesResources NO-SOURCE
+> Task :testFixturesClasses
+> Task :testFixturesJar
+
+> Task :processTestAot
+12:05:00.189 [main] INFO org.springframework.test.context.aot.TestClassScanner -- Scanning for Spring test classes in all packages in classpath roots [C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test, C:\Users\suppi\IdeaProjects\spring-modulith-template\build\resources\test]
+12:05:00.638 [main] INFO com.tngtech.archunit.core.PluginLoader -- Detected Java version 25.0.2
+12:05:01.118 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.ApplicationTests]: ApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.168 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.ApplicationTests
+12:05:01.171 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.application.dev.controller.DevKeycloakTokenControllerTest]: DevKeycloakTokenControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.218 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.application.dev.controller.DevKeycloakTokenControllerTest
+12:05:01.222 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.identity.controller.IdentityControllerTest]: IdentityControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.263 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.identity.controller.IdentityControllerTest
+12:05:01.267 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.identity.repository.UserPreferenceRepositoryTest]: UserPreferenceRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.290 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.identity.repository.UserPreferenceRepositoryTest
+12:05:01.293 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.identity.repository.UserRepositoryTest]: UserRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.297 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.identity.repository.UserRepositoryTest
+12:05:01.299 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.controller.OrganizationControllerTest]: OrganizationControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.336 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.controller.OrganizationControllerTest
+12:05:01.339 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.controller.OrganizationMembershipControllerTest]: OrganizationMembershipControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.347 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.controller.OrganizationMembershipControllerTest
+12:05:01.349 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.controller.PersonalWorkspaceControllerTest]: PersonalWorkspaceControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.357 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.controller.PersonalWorkspaceControllerTest
+12:05:01.358 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.controller.WorkspaceControllerTest]: WorkspaceControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.366 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.controller.WorkspaceControllerTest
+12:05:01.367 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.controller.WorkspaceMembershipControllerTest]: WorkspaceMembershipControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.374 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.controller.WorkspaceMembershipControllerTest
+12:05:01.376 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.repository.OrganizationRepositoryTest]: OrganizationRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.401 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.repository.OrganizationRepositoryTest
+12:05:01.405 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [pm.be.pmbe2.workspace.repository.WorkspaceRepositoryTest]: WorkspaceRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+12:05:01.409 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration pm.be.pmbe2.Application for test class pm.be.pmbe2.workspace.repository.WorkspaceRepositoryTest
+12:05:01.798 [main] INFO  p.b.i.auth.AuthIntegrationTest - Starting AuthIntegrationTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:01.799 [main] INFO  p.b.i.auth.AuthIntegrationTest - The following 1 profile is active: "test"
+12:05:02.045 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 9.0.1.Final
+12:05:02.875 [main] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=fb19dbd3-4ff9-3d02-a736-9c419076f5cd
+12:05:05.571 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:06.391 [main] INFO  p.b.i.auth.KeycloakIntegrationTest - Starting KeycloakIntegrationTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:06.391 [main] INFO  p.b.i.auth.KeycloakIntegrationTest - The following 1 profile is active: "test"
+12:05:06.677 [main] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=95849efa-1d7b-3eef-82a8-335b575adfad
+12:05:06.885 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:07.264 [main] INFO  p.b.p.a.d.c.DevKeycloakTokenControllerTest - Starting DevKeycloakTokenControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:07.264 [main] INFO  p.b.p.a.d.c.DevKeycloakTokenControllerTest - The following 1 profile is active: "dev"
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\suppi\.gradle\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.17.8\f09415827a71be7ed621c7bd02550678f28bc81c\byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+12:05:07.838 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:07.915 [main] INFO  p.b.p.i.c.IdentityControllerTest - Starting IdentityControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:07.915 [main] INFO  p.b.p.i.c.IdentityControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:08.107 [main] WARN  o.s.t.c.b.o.BeanOverrideRegistry - Bean with name '<<< PSEUDO BEAN NAME PLACEHOLDER >>>' was overridden by multiple handlers: [[MockitoBeanOverrideHandler@a614959 field = private pm.be.pmbe2.identity.service.IdentityService pm.be.pmbe2.identity.controller.IdentityControllerTest.identityService, beanType = pm.be.pmbe2.identity.service.IdentityService, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false], [MockitoBeanOverrideHandler@453173a2 field = private pm.be.pmbe2.identity.service.SignupOrchestratorService pm.be.pmbe2.identity.controller.IdentityControllerTest.signupOrchestratorService, beanType = pm.be.pmbe2.identity.service.SignupOrchestratorService, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false]]
+12:05:08.266 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:08.577 [main] INFO  p.b.p.i.r.UserPreferenceRepositoryTest - Starting UserPreferenceRepositoryTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:08.577 [main] INFO  p.b.p.i.r.UserPreferenceRepositoryTest - No active profile set, falling back to 1 default profile: "default"
+12:05:08.900 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:09.005 [main] INFO  p.b.p.i.r.UserRepositoryTest - Starting UserRepositoryTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:09.005 [main] INFO  p.b.p.i.r.UserRepositoryTest - No active profile set, falling back to 1 default profile: "default"
+12:05:09.248 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:09.367 [main] INFO  p.b.p.w.c.OrganizationControllerTest - Starting OrganizationControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:09.367 [main] INFO  p.b.p.w.c.OrganizationControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:09.714 [main] WARN  o.s.t.c.b.o.BeanOverrideRegistry - Bean with name '<<< PSEUDO BEAN NAME PLACEHOLDER >>>' was overridden by multiple handlers: [[MockitoBeanOverrideHandler@3e779120 field = private pm.be.pmbe2.workspace.service.OrganizationService pm.be.pmbe2.workspace.controller.OrganizationControllerTest.organizationService, beanType = pm.be.pmbe2.workspace.service.OrganizationService, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false], [MockitoBeanOverrideHandler@34df5fa4 field = private pm.be.pmbe2.identity.api.IdentityApi pm.be.pmbe2.workspace.controller.OrganizationControllerTest.identityApi, beanType = pm.be.pmbe2.identity.api.IdentityApi, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false]]
+12:05:09.770 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:09.924 [main] INFO  p.b.p.w.c.OrganizationMembershipControllerTest - Starting OrganizationMembershipControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:09.924 [main] INFO  p.b.p.w.c.OrganizationMembershipControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:10.076 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:10.307 [main] INFO  p.b.p.w.c.PersonalWorkspaceControllerTest - Starting PersonalWorkspaceControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:10.307 [main] INFO  p.b.p.w.c.PersonalWorkspaceControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:10.557 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:10.659 [main] INFO  p.b.p.w.c.WorkspaceControllerTest - Starting WorkspaceControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:10.659 [main] INFO  p.b.p.w.c.WorkspaceControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:10.746 [main] WARN  o.s.t.c.b.o.BeanOverrideRegistry - Bean with name '<<< PSEUDO BEAN NAME PLACEHOLDER >>>' was overridden by multiple handlers: [[MockitoBeanOverrideHandler@66791b46 field = private pm.be.pmbe2.workspace.service.WorkspaceService pm.be.pmbe2.workspace.controller.WorkspaceControllerTest.workspaceService, beanType = pm.be.pmbe2.workspace.service.WorkspaceService, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false], [MockitoBeanOverrideHandler@54537bcb field = private pm.be.pmbe2.identity.api.IdentityApi pm.be.pmbe2.workspace.controller.WorkspaceControllerTest.identityApi, beanType = pm.be.pmbe2.identity.api.IdentityApi, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false]]
+12:05:10.768 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:10.867 [main] INFO  p.b.p.w.c.WorkspaceMembershipControllerTest - Starting WorkspaceMembershipControllerTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:10.867 [main] INFO  p.b.p.w.c.WorkspaceMembershipControllerTest - No active profile set, falling back to 1 default profile: "default"
+12:05:10.956 [main] WARN  o.s.t.c.b.o.BeanOverrideRegistry - Bean with name '<<< PSEUDO BEAN NAME PLACEHOLDER >>>' was overridden by multiple handlers: [[MockitoBeanOverrideHandler@f68b17a field = private pm.be.pmbe2.workspace.service.WorkspaceService pm.be.pmbe2.workspace.controller.WorkspaceMembershipControllerTest.workspaceService, beanType = pm.be.pmbe2.workspace.service.WorkspaceService, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false], [MockitoBeanOverrideHandler@2750f5dd field = private pm.be.pmbe2.identity.api.IdentityApi pm.be.pmbe2.workspace.controller.WorkspaceMembershipControllerTest.identityApi, beanType = pm.be.pmbe2.identity.api.IdentityApi, beanName = [null], contextName = '', strategy = REPLACE_OR_CREATE, reset = AFTER, extraInterfaces = set[[empty]], answers = RETURNS_DEFAULTS, serializable = false]]
+12:05:10.978 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:11.078 [main] INFO  p.b.p.w.r.OrganizationRepositoryTest - Starting OrganizationRepositoryTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:11.079 [main] INFO  p.b.p.w.r.OrganizationRepositoryTest - No active profile set, falling back to 1 default profile: "default"
+12:05:11.160 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+12:05:11.205 [main] INFO  p.b.p.w.r.WorkspaceRepositoryTest - Starting WorkspaceRepositoryTest using Java 25.0.2 with PID 24860 (C:\Users\suppi\IdeaProjects\spring-modulith-template\build\classes\java\test started by suppi in C:\Users\suppi\IdeaProjects\spring-modulith-template)
+12:05:11.205 [main] INFO  p.b.p.w.r.WorkspaceRepositoryTest - No active profile set, falling back to 1 default profile: "default"
+12:05:11.290 [main] INFO  o.s.m.r.a.ApplicationModulesFileGeneratingProcessor - Generating application modules information to META-INF/spring-modulith/application-modules.json
+
+> Task :compileAotTestJava
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processAotTestResources
+> Task :aotTestClasses
+> Task :checkstyleAotTest SKIPPED
+> Task :spotlessGroovyGradleCheck
+> Task :spotlessJavaCheck
+> Task :spotlessSqlCheck
+> Task :spotlessCheck
+> Task :checkstyleTestFixtures
+> Task :checkstyleMain
+> Task :checkstyleTest
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.sun.jna.Native in an unnamed module (file:/C:/Users/suppi/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.18.1/b27ba04287cc4abe769642fe8318d39fc89bf937/jna-5.18.1.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+12:06:25.107 [SpringApplicationShutdownHook] WARN  o.s.b.f.s.DisposableBeanAdapter - Invocation of destroy method failed on bean with name 'eventPublicationRegistry': org.springframework.jdbc.BadSqlGrammarException: StatementCallback; bad SQL grammar [SELECT ID, COMPLETION_DATE, EVENT_TYPE, LISTENER_ID, PUBLICATION_DATE, SERIALIZED_EVENT, STATUS, COMPLETION_ATTEMPTS, LAST_RESUBMISSION_DATE FROM EVENT_PUBLICATION WHERE COMPLETION_DATE IS NULL OR STATUS != 'COMPLETED' ORDER BY PUBLICATION_DATE ASC]
+12:06:25.112 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+12:06:25.113 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+12:06:26.038 [SpringApplicationShutdownHook] WARN  o.s.b.f.s.DisposableBeanAdapter - Invocation of destroy method failed on bean with name 'eventPublicationRegistry': org.springframework.jdbc.BadSqlGrammarException: StatementCallback; bad SQL grammar [SELECT ID, COMPLETION_DATE, EVENT_TYPE, LISTENER_ID, PUBLICATION_DATE, SERIALIZED_EVENT, STATUS, COMPLETION_ATTEMPTS, LAST_RESUBMISSION_DATE FROM EVENT_PUBLICATION WHERE COMPLETION_DATE IS NULL OR STATUS != 'COMPLETED' ORDER BY PUBLICATION_DATE ASC]
+12:06:26.040 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Shutdown initiated...
+12:06:26.042 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Shutdown completed.
+12:06:26.882 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-3 - Shutdown initiated...
+12:06:26.885 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-3 - Shutdown completed.
+12:06:27.264 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-4 - Shutdown initiated...
+12:06:27.267 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-4 - Shutdown completed.
+12:06:27.601 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-5 - Shutdown initiated...
+12:06:27.604 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-5 - Shutdown completed.
+12:06:27.925 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-6 - Shutdown initiated...
+12:06:27.927 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-6 - Shutdown completed.
+
+> Task :check
+> Task :bootRunMainClassName
+> Task :jacocoTestReport
+> Task :forkedSpringBootRun
+Error: LinkageError occurred while loading main class pm.be.pmbe2.Application
+	java.lang.UnsupportedClassVersionError: pm/be/pmbe2/Application has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0
+> Task :generateOpenApiDocs
+Unable to connect to http://localhost:8080/v3/api-docs waited for 60 seconds
+org.awaitility.core.ConditionTimeoutException: Condition org.awaitility.kotlin.AwaitilityKt$sam$java_util_concurrent_Callable$0 was not fulfilled within 1 minutes.
+	at org.awaitility.core.ConditionAwaiter.await(ConditionAwaiter.java:165)
+	at org.awaitility.core.CallableCondition.await(CallableCondition.java:78)
+	at org.awaitility.core.CallableCondition.await(CallableCondition.java:26)
+	at org.awaitility.core.ConditionFactory.until(ConditionFactory.java:895)
+	at org.awaitility.core.ConditionFactory.until(ConditionFactory.java:864)
+	at org.awaitility.kotlin.AwaitilityKt.until(AwaitilityKt.kt:137)
+	at org.springdoc.openapi.gradle.plugin.OpenApiGeneratorTask.generateApiDocs(OpenApiGeneratorTask.kt:98)
+	at org.springdoc.openapi.gradle.plugin.OpenApiGeneratorTask.execute(OpenApiGeneratorTask.kt:90)
+	at java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base@21.0.7/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:259)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:244)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:227)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:210)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:176)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:110)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:64)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:61)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:61)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:51)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:29)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:70)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:40)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:62)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:27)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:192)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:76)
+	at org.gradle.internal.Either$Right.fold(Either.java:176)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at java.base@21.0.7/java.util.Optional.orElseGet(Optional.java:364)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:63)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:34)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:64)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:42)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:77)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:133)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:59)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:77)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:43)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:305)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at java.base@21.0.7/java.util.Optional.orElseGet(Optional.java:364)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:44)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:121)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.DefaultNodeExecutor.executeLocalTaskNode(DefaultNodeExecutor.java:55)
+	at org.gradle.execution.plan.DefaultNodeExecutor.execute(DefaultNodeExecutor.java:34)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:355)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:343)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+	at java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
+Caused by: java.net.ConnectException: Connection refused: connect
+	at java.base/sun.nio.ch.Net.connect0(Native Method)
+	at java.base/sun.nio.ch.Net.connect(Net.java:589)
+	at java.base/sun.nio.ch.Net.connect(Net.java:578)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:583)
+	at java.base/java.net.Socket.connect(Socket.java:751)
+	at java.base/java.net.Socket.connect(Socket.java:686)
+	at java.base/sun.net.NetworkClient.doConnect(NetworkClient.java:183)
+	at java.base/sun.net.www.http.HttpClient.openServer(HttpClient.java:531)
+	at java.base/sun.net.www.http.HttpClient.openServer(HttpClient.java:636)
+	at java.base/sun.net.www.http.HttpClient.<init>(HttpClient.java:280)
+	at java.base/sun.net.www.http.HttpClient.New(HttpClient.java:386)
+	at java.base/sun.net.www.http.HttpClient.New(HttpClient.java:408)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.getNewHttpClient(HttpURLConnection.java:1319)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.plainConnect0(HttpURLConnection.java:1252)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.plainConnect(HttpURLConnection.java:1138)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.connect(HttpURLConnection.java:1067)
+	at org.springdoc.openapi.gradle.plugin.OpenApiGeneratorTask$generateApiDocs$1.invoke(OpenApiGeneratorTask.kt:110)
+	at org.springdoc.openapi.gradle.plugin.OpenApiGeneratorTask$generateApiDocs$1.invoke(OpenApiGeneratorTask.kt:98)
+	at org.awaitility.kotlin.AwaitilityKt$sam$java_util_concurrent_Callable$0.call(AwaitilityKt.kt)
+	at org.awaitility.core.CallableCondition$ConditionEvaluationWrapper.eval(CallableCondition.java:99)
+	at org.awaitility.core.ConditionAwaiter$ConditionPoller.call(ConditionAwaiter.java:222)
+	at org.awaitility.core.ConditionAwaiter$ConditionPoller.call(ConditionAwaiter.java:209)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	... 3 more
+
+> Task :generateOpenApiDocs FAILED
+> Task :forkedSpringBootStop
+
+[Incubating] Problems report is available at: file:///C:/Users/suppi/IdeaProjects/spring-modulith-template/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':generateOpenApiDocs'.
+> Unable to connect to http://localhost:8080/v3/api-docs waited for 60 seconds
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3m 4s
+36 actionable tasks: 36 executed
+12:07:31 PM: Execution finished 'clean spotlessApply build'.

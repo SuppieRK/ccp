@@ -1,0 +1,24 @@
+00000|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:11
+00001|    throw wrapped;
+00002|    ^
+00003|
+00004|Error: boom
+00005|    at fail (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:9:21)
+00006|    at Object.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:15:1)
+00007|    ... 6 lines matching cause stack trace ...
+00008|    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+00009|    at node:internal/main/run_main_module:36:49 {
+00010|  cause: Error: root-cause
+00011|      at rootCause (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:2:9)
+00012|      at fail (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:7:5)
+00013|      at Object.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/runtime_failure.js:15:1)
+00014|      at Module._compile (node:internal/modules/cjs/loader:1706:14)
+00015|      at Object..js (node:internal/modules/cjs/loader:1839:10)
+00016|      at Module.load (node:internal/modules/cjs/loader:1441:32)
+00017|      at Function._load (node:internal/modules/cjs/loader:1263:12)
+00018|      at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+00019|      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+00020|      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+00021|}
+00022|
+00023|Node.js v22.20.0

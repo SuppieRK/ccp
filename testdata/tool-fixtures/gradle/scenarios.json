@@ -1,0 +1,111 @@
+[
+  {
+    "name": "failure-missing-docker",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 1,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "failure-compile",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 1,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "download-artifacts",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 0,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "failure-jooq-spring-aot",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 1,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "success-jooq-spring-aot-openapi",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 0,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "failure-spotless",
+    "tool": "gradle",
+    "native": [
+      "./gradlew",
+      "build"
+    ],
+    "expect_exit": 1,
+    "required": false,
+    "text_only": true
+  },
+  {
+    "name": "success",
+    "tool": "gradle",
+    "project": "project/example",
+    "native": [
+      "./gradlew",
+      ":test",
+      "--tests",
+      "example.SuccessTest"
+    ],
+    "expect_exit": 0,
+    "must_contain": [
+      "[ok] :compileJava",
+      "BUILD SUCCESSFUL"
+    ],
+    "must_not_contain": [
+      "FAILURE:"
+    ],
+    "ignore_lines": [
+      "^$"
+    ],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "gradle",
+    "project": "project/example",
+    "native": [
+      "./gradlew",
+      ":test",
+      "--tests",
+      "example.FailureTest"
+    ],
+    "expect_exit": 1,
+    "must_contain": [
+      "BUILD FAILED"
+    ],
+    "must_not_contain": [],
+    "ignore_lines": [
+      "^$"
+    ],
+    "required": false
+  }
+]

@@ -1,0 +1,7 @@
+pytest: 0 passed, 1 failed
+failure details:
+- test_fail: AssertionError: assert {'ok': False} == {'ok': True}
+  ----------------------------- Captured stdout call -----------------------------
+  captured stdout call
+failed tests:
+- tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...

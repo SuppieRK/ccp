@@ -1,0 +1,54 @@
+[
+  {
+    "name": "success",
+    "tool": "pytest",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pytest", "-q", "tests/test_app.py::test_pass"],
+    "expect_exit": 0,
+    "must_contain": ["pytest: 1 passed"],
+    "must_not_contain": ["FAILED", "captured stdout call"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "pytest",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pytest", "-q", "tests/test_app.py::test_fail"],
+    "expect_exit": 1,
+    "must_contain": ["pytest: 0 passed, 1 failed", "tests/test_app.py::test_fail", "captured stdout call"],
+    "must_not_contain": ["pytest: 1 passed"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "module",
+    "tool": "python",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/python", "-m", "pytest", "-q", "tests/test_app.py::test_pass"],
+    "expect_exit": 0,
+    "must_contain": ["pytest: 1 passed"],
+    "must_not_contain": ["FAILED", "captured stdout call"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "no-tests",
+    "tool": "pytest",
+    "project": "projects/no-tests",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pytest", "-q"],
+    "expect_exit": 5,
+    "must_contain": ["pytest: no tests collected"],
+    "must_not_contain": ["pytest: 1 passed"],
+    "ignore_lines": ["^$"],
+    "required": true
+  }
+]

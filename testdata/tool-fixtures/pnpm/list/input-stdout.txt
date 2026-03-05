@@ -1,0 +1,8 @@
+00000|Legend: production dependency, optional only, dev only
+00001|
+00002|@bench/root@1.0.0 /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/pnpm/projects/workspace (PRIVATE)
+00003|│
+00004|│   dependencies:
+00005|└── @bench/lib@link:packages/lib
+00006|
+00007|1 package

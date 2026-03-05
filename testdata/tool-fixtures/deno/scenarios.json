@@ -1,0 +1,47 @@
+[
+  {
+    "name": "run-success",
+    "tool": "deno",
+    "project": "projects/success",
+    "native": ["deno", "run", "app.ts"],
+    "expect_exit": 0,
+    "must_contain": ["app payload"],
+    "must_not_contain": ["panic:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "test-failure",
+    "tool": "deno",
+    "project": "projects/failure",
+    "native": ["deno", "test"],
+    "expect_exit": 1,
+    "must_contain": ["error:"],
+    "must_not_contain": ["ok"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "run-low-confidence-passthrough",
+    "tool": "deno",
+    "project": "projects/low-confidence",
+    "native": ["deno", "run", "main.ts"],
+    "expect_exit": 0,
+    "must_contain": ["abc", "def"],
+    "must_not_contain": ["ok"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "lint-structured-passthrough",
+    "tool": "deno",
+    "project": "projects/structured",
+    "native": ["deno", "lint", "--json", "lint_target.ts"],
+    "expect_exit": 1,
+    "must_contain": ["\"diagnostics\"", "\"code\""],
+    "must_not_contain": ["ok"],
+    "ignore_lines": ["^$"],
+    "structured_output": true,
+    "required": false
+  }
+]

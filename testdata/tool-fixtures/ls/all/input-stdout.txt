@@ -1,0 +1,13 @@
+00000|.
+00001|..
+00002|.ccp
+00003|.hidden-fixture
+00004|README.md
+00005|docs
+00006|emptydir
+00007|file-0.bin
+00008|file-1.bin
+00009|file-2.bin
+00010|link-to-main.txt
+00011|node_modules
+00012|src

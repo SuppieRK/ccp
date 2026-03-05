@@ -1,0 +1,24 @@
+[
+  {
+    "name": "success",
+    "tool": "cargo",
+    "project": "projects/success",
+    "native": ["cargo", "clippy", "--", "-D", "warnings"],
+    "expect_exit": 0,
+    "must_contain": ["cargo clippy: ok"],
+    "must_not_contain": ["error["],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "cargo",
+    "project": "projects/failure",
+    "native": ["cargo", "clippy", "--", "-D", "warnings"],
+    "expect_exit": 101,
+    "must_contain": ["clippy::"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  }
+]

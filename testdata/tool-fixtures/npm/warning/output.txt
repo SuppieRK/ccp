@@ -1,0 +1,3 @@
+Checked 1 file
+(node:158835) DeprecationWarning: normalizeName() is deprecated; migrate to normalizeUserName()
+(Use `node --trace-deprecation ...` to show where the warning was created)

@@ -1,0 +1,12 @@
+00000|    Checking fixture-cargo-clippy-failure v0.1.0 (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/cargo-clippy/projects/failure)
+00001|error: length comparison to zero
+00002| --> src/main.rs:7:8
+00003|  |
+00004|7 |     if name.len() > 0 {
+00005|  |        ^^^^^^^^^^^^^^ help: using `!is_empty` is clearer and more explicit: `!name.is_empty()`
+00006|  |
+00007|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#len_zero
+00008|  = note: `-D clippy::len-zero` implied by `-D warnings`
+00009|  = help: to override `-D warnings` add `#[allow(clippy::len_zero)]`
+00010|
+00011|error: could not compile `fixture-cargo-clippy-failure` (bin "fixture-cargo-clippy-failure") due to 1 previous error

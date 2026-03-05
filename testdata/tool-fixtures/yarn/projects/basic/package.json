@@ -1,0 +1,9 @@
+{
+  "name": "yarn-benchmark",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test:success": "node scripts/success.js",
+    "test:failure": "node scripts/failure.js"
+  }
+}

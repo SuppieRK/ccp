@@ -1,0 +1,54 @@
+[
+  {
+    "name": "failure",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prettier", "--check", "src/bad.js"],
+    "expect_exit": 1,
+    "must_contain": ["prettier check: 1 files need formatting", "- src/bad.js"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure-multiple",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prettier", "--check", "src/bad.js", "src/bad2.js"],
+    "expect_exit": 1,
+    "must_contain": ["prettier check: 2 files need formatting", "- src/bad.js", "- src/bad2.js"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "success",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prettier", "--check", "src/good.js"],
+    "expect_exit": 0,
+    "must_contain": ["prettier check: ok"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "write",
+    "tool": "npx",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["npx", "prettier", "--write", "src/write_bad.js"],
+    "expect_exit": 0,
+    "must_contain": ["src/write_bad.js"],
+    "must_not_contain": ["Need to install the following packages:", "Ok to proceed?"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

@@ -1,0 +1,1 @@
+00000| ERR_PNPM_OUTDATED_NO_LOCKFILE  No lockfile in directory "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/pnpm/projects/workspace". Run `pnpm install` to generate one.

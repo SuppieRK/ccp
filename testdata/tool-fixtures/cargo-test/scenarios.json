@@ -1,0 +1,24 @@
+[
+  {
+    "name": "success",
+    "tool": "cargo",
+    "project": "projects/success",
+    "native": ["cargo", "test"],
+    "expect_exit": 0,
+    "must_contain": ["cargo test: ok"],
+    "must_not_contain": ["cargo test: failed"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "cargo",
+    "project": "projects/failure",
+    "native": ["cargo", "test"],
+    "expect_exit": 101,
+    "must_contain": ["cargo test: failed", "failure details:"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  }
+]

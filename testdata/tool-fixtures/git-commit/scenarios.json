@@ -1,0 +1,36 @@
+[
+  {
+    "name": "success",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_success.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "commit", "--allow-empty", "-m", "bench commit"],
+    "expect_exit": 0,
+    "must_contain": ["git commit: ok"],
+    "must_not_contain": ["fatal:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_failure.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "commit", "-m", "bench commit"],
+    "expect_exit": 128,
+    "must_contain": ["fatal:", "not a git repository"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

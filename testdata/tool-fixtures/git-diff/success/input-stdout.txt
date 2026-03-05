@@ -1,0 +1,7 @@
+00000|diff --git a/tracked.txt b/tracked.txt
+00001|index 3367afd..3e75765 100644
+00002|--- a/tracked.txt
+00003|+++ b/tracked.txt
+00004|@@ -1 +1 @@
+00005|-old
+00006|+new

@@ -1,0 +1,21 @@
+00000|F                                                                        [100%]
+00001|=================================== FAILURES ===================================
+00002|__________________________________ test_fail ___________________________________
+00003|
+00004|    def test_fail():
+00005|        print("captured stdout call")
+00006|        left = {"ok": False}
+00007|        right = {"ok": True}
+00008|>       assert left == right
+00009|E       AssertionError: assert {'ok': False} == {'ok': True}
+00010|E         
+00011|E         Differing items:
+00012|E         {'ok': False} != {'ok': True}
+00013|E         Use -v to get more diff
+00014|
+00015|tests/test_app.py:10: AssertionError
+00016|----------------------------- Captured stdout call -----------------------------
+00017|captured stdout call
+00018|=========================== short test summary info ============================
+00019|FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
+00020|1 failed in 1.42s

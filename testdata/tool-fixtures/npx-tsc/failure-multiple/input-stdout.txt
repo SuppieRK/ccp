@@ -1,0 +1,3 @@
+00000|src/fail.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+00001|src/fail.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.
+00002|src/fail2.ts(2,10): error TS2304: Cannot find name 'missingSymbol'.

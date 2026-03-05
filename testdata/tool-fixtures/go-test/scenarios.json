@@ -1,0 +1,41 @@
+[
+  {
+    "name": "success",
+    "tool": "go",
+    "project": "projects/success",
+    "native": ["go", "test", "-count=1", "./..."],
+    "expect_exit": 0,
+    "must_contain": ["go test: 2 passed, 1 no-test-files"],
+    "must_not_contain": ["panic:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure",
+    "tool": "go",
+    "project": "projects/failure",
+    "native": ["go", "test", "-count=1", "./..."],
+    "expect_exit": 1,
+    "must_contain": [
+      "context: byte compare baseline=ccp expected=cxp",
+      "--- FAIL: TestByteCompare",
+      "context: struct field expected=fixture-bad actual=fixture",
+      "--- FAIL: TestStructField",
+      "go test: 1 passed, 2 failed, 1 no-test-files"
+    ],
+    "must_not_contain": ["panic:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "json-passthrough",
+    "tool": "go",
+    "project": "projects/success",
+    "native": ["go", "test", "-count=1", "-json", "./..."],
+    "expect_exit": 0,
+    "must_contain": ["\"Action\":\"pass\""],
+    "must_not_contain": ["go test:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  }
+]

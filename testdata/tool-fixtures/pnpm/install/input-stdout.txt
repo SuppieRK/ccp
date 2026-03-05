@@ -1,0 +1,5 @@
+00000|Scope: all 3 workspace projects
+00001|Lockfile is up to date, resolution step is skipped
+00002|Already up to date
+00003|
+00004|Done in 244ms using pnpm v10.30.3

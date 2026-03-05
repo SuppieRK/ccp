@@ -1,0 +1,1 @@
+00000|fatal: not a git repository: '.git'

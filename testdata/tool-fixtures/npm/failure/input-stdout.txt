@@ -1,0 +1,38 @@
+00000|
+00001|> ccp-npm-benchmark-basic@1.0.0 failure-diagnostics
+00002|> node --test test/failure.test.js
+00003|
+00004|TAP version 13
+00005|# Subtest: divide returns integer result
+00006|not ok 1 - divide returns integer result
+00007|  ---
+00008|  duration_ms: 0.62068
+00009|  type: 'test'
+00010|  location: '/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/npm/projects/basic/test/failure.test.js:5:1'
+00011|  failureType: 'testCodeFailure'
+00012|  error: |-
+00013|    Expected values to be strictly equal:
+00014|    
+00015|    3.5 !== 4
+00016|    
+00017|  code: 'ERR_ASSERTION'
+00018|  name: 'AssertionError'
+00019|  expected: 4
+00020|  actual: 3.5
+00021|  operator: 'strictEqual'
+00022|  stack: |-
+00023|    TestContext.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/npm/projects/basic/test/failure.test.js:6:10)
+00024|    Test.runInAsyncScope (node:async_hooks:214:14)
+00025|    Test.run (node:internal/test_runner/test:1047:25)
+00026|    Test.start (node:internal/test_runner/test:944:17)
+00027|    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+00028|  ...
+00029|1..1
+00030|# tests 1
+00031|# suites 0
+00032|# pass 0
+00033|# fail 1
+00034|# cancelled 0
+00035|# skipped 0
+00036|# todo 0
+00037|# duration_ms 37.52695

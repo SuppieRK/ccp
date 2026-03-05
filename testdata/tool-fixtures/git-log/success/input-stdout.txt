@@ -1,0 +1,17 @@
+00000|commit 8800a11947af9264b28acbcebd177cbfdf507920
+00001|Author: bench <bench@example.com>
+00002|Date:   Fri Feb 27 23:21:54 2026 +0100
+00003|
+00004|    third commit
+00005|
+00006|commit 6f3fda33d1707a6b184b8f8bd088998a8c5f7885
+00007|Author: bench <bench@example.com>
+00008|Date:   Fri Feb 27 23:21:53 2026 +0100
+00009|
+00010|    second commit
+00011|
+00012|commit d122e803842b0782a702dfbb7d3352ca0ba0f953
+00013|Author: bench <bench@example.com>
+00014|Date:   Fri Feb 27 23:21:53 2026 +0100
+00015|
+00016|    initial commit

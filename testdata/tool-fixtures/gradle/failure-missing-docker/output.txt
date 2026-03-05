@@ -1,0 +1,73 @@
+[ok] :clean
+[ok] :examples:basic-demo:clean
+[ok] :spotlessInternalRegisterDependencies
+[ok] :spotlessGroovyGradle
+[ok] :spotlessGroovyGradleApply
+[ok] :spotlessJava
+[ok] :spotlessJavaApply
+[ok] :spotlessApply
+[ok] :spotlessJavaCheck
+[ok] :compileJava
+[ok] :processResources
+[ok] :classes
+[ok] :resolveMainClassName
+[ok] :bootJar
+[ok] :jar
+[ok] :javadoc
+[ok] :javadocJar
+[ok] :sourceJar
+[ok] :sourcesJar
+[ok] :assemble
+[ok] :spotlessGroovyGradleCheck
+[ok] :spotlessCheck
+[ok] :compileTestJava
+[ok] :processTestResources
+[ok] :testClasses
+> Task :test
+        Caused by: java.lang.IllegalStateException at DockerClientProviderStrategy.java:274
+MultiLevelCacheAutoConfigurationTest > instantiationTest() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > useKeyPrefixWithoutPrefixFailsFast() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > redisTemplateUsesJsonValueSerializerByDefault() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > instantiationTestWithDifferentCacheTypes(CacheType) > initializationError FAILED
+    java.lang.NoClassDefFoundError at Method.java:569
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > circuitBreakerWarnsWhenWaitDurationTooHigh(CapturedOutput) FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > instantiationTestWithDifferentLocalExpirationModes(String, LocalExpirationMode) > initializationError FAILED
+    java.lang.NoClassDefFoundError at Method.java:569
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > redisTemplateUsesCustomValueSerializerWhenProvided() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > cacheNamesTest() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at DockerClientProviderStrategy.java:274
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > zeroLocalTimeToLive() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeExpiryJitter() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > tooBigExpiryJitter() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > expirationWithinConfiguredJitterRange() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeLocalTimeToLive() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeTimeToLive() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > zeroTimeToLive() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended

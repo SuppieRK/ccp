@@ -1,0 +1,18 @@
+00000|WARNING: A restricted method in java.lang.System has been called
+00001|WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.2.0-bin/11i5gvueggl8a5cioxuftxrik/gradle-9.2.0/lib/native-platform-0.22-milestone-29.jar)
+00002|WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+00003|WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+00004|
+00017|
+00018|1 test completed, 1 failed
+00019|
+00020|FAILURE: Build failed with an exception.
+00021|
+00022|* What went wrong:
+00023|Execution failed for task ':test'.
+00024|> There were failing tests. See the report at: file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/gradle/project/example/build/reports/tests/test/index.html
+00025|
+00026|* Try:
+00027|> Run with --scan to generate a Build Scan (powered by Develocity).
+00028|
+00029|BUILD FAILED in 1s

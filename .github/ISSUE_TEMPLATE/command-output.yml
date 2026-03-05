@@ -1,0 +1,77 @@
+name: Command Output
+description: Report when CCP output differs from native command output / expectation.
+title: "[output] <command>"
+labels:
+  - output
+body:
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact command you ran.
+      placeholder: |
+        find . -type f
+    validations:
+      required: true
+
+  - type: textarea
+    id: normal_stdout
+    attributes:
+      label: Normal Command STDOUT
+      description: Standard output from running the command without CCP.
+      placeholder: |
+        <paste native command stdout here, using ccp --capture-raw>
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: normal_stderr
+    attributes:
+      label: Normal Command STDERR
+      description: Standard error output from running the command without CCP.
+      placeholder: |
+        <paste native command stderr here, using ccp --capture-raw>
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: received_output
+    attributes:
+      label: Received CCP Output
+      description: Output you got when running the command through CCP.
+      placeholder: |
+        <paste CCP output here>
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_output
+    attributes:
+      label: Desired CCP Output (Optional)
+      description: If known, show what CCP output should look like.
+      placeholder: |
+        <optional expected CCP output>
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: ccp_version
+    attributes:
+      label: CCP Version
+      description: Output of `ccp --version`.
+      placeholder: 0.1.0
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / Shell
+      description: Operating system and shell used.
+      placeholder: Ubuntu 24.04 / bash
+    validations:
+      required: false

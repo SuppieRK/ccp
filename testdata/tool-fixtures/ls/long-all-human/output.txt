@@ -1,0 +1,13 @@
+.ccp/
+docs/
+emptydir/
+node_modules/
+src/
+.hidden-fixture  23B
+README.md  59B
+file-0.bin  21B
+file-1.bin  26B
+file-2.bin  35B
+link-to-main.txt  29B
+
+summary: 6 files, 5 dirs

@@ -1,0 +1,46 @@
+[
+  {
+    "name": "go-files",
+    "tool": "find",
+    "project": "projects/basic",
+    "native": ["find", ".", "-name", "*.go", "-type", "f"],
+    "expect_exit": 0,
+    "must_contain": ["pkg/a/", "a.go", "pkg/b/", "b.go"],
+    "must_not_contain": ["random-jitter"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "all-files-with-ignore",
+    "tool": "find",
+    "project": "projects/basic",
+    "native": ["find", ".", "-name", "*", "-type", "f"],
+    "expect_exit": 0,
+    "must_contain": ["main.go", "README.md"],
+    "must_not_contain": ["random-jitter"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "directories",
+    "tool": "find",
+    "project": "projects/basic",
+    "native": ["find", ".", "-type", "d"],
+    "expect_exit": 0,
+    "must_contain": ["docs/", "pkg/"],
+    "must_not_contain": ["random-jitter"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "no-files-found",
+    "tool": "find",
+    "project": "projects/basic",
+    "native": ["find", ".", "-name", "*.doesnotexist", "-type", "f"],
+    "expect_exit": 0,
+    "must_contain": [],
+    "must_not_contain": ["random-jitter"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

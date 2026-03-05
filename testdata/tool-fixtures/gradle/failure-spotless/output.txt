@@ -1,0 +1,44 @@
+[ok] :clean
+[ok] :examples:basic-demo:clean
+[ok] :spotlessInternalRegisterDependencies
+[ok] :spotlessGroovyGradle
+[ok] :spotlessGroovyGradleApply
+[ok] :spotlessJava
+> Task :spotlessJavaApply FAILED
+[Incubating] Problems report is available at: file:///C:/Users/suppi/IdeaProjects/spring-boot-multilevel-cache-starter/build/reports/problems/problems-report.html
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+For more on this, please refer to https://docs.gradle.org/9.3.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+7 actionable tasks: 7 executed
+8:15: error: ',', '}', or ';' expected
+com.google.googlejavaformat.java.FormatterException: 8:15: error: ',', '}', or ';' expected
+	at com.google.googlejavaformat.java.FormatterException.fromJavacDiagnostics(FormatterException.java:54)
+	at com.google.googlejavaformat.java.Formatter.format(Formatter.java:149)
+	at com.google.googlejavaformat.java.Formatter.getFormatReplacements(Formatter.java:279)
+	at com.google.googlejavaformat.java.Formatter.formatSource(Formatter.java:253)
+	at com.google.googlejavaformat.java.Formatter.formatSource(Formatter.java:219)
+	at com.diffplug.spotless.glue.java.GoogleJavaFormatFormatterFunc.apply(GoogleJavaFormatFormatterFunc.java:65)
+	at com.diffplug.spotless.FormatterFunc.apply(FormatterFunc.java:33)
+	at com.diffplug.spotless.FormatterStepEqualityOnStateSerialization.format(FormatterStepEqualityOnStateSerialization.java:51)
+	at com.diffplug.spotless.Formatter.computeWithLint(Formatter.java:172)
+	at com.diffplug.spotless.Formatter.compute(Formatter.java:137)
+	at com.diffplug.spotless.generic.FenceStep$BaseFormatter.applyWithFile(FenceStep.java:226)
+	at com.diffplug.spotless.FormatterFunc$NeedsFile.apply(FormatterFunc.java:174)
+	at com.diffplug.spotless.DirtyState.of(DirtyState.java:96)
+	at com.diffplug.spotless.LintState.of(LintState.java:140)
+	at com.diffplug.spotless.LintState.of(LintState.java:134)
+	at com.diffplug.gradle.spotless.SpotlessTaskImpl.processInputFile(SpotlessTaskImpl.java:136)
+	at com.diffplug.gradle.spotless.SpotlessTaskImpl.performAction(SpotlessTaskImpl.java:119)
+8:15: error: ',', '}', or ';' expected
+com.google.googlejavaformat.java.FormatterException: 8:15: error: ',', '}', or ';' expected
+	at com.google.googlejavaformat.java.FormatterException.fromJavacDiagnostics(FormatterException.java:54)
+	at com.diffplug.spotless.LintState.of(LintState.java:177)
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':spotlessJavaApply'.
+> There were 1 lint error(s), they must be fixed or suppressed.
+  src/main/java/io/github/suppie/spring/cache/LocalExpirationMode.java:L8 toggle(toggle) error: ',', '}', or ';' expected
+  Resolve these lints or suppress with `suppressLintsFor`
+* Try:
+> Get more help at https://help.gradle.org.
+BUILD FAILED in 1s

@@ -1,0 +1,286 @@
+name: PR Validation
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Run go vet
+        shell: bash
+        run: |
+          go vet ./...
+
+      - name: Run tests
+        shell: bash
+        run: |
+          go test -count=1 ./...
+
+      - name: Run race detector
+        shell: bash
+        run: |
+          go test -count=1 -race ./...
+
+      - name: Generate internal coverage profile
+        shell: bash
+        run: |
+          mkdir -p .artifacts/coverage
+          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
+
+      - name: Enforce internal coverage gate (package + module)
+        shell: bash
+        run: |
+          go run ./cmd/coverage-gate \
+            -coverprofile .artifacts/coverage/internal.cover \
+            -module go-command-compression-proxy \
+            -internal-prefix internal/ \
+            -threshold 80 \
+            -summary-out .artifacts/coverage/summary.md
+
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" && -f .artifacts/coverage/summary.md ]]; then
+            cat .artifacts/coverage/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  benchmark-discover:
+    name: Benchmark Discover (PR)
+    runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.select-tools.outputs.tools }}
+      has_tools: ${{ steps.select-tools.outputs.has_tools }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select benchmark tools from changed files
+        id: select-tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t all_tools < <(find testdata/tool-fixtures -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          if [[ ${#all_tools[@]} -eq 0 ]]; then
+            echo "No benchmark tools found under testdata/tool-fixtures" >&2
+            exit 1
+          fi
+
+          declare -A selected=()
+          run_all=0
+
+          add_prefix() {
+            local prefix="$1"
+            local t
+            for t in "${all_tools[@]}"; do
+              if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
+                selected["$t"]=1
+              fi
+            done
+          }
+
+          add_exact_if_exists() {
+            local exact="$1"
+            local t
+            for t in "${all_tools[@]}"; do
+              if [[ "$t" == "$exact" ]]; then
+                selected["$t"]=1
+                return
+              fi
+            done
+          }
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            mapfile -t changed < <(git diff --name-only "$base_sha" "$head_sha")
+          else
+            changed=()
+          fi
+
+          if [[ ${#changed[@]} -eq 0 && "${{ github.event_name }}" != "pull_request" ]]; then
+            run_all=1
+          fi
+
+          for path in "${changed[@]}"; do
+            [[ -z "$path" ]] && continue
+            case "$path" in
+              testdata/tool-fixtures/*)
+                tool="${path#testdata/tool-fixtures/}"
+                tool="${tool%%/*}"
+                add_exact_if_exists "$tool"
+                ;;
+              openspec/specs/*/spec.md)
+                cap="${path#openspec/specs/}"
+                cap="${cap%%/*}"
+                add_exact_if_exists "$cap"
+                ;;
+              internal/engine/filters/*)
+                rel="${path#internal/engine/filters/}"
+                first="${rel%%/*}"
+                first="${first%%.*}"
+                case "$first" in
+                  cargo|docker|git|go|kubectl|npx)
+                    add_prefix "$first"
+                    ;;
+                  *)
+                    add_exact_if_exists "$first"
+                    ;;
+                esac
+                ;;
+              cmd/ccp/*|internal/runner/*|internal/engine/*|internal/metrics/*|tools/benchmark/*|go.mod|go.sum)
+                run_all=1
+                ;;
+            esac
+          done
+
+          if [[ "$run_all" -eq 1 ]]; then
+            tools_json=$(printf "%s\n" "${all_tools[@]}" | jq -R -s -c 'split("\n")[:-1]')
+            has_tools=true
+          elif [[ ${#selected[@]} -gt 0 ]]; then
+            tools_json=$(printf "%s\n" "${!selected[@]}" | sort | jq -R -s -c 'split("\n")[:-1]')
+            has_tools=true
+          else
+            tools_json="[]"
+            has_tools=false
+          fi
+
+          echo "tools=${tools_json}" >> "$GITHUB_OUTPUT"
+          echo "has_tools=${has_tools}" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            echo "## PR Benchmark Tool Selection" >> "${GITHUB_STEP_SUMMARY}"
+            echo "" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- Changed files analyzed: ${#changed[@]}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- Selected tools: \`${tools_json}\`" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  benchmark-tool:
+    name: Benchmark (PR informational) / ${{ matrix.tool }}
+    needs: [validate, benchmark-discover]
+    if: needs.benchmark-discover.outputs.has_tools == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: ${{ fromJson(needs.benchmark-discover.outputs.tools) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Rust (cargo)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm --version
+
+      - name: Setup kind
+        uses: helm/kind-action@v1.14.0
+        with:
+          install_only: true
+
+      - name: Build ccp binary
+        shell: bash
+        run: |
+          mkdir -p .bin
+          go build -o .bin/ccp ./cmd/ccp
+          echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
+
+      - name: Pre-pull Docker benchmark images
+        shell: bash
+        run: |
+          docker pull nginx:alpine
+          docker pull alpine:latest
+
+      - name: Restore benchmark history cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .artifacts/benchmark-history/${{ matrix.tool }}
+          key: benchmark-report-main-${{ matrix.tool }}-v1-
+          restore-keys: |
+            benchmark-report-main-${{ matrix.tool }}-v1-
+
+      - name: Run benchmark harness for tool
+        id: run-benchmark
+        shell: bash
+        env:
+          BENCH_YELLOW_OVERHEAD_ABS_MS: ${{ vars.BENCH_YELLOW_OVERHEAD_ABS_MS || '20' }}
+          BENCH_YELLOW_OVERHEAD_REL_PCT: ${{ vars.BENCH_YELLOW_OVERHEAD_REL_PCT || '25' }}
+          BENCH_YELLOW_MIN_NATIVE_MS: ${{ vars.BENCH_YELLOW_MIN_NATIVE_MS || '50' }}
+        run: |
+          set -euo pipefail
+          tool="${{ matrix.tool }}"
+          out_dir="${GITHUB_WORKSPACE}/.artifacts/benchmark/${tool}"
+          history_dir="${GITHUB_WORKSPACE}/.artifacts/benchmark-history/${tool}"
+          prev_report="${history_dir}/report.json"
+          mkdir -p "$out_dir" "$history_dir"
+
+          (
+            cd tools/benchmark
+            go run ./cmd/ccp-ci \
+              -fixtures-root "${GITHUB_WORKSPACE}/testdata/tool-fixtures" \
+              -artifacts-dir "$out_dir" \
+              -previous-report "$prev_report" \
+              -tool "$tool" \
+              -max-artifact-bytes 5242880
+          )
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy-benchmark-pr-${{ matrix.tool }}
+          path: .artifacts/benchmark/${{ matrix.tool }}
+          retention-days: 14

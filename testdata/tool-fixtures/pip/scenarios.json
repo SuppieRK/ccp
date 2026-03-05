@@ -1,0 +1,41 @@
+[
+  {
+    "name": "show-passthrough",
+    "tool": "pip",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pip", "show", "pip"],
+    "expect_exit": 0,
+    "must_contain": ["Name: pip", "Version:"],
+    "must_not_contain": ["ok"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "list-verbose",
+    "tool": "pip",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pip", "list", "--verbose"],
+    "expect_exit": 0,
+    "must_contain": ["pip list:", "pip ("],
+    "must_not_contain": ["Need to install the following packages:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "list-freeze-passthrough",
+    "tool": "pip",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./.venv/bin/pip", "list", "--format=freeze"],
+    "expect_exit": 0,
+    "must_contain": ["pip=="],
+    "must_not_contain": ["pip list:"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

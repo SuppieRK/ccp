@@ -1,0 +1,5 @@
+ M modified.txt
+M  staged.txt
+?? .ccp/
+?? scripts/
+?? untracked.txt

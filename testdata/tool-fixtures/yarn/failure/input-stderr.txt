@@ -1,0 +1,2 @@
+00003|fatal: boom
+00004|error Command failed with exit code 1.

@@ -1,0 +1,48 @@
+[
+  {
+    "name": "success",
+    "tool": "kubectl",
+    "dispatch": "kubectl get services",
+    "project": "project",
+    "before_start": [
+      ["./scripts/cluster_up.sh"],
+      ["./scripts/setup_services_fold.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["kubectl", "get", "services", "-n", "ccp-bench"],
+    "expect_exit": 0,
+    "must_contain": ["[2] services: ClusterIP 80/TCP"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "unknown-headers",
+    "tool": "kubectl",
+    "dispatch": "kubectl get services",
+    "project": "project",
+    "before_start": [
+      ["./scripts/cluster_up.sh"],
+      ["./scripts/setup_services_fold.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": [
+      "kubectl",
+      "get",
+      "services",
+      "-n",
+      "ccp-bench",
+      "-o",
+      "custom-columns=CUSTOM:.metadata.name,COLS:.spec.type,HERE:.spec.clusterIP"
+    ],
+    "expect_exit": 0,
+    "must_contain": ["CUSTOM", "COLS", "HERE"],
+    "must_not_contain": ["services:"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

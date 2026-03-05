@@ -1,0 +1,5 @@
+00000|WARNING: A restricted method in java.lang.System has been called
+00001|WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.2.0-bin/11i5gvueggl8a5cioxuftxrik/gradle-9.2.0/lib/native-platform-0.22-milestone-29.jar)
+00002|WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+00003|WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+00004|

@@ -1,0 +1,4 @@
+00000|NAME STATUS ROLES AGE VERSION
+00001|node-a Ready worker 3d v1.29.0
+00002|node-b Ready worker 3d v1.29.0
+00003|node-c NotReady worker 2m v1.29.0

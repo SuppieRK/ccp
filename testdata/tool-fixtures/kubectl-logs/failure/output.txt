@@ -1,0 +1,1 @@
+error: error from server (NotFound): pods "missing-pod" not found in namespace "ccp-bench"

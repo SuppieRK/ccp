@@ -1,0 +1,29 @@
+WORK=/tmp/go-build1185181138
+cd /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy
+git status --porcelain
+cd /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy
+git -c log.showsignature=false show -s --format=%H:%ct
+mkdir -p $WORK/b001/
+cat >/tmp/go-build1185181138/b001/importcfg.link << 'EOF' # internal
+packagefile fixture-go-build=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/8e/8eab030e49eaf85585e94e72f36f518fa4d111f0d01cefbe05debba6ad7c3766-d
+packagefile fixture-go-build/lib=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/08/08a85aab6fd6b6775a73a6af29d35645ad77c190441a3c1520fc70ee1f3c7760-d
+packagefile runtime=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/f5/f5966af2f8ca82247304032a0ef73c00b22421dfe30cd7293813a0ebdd2636bd-d
+packagefile internal/abi=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/69/69bc9d9aab36a9b1b2c576399106bcac4c158bc13563cff9e4dc550d8bca7927-d
+packagefile internal/bytealg=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/3c/3ca9f3d86328521b7ebdb67d2b142e225314e20995659acbecd86973d5c5a06e-d
+packagefile internal/chacha8rand=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/f5/f5b68ff0483990fe0c02f3a744232f500e56e02d88c5e728423282befaef0212-d
+packagefile internal/coverage/rtcov=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/ec/ecb8b81d1ac53f068c21561167a29b50f32c6de97b7c304b71f75c926fee6cb0-d
+packagefile internal/cpu=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/de/de8028b6f1a7f4238222d95ecb8587390d751ba98d2b512a9a4437ec3c73d506-d
+packagefile internal/goarch=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/0d/0d2a0ba6eb9379c5ff0e137bc928ea099d76e9f61d9c2a2c591cb2aef5922e46-d
+packagefile internal/godebugs=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/49/49a34b181a765c694d50b98936ef72a21756da53b11b40354362ec81f504cfad-d
+packagefile internal/goexperiment=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/70/70402071cfb27d1a2a4b79dd54dca59f811bf4f410636f06e2be349fddea172b-d
+packagefile internal/goos=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/ac/acc4505e9587e9679db61b5f25d204bb07ace206991f9a104a96cf73005eb12a-d
+packagefile runtime/internal/atomic=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/85/8501ea793151b1b9aedcd711cb27a44997ca65ae56a59afc02921571729d9dc0-d
+packagefile runtime/internal/math=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/25/2523a88aa3aa51c9638a26fe61b0ba0e6021d71066fc40d0c77bafcb88003e6e-d
+packagefile runtime/internal/sys=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/da/da3a93f4ddab420f19552e8fe8e82b66a02125a8f27cd8b0f9cb0a41e49f86cb-d
+packagefile runtime/internal/syscall=/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/a0/a07e525e78f00cc5e05f48e0e5b651b672a10e900ad2448ffc4009a6c0e83233-d
+modinfo "0w\xaf\f\x92t\b\x02A\xe1\xc1\a\xe6\xd6\x18\xe6path\tfixture-go-build\nmod\tfixture-go-build\t(devel)\t\nbuild\t-buildmode=exe\nbuild\t-compiler=gc\nbuild\tCGO_ENABLED=1\nbuild\tCGO_CFLAGS=\nbuild\tCGO_CPPFLAGS=\nbuild\tCGO_CXXFLAGS=\nbuild\tCGO_LDFLAGS=\nbuild\tGOARCH=amd64\nbuild\tGOOS=linux\nbuild\tGOAMD64=v1\nbuild\tvcs=git\nbuild\tvcs.revision=55e16a72a9036607acd0674e5021ff33171f90b6\nbuild\tvcs.time=2026-02-28T10:10:20Z\nbuild\tvcs.modified=true\n\xf92C1\x86\x18 r\x00\x82B\x10A\x16\xd8\xf2"
+EOF
+mkdir -p $WORK/b001/exe/
+cd .
+/usr/lib/go-1.22/pkg/tool/linux_amd64/link -o $WORK/b001/exe/a.out -importcfg $WORK/b001/importcfg.link -buildmode=exe -buildid=E5DpMY27xZttJ_pHsUu5/ilDXTy3x-xvPV7kbCoxp/IxdFMt7-LWElPYbjDcmi/E5DpMY27xZttJ_pHsUu5 -extld=gcc /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.gocache/8e/8eab030e49eaf85585e94e72f36f518fa4d111f0d01cefbe05debba6ad7c3766-d
+/usr/lib/go-1.22/pkg/tool/linux_amd64/buildid -w $WORK/b001/exe/a.out # internal

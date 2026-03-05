@@ -1,0 +1,5 @@
+00000|
+00001|> ccp-npm-benchmark-basic@1.0.0 warning-actionable
+00002|> node scripts/warning_actionable.js
+00003|
+00004|Checked 1 file

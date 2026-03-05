@@ -1,0 +1,61 @@
+{"Time":"2026-02-28T11:57:17.418816123+01:00","Action":"start","Package":"fixture-go-test"}
+{"Time":"2026-02-28T11:57:17.419033426+01:00","Action":"start","Package":"fixture-go-test/no-test"}
+{"Time":"2026-02-28T11:57:17.419063254+01:00","Action":"output","Package":"fixture-go-test/no-test","Output":"?   \tfixture-go-test/no-test\t[no test files]\n"}
+{"Time":"2026-02-28T11:57:17.419072697+01:00","Action":"skip","Package":"fixture-go-test/no-test","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.419082038+01:00","Action":"start","Package":"fixture-go-test/test"}
+{"Time":"2026-02-28T11:57:17.420101984+01:00","Action":"run","Package":"fixture-go-test","Test":"TestMathAdd"}
+{"Time":"2026-02-28T11:57:17.420126917+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMathAdd","Output":"=== RUN   TestMathAdd\n"}
+{"Time":"2026-02-28T11:57:17.420150436+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMathAdd","Output":"--- PASS: TestMathAdd (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420199174+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestMathAdd","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420207569+01:00","Action":"run","Package":"fixture-go-test","Test":"TestMathMul"}
+{"Time":"2026-02-28T11:57:17.420210854+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMathMul","Output":"=== RUN   TestMathMul\n"}
+{"Time":"2026-02-28T11:57:17.420264813+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMathMul","Output":"--- PASS: TestMathMul (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420291019+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestMathMul","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420295577+01:00","Action":"run","Package":"fixture-go-test","Test":"TestStringLen"}
+{"Time":"2026-02-28T11:57:17.420297944+01:00","Action":"output","Package":"fixture-go-test","Test":"TestStringLen","Output":"=== RUN   TestStringLen\n"}
+{"Time":"2026-02-28T11:57:17.420300949+01:00","Action":"output","Package":"fixture-go-test","Test":"TestStringLen","Output":"--- PASS: TestStringLen (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420308043+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestStringLen","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420309465+01:00","Action":"run","Package":"fixture-go-test","Test":"TestSliceAppend"}
+{"Time":"2026-02-28T11:57:17.420310383+01:00","Action":"output","Package":"fixture-go-test","Test":"TestSliceAppend","Output":"=== RUN   TestSliceAppend\n"}
+{"Time":"2026-02-28T11:57:17.42035543+01:00","Action":"output","Package":"fixture-go-test","Test":"TestSliceAppend","Output":"--- PASS: TestSliceAppend (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420404939+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestSliceAppend","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420409235+01:00","Action":"run","Package":"fixture-go-test","Test":"TestMapLookup"}
+{"Time":"2026-02-28T11:57:17.420410901+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMapLookup","Output":"=== RUN   TestMapLookup\n"}
+{"Time":"2026-02-28T11:57:17.42041326+01:00","Action":"output","Package":"fixture-go-test","Test":"TestMapLookup","Output":"--- PASS: TestMapLookup (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420414579+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestMapLookup","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420416657+01:00","Action":"run","Package":"fixture-go-test","Test":"TestRuneCountASCII"}
+{"Time":"2026-02-28T11:57:17.420418023+01:00","Action":"output","Package":"fixture-go-test","Test":"TestRuneCountASCII","Output":"=== RUN   TestRuneCountASCII\n"}
+{"Time":"2026-02-28T11:57:17.420419315+01:00","Action":"output","Package":"fixture-go-test","Test":"TestRuneCountASCII","Output":"--- PASS: TestRuneCountASCII (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420420316+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestRuneCountASCII","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420421861+01:00","Action":"run","Package":"fixture-go-test","Test":"TestBoolLogic"}
+{"Time":"2026-02-28T11:57:17.420422722+01:00","Action":"output","Package":"fixture-go-test","Test":"TestBoolLogic","Output":"=== RUN   TestBoolLogic\n"}
+{"Time":"2026-02-28T11:57:17.420424172+01:00","Action":"output","Package":"fixture-go-test","Test":"TestBoolLogic","Output":"--- PASS: TestBoolLogic (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420425267+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestBoolLogic","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420426241+01:00","Action":"run","Package":"fixture-go-test","Test":"TestLoopSum"}
+{"Time":"2026-02-28T11:57:17.42042713+01:00","Action":"output","Package":"fixture-go-test","Test":"TestLoopSum","Output":"=== RUN   TestLoopSum\n"}
+{"Time":"2026-02-28T11:57:17.420428197+01:00","Action":"output","Package":"fixture-go-test","Test":"TestLoopSum","Output":"--- PASS: TestLoopSum (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420429076+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestLoopSum","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420430022+01:00","Action":"run","Package":"fixture-go-test","Test":"TestByteCompare"}
+{"Time":"2026-02-28T11:57:17.420430873+01:00","Action":"output","Package":"fixture-go-test","Test":"TestByteCompare","Output":"=== RUN   TestByteCompare\n"}
+{"Time":"2026-02-28T11:57:17.420431912+01:00","Action":"output","Package":"fixture-go-test","Test":"TestByteCompare","Output":"--- PASS: TestByteCompare (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420432829+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestByteCompare","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420433775+01:00","Action":"run","Package":"fixture-go-test","Test":"TestStructField"}
+{"Time":"2026-02-28T11:57:17.420434561+01:00","Action":"output","Package":"fixture-go-test","Test":"TestStructField","Output":"=== RUN   TestStructField\n"}
+{"Time":"2026-02-28T11:57:17.420435572+01:00","Action":"output","Package":"fixture-go-test","Test":"TestStructField","Output":"--- PASS: TestStructField (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420436423+01:00","Action":"pass","Package":"fixture-go-test","Test":"TestStructField","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420438286+01:00","Action":"output","Package":"fixture-go-test","Output":"PASS\n"}
+{"Time":"2026-02-28T11:57:17.420665181+01:00","Action":"output","Package":"fixture-go-test","Output":"ok  \tfixture-go-test\t0.002s\n"}
+{"Time":"2026-02-28T11:57:17.420676337+01:00","Action":"pass","Package":"fixture-go-test","Elapsed":0.002}
+{"Time":"2026-02-28T11:57:17.420813003+01:00","Action":"run","Package":"fixture-go-test/test","Test":"TestFakePassingMath"}
+{"Time":"2026-02-28T11:57:17.420820948+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingMath","Output":"=== RUN   TestFakePassingMath\n"}
+{"Time":"2026-02-28T11:57:17.420829821+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingMath","Output":"running fake passing math test\n"}
+{"Time":"2026-02-28T11:57:17.420832554+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingMath","Output":"--- PASS: TestFakePassingMath (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420876045+01:00","Action":"pass","Package":"fixture-go-test/test","Test":"TestFakePassingMath","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420901727+01:00","Action":"run","Package":"fixture-go-test/test","Test":"TestFakePassingSliceLen"}
+{"Time":"2026-02-28T11:57:17.420907295+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingSliceLen","Output":"=== RUN   TestFakePassingSliceLen\n"}
+{"Time":"2026-02-28T11:57:17.420912434+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingSliceLen","Output":"    passing_test.go:16: running fake passing slice test\n"}
+{"Time":"2026-02-28T11:57:17.420942439+01:00","Action":"output","Package":"fixture-go-test/test","Test":"TestFakePassingSliceLen","Output":"--- PASS: TestFakePassingSliceLen (0.00s)\n"}
+{"Time":"2026-02-28T11:57:17.420949477+01:00","Action":"pass","Package":"fixture-go-test/test","Test":"TestFakePassingSliceLen","Elapsed":0}
+{"Time":"2026-02-28T11:57:17.420951339+01:00","Action":"output","Package":"fixture-go-test/test","Output":"PASS\n"}
+{"Time":"2026-02-28T11:57:17.421282416+01:00","Action":"output","Package":"fixture-go-test/test","Output":"ok  \tfixture-go-test/test\t0.002s\n"}
+{"Time":"2026-02-28T11:57:17.421315295+01:00","Action":"pass","Package":"fixture-go-test/test","Elapsed":0.002}

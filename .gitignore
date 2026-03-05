@@ -1,0 +1,75 @@
+# --- Build outputs ---
+bin/
+dist/
+build/
+out/
+
+# Go binaries/artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# --- Coverage / profiling ---
+coverage.out
+cover.out
+*.coverprofile
+*.prof
+
+# --- Go workspace / local env ---
+.bin
+.cache
+.gocache
+.artifacts
+go.work
+go.work.sum
+.env
+.env.*
+
+# --- Local runtime state ---
+.ccp/
+**/.ccp/
+**/ccp-capture-*.*
+
+# --- Cargo benchmark/test project artifacts ---
+testdata/tool-fixtures/cargo*/**/Cargo.lock
+testdata/tool-fixtures/cargo*/**/target/
+
+# Java
+**/gradle*/**/build
+**/maven*/**/target
+
+# Node / NPM / Yarn
+**/node_modules
+node_modules
+yarn.lock
+.pnpm-store
+**/.pnpm-store
+.tmp
+**/.tmp
+
+# Python
+**/.venv
+**/__pycache__
+**/.pytest_cache/
+.pytest_cache/
+
+# --- IDE/editor ---
+.idea/
+.vscode/
+.history/
+*.iml
+.codex
+.opencode
+.claude
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# AI
+openspec/changes
+TODO.md

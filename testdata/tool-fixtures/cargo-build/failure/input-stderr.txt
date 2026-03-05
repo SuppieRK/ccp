@@ -1,0 +1,9 @@
+00000|   Compiling fixture-cargo-build-failure v0.1.0 (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/cargo-build/projects/failure)
+00001|error[E0425]: cannot find value `missing_symbol` in this scope
+00002| --> src/main.rs:2:13
+00003|  |
+00004|2 |     let _ = missing_symbol;
+00005|  |             ^^^^^^^^^^^^^^ not found in this scope
+00006|
+00007|For more information about this error, try `rustc --explain E0425`.
+00008|error: could not compile `fixture-cargo-build-failure` (bin "fixture-cargo-build-failure") due to 1 previous error

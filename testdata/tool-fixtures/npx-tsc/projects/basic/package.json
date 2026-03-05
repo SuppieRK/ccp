@@ -1,0 +1,8 @@
+{
+  "name": "npx-tsc-benchmark",
+  "private": true,
+  "type": "commonjs",
+  "devDependencies": {
+    "typescript": "5.8.2"
+  }
+}

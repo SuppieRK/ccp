@@ -1,0 +1,6 @@
+cargo test: failed (1 passed, 1 failed, 0 ignored)
+- unit: 1 passed, 1 failed, 0 ignored
+failure details:
+- tests::failing_case (src/lib.rs:16:9): assertion `left == right` failed
+left: 6
+right: 7
