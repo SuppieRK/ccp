@@ -132,3 +132,50 @@ The command proxy SHALL record one metrics entry for each completed non-raw exec
 #### Scenario: Metrics write failure does not change command outcome
 - **WHEN** metrics persistence fails after command execution
 - **THEN** command exit code and emitted output remain unchanged.
+
+### Requirement: Execution command stdin propagation
+The command proxy SHALL propagate stdin from the `ccp` process into wrapped command execution for both semantic and raw paths.
+
+#### Scenario: Semantic mode forwards piped stdin
+- **WHEN** `ccp` runs a stdin-driven command in semantic mode and stdin contains bytes
+- **THEN** the wrapped command receives the same stdin byte stream
+- **AND** emitted stdout/stderr reflects normal execution against that input.
+
+#### Scenario: Raw mode forwards piped stdin
+- **WHEN** `ccp --raw` runs a stdin-driven command and stdin contains bytes
+- **THEN** the wrapped command receives the same stdin byte stream
+- **AND** `ccp` preserves raw passthrough semantics for resulting output and exit code.
+
+### Requirement: Stdin-driven pipeline parity
+The command proxy SHALL preserve native observable behavior for stdin-driven pipeline scenarios.
+
+#### Scenario: Pipeline producer output is consumable by wrapped command
+- **WHEN** a producer command pipes output into `ccp <consumer-command>` where the consumer reads stdin
+- **THEN** proxied consumer output SHALL match native consumer behavior for equivalent input
+- **AND** proxied consumer exit code SHALL match native consumer exit code.
+
+#### Scenario: Empty producer input remains empty
+- **WHEN** a producer sends zero bytes to `ccp <consumer-command>`
+- **THEN** the wrapped consumer receives zero bytes
+- **AND** `ccp` emits zero bytes unless the native consumer would emit output for empty input.
+
+### Requirement: Stdin diagnostics metadata tagging
+The command proxy SHALL encode stdin-presence diagnostics in execution dispatch metadata using the existing dispatch-tag pattern.
+
+#### Scenario: Metrics/history include stdin mode via dispatch
+- **WHEN** a command runs with stdin connected to a pipe, terminal, or closed/empty source
+- **THEN** execution dispatch metadata includes a stable stdin mode marker (for example `stdin=pipe`, `stdin=tty`, or `stdin=none`)
+- **AND** persisted metrics/history diagnostics expose that marker through the existing dispatch field.
+
+### Requirement: Safe handling for stdin-sensitive ambiguous contexts
+When planner confidence is insufficient for stdin-sensitive command contexts, the command proxy SHALL preserve safety by avoiding tool-specific miscompaction.
+
+#### Scenario: Ambiguous stdin-sensitive context under permissive mode
+- **WHEN** stdin is present and command planning falls back to ambiguous permissive execution
+- **THEN** execution proceeds via neutral/passthrough-safe filtering behavior
+- **AND** input delivery and exit semantics remain consistent with native execution.
+
+#### Scenario: Ambiguous stdin-sensitive context under strict mode
+- **WHEN** stdin is present and command planning cannot guarantee single-tool semantics with `--strict`
+- **THEN** command execution is rejected pre-flight
+- **AND** a clear ambiguity diagnostic is emitted.

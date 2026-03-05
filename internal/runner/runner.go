@@ -61,6 +61,15 @@ type streamStats struct {
 	keptBytes int
 }
 
+type runMetricsMeta struct {
+	command         string
+	tool            string
+	engineDispatch  string
+	metricsDispatch string
+	code            int
+	durationMS      int64
+}
+
 const (
 	maxLineBytes      = 32 * 1024 * 1024
 	streamReadBufSize = 64 * 1024
@@ -90,7 +99,8 @@ func (r *Runner) Run(args []string) int {
 	}
 	startedAt := time.Now().UTC()
 	tool := plan.Tool
-	dispatch := plan.DispatchKey
+	engineDispatch := plan.DispatchKey
+	metricsDispatch := withStdinDispatch(plan.DispatchKey)
 	if plan.Name == "" {
 		return writeStderrMsgAndCode(2, "no command provided")
 	}
@@ -122,11 +132,11 @@ func (r *Runner) Run(args []string) int {
 	stderrStats := &streamStats{}
 	go func() {
 		defer wg.Done()
-		r.copyStream("stdout", tool, dispatch, stdout, os.Stdout, stdoutStats)
+		r.copyStream("stdout", tool, engineDispatch, stdout, os.Stdout, stdoutStats)
 	}()
 	go func() {
 		defer wg.Done()
-		r.copyStream("stderr", tool, dispatch, stderr, os.Stderr, stderrStats)
+		r.copyStream("stderr", tool, engineDispatch, stderr, os.Stderr, stderrStats)
 	}()
 	wg.Wait()
 	close(done)
@@ -136,7 +146,18 @@ func (r *Runner) Run(args []string) int {
 		return writeStderrAndCode(1, err)
 	}
 	duration := time.Since(startedAt).Milliseconds()
-	r.emitExitAndMetrics(plan.RawInput, tool, dispatch, exitCode, duration, stdoutStats, stderrStats)
+	r.emitExitAndMetrics(
+		runMetricsMeta{
+			command:         plan.RawInput,
+			tool:            tool,
+			engineDispatch:  engineDispatch,
+			metricsDispatch: metricsDispatch,
+			code:            exitCode,
+			durationMS:      duration,
+		},
+		stdoutStats,
+		stderrStats,
+	)
 	return exitCode
 }
 
@@ -269,6 +290,7 @@ func (w *sequencedCaptureWriter) writeSequencedLine(line []byte) error {
 
 func commandWithPipes(name string, args []string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	cmd := exec.Command(name, args...)
+	cmd.Stdin = os.Stdin
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, nil, nil, err
@@ -279,6 +301,50 @@ func commandWithPipes(name string, args []string) (*exec.Cmd, io.ReadCloser, io.
 		return nil, nil, nil, err
 	}
 	return cmd, stdout, stderr, nil
+}
+
+func withStdinDispatch(dispatch string) string {
+	mode := detectStdinMode(os.Stdin)
+	tag := "stdin=" + mode
+	if dispatch == "" {
+		return tag
+	}
+	parts := strings.Split(dispatch, "|")
+	filtered := make([]string, 0, len(parts)+1)
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "stdin=") {
+			continue
+		}
+		filtered = append(filtered, trimmed)
+	}
+	filtered = append(filtered, tag)
+	return strings.Join(filtered, "|")
+}
+
+func detectStdinMode(stdin *os.File) string {
+	if stdin == nil {
+		return "none"
+	}
+	info, err := stdin.Stat()
+	if err != nil {
+		return "none"
+	}
+	mode := info.Mode()
+	if mode&os.ModeNamedPipe != 0 {
+		return "pipe"
+	}
+	if mode&os.ModeCharDevice != 0 {
+		return "tty"
+	}
+	if mode.IsRegular() {
+		// File redirection is still stdin-fed input for command execution semantics.
+		return "pipe"
+	}
+	return "none"
 }
 
 func closePipes(stdout, stderr io.ReadCloser) {
@@ -337,21 +403,21 @@ func waitExitCode(cmd *exec.Cmd) (int, error) {
 	return 0, nil
 }
 
-func (r *Runner) emitExitAndMetrics(command string, tool string, dispatch string, code int, durationMS int64, stdoutStats *streamStats, stderrStats *streamStats) {
-	stdoutExitBytes, stderrExitBytes := r.emitExitEvent(tool, dispatch, code)
+func (r *Runner) emitExitAndMetrics(meta runMetricsMeta, stdoutStats *streamStats, stderrStats *streamStats) {
+	stdoutExitBytes, stderrExitBytes := r.emitExitEvent(meta.tool, meta.engineDispatch, meta.code)
 	stdoutStats.keptBytes += stdoutExitBytes
 	stderrStats.keptBytes += stderrExitBytes
 	if !r.opts.Raw {
 		_ = metrics.Append(r.opts.MetricsPath, metrics.RunMetric{
 			Timestamp:   time.Now().UTC(),
-			Command:     command,
-			Tool:        tool,
-			Dispatch:    dispatch,
+			Command:     meta.command,
+			Tool:        meta.tool,
+			Dispatch:    meta.metricsDispatch,
 			RawBytes:    stdoutStats.rawBytes + stderrStats.rawBytes,
 			KeptBytes:   stdoutStats.keptBytes + stderrStats.keptBytes,
-			ExitCode:    code,
-			DurationMS:  durationMS,
-			Passthrough: tool == "",
+			ExitCode:    meta.code,
+			DurationMS:  meta.durationMS,
+			Passthrough: meta.tool == "",
 		})
 	}
 }

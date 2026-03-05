@@ -69,9 +69,11 @@ Key point:
 Runner responsibilities:
 
 - Execute planned command (`exec.Command`).
+- Forward parent stdin to wrapped command execution for semantic and raw paths.
 - Read `stdout` and `stderr` concurrently.
 - Send line events + EOF/tick/exit events into the engine.
 - Emit final exit code from the wrapped process.
+- Record execution diagnostics in metrics, including dispatch metadata tags such as stdin mode (`stdin=pipe|tty|none`).
 
 Important modes:
 
