@@ -339,6 +339,25 @@ func TestClaudeHookRemovalHelpers(t *testing.T) {
 	}
 }
 
+func TestClaudeHookScriptPrefixesEachChainedSegment(t *testing.T) {
+	script := claudeHookScriptContent()
+	if !strings.Contains(script, `grep -Eq "['\"\\\\]|\\$\\(|\\$\\{|<<"`) {
+		t.Fatalf("expected conservative complexity fallback guard in hook script, got: %s", script)
+	}
+	if !strings.Contains(script, `gsub("(^|\\|\\||&&|\\||;)\\s*(?!ccp\\b)"; "\\1 ccp ")`) {
+		t.Fatalf("expected chained-segment rewrite rule in hook script, got: %s", script)
+	}
+	if !strings.Contains(script, `if [ "$REWRITTEN_CMD" = "$CMD" ]; then`) {
+		t.Fatalf("expected no-op guard when rewrite does not change command, got: %s", script)
+	}
+	if !strings.Contains(script, `if ! sh -n -c "$REWRITTEN_CMD" >/dev/null 2>&1; then`) {
+		t.Fatalf("expected shell syntax verification guard for rewritten command, got: %s", script)
+	}
+	if !strings.Contains(script, `--arg cmd "$REWRITTEN_CMD"`) {
+		t.Fatalf("expected updated input payload to use rewritten command, got: %s", script)
+	}
+}
+
 func TestCodexPlanAndUpsertBranches(t *testing.T) {
 	a := NewCodexAdapter()
 	ctx := Context{HomeDir: filepath.Join(t.TempDir(), "home")}

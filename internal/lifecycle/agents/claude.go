@@ -258,12 +258,28 @@ if [ -z "$CMD" ]; then
   exit 0
 fi
 
-case "$CMD" in
-  ccp\ *|*/ccp\ *) exit 0 ;;
-esac
+# Conservative safety fallback: skip rewrite for complex quoting/substitution shapes.
+if printf '%s' "$CMD" | grep -Eq "['\"\\\\]|\\$\\(|\\$\\{|<<"; then
+  exit 0
+fi
+
+REWRITTEN_CMD="$(
+  printf '%s' "$CMD" | jq -Rr '
+    gsub("(^|\\|\\||&&|\\||;)\\s*(?!ccp\\b)"; "\\1 ccp ")
+  ' 2>/dev/null
+)"
+if [ -z "$REWRITTEN_CMD" ]; then
+  exit 0
+fi
+if [ "$REWRITTEN_CMD" = "$CMD" ]; then
+  exit 0
+fi
+if ! sh -n -c "$REWRITTEN_CMD" >/dev/null 2>&1; then
+  exit 0
+fi
 
 UPDATED_INPUT="$(
-  printf '%s' "$INPUT" | jq -c --arg cmd "ccp $CMD" '
+  printf '%s' "$INPUT" | jq -c --arg cmd "$REWRITTEN_CMD" '
     (.tool_input // {}) as $ti
     | $ti
     | .command = $cmd
