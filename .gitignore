@@ -45,6 +45,8 @@ testdata/tool-fixtures/cargo*/**/target/
 # Node / NPM / Yarn
 **/node_modules
 node_modules
+!testdata/tool-fixtures/ls/projects/tiny/node_modules/
+!testdata/tool-fixtures/ls/projects/tiny/node_modules/leftpad.js
 yarn.lock
 .pnpm-store
 **/.pnpm-store
