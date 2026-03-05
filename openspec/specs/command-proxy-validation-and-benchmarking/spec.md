@@ -130,6 +130,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** SonarQube analysis is executed in that workflow
 - **AND** SonarQube execution is configured as non-blocking (`continue-on-error: true`).
 
+#### Scenario: SonarQube job checks out full git history
+- **WHEN** SonarQube analysis runs in CI
+- **THEN** checkout uses full history (`fetch-depth: 0`) so SCM metadata is available
+- **AND** shallow-clone warnings do not degrade issue assignment capabilities.
+
 #### Scenario: Summary publication uses GitHub step summary
 - **WHEN** benchmark harness and quality-gate steps complete
 - **THEN** human-readable benchmark and gate summaries are appended to `$GITHUB_STEP_SUMMARY`.
