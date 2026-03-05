@@ -95,8 +95,16 @@ func opencodePluginContent() string {
       if (trimmed === "ccp" || trimmed.startsWith("ccp ")) {
         return;
       }
+      // Conservative safety fallback: avoid rewrite for complex quoting/substitution shapes.
+      if (/['"\\]|\$\(|\$\{|<</.test(command)) {
+        return;
+      }
+      const rewritten = command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ");
+      if (rewritten === command) {
+        return;
+      }
       output.args = output.args || {};
-      output.args.command = ` + "`ccp ${command}`" + `;
+      output.args.command = rewritten;
     },
   };
 }
