@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"go-command-compression-proxy/internal/lifecycle/agents"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -481,6 +482,12 @@ func TestRunInitClaudeUsesHomeTargetsAndPreToolUseSettings(t *testing.T) {
 	}
 	if runtime.GOOS != "windows" && (hookInfo.Mode()&0o111) == 0 {
 		t.Fatalf("expected claude hook to be executable, mode=%v", hookInfo.Mode())
+	}
+	if runtime.GOOS != "windows" {
+		cmd := exec.Command("sh", "-n", hookPath)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("expected syntactically valid claude hook script, err=%v output=%s", err, string(out))
+		}
 	}
 
 	b, err := os.ReadFile(settingsPath)

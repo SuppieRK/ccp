@@ -29,6 +29,32 @@ Claude init integration SHALL provision a runnable rewrite hook script and regis
 - **WHEN** Claude integration is initialized
 - **THEN** `~/.claude/settings.json` includes PreToolUse hook registration that points to the installed rewrite hook.
 
+### Requirement: Claude Chained Command Rewrite Parity
+Claude PreToolUse rewrite behavior SHALL preserve CCP routing across chained and piped shell command segments.
+
+#### Scenario: chained command segments are all prefixed
+- **WHEN** Claude PreToolUse receives a Bash command containing `&&`, `||`, `|`, or `;`
+- **THEN** the rewrite output prefixes each command segment with `ccp`
+- **AND** segments already starting with `ccp` are not double-prefixed.
+
+#### Scenario: mixed prefixed and unprefixed chains are normalized
+- **WHEN** Claude PreToolUse receives a command where only the first chain segment is prefixed with `ccp`
+- **THEN** the rewrite output keeps the existing first segment
+- **AND** prefixes remaining unprefixed chain segments with `ccp`.
+
+### Requirement: Claude Rewrite Safety Fallback
+Claude PreToolUse rewrite behavior SHALL fail safe to passthrough for command shapes that are not safely normalizable by the chain-prefix rewriter.
+
+#### Scenario: complex quoting or substitution bypasses rewrite
+- **WHEN** Claude PreToolUse receives a command containing complex quoting, shell substitution, escapes, or heredoc markers
+- **THEN** the hook does not emit rewritten input
+- **AND** command execution remains native passthrough.
+
+#### Scenario: rewritten command must pass shell syntax check
+- **WHEN** the hook computes a rewritten command string
+- **THEN** the hook applies the rewritten command only if it passes shell syntax validation
+- **AND** if syntax validation fails, the hook emits no rewrite and falls back to passthrough.
+
 ### Requirement: Automatic Settings Registration
 Claude init integration SHALL materialize required PreToolUse settings automatically.
 
