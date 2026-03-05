@@ -43,7 +43,7 @@ func isImagesHeader(headers []string) bool {
 	return hasRequiredHeaders(headers, requiredImagesHeaders)
 }
 
-func hasRequiredHeaders(headers []string, required []string) bool {
+func hasRequiredHeaders(headers, required []string) bool {
 	normalized := make(map[string]struct{}, len(headers))
 	for _, h := range headers {
 		key := strings.ToUpper(strings.TrimSpace(h))
