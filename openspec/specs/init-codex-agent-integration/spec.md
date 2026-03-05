@@ -30,8 +30,8 @@ Codex init integration SHALL upsert a CCP-managed instruction block that routes 
 #### Scenario: managed block wording contract
 - **WHEN** integration writes CCP-managed Codex instructions
 - **THEN** the managed block remains concise and includes:
-  - explicit preference to run shell commands via `ccp`
-  - short examples (`ccp go test ./...`, `ccp git status`, `ccp ls -la`)
+  - explicit instruction to use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions
+  - at least six command examples, including chaining examples with `&&` and `||`
   - fallback note only for missing `ccp` binary.
 
 #### Scenario: canonical managed block template
@@ -42,12 +42,15 @@ Codex init integration SHALL upsert a CCP-managed instruction block that routes 
 <!-- BEGIN: CCP MANAGED BLOCK -->
 ## CCP Integration (Managed)
 
-Prefer running shell commands through `ccp`.
+Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.
 
 Examples:
-- `ccp go test ./...`
-- `ccp git status`
 - `ccp ls -la`
+- `ccp git status --short`
+- `ccp go test -count=1 ./...`
+- `ccp echo chain-ok && ccp echo chain-done`
+- `ccp false || ccp echo chain-recovered`
+- `ccp nl -ba spec.md | ccp sed -n '1,260p'`
 
 If `ccp` is unavailable, run the original command and note that CCP is not installed.
 <!-- END: CCP MANAGED BLOCK -->
