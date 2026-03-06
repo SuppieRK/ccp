@@ -107,148 +107,201 @@ func TestToolFixtureCoverage(t *testing.T) {
 
 func TestToolFixturesMatchExpectedOutput(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "tool-fixtures")
+	cases, err := collectFixtureCases(root)
+	if err != nil {
+		t.Fatalf("collect fixture cases: %v", err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("no fixture cases found")
+	}
+	for _, c := range cases {
+		t.Run(c.caseID(), func(t *testing.T) {
+			assertFixtureCaseMatches(t, c)
+		})
+	}
+}
+
+func collectFixtureCases(root string) ([]fixtureCase, error) {
 	tools, err := os.ReadDir(root)
 	if err != nil {
-		t.Fatalf("read fixture root: %v", err)
+		return nil, err
 	}
 	cases := make([]fixtureCase, 0, 128)
 	for _, toolEntry := range tools {
 		if !toolEntry.IsDir() {
 			continue
 		}
-		fixtureSet := toolEntry.Name()
-		toolDir := filepath.Join(root, fixtureSet)
-		scenarioMeta := loadScenarioMetaMap(toolDir)
-		entries, err := os.ReadDir(toolDir)
+		toolCases, err := collectFixtureCasesForTool(root, toolEntry.Name())
 		if err != nil {
-			t.Fatalf("read fixture set %s: %v", fixtureSet, err)
+			return nil, err
 		}
-		scenarioSeen := map[string]struct{}{}
-		scenarios := make([]string, 0, len(scenarioMeta)+len(entries))
-		for name := range scenarioMeta {
-			n := strings.TrimSpace(name)
-			if n == "" {
-				continue
-			}
-			if _, ok := scenarioSeen[n]; ok {
-				continue
-			}
-			scenarioSeen[n] = struct{}{}
-			scenarios = append(scenarios, n)
-		}
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			n := strings.TrimSpace(e.Name())
-			if n == "" || n == "projects" {
-				continue
-			}
-			if _, ok := scenarioSeen[n]; ok {
-				continue
-			}
-			scenarioSeen[n] = struct{}{}
-			scenarios = append(scenarios, n)
-		}
-		if len(scenarioMeta) == 0 && len(scenarios) == 0 {
-			continue
-		}
-		sort.Strings(scenarios)
-		for _, scenario := range scenarios {
-			meta, hasMeta := scenarioMeta[scenario]
-			if !hasMeta {
-				meta = fixtureMeta{
-					Tool:     toolNameFromFolder(filepath.Base(toolDir)),
-					Dispatch: "",
-					Trigger:  "both",
-					ExitCode: 0,
-					Stream:   string(engine.StdoutStream),
-				}
-			}
-			scenarioDir := filepath.Join(toolDir, scenario)
-			if meta.Tool == "" {
-				continue
-			}
-			cases = append(cases, fixtureCase{
-				fixtureSet: fixtureSet,
-				scenario:   scenario,
-				dir:        scenarioDir,
-				outputPath: firstExisting(filepath.Join(scenarioDir, "output.txt")),
-				inputPath:  firstExisting(filepath.Join(scenarioDir, "input.txt")),
-				stdoutPath: firstExisting(filepath.Join(scenarioDir, "input-stdout.txt")),
-				stderrPath: firstExisting(filepath.Join(scenarioDir, "input-stderr.txt")),
-				meta:       meta,
-			})
-		}
-	}
-	if len(cases) == 0 {
-		t.Fatal("no fixture cases found")
+		cases = append(cases, toolCases...)
 	}
 	sort.Slice(cases, func(i, j int) bool {
 		return cases[i].caseID() < cases[j].caseID()
 	})
+	return cases, nil
+}
 
-	for _, c := range cases {
-		t.Run(c.caseID(), func(t *testing.T) {
-			meta := c.meta
-			if meta.Tool == "" {
-				t.Fatalf("fixture %s missing tool in meta", c.caseID())
-			}
-			got := ""
-			if st, err := os.Stat(c.dir); err == nil && st.IsDir() {
-				got = normalizeFixtureOutput(runFixtureCase(t, c.meta, c, c.scenario))
-			}
-			if len(meta.MustContain) > 0 || len(meta.MustNotContain) > 0 {
-				for _, expected := range meta.MustContain {
-					if !strings.Contains(got, expected) {
-						t.Fatalf("missing must_contain: %q\ngot:\n%s", expected, got)
-					}
-				}
-				for _, forbidden := range meta.MustNotContain {
-					if strings.Contains(got, forbidden) {
-						t.Fatalf("unexpected must_not_contain: %q\ngot:\n%s", forbidden, got)
-					}
-				}
-				return
-			}
-			if meta.StructuredOutput {
-				wantStructured := ""
-				if c.stdoutPath != "" || c.stderrPath != "" {
-					events, err := readSequencedEvents(c.stdoutPath, c.stderrPath)
-					if err != nil {
-						t.Fatalf("build structured expected output: %v", err)
-					}
-					var b strings.Builder
-					for _, ev := range events {
-						b.WriteString(fixtureANSIEscapeRe.ReplaceAllString(ev.line, ""))
-					}
-					wantStructured = normalizeNewlines(b.String())
-				} else if c.inputPath != "" {
-					in, err := os.ReadFile(c.inputPath)
-					if err != nil {
-						t.Fatalf("build structured expected output: %v", err)
-					}
-					wantStructured = normalizeNewlines(fixtureANSIEscapeRe.ReplaceAllString(string(in), ""))
-				}
-				wantStructured = normalizeFixtureOutput(wantStructured)
-				if got != wantStructured {
-					t.Fatalf("structured output mismatch\nwant:\n%s\n---\ngot:\n%s", wantStructured, got)
-				}
-				return
-			}
-			want := ""
-			if c.outputPath != "" {
-				wantBytes, err := os.ReadFile(c.outputPath)
-				if err != nil {
-					t.Fatalf("read output fixture: %v", err)
-				}
-				want = normalizeFixtureOutput(string(wantBytes))
-			}
-			if got != want {
-				t.Fatalf("output mismatch\nwant:\n%s\n---\ngot:\n%s", want, got)
-			}
+func collectFixtureCasesForTool(root, fixtureSet string) ([]fixtureCase, error) {
+	toolDir := filepath.Join(root, fixtureSet)
+	scenarioMeta := loadScenarioMetaMap(toolDir)
+	entries, err := os.ReadDir(toolDir)
+	if err != nil {
+		return nil, err
+	}
+	scenarios := fixtureScenarioNames(scenarioMeta, entries)
+	if len(scenarioMeta) == 0 && len(scenarios) == 0 {
+		return nil, nil
+	}
+	cases := make([]fixtureCase, 0, len(scenarios))
+	for _, scenario := range scenarios {
+		meta := fixtureCaseMeta(toolDir, scenario, scenarioMeta)
+		if meta.Tool == "" {
+			continue
+		}
+		scenarioDir := filepath.Join(toolDir, scenario)
+		cases = append(cases, fixtureCase{
+			fixtureSet: fixtureSet,
+			scenario:   scenario,
+			dir:        scenarioDir,
+			outputPath: firstExisting(filepath.Join(scenarioDir, "output.txt")),
+			inputPath:  firstExisting(filepath.Join(scenarioDir, "input.txt")),
+			stdoutPath: firstExisting(filepath.Join(scenarioDir, "input-stdout.txt")),
+			stderrPath: firstExisting(filepath.Join(scenarioDir, "input-stderr.txt")),
+			meta:       meta,
 		})
 	}
+	return cases, nil
+}
+
+func fixtureScenarioNames(scenarioMeta map[string]fixtureMeta, entries []os.DirEntry) []string {
+	scenarioSeen := map[string]struct{}{}
+	scenarios := make([]string, 0, len(scenarioMeta)+len(entries))
+	addScenario := func(name string) {
+		n := strings.TrimSpace(name)
+		if n == "" || n == "projects" {
+			return
+		}
+		if _, ok := scenarioSeen[n]; ok {
+			return
+		}
+		scenarioSeen[n] = struct{}{}
+		scenarios = append(scenarios, n)
+	}
+	for name := range scenarioMeta {
+		addScenario(name)
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			addScenario(e.Name())
+		}
+	}
+	sort.Strings(scenarios)
+	return scenarios
+}
+
+func fixtureCaseMeta(toolDir, scenario string, scenarioMeta map[string]fixtureMeta) fixtureMeta {
+	if meta, ok := scenarioMeta[scenario]; ok {
+		return meta
+	}
+	return fixtureMeta{
+		Tool:     toolNameFromFolder(filepath.Base(toolDir)),
+		Dispatch: "",
+		Trigger:  "both",
+		ExitCode: 0,
+		Stream:   string(engine.StdoutStream),
+	}
+}
+
+func assertFixtureCaseMatches(t *testing.T, c fixtureCase) {
+	t.Helper()
+	meta := c.meta
+	if meta.Tool == "" {
+		t.Fatalf("fixture %s missing tool in meta", c.caseID())
+	}
+	got := actualFixtureOutput(t, c)
+	if hasFixtureContainmentRules(meta) {
+		assertFixtureContainment(t, got, meta)
+		return
+	}
+	if meta.StructuredOutput {
+		assertFixtureStructuredOutput(t, got, c)
+		return
+	}
+	want := expectedFixtureOutput(t, c.outputPath)
+	if got != want {
+		t.Fatalf("output mismatch\nwant:\n%s\n---\ngot:\n%s", want, got)
+	}
+}
+
+func actualFixtureOutput(t *testing.T, c fixtureCase) string {
+	t.Helper()
+	if st, err := os.Stat(c.dir); err == nil && st.IsDir() {
+		return normalizeFixtureOutput(runFixtureCase(t, c.meta, c, c.scenario))
+	}
+	return ""
+}
+
+func hasFixtureContainmentRules(meta fixtureMeta) bool {
+	return len(meta.MustContain) > 0 || len(meta.MustNotContain) > 0
+}
+
+func assertFixtureContainment(t *testing.T, got string, meta fixtureMeta) {
+	t.Helper()
+	for _, expected := range meta.MustContain {
+		if !strings.Contains(got, expected) {
+			t.Fatalf("missing must_contain: %q\ngot:\n%s", expected, got)
+		}
+	}
+	for _, forbidden := range meta.MustNotContain {
+		if strings.Contains(got, forbidden) {
+			t.Fatalf("unexpected must_not_contain: %q\ngot:\n%s", forbidden, got)
+		}
+	}
+}
+
+func assertFixtureStructuredOutput(t *testing.T, got string, c fixtureCase) {
+	t.Helper()
+	wantStructured := normalizeFixtureOutput(buildStructuredFixtureOutput(t, c))
+	if got != wantStructured {
+		t.Fatalf("structured output mismatch\nwant:\n%s\n---\ngot:\n%s", wantStructured, got)
+	}
+}
+
+func buildStructuredFixtureOutput(t *testing.T, c fixtureCase) string {
+	t.Helper()
+	if c.stdoutPath != "" || c.stderrPath != "" {
+		events, err := readSequencedEvents(c.stdoutPath, c.stderrPath)
+		if err != nil {
+			t.Fatalf("build structured expected output: %v", err)
+		}
+		var b strings.Builder
+		for _, ev := range events {
+			b.WriteString(fixtureANSIEscapeRe.ReplaceAllString(ev.line, ""))
+		}
+		return normalizeNewlines(b.String())
+	}
+	if c.inputPath == "" {
+		return ""
+	}
+	in, err := os.ReadFile(c.inputPath)
+	if err != nil {
+		t.Fatalf("build structured expected output: %v", err)
+	}
+	return normalizeNewlines(fixtureANSIEscapeRe.ReplaceAllString(string(in), ""))
+}
+
+func expectedFixtureOutput(t *testing.T, path string) string {
+	t.Helper()
+	if path == "" {
+		return ""
+	}
+	wantBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read output fixture: %v", err)
+	}
+	return normalizeFixtureOutput(string(wantBytes))
 }
 
 type fixtureCase struct {
@@ -349,42 +402,68 @@ func runFixtureCase(t *testing.T, meta fixtureMeta, c fixtureCase, caseName stri
 		caseDir:  absoluteFixturePath(c.dir),
 		hasSplit: c.stdoutPath != "" || c.stderrPath != "",
 	}
-	restore := func() {}
-	if strings.TrimSpace(meta.Project) != "" {
-		projectDir := filepath.Clean(filepath.Join(filepath.Dir(paths.caseDir), meta.Project))
-		if st, err := os.Stat(projectDir); err == nil && st.IsDir() {
-			if origWD, err := os.Getwd(); err == nil && os.Chdir(projectDir) == nil {
-				restore = func() { _ = os.Chdir(origWD) }
-			}
-		}
-	}
+	restore := chdirFixtureProject(t, meta.Project, paths.caseDir)
 	defer restore()
 
-	registry := engine.NewToolFilterRegistry()
-	mustRegister(t, registry, NewLSCompactor())
-	mustRegister(t, registry, NewGitToolFilter())
-	mustRegister(t, registry, NewGradleFilter())
-	mustRegister(t, registry, NewMavenFilter())
-	mustRegister(t, registry, NewDenoFilter())
-	mustRegister(t, registry, NewNodeFilter())
-	mustRegister(t, registry, NewPythonFilter())
-	mustRegister(t, registry, NewPytestFilter())
-	mustRegister(t, registry, NewPIPFilter())
-	mustRegister(t, registry, NewNPMFilter())
-	mustRegister(t, registry, NewPNPMFilter())
-	mustRegister(t, registry, NewYarnFilter())
-	mustRegister(t, registry, NewNPXFilter())
-	mustRegister(t, registry, NewGrepFilter())
-	mustRegister(t, registry, NewFindFilter())
-	mustRegister(t, registry, NewKubectlToolFilter())
-	mustRegister(t, registry, NewDockerToolFilter())
-	mustRegister(t, registry, NewGoToolFilter())
-	mustRegister(t, registry, NewCargoToolFilter())
-	eng := engine.NewEngine(engine.Config{
-		Registry:          registry,
-		NeverDropPatterns: engine.DefaultNeverDropPatterns(),
-	})
+	registry := newFixtureRegistry(t)
+	eng := engine.NewEngine(engine.Config{Registry: registry, NeverDropPatterns: engine.DefaultNeverDropPatterns()})
 	eng.SetCommandID("fixture:" + caseName)
+	dispatch := resolveFixtureDispatch(meta, registry)
+
+	var out strings.Builder
+	stream := fixtureStream(meta)
+	trigger := fixtureTrigger(meta)
+	seenStream, hasSplit := processFixtureInputEvents(t, &out, eng, meta.Tool, dispatch, stream, paths)
+	emitFixtureEOF(&out, eng, meta.Tool, dispatch, stream, trigger, hasSplit)
+	emitFixtureExit(&out, eng, meta.Tool, dispatch, stream, trigger, hasSplit, seenStream, meta.ExitCode)
+	return normalizeNewlines(out.String())
+}
+
+func chdirFixtureProject(t *testing.T, project, caseDir string) func() {
+	t.Helper()
+	restore := func() {}
+	if strings.TrimSpace(project) == "" {
+		return restore
+	}
+	projectDir := filepath.Clean(filepath.Join(filepath.Dir(caseDir), project))
+	if st, err := os.Stat(projectDir); err == nil && st.IsDir() {
+		if origWD, err := os.Getwd(); err == nil && os.Chdir(projectDir) == nil {
+			restore = func() { _ = os.Chdir(origWD) }
+		}
+	}
+	return restore
+}
+
+func newFixtureRegistry(t *testing.T) *engine.ToolFilterRegistry {
+	t.Helper()
+	registry := engine.NewToolFilterRegistry()
+	for _, filter := range []engine.ToolFilter{
+		NewLSCompactor(),
+		NewGitToolFilter(),
+		NewGradleFilter(),
+		NewMavenFilter(),
+		NewDenoFilter(),
+		NewNodeFilter(),
+		NewPythonFilter(),
+		NewPytestFilter(),
+		NewPIPFilter(),
+		NewNPMFilter(),
+		NewPNPMFilter(),
+		NewYarnFilter(),
+		NewNPXFilter(),
+		NewGrepFilter(),
+		NewFindFilter(),
+		NewKubectlToolFilter(),
+		NewDockerToolFilter(),
+		NewGoToolFilter(),
+		NewCargoToolFilter(),
+	} {
+		mustRegister(t, registry, filter)
+	}
+	return registry
+}
+
+func resolveFixtureDispatch(meta fixtureMeta, registry *engine.ToolFilterRegistry) string {
 	dispatch := strings.TrimSpace(meta.Dispatch)
 	if meta.Tool != "" && len(meta.Native) > 0 {
 		if f := registry.Resolve(meta.Tool); f != nil {
@@ -392,72 +471,115 @@ func runFixtureCase(t *testing.T, meta fixtureMeta, c fixtureCase, caseName stri
 			if len(tail) > 0 {
 				tail = tail[1:]
 			}
-			prep := f.Prepare(tail)
-			if strings.TrimSpace(prep.DispatchKey) != "" {
-				dispatch = prep.DispatchKey
-			} else if len(prep.NormalizedArgs) > 0 {
-				dispatch = meta.Tool + " " + strings.Join(prep.NormalizedArgs, " ")
-			}
+			dispatch = dispatchFromPreparedArgs(meta.Tool, dispatch, f.Prepare(tail))
 		}
 	}
 	if dispatch == "" {
-		dispatch = meta.Tool
+		return meta.Tool
 	}
+	return dispatch
+}
 
-	var out strings.Builder
-	stream := meta.Stream
-	if stream == "" {
-		stream = string(engine.StdoutStream)
+func dispatchFromPreparedArgs(tool, fallback string, prep engine.PrepareResult) string {
+	if strings.TrimSpace(prep.DispatchKey) != "" {
+		return prep.DispatchKey
 	}
+	if len(prep.NormalizedArgs) > 0 {
+		return tool + " " + strings.Join(prep.NormalizedArgs, " ")
+	}
+	return fallback
+}
+
+func fixtureStream(meta fixtureMeta) string {
+	if meta.Stream == "" {
+		return string(engine.StdoutStream)
+	}
+	return meta.Stream
+}
+
+func fixtureTrigger(meta fixtureMeta) string {
 	trigger := strings.ToLower(strings.TrimSpace(meta.Trigger))
 	if trigger == "" {
-		trigger = "eof"
+		return "eof"
 	}
+	return trigger
+}
+
+func processFixtureInputEvents(t *testing.T, out *strings.Builder, eng *engine.Engine, tool, dispatch, stream string, paths fixtureCasePaths) (map[string]bool, bool) {
+	t.Helper()
 	seenStream := map[string]bool{}
-	hasSplit := false
 	if paths.hasSplit {
-		events, err := readSequencedEvents(paths.stdout, paths.stderr)
-		if err != nil {
-			t.Fatalf("read sequenced fixture events: %v", err)
-		}
-		for _, ev := range events {
-			seenStream[ev.stream] = true
-			line := fixtureANSIEscapeRe.ReplaceAllString(ev.line, "")
-			appendFixtureDecision(&out, eng.Process(ev.stream, meta.Tool, engine.Input{Line: line, Dispatch: dispatch}))
-		}
-		hasSplit = true
-	} else if paths.input != "" {
-		in, err := os.ReadFile(paths.input)
-		if err != nil {
-			t.Fatalf("read input fixture: %v", err)
-		}
-		for _, line := range splitInputLines(string(in)) {
-			seenStream[stream] = true
-			line = fixtureANSIEscapeRe.ReplaceAllString(line, "")
-			appendFixtureDecision(&out, eng.Process(stream, meta.Tool, engine.Input{Line: line, Dispatch: dispatch}))
-		}
+		processSplitFixtureEvents(t, out, eng, tool, dispatch, paths, seenStream)
+		return seenStream, true
 	}
-	if trigger == "eof" || trigger == "both" || trigger == "exit" {
-		eofStreams := []string{stream}
-		if hasSplit {
-			eofStreams = []string{string(engine.StdoutStream), string(engine.StderrStream)}
-		}
-		for _, s := range eofStreams {
-			appendFixtureDecision(&out, eng.Process(s, meta.Tool, engine.Input{EOF: true, Dispatch: dispatch}))
-		}
+	processSingleFixtureInput(t, out, eng, tool, dispatch, stream, paths.input, seenStream)
+	return seenStream, false
+}
+
+func processSplitFixtureEvents(t *testing.T, out *strings.Builder, eng *engine.Engine, tool, dispatch string, paths fixtureCasePaths, seenStream map[string]bool) {
+	t.Helper()
+	events, err := readSequencedEvents(paths.stdout, paths.stderr)
+	if err != nil {
+		t.Fatalf("read sequenced fixture events: %v", err)
 	}
-	if trigger == "exit" || trigger == "both" {
-		exitStream := stream
-		if hasSplit {
-			if seenStream[string(engine.StdoutStream)] {
-				exitStream = string(engine.StdoutStream)
-			} else if seenStream[string(engine.StderrStream)] {
-				exitStream = string(engine.StderrStream)
-			}
-		}
-		appendFixtureDecision(&out, eng.Process(exitStream, meta.Tool, engine.Input{Exit: true, Code: meta.ExitCode, Dispatch: dispatch}))
+	for _, ev := range events {
+		seenStream[ev.stream] = true
+		line := fixtureANSIEscapeRe.ReplaceAllString(ev.line, "")
+		appendFixtureDecision(out, eng.Process(ev.stream, tool, engine.Input{Line: line, Dispatch: dispatch}))
 	}
-	return normalizeNewlines(out.String())
+}
+
+func processSingleFixtureInput(t *testing.T, out *strings.Builder, eng *engine.Engine, tool, dispatch, stream, inputPath string, seenStream map[string]bool) {
+	t.Helper()
+	if inputPath == "" {
+		return
+	}
+	in, err := os.ReadFile(inputPath)
+	if err != nil {
+		t.Fatalf("read input fixture: %v", err)
+	}
+	for _, line := range splitInputLines(string(in)) {
+		seenStream[stream] = true
+		line = fixtureANSIEscapeRe.ReplaceAllString(line, "")
+		appendFixtureDecision(out, eng.Process(stream, tool, engine.Input{Line: line, Dispatch: dispatch}))
+	}
+}
+
+func emitFixtureEOF(out *strings.Builder, eng *engine.Engine, tool, dispatch, stream, trigger string, hasSplit bool) {
+	if trigger != "eof" && trigger != "both" && trigger != "exit" {
+		return
+	}
+	for _, s := range fixtureEOFStreams(stream, hasSplit) {
+		appendFixtureDecision(out, eng.Process(s, tool, engine.Input{EOF: true, Dispatch: dispatch}))
+	}
+}
+
+func fixtureEOFStreams(stream string, hasSplit bool) []string {
+	if hasSplit {
+		return []string{string(engine.StdoutStream), string(engine.StderrStream)}
+	}
+	return []string{stream}
+}
+
+func emitFixtureExit(out *strings.Builder, eng *engine.Engine, tool, dispatch, stream, trigger string, hasSplit bool, seenStream map[string]bool, exitCode int) {
+	if trigger != "exit" && trigger != "both" {
+		return
+	}
+	exitStream := fixtureExitStream(stream, hasSplit, seenStream)
+	appendFixtureDecision(out, eng.Process(exitStream, tool, engine.Input{Exit: true, Code: exitCode, Dispatch: dispatch}))
+}
+
+func fixtureExitStream(stream string, hasSplit bool, seenStream map[string]bool) string {
+	if !hasSplit {
+		return stream
+	}
+	if seenStream[string(engine.StdoutStream)] {
+		return string(engine.StdoutStream)
+	}
+	if seenStream[string(engine.StderrStream)] {
+		return string(engine.StderrStream)
+	}
+	return stream
 }
 
 type fixtureCasePaths struct {
