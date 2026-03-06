@@ -9,115 +9,59 @@
 
 `ccp` is an agent-first command proxy written in Go.
 
-It executes native system commands and compacts their output to reduce tokens consumed by coding agents while preserving execution correctness, exit codes, and critical diagnostics.
+It executes native system commands and compacts their output to reduce tokens consumed by coding agents while preserving execution correctness, exit codes, critical diagnostics, and downstream usability.
 
-This project prioritizes deterministic, machine-consumable correctness over terminal-faithful human presentation.
-
----
-
-## What This Project Does
-
-`ccp` sits in front of native CLI tools and:
-
-- Executes the real command.
-- Processes `stdout` and `stderr`.
-- Applies tool-specific compaction logic.
-- Preserves exit code parity and critical diagnostics.
-- Falls back to passthrough on ambiguity or unsafe shapes.
-
-Supported command surfaces include:
-
-- Files/search: `ls`, `find`, `grep`
-- Source control: `git`
-- Containers/cluster: `docker`, `kubectl`
-- Java/build: `gradle`, `maven`
-- JavaScript/TypeScript: `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno`
-- Python/Go/Rust: `pip`, `python`, `pytest`, `go`, `cargo`
-
-Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
-
----
+This project prioritizes deterministic, machine-consumable correctness over terminal-faithful human presentation and favors shape-preserving compaction so coding agents can still interpret output and compose follow-up shell commands naturally.
 
 ## Why It’s Useful
 
-### Primary Optimization Target
-
-The core KPI is output reduction as a proxy for reduced token consumption in agent workflows.
-
-`ccp`:
+`ccp` optimizes for useful compression, not maximal compression.
 
 - Removes repetitive or low-signal output when safe.
-- Preserves actionable diagnostics.
+- Favors filtering and omission over denser non-native output encodings.
+- Preserves actionable diagnostics and line-oriented output affordances when possible.
 - Keeps deterministic behavior for identical inputs.
 - Emits zero bytes if native output is zero bytes.
 - Preserves exact byte stream in `--raw` mode.
 
-### Deterministic & Safe by Design
-
-The proxy guarantees:
-
-- Exit code parity.
-- Preservation of critical errors.
-- Passthrough on ambiguity.
-- Stable deterministic output.
-- Isolation of command contexts.
-
-For coding agents operating in large repositories, this materially reduces context size without sacrificing correctness.
-
----
-
-## Execution modes
-
-- **Semantic mode (default)** — compaction enabled.
-- **`--raw`** — byte-for-byte passthrough.
-- **`--strict`** — reject ambiguous plans.
-- **`--capture-raw`** — preserve raw artifacts while executing normally.
+For coding agents operating in large repositories, this reduces context size without sacrificing correctness or downstream operability.
 
 ---
 
 ## Getting Started
 
-### Installer Script
+Install with the provided script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
 ```
 
-### Build and Install from Source
-
-> Requires Go 1.24+
+Or build from source (`Go 1.24+`):
 
 ```bash
 go build -o ccp ./cmd/ccp
-./ccp --version
+install -m 0755 ./ccp /usr/local/bin/ccp
 ```
 
-Install system-wide:
+Verify the installation:
 
 ```bash
-install -m 0755 ./ccp /usr/local/bin/ccp
 ccp --version
 ```
 
----
-
-### Initialization
-
-Try automatic mode in case if your project has referenced tools:
+Initialize supported agent integrations:
 
 ```bash
 ccp init
 ```
 
-Or manually:
+Or select tools explicitly:
 
 ```bash
 ccp init --tools claude,codex
 ```
 
----
-
-### Uninstall
+Uninstall:
 
 ```bash
 ccp uninstall
@@ -125,17 +69,26 @@ ccp uninstall
 
 ---
 
-## Basic Direct Usage
+## Usage
 
-Wrap native commands directly:
+Primary use case: initialize supported coding-agent integrations so agent shell commands are routed through `ccp`.
+
+```bash
+ccp init
+```
+
+You can also wrap commands directly in local workflows or CI when you want smaller logs without changing the underlying command behavior:
 
 ```bash
 ccp ls -la
 ccp git status
 ccp grep -R "TODO" .
+
+# byte-for-byte passthrough
+ccp --raw git status
 ```
 
-Shell-style chains:
+Chained and piped commands should prefix each executable:
 
 ```bash
 ccp echo chain-ok && ccp echo chain-done
@@ -143,17 +96,20 @@ ccp false || ccp echo chain-recovered
 ccp nl -ba spec.md | ccp sed -n '1,260p'
 ```
 
-Raw passthrough:
+---
 
-```bash
-ccp --raw git status
-```
+## Capability Matrix
 
-Strict mode:
+| Area | Supported |
+|---|---|
+| Files/search | `ls`, `find`, `grep` |
+| Source control | `git` |
+| Containers/cluster | `docker`, `kubectl` |
+| Java/build | `gradle`, `maven` |
+| JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
+| Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
 
-```bash
-ccp --strict git log
-```
+Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
 ---
 
@@ -169,19 +125,29 @@ For issues:
 
 - Open a GitHub issue for bugs or feature requests.
 - For vulnerabilities, follow the process in [SECURITY.md](./SECURITY.md).
-- Use following commands to generate a bug report:
+- For command-output bugs, include the exact command, native `stdout`, native `stderr`, CCP output, `ccp --version`, and OS/shell details.
+- One way to collect that information is:
 
 ```bash
-# Capture CCP version
+# version
 ccp --version
 
-# Capture raw command output for diagnostics
-ccp --capture-raw (--capture-raw-dir <directory>) (--confidential <comma-separated list of strings to replace>) <command>
+# native stdout/stderr in timestamped capture files
+mkdir -p .artifacts/issue
+ccp --capture-raw --capture-raw-dir .artifacts/issue <command>
 
-# Capture CCP command output
-# NOTE: does not support --confidential, needs manual checking
-ccp <command>
+# CCP output shown on the terminal
+ccp <command> > .artifacts/issue/ccp.stdout 2> .artifacts/issue/ccp.stderr
 ```
+
+If the raw captures contain internal package names or other sensitive strings, add `--confidential value1,value2,...` to the `--capture-raw` command to redact those substrings in the capture files before sharing them. This does not redact the separate `ccp <command>` output file, so review that file manually before posting.
+
+Attach or paste:
+- the exact command you ran
+- `.artifacts/issue/ccp-capture-*-input-stdout.txt`
+- `.artifacts/issue/ccp-capture-*-input-stderr.txt`
+- `.artifacts/issue/ccp.stdout`
+- `.artifacts/issue/ccp.stderr` if relevant
 
 ---
 

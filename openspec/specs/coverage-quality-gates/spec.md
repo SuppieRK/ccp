@@ -61,5 +61,10 @@ The system SHALL document concrete remediation steps so contributors can restore
 
 #### Scenario: Contributor guidance for coverage failures
 - **WHEN** a contributor encounters internal coverage below the required threshold
-- **THEN** repository contribution guidance includes commands to generate the internal coverage profile and run `cmd/coverage-gate`
+- **THEN** repository contribution guidance includes a canonical local validation command that generates the internal coverage profile and runs `cmd/coverage-gate`
 - **AND** guidance states that tests must be added/updated until `internal/...` package and module-group coverage are each at least `80%`.
+
+#### Scenario: Local validation helper suggests missing quality tools
+- **WHEN** local validation guidance references optional quality tools such as `staticcheck`, `ineffassign`, or `gocyclo`
+- **THEN** the helper command runs those tools when available
+- **AND** missing-tool cases report install guidance instead of failing due only to an absent binary.

@@ -1,16 +1,12 @@
 # Agent Rule – Benchmarks
 
-## Structure
+## Scope
 
-- Assets under: `testdata/tool-fixtures/<tool>/`
-- Scenario definitions in: `scenarios.json`
-- Scenarios MUST be command-driven against declared project.
-- MUST use deterministic assertions:
-  `must_contain`
-  `must_not_contain`
-- MUST use `required: true` for fail-fast.
+- Fixtures live under `testdata/tool-fixtures/<tool>/` with scenario definitions in `scenarios.json`.
+- Scenarios MUST be command-driven against the declared project.
+- Assertions MUST be deterministic (`must_contain`, `must_not_contain`, `required`, etc.).
 
-## Determinism
+## Expectations
 
 - Primary KPI: token-oriented metrics.
 - MUST track proxy overhead in milliseconds.
@@ -18,9 +14,13 @@
 - MUST compare using cached `report.json`.
 - Compaction-drop warnings only when scenario name and raw input hash match.
 - Runtime artifacts MUST NOT be committed.
+- Use `ccp gain`, not just the harness summary, to judge compression results for a tool.
+- Highlight runs with no `gain.db` files or no meaningful compression result for the changed tool.
 
 ## Local Execution
 
-```shell
-./scripts/benchmark-local.sh
-```
+- Use `./scripts/benchmark-local.sh -t <tool>` for tool-specific changes.
+- SHOULD run the benchmark before changing an existing tool filter when a local baseline is useful.
+- MUST run the benchmark after changing a tool filter or benchmarked execution behavior.
+- Treat any non-zero benchmark exit as a failure.
+- Compare before/after `ccp gain` output when a baseline exists.
