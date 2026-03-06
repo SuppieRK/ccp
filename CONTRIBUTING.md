@@ -18,7 +18,7 @@ The primary optimization goal is reduction of command output volume as a practic
 
 Contributions MUST:
 
-- Optimize for lower output bytes when correctness is preserved.
+- Optimize for lower output tokens when correctness is preserved.
 - Prefer semantic compaction over terminal-faithful formatting.
 - Remove repetitive or low-signal output when safe.
 - Preserve information required for correct downstream actions.
@@ -89,7 +89,15 @@ Recommended additional validation:
 
 ```bash
 go test -count=1 -race ./...
-go test -count=1 -v ./...
+
+# https://github.com/dominikh/go-tools
+staticcheck ./...
+
+# https://github.com/gordonklaus/ineffassign
+ineffassign ./...
+
+# https://github.com/fzipp/gocyclo
+gocyclo -over 15 .
 ```
 
 CI is authoritative. Pull requests must pass all CI checks.

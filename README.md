@@ -101,7 +101,31 @@ ccp --version
 
 ---
 
-## Basic Usage
+### Initialization
+
+Try automatic mode in case if your project has referenced tools:
+
+```bash
+ccp init
+```
+
+Or manually:
+
+```bash
+ccp init --tools claude,codex
+```
+
+---
+
+### Uninstall
+
+```bash
+ccp uninstall
+```
+
+---
+
+## Basic Direct Usage
 
 Wrap native commands directly:
 
@@ -114,8 +138,9 @@ ccp grep -R "TODO" .
 Shell-style chains:
 
 ```bash
-ccp echo a && echo b
-ccp "echo a && echo b"
+ccp echo chain-ok && ccp echo chain-done
+ccp false || ccp echo chain-recovered
+ccp nl -ba spec.md | ccp sed -n '1,260p'
 ```
 
 Raw passthrough:
@@ -144,6 +169,19 @@ For issues:
 
 - Open a GitHub issue for bugs or feature requests.
 - For vulnerabilities, follow the process in [SECURITY.md](./SECURITY.md).
+- Use following commands to generate a bug report:
+
+```bash
+# Capture CCP version
+ccp --version
+
+# Capture raw command output for diagnostics
+ccp --capture-raw (--capture-raw-dir <directory>) (--confidential <comma-separated list of strings to replace>) <command>
+
+# Capture CCP command output
+# NOTE: does not support --confidential, needs manual checking
+ccp <command>
+```
 
 ---
 

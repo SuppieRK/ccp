@@ -94,32 +94,44 @@ func classifyNPMLine(rawLine, line string) npmOutputClass {
 	lower := strings.ToLower(trimmed)
 	leftLower := strings.ToLower(strings.TrimLeft(trimmed, " \t"))
 
-	if npmLifecycleHeaderRe.MatchString(trimmed) || strings.HasPrefix(trimmed, "> ") {
+	if isNPMLifecycleLine(trimmed, lower) {
 		return npmClassLifecycle
 	}
-	if strings.HasPrefix(lower, "yarn run v") || strings.HasPrefix(trimmed, "$ ") {
-		return npmClassLifecycle
-	}
-	if strings.HasPrefix(leftLower, "npm notice") {
+	if isNPMProgressLine(leftLower, lower) || isNPMProgressNoise(rawLine, trimmed) {
 		return npmClassProgress
 	}
-	if strings.HasPrefix(lower, "done in ") || strings.HasPrefix(lower, "info visit https://yarnpkg.com") {
-		return npmClassProgress
-	}
-	if strings.HasPrefix(leftLower, "npm warn") || strings.HasPrefix(lower, "warning ") {
+	if isNPMWarningLine(leftLower, lower) {
 		return npmClassWarning
 	}
-	if strings.HasPrefix(leftLower, "npm err!") ||
+	if isNPMFailureLine(trimmed, leftLower, lower) {
+		return npmClassFailure
+	}
+	return npmClassNeutral
+}
+
+func isNPMLifecycleLine(trimmed, lower string) bool {
+	return npmLifecycleHeaderRe.MatchString(trimmed) ||
+		strings.HasPrefix(trimmed, "> ") ||
+		strings.HasPrefix(lower, "yarn run v") ||
+		strings.HasPrefix(trimmed, "$ ")
+}
+
+func isNPMProgressLine(leftLower, lower string) bool {
+	return strings.HasPrefix(leftLower, "npm notice") ||
+		strings.HasPrefix(lower, "done in ") ||
+		strings.HasPrefix(lower, "info visit https://yarnpkg.com")
+}
+
+func isNPMWarningLine(leftLower, lower string) bool {
+	return strings.HasPrefix(leftLower, "npm warn") || strings.HasPrefix(lower, "warning ")
+}
+
+func isNPMFailureLine(trimmed, leftLower, lower string) bool {
+	return strings.HasPrefix(leftLower, "npm err!") ||
 		strings.HasPrefix(lower, "error command failed with exit code") ||
 		strings.Contains(lower, " failed") ||
 		strings.Contains(lower, " error") ||
-		strings.HasPrefix(trimmed, "[ERROR]") {
-		return npmClassFailure
-	}
-	if isNPMProgressNoise(rawLine, trimmed) {
-		return npmClassProgress
-	}
-	return npmClassNeutral
+		strings.HasPrefix(trimmed, "[ERROR]")
 }
 
 func isNPMProgressNoise(rawLine, trimmed string) bool {

@@ -77,7 +77,17 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), testGainDBPath)
 	now := time.Now().UTC()
-	seed := []RunMetric{
+	appendSeedMetrics(t, path, queryFilterSeed(now))
+	assertToolFilteredSummaryRows(t, path)
+	assertSummaryRowsByTool(t, path)
+	assertFailedHistoryRows(t, path)
+	assertSinceFilteredRows(t, path, 3*time.Hour, 2)
+	assertPeriodQueriesReturnRows(t, path, periodDay, periodWeek, periodMonth)
+	assertMissedOpportunities(t, path)
+}
+
+func queryFilterSeed(now time.Time) []RunMetric {
+	return []RunMetric{
 		{
 			Timestamp:   now.Add(-48 * time.Hour),
 			Tool:        "go",
@@ -106,8 +116,10 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 			Passthrough: true,
 		},
 	}
-	appendSeedMetrics(t, path, seed)
+}
 
+func assertToolFilteredSummaryRows(t *testing.T, path string) {
+	t.Helper()
 	rows, err := QuerySummaryRows(path, QueryOptions{Tool: "go"})
 	if err != nil {
 		t.Fatalf("summary rows by tool: %v", err)
@@ -115,7 +127,10 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 	if len(rows) != 1 || rows[0].Command != goTestCommand {
 		t.Fatalf("unexpected tool-filtered rows: %#v", rows)
 	}
+}
 
+func assertSummaryRowsByTool(t *testing.T, path string) {
+	t.Helper()
 	toolRows, err := QuerySummaryRowsByTool(path, QueryOptions{})
 	if err != nil {
 		t.Fatalf("summary rows by tool aggregate: %v", err)
@@ -129,7 +144,10 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 	if toolRows[0].EstimatedInputTokens != ((2000+3)/4) || toolRows[0].EstimatedOutputTokens != ((700+3)/4) {
 		t.Fatalf("unexpected token estimates from bytes for go aggregate: %#v", toolRows[0])
 	}
+}
 
+func assertFailedHistoryRows(t *testing.T, path string) {
+	t.Helper()
 	failedRows, err := QueryHistory(path, QueryOptions{Failed: true})
 	if err != nil {
 		t.Fatalf("history failed filter: %v", err)
@@ -137,16 +155,22 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 	if len(failedRows) != 1 || failedRows[0].ExitCode == 0 {
 		t.Fatalf("unexpected failed-only rows: %#v", failedRows)
 	}
+}
 
-	sinceRows, err := QueryHistory(path, QueryOptions{Since: 3 * time.Hour})
+func assertSinceFilteredRows(t *testing.T, path string, since time.Duration, want int) {
+	t.Helper()
+	sinceRows, err := QueryHistory(path, QueryOptions{Since: since})
 	if err != nil {
 		t.Fatalf("history since filter: %v", err)
 	}
-	if len(sinceRows) != 2 {
-		t.Fatalf("since-filter rows = %d, want 2", len(sinceRows))
+	if len(sinceRows) != want {
+		t.Fatalf("since-filter rows = %d, want %d", len(sinceRows), want)
 	}
+}
 
-	for _, p := range []string{periodDay, periodWeek, periodMonth} {
+func assertPeriodQueriesReturnRows(t *testing.T, path string, periods ...string) {
+	t.Helper()
+	for _, p := range periods {
 		out, err := QueryPeriod(path, QueryOptions{Period: p})
 		if err != nil {
 			t.Fatalf("period query (%s): %v", p, err)
@@ -155,7 +179,10 @@ func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
 			t.Fatalf("period query (%s) returned no rows", p)
 		}
 	}
+}
 
+func assertMissedOpportunities(t *testing.T, path string) {
+	t.Helper()
 	missed, err := QueryMissedOpportunities(path, QueryOptions{}, 5)
 	if err != nil {
 		t.Fatalf("missed opportunities: %v", err)
