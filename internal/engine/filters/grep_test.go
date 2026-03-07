@@ -104,12 +104,6 @@ func TestGrepFilterNoMatchCases(t *testing.T) {
 		wantOutput    string
 	}{
 		{
-			name:       "strict-no-match-suppression",
-			dispatch:   "grep|max=50|context_only=0|strict_no_match=1",
-			exitCode:   0,
-			wantAction: engine.ActionIgnore,
-		},
-		{
 			name:          "non-zero-no-match-after-eof",
 			dispatch:      "grep|max=50|context_only=0",
 			exitCode:      1,
@@ -118,11 +112,10 @@ func TestGrepFilterNoMatchCases(t *testing.T) {
 			wantAction:    engine.ActionIgnore,
 		},
 		{
-			name:       "zero-exit-no-match-summary",
+			name:       "zero-exit-no-match-empty",
 			dispatch:   "grep|max=50|context_only=0",
 			exitCode:   0,
-			wantAction: engine.ActionFlush,
-			wantOutput: "0 matches\n",
+			wantAction: engine.ActionIgnore,
 		},
 	}
 

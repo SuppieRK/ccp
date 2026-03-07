@@ -47,7 +47,6 @@ CI is the canonical definition of release build mechanics.
 - MUST execute command shape exactly as typed unless filter contract defines normalization.
 - MUST preserve native output affordances when possible, especially line-oriented forms that coding agents can reuse in follow-up shell expressions.
 - MUST treat structured/precision modes as byte-preserving passthrough when required.
-- `--strict` MUST reject ambiguous plans.
 - `--capture-raw` MUST preserve execution semantics.
 
 ---

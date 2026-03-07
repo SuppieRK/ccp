@@ -22,7 +22,7 @@ func mustDockerRegistry(t *testing.T) *engine.ToolFilterRegistry {
 func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 	reg := mustDockerRegistry(t)
 
-	psPlan, err := BuildExecPlan([]string{"docker", "ps"}, reg, false)
+	psPlan, err := BuildExecPlan([]string{"docker", "ps"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanFmt, err)
 	}
@@ -30,7 +30,7 @@ func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 		t.Fatalf("unexpected docker ps plan: %#v", psPlan)
 	}
 
-	imgPlan, err := BuildExecPlan([]string{"docker", "images"}, reg, false)
+	imgPlan, err := BuildExecPlan([]string{"docker", "images"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanFmt, err)
 	}
@@ -38,7 +38,7 @@ func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 		t.Fatalf("unexpected docker images plan: %#v", imgPlan)
 	}
 
-	logPlan, err := BuildExecPlan([]string{"docker", "logs", "--tail", "20", "api"}, reg, false)
+	logPlan, err := BuildExecPlan([]string{"docker", "logs", "--tail", "20", "api"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanFmt, err)
 	}
@@ -59,7 +59,7 @@ func TestBuildExecPlanDockerPassthroughBoundaries(t *testing.T) {
 		{"docker", "logs", "api", "-f"},
 	}
 	for _, tc := range tests {
-		plan, err := BuildExecPlan(tc, reg, false)
+		plan, err := BuildExecPlan(tc, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %#v: %v", tc, err)
 		}

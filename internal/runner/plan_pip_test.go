@@ -45,7 +45,7 @@ func TestBuildExecPlanPIPAliasResolvesAndStructuredArgs(t *testing.T) {
 
 	setLookPathFnForTest(t, func(file string) (string, error) { return "", exec.ErrNotFound })
 
-	plan, err := BuildExecPlan([]string{"pip3", "list"}, reg, false)
+	plan, err := BuildExecPlan([]string{"pip3", "list"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPIPFmt, err)
 	}
@@ -75,7 +75,7 @@ func TestBuildExecPlanPIPUsesUVPreferredSubstitutionWhenAvailable(t *testing.T) 
 		return "", errors.New("not found")
 	})
 
-	plan, err := BuildExecPlan([]string{"pip", "outdated"}, reg, false)
+	plan, err := BuildExecPlan([]string{"pip", "outdated"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPIPFmt, err)
 	}
@@ -102,10 +102,10 @@ func TestBuildExecPlanPIPUVLookupCachedAcrossPlans(t *testing.T) {
 		return "", exec.ErrNotFound
 	})
 
-	if _, err := BuildExecPlan([]string{"pip", "list"}, reg, false); err != nil {
+	if _, err := BuildExecPlan([]string{"pip", "list"}, reg); err != nil {
 		t.Fatalf(errUnexpectedPIPFmt, err)
 	}
-	if _, err := BuildExecPlan([]string{"pip", "outdated"}, reg, false); err != nil {
+	if _, err := BuildExecPlan([]string{"pip", "outdated"}, reg); err != nil {
 		t.Fatalf(errUnexpectedPIPFmt, err)
 	}
 	if calls != 1 {
@@ -132,7 +132,7 @@ func TestBuildExecPlanPIPAmbiguousPassthroughCases(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, reg, false)
+			plan, err := BuildExecPlan(tc.args, reg)
 			if err != nil {
 				t.Fatalf(errUnexpectedPIPFmt, err)
 			}
@@ -151,7 +151,7 @@ func TestBuildExecPlanDirectUVShapeRemainsPassthrough(t *testing.T) {
 	if resolved := reg.Resolve("uv"); resolved != nil {
 		t.Fatalf("expected no dedicated uv tool filter, got %q", resolved.Tool())
 	}
-	plan, err := BuildExecPlan([]string{"uv", "run", "python", "-V"}, reg, false)
+	plan, err := BuildExecPlan([]string{"uv", "run", "python", "-V"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPIPFmt, err)
 	}

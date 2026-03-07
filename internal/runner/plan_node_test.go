@@ -43,7 +43,7 @@ func TestBuildExecPlanNodeCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, registry, false)
+			plan, err := BuildExecPlan(tc.args, registry)
 			if err != nil {
 				t.Fatalf(errUnexpectedNodeFmt, err)
 			}
@@ -69,7 +69,7 @@ func TestBuildExecPlanNPXNodeDelegates(t *testing.T) {
 		t.Fatalf(errRegisterNodeFilterFmt, err)
 	}
 
-	plan, err := BuildExecPlan([]string{"npx", "node", nodeScriptName}, registry, false)
+	plan, err := BuildExecPlan([]string{"npx", "node", nodeScriptName}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedNodeFmt, err)
 	}

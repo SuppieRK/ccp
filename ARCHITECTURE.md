@@ -79,7 +79,7 @@ Important modes:
 
 - `--raw`: bypass semantic engine; direct passthrough.
 - `--capture-raw` / `--capture-raw-dir`: capture sequenced raw stdout/stderr files while preserving normal execution.
-- `--strict`: reject ambiguous plans.
+- ambiguous shell or low-confidence planner shapes: use safe permissive fallback with neutral filtering.
 
 ## Engine + Filter Layer (`internal/engine`)
 

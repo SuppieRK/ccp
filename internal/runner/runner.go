@@ -25,7 +25,6 @@ type Options struct {
 	CaptureRaw    bool
 	CaptureRawDir string
 	Confidential  []string
-	Strict        bool
 	DebugFilter   bool
 	MetricsPath   string
 }
@@ -93,7 +92,7 @@ func (r *Runner) Run(args []string) int {
 		return r.runRaw(args)
 	}
 
-	plan, err := BuildExecPlan(args, r.registry, r.opts.Strict)
+	plan, err := BuildExecPlan(args, r.registry)
 	if err != nil {
 		return writeStderrAndCode(1, err)
 	}

@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"strings"
 	"testing"
 
 	"go-command-compression-proxy/internal/engine"
@@ -45,7 +44,7 @@ func TestBuildExecPlanPNPMCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, reg, false)
+			plan, err := BuildExecPlan(tc.args, reg)
 			if err != nil {
 				t.Fatalf(errUnexpectedPNPMFmt, err)
 			}
@@ -59,20 +58,9 @@ func TestBuildExecPlanPNPMCases(t *testing.T) {
 	}
 }
 
-func TestBuildExecPlanPNPMStrictRejectsUnsafeInstallPackage(t *testing.T) {
+func TestBuildExecPlanPNPMUnsafeInstallFallsBackToNeutral(t *testing.T) {
 	reg := mustPNPMRegistry(t)
-	_, err := BuildExecPlan([]string{"pnpm", "install", "../evil"}, reg, true)
-	if err == nil {
-		t.Fatal("expected strict-mode planning error")
-	}
-	if !strings.Contains(strings.ToLower(err.Error()), "unsafe pnpm install package") {
-		t.Fatalf("expected unsafe install diagnostics, got %q", err)
-	}
-}
-
-func TestBuildExecPlanPNPMPermissiveUnsafeInstallFallsBackToNeutral(t *testing.T) {
-	reg := mustPNPMRegistry(t)
-	plan, err := BuildExecPlan([]string{"pnpm", "install", "../evil"}, reg, false)
+	plan, err := BuildExecPlan([]string{"pnpm", "install", "../evil"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPNPMFmt, err)
 	}

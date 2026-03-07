@@ -14,7 +14,7 @@ func TestBuildExecPlanYarnAliasResolvesToYarnFilter(t *testing.T) {
 	}
 
 	for _, bin := range []string{"yarn", "yarnpkg"} {
-		plan, err := BuildExecPlan([]string{bin, "install"}, reg, false)
+		plan, err := BuildExecPlan([]string{bin, "install"}, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %s: %v", bin, err)
 		}

@@ -42,10 +42,6 @@ Unsafe BRE translation candidates SHALL be marked ambiguous.
 - **WHEN** pattern uses unsupported BRE constructs without ERE/PERL flags
 - **THEN** plan is marked ambiguous and forced to neutral passthrough.
 
-#### Scenario: Ambiguous regex in strict mode
-- **WHEN** strict mode is enabled for the same ambiguous plan
-- **THEN** planning is rejected with explicit ambiguity diagnostics.
-
 ### Requirement: Grep Runtime Handling
 Runtime processing SHALL preserve diagnostics and compact stdout only at exit.
 
@@ -78,13 +74,12 @@ Compacted grep output SHALL group and bound matches deterministically.
 - **THEN** rendering is capped and appends `... +<n> more matches`.
 
 ### Requirement: No-Match Semantics
-No-match behavior SHALL follow exit/strict metadata semantics without synthetic errors.
+No-match behavior SHALL preserve native empty-output semantics without synthetic summaries.
 
-#### Scenario: Strict or non-zero no-match
+#### Scenario: Non-zero no-match
 - **WHEN** buffered stdout is empty and exit is non-zero
-- **OR** dispatch includes `strict_no_match=1`
 - **THEN** no stdout output is emitted.
 
-#### Scenario: Non-strict zero-exit no-match
-- **WHEN** buffered stdout is empty, exit is zero, and strict no-match is disabled
-- **THEN** output is `0 matches`.
+#### Scenario: Zero-exit no-match
+- **WHEN** buffered stdout is empty and exit is zero
+- **THEN** no stdout output is emitted.

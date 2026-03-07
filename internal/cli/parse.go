@@ -19,8 +19,6 @@ type Options struct {
 	CaptureRawDir string
 	// ConfidentialRedactions are comma-separated substrings replaced with "***" in capture files.
 	ConfidentialRedactions []string
-	// Strict rejects ambiguous command plans before execution.
-	Strict bool
 	// DebugFilter emits filter metadata while writing compacted output.
 	DebugFilter bool
 	// CommandArgs are the command and arguments forwarded to runner/lifecycle logic.
@@ -78,9 +76,6 @@ func parseFlagArg(args []string, index int, opts *Options) (bool, int, error) {
 		}
 		opts.ConfidentialRedactions = parseConfidentialRedactions(value)
 		return true, next, nil
-	case "--strict":
-		opts.Strict = true
-		return true, index, nil
 	case "--debug-filter":
 		opts.DebugFilter = true
 		return true, index, nil

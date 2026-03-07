@@ -414,20 +414,7 @@ func TestRawBypassesRegistryCompletely(t *testing.T) {
 	}
 }
 
-func TestStrictModeRejectsAmbiguousChainedCommand(t *testing.T) {
-	r := New(Options{Strict: true}, nil, nil)
-	stderr, code := captureStderr(t, func() int {
-		return r.Run([]string{"echo", "a", "&&", "echo", "b"})
-	})
-	if code == 0 {
-		t.Fatal("expected strict-mode rejection code")
-	}
-	if !strings.Contains(stderr, "strict mode") || !strings.Contains(stderr, "&&") {
-		t.Fatalf("expected strict diagnostics with operator, got %q", stderr)
-	}
-}
-
-func TestPermissiveModeAllowsAmbiguousChainedCommand(t *testing.T) {
+func TestAmbiguousChainedCommandExecutesPermissively(t *testing.T) {
 	r := New(Options{}, nil, nil)
 	out, code := captureStdout(t, func() int {
 		return r.Run([]string{"echo", "a", "&&", "echo", "b"})
@@ -459,8 +446,8 @@ func TestPermissiveAmbiguousUsesNeutralFiltering(t *testing.T) {
 	}
 }
 
-func TestStrictModeAllowsDirectExecution(t *testing.T) {
-	r := New(Options{Strict: true}, nil, nil)
+func TestDirectExecutionStillWorks(t *testing.T) {
+	r := New(Options{}, nil, nil)
 	out, code := captureStdout(t, func() int {
 		if isWindows() {
 			return r.Run([]string{rtCmdExe, "/C", "echo ok"})
@@ -468,7 +455,7 @@ func TestStrictModeAllowsDirectExecution(t *testing.T) {
 		return r.Run([]string{"sh", "-c", "echo ok"})
 	})
 	if code != 0 {
-		t.Fatalf("expected strict direct execution success, got %d", code)
+		t.Fatalf("expected direct execution success, got %d", code)
 	}
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("expected output, got %q", out)

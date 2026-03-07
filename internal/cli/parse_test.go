@@ -88,13 +88,10 @@ func TestParseRejectsVerbosityFlags(t *testing.T) {
 	}
 }
 
-func TestParseDebugAndStrictFlags(t *testing.T) {
-	opts := mustParse(t, []string{"--debug-filter", "--strict", "ls"})
+func TestParseDebugFlag(t *testing.T) {
+	opts := mustParse(t, []string{"--debug-filter", "ls"})
 	if !opts.DebugFilter {
 		t.Fatal("expected debug-filter mode to be enabled")
-	}
-	if !opts.Strict {
-		t.Fatal("expected strict mode to be enabled")
 	}
 }
 

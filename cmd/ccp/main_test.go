@@ -36,14 +36,14 @@ func TestBuildRuntimeUsesSharedRegistryForPlannerAndEngine(t *testing.T) {
 	if registry.Resolve("gradlew") == nil {
 		t.Fatal("expected gradle filter aliases in shared registry")
 	}
-	plan, err := runner.BuildExecPlan([]string{"ls"}, registry, false)
+	plan, err := runner.BuildExecPlan([]string{"ls"}, registry)
 	if err != nil {
 		t.Fatalf("build plan with shared registry: %v", err)
 	}
 	if plan.Tool != "" {
 		t.Fatalf("expected default ls passthrough tool binding, got %q", plan.Tool)
 	}
-	longPlan, err := runner.BuildExecPlan([]string{"ls", "-l"}, registry, false)
+	longPlan, err := runner.BuildExecPlan([]string{"ls", "-l"}, registry)
 	if err != nil {
 		t.Fatalf("build long ls plan with shared registry: %v", err)
 	}

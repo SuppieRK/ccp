@@ -44,7 +44,7 @@ func TestBuildExecPlanNPXCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, reg, false)
+			plan, err := BuildExecPlan(tc.args, reg)
 			if err != nil {
 				t.Fatalf(errUnexpectedNPXFmt, err)
 			}

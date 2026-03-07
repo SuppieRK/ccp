@@ -27,7 +27,7 @@ func TestBuildExecPlanGoDispatchesKnownSubcommands(t *testing.T) {
 		{args: []string{"go", "build", "./..."}, dispatch: "go build"},
 	}
 	for _, tc := range tests {
-		plan, err := BuildExecPlan(tc.args, reg, false)
+		plan, err := BuildExecPlan(tc.args, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %#v: %v", tc.args, err)
 		}
@@ -39,7 +39,7 @@ func TestBuildExecPlanGoDispatchesKnownSubcommands(t *testing.T) {
 
 func TestBuildExecPlanGoUnsupportedPassthrough(t *testing.T) {
 	reg := mustGoRegistry(t)
-	plan, err := BuildExecPlan([]string{"go", "run", "."}, reg, false)
+	plan, err := BuildExecPlan([]string{"go", "run", "."}, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

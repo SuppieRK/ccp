@@ -92,7 +92,7 @@ func defaultMetricsPath() string {
 }
 
 func usageText() string {
-	return "usage: ccp [--help|-h] [--version] [--raw] [--capture-raw --capture-raw-dir <dir> --confidential <a,b,...>] [--strict] [--debug-filter] <command> [args...]"
+	return "usage: ccp [--help|-h] [--version] [--raw] [--capture-raw --capture-raw-dir <dir> --confidential <a,b,...>] [--debug-filter] <command> [args...]"
 }
 
 func buildRuntime(opts cli.Options) (*runner.Runner, error) {
@@ -137,7 +137,6 @@ func buildRuntime(opts cli.Options) (*runner.Runner, error) {
 		CaptureRaw:    opts.CaptureRaw,
 		CaptureRawDir: opts.CaptureRawDir,
 		Confidential:  opts.ConfidentialRedactions,
-		Strict:        opts.Strict,
 		DebugFilter:   opts.DebugFilter,
 		MetricsPath:   defaultMetricsPath(),
 	}, eng, registry), nil

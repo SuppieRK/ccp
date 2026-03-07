@@ -35,7 +35,7 @@ func TestBuildExecPlanGrepUsesPreferredSubstitutionWhenAvailable(t *testing.T) {
 
 	reg := mustGrepRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"grep", "needle"}, reg, false)
+	plan, err := BuildExecPlan([]string{"grep", "needle"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedGrepFmt, err)
 	}
@@ -67,7 +67,7 @@ func TestBuildExecPlanGrepFallsBackToNativeWhenPreferredUnavailable(t *testing.T
 
 	reg := mustGrepRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"grep", "needle"}, reg, false)
+	plan, err := BuildExecPlan([]string{"grep", "needle"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedGrepFmt, err)
 	}
@@ -88,7 +88,7 @@ func TestBuildExecPlanGrepUnsafeRegexAmbiguous(t *testing.T) {
 
 	reg := mustGrepRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"grep", `a\+b`, "."}, reg, false)
+	plan, err := BuildExecPlan([]string{"grep", `a\+b`, "."}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedGrepFmt, err)
 	}
@@ -97,24 +97,6 @@ func TestBuildExecPlanGrepUnsafeRegexAmbiguous(t *testing.T) {
 	}
 	if plan.Tool != "" {
 		t.Fatalf("expected neutral passthrough for ambiguous regex, got %q", plan.Tool)
-	}
-	if _, err := BuildExecPlan([]string{"grep", `a\+b`, "."}, reg, true); err == nil {
-		t.Fatal("expected strict mode to reject unsafe regex translation")
-	}
-}
-
-func TestBuildExecPlanGrepStrictAddsNoMatchSuppressionMarker(t *testing.T) {
-	restore := stubLookPath(func(file string) (string, error) { return "", &exec.Error{Name: file, Err: exec.ErrNotFound} })
-	defer restore()
-
-	reg := mustGrepRegistry(t)
-
-	plan, err := BuildExecPlan([]string{"grep", "needle", "."}, reg, true)
-	if err != nil {
-		t.Fatalf(errUnexpectedGrepFmt, err)
-	}
-	if !strings.Contains(plan.DispatchKey, "strict_no_match=1") {
-		t.Fatalf("expected strict dispatch marker, got %q", plan.DispatchKey)
 	}
 }
 
