@@ -27,10 +27,20 @@ run_if_available() {
   warn_missing_tool "$tool" "$install"
 }
 
-mapfile -t GO_FILES < <(find cmd internal -name '*.go' | sort)
-if [[ "${#GO_FILES[@]}" -gt 0 ]]; then
-  echo "[validate] gofmt -w ${#GO_FILES[@]} files"
-  gofmt -w "${GO_FILES[@]}"
+collect_go_files() {
+  find cmd internal -name '*.go' | sort
+}
+
+GO_FILES="$(collect_go_files)"
+if [[ -n "$GO_FILES" ]]; then
+  GO_FILE_COUNT="$(printf '%s\n' "$GO_FILES" | wc -l | tr -d '[:space:]')"
+  echo "[validate] gofmt -w ${GO_FILE_COUNT} files"
+  while IFS= read -r go_file; do
+    [[ -z "$go_file" ]] && continue
+    gofmt -w "$go_file"
+  done <<EOF
+$GO_FILES
+EOF
 fi
 
 echo "[validate] go vet ./..."
