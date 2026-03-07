@@ -46,6 +46,7 @@ const (
 	AgentCursor        ID = "cursor"
 	AgentGemini        ID = "gemini"
 	AgentGitHubCopilot ID = "github-copilot"
+	AgentKiro          ID = "kiro"
 	AgentOpenCode      ID = "opencode"
 	AgentTrae          ID = "trae"
 	AgentWindsurf      ID = "windsurf"
@@ -102,6 +103,7 @@ func DefaultAdapters() map[string]Adapter {
 		string(AgentCursor):        NewCursorAdapter(),
 		string(AgentGemini):        NewGeminiAdapter(),
 		string(AgentGitHubCopilot): NewGitHubCopilotAdapter(),
+		string(AgentKiro):          NewKiroAdapter(),
 		string(AgentOpenCode):      NewOpenCodeAdapter(),
 		string(AgentTrae):          NewTraeAdapter(),
 		string(AgentWindsurf):      NewWindsurfAdapter(),

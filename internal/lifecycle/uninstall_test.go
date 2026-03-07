@@ -225,6 +225,31 @@ func TestRunUninstallContinueRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallKiroRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".kiro"), "mkdir .kiro: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("kiro")); err != nil {
+		t.Fatalf("kiro init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("kiro")); err != nil {
+		t.Fatalf("kiro uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".kiro", "steering", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected kiro steering file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallTraeRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -575,6 +600,34 @@ func TestRunUninstallTraePreservesOtherTraeFilesAndDirectories(t *testing.T) {
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".trae", "rules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .trae/rules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallKiroPreservesOtherKiroFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".kiro", "steering"), "mkdir .kiro/steering: %v")
+	otherRule := filepath.Join(tmp, ".kiro", "steering", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("kiro")); err != nil {
+		t.Fatalf("kiro init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("kiro")); err != nil {
+		t.Fatalf("kiro uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other kiro steering preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".kiro", "steering")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .kiro/steering directory preserved, err=%v", err)
 	}
 }
 
