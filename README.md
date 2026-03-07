@@ -26,6 +26,42 @@ This project prioritizes deterministic, machine-consumable correctness over term
 
 For coding agents operating in large repositories, this reduces context size without sacrificing correctness or downstream operability.
 
+## Example Gains
+
+Representative benchmark scenarios from CI:
+
+| Command | Scenario | Native tokens | CCP tokens | Savings | Overhead |
+|---|---|---:|---:|---:|---:|
+| `find . -name *.go -type f` | recursive code search | 202 | 171 | 15.35% | 4 ms |
+| `grep -r -n needle .` | recursive match | 1159 | 745 | 35.72% | 4 ms |
+| `./gradlew build` | large generated-build failure | 22,917 | 1,132 | 95.06% | N/A |
+| `cargo build` | failing build | 280 | 32 | 88.57% | 5 ms |
+| `go test -count=1 ./...` | failing test run | 130 | 80 | 38.46% | 4 ms |
+| `./.venv/bin/pytest -q tests/test_app.py::test_fail` | failing test | 259 | 73 | 71.81% | 5 ms |
+| `docker logs <container>` | noisy container logs | 1009 | 19 | 98.12% | 5 ms |
+| `docker ps --format {{json .}}` | structured passthrough safety | 169 | 167 | 0.00% | 7 ms |
+
+These examples are benchmark-fixture results from CI. They illustrate both compression wins and deliberate passthrough for structured or precision-sensitive output.
+
+## Real-World Usage
+
+In one research-heavy Claude session across 4 repositories:
+
+| Metric | Value |
+|---|---:|
+| Commands proxied | 96 |
+| Native tokens | 944,007 |
+| CCP tokens | 59,195 |
+| Total savings | 93.73% |
+
+Largest contributors in that session:
+
+- `find`: 57 runs, ~93.98% savings
+- `grep`: 28 runs, ~42.56% savings
+- `ls`: 2 runs, ~79.67% savings
+
+These numbers come from `ccp gain` on actual work, not a synthetic benchmark summary. Results vary by repository shape and command mix.
+
 ---
 
 ## Getting Started
@@ -108,8 +144,21 @@ ccp nl -ba spec.md | ccp sed -n '1,260p'
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
+| Agent integrations | `claude`, `codex`, `opencode` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
+
+---
+
+## Inspired By
+
+`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
+
+`ccp` takes a narrower path: it stays close to native commands, preserves the command shapes users and coding agents already know, and focuses on deterministic output compaction rather than introducing a broad meta-command layer.
+
+You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
+
+That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
 
 ---
 
