@@ -22,6 +22,8 @@ const (
 	initCodexDir          = ".codex"
 	initCopilotDir        = ".copilot"
 	initCopilotFileName   = "copilot-instructions.md"
+	initCursorDir         = ".cursor"
+	initCursorRuleName    = "ccp.mdc"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
@@ -170,10 +172,10 @@ func TestRunInitPersistsStateShape(t *testing.T) {
 	if len(cfg.State) != 1 {
 		t.Fatalf("state len = %d, want 1", len(cfg.State))
 	}
-	if cfg.State[0].Tool != "cursor" || cfg.State[0].Status != "noop" {
+	if cfg.State[0].Tool != "cursor" || cfg.State[0].Status != "applied" {
 		t.Fatalf("unexpected state entry: %+v", cfg.State[0])
 	}
-	if !strings.Contains(cfg.State[0].Reason, "applied=0 noop=1") {
+	if !strings.Contains(cfg.State[0].Reason, "applied=1 noop=0") {
 		t.Fatalf("unexpected state reason: %q", cfg.State[0].Reason)
 	}
 }
@@ -233,6 +235,36 @@ func TestRunInitDetectsGitHubCopilotWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(home, initCopilotDir, initCopilotFileName)); err != nil {
 		t.Fatalf("expected github copilot instructions file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsCursorWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCursorDir, "mkdir .cursor: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "cursor" {
+		t.Fatalf("tools = %v, want [cursor]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initCursorDir, "rules", initCursorRuleName)); err != nil {
+		t.Fatalf("expected cursor rule file after detection, err=%v", err)
 	}
 }
 
@@ -534,6 +566,80 @@ func TestRunInitGitHubCopilotPreservesUserContentAndReplacesOnlyManagedRegion(t 
 	}
 	if strings.Contains(s, "old content") {
 		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitCursorUsesManagedProjectRule(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initCursorDir), "mkdir .cursor: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "cursor"}); err != nil {
+		t.Fatalf("cursor init failed: %v", err)
+	}
+	rulePath := filepath.Join(tmp, initCursorDir, "rules", initCursorRuleName)
+	b, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read cursor rule file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "alwaysApply: true") {
+		t.Fatalf("expected alwaysApply metadata, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
+		t.Fatalf("expected canonical ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, "`ccp echo chain-ok && ccp echo chain-done`") {
+		t.Fatalf("expected chaining examples, got: %s", s)
+	}
+	if strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("did not expect managed block markers in cursor rule, got: %s", s)
+	}
+}
+
+func TestRunInitCursorRerunKeepsManagedRuleStable(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initCursorDir), "mkdir .cursor: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "cursor"}); err != nil {
+		t.Fatalf(initFirstFailedFmt, err)
+	}
+	rulePath := filepath.Join(tmp, initCursorDir, "rules", initCursorRuleName)
+	before, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read before: %v", err)
+	}
+	infoBefore, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat before: %v", err)
+	}
+
+	if err := RunInit([]string{initToolsFlag, "cursor"}); err != nil {
+		t.Fatalf(initSecondFailedFmt, err)
+	}
+	after, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	infoAfter, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected idempotent rerun to keep rule content unchanged")
+	}
+	if !infoAfter.ModTime().Equal(infoBefore.ModTime()) {
+		t.Fatalf("expected idempotent rerun to keep rule timestamp, before=%v after=%v", infoBefore.ModTime(), infoAfter.ModTime())
+	}
+	if matches, _ := filepath.Glob(rulePath + ".bak.*"); len(matches) != 0 {
+		t.Fatalf("expected no rule backups for idempotent rerun, got %d", len(matches))
 	}
 }
 

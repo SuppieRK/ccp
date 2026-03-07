@@ -45,6 +45,11 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **WHEN** user selects `github-copilot`
 - **THEN** init accepts the tool ID as a valid registered adapter.
 
+#### Scenario: cursor is a supported adapter-backed tool
+- **WHEN** user selects `cursor`
+- **THEN** init accepts the tool ID as a valid registered adapter
+- **AND** routes installation through a real Cursor adapter rather than a no-op placeholder.
+
 ### Requirement: Adapter Installation Semantics
 `ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
 
@@ -62,7 +67,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes

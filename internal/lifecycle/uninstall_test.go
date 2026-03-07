@@ -74,6 +74,31 @@ func TestRunUninstallGitHubCopilotRemovesManagedBlockAndInitConfig(t *testing.T)
 	}
 }
 
+func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".cursor"), "mkdir .cursor: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("cursor")); err != nil {
+		t.Fatalf("cursor init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("cursor")); err != nil {
+		t.Fatalf("cursor uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".cursor", "rules", "ccp.mdc")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected cursor rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -198,6 +223,34 @@ func TestRunUninstallGitHubCopilotPreservesNonCCPContent(t *testing.T) {
 	}
 	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
 		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallCursorPreservesOtherCursorFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".cursor", "rules"), "mkdir .cursor/rules: %v")
+	otherRule := filepath.Join(tmp, ".cursor", "rules", "team.mdc")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("cursor")); err != nil {
+		t.Fatalf("cursor init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("cursor")); err != nil {
+		t.Fatalf("cursor uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other cursor rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".cursor", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .cursor/rules directory preserved, err=%v", err)
 	}
 }
 
@@ -377,6 +430,26 @@ func TestRunUninstallDetectsGitHubCopilotWhenToolsFlagOmitted(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "home", ".copilot", "copilot-instructions.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected github copilot instructions removed, err=%v", err)
+	}
+}
+
+func TestRunUninstallDetectsCursorWhenToolsFlagOmitted(t *testing.T) {
+	tmp := t.TempDir()
+	chdirForTest(t, tmp)
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	mkdirAllForTest(t, filepath.Join(tmp, ".cursor"), "mkdir .cursor: %v")
+
+	if err := RunInit(toolsArgs("cursor")); err != nil {
+		t.Fatalf("init cursor: %v", err)
+	}
+	if err := os.Remove(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); err != nil {
+		t.Fatalf("remove init config: %v", err)
+	}
+	if err := RunUninstall(nil); err != nil {
+		t.Fatalf("uninstall auto-detect: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, ".cursor", "rules", "ccp.mdc")); !os.IsNotExist(err) {
+		t.Fatalf("expected cursor rule removed, err=%v", err)
 	}
 }
 

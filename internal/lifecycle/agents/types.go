@@ -90,7 +90,7 @@ func DefaultAdapters() map[string]Adapter {
 	return map[string]Adapter{
 		string(AgentClaude):        NewClaudeAdapter(),
 		string(AgentCodex):         NewCodexAdapter(),
-		string(AgentCursor):        NewNoopAdapter(string(AgentCursor), ".cursor"),
+		string(AgentCursor):        NewCursorAdapter(),
 		string(AgentGitHubCopilot): NewGitHubCopilotAdapter(),
 		string(AgentOpenCode):      NewOpenCodeAdapter(),
 	}
