@@ -169,6 +169,13 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** each emitted benchmark matrix entry includes the tool identifier plus runtime requirement metadata
 - **AND** benchmark jobs use that metadata to provision only the needed runtimes for that tool.
 
+#### Scenario: Maintained shell helper control flow is explicit
+- **WHEN** maintained validation or benchmark shell helper functions complete successfully
+- **THEN** they end with an explicit `return 0`
+- **AND WHEN** maintained shell scripts branch on values that may not match a known tool or path pattern
+- **THEN** the `case` statement includes an explicit `*` fallback branch
+- **AND** the fallback behavior is a deliberate no-op unless stricter handling is required.
+
 #### Scenario: Coverage and race gates are enforced in validation workflows
 - **WHEN** PR/main validation runs
 - **THEN** CI runs the repository local-validation helper covering `go vet ./...`, `go test -count=1 -race ./...`, internal coverage gate enforcement at `80%`, `staticcheck ./...`, `ineffassign ./...`, and `gocyclo -over 15 .`

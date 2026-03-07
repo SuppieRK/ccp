@@ -90,7 +90,7 @@ ccp init
 Or select tools explicitly:
 
 ```bash
-ccp init --tools claude,codex
+ccp init --tools claude,codex,github-copilot
 ```
 
 Uninstall:
@@ -140,7 +140,7 @@ ccp nl -ba spec.md | ccp sed -n '1,260p'
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `claude`, `codex`, `opencode` |
+| Agent integrations | `claude`, `codex`, `github-copilot`, `opencode` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 

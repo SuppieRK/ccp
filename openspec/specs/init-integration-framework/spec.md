@@ -23,7 +23,7 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init detects tools using registered adapters for the selected scope root.
 
 #### Scenario: detect tool by known directory
-- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`)
+- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`)
 - **THEN** that tool is included in detected candidates for init selection.
 
 #### Scenario: ignore non-directory collisions
@@ -40,6 +40,10 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 #### Scenario: unsupported tool request
 - **WHEN** user selects a tool without a registered adapter
 - **THEN** init fails with `unsupported tool` diagnostics.
+
+#### Scenario: github-copilot is a supported tool
+- **WHEN** user selects `github-copilot`
+- **THEN** init accepts the tool ID as a valid registered adapter.
 
 ### Requirement: Adapter Installation Semantics
 `ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
@@ -58,7 +62,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes

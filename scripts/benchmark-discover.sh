@@ -79,6 +79,8 @@ tool_matrix_entry() {
     node|npm|pnpm|yarn|npx-*)
       needs_node=true
       ;;
+    *)
+      ;;
   esac
 
   if [[ "$tool" == "pnpm" ]]; then
@@ -114,6 +116,7 @@ tool_matrix_entry() {
       needs_kind: $needs_kind,
       needs_docker_images: $needs_docker_images
     }'
+  return 0
 }
 
 build_matrix_json() {
@@ -121,6 +124,7 @@ build_matrix_json() {
   for tool in "$@"; do
     tool_matrix_entry "$tool"
   done | jq -s -c '.'
+  return 0
 }
 
 if [[ "$mode" == "main" ]]; then
@@ -148,6 +152,7 @@ add_prefix() {
       selected["$t"]=1
     fi
   done
+  return 0
 }
 
 add_exact_if_exists() {
@@ -201,6 +206,8 @@ for path in "${changed[@]}"; do
       ;;
     cmd/ccp/*|internal/runner/*|internal/engine/*|internal/metrics/*|tools/benchmark/*|go.mod|go.sum)
       run_all=1
+      ;;
+    *)
       ;;
   esac
 done

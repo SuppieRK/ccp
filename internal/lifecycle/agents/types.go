@@ -38,10 +38,11 @@ type Context struct {
 type ID string
 
 const (
-	AgentClaude   ID = "claude"
-	AgentCodex    ID = "codex"
-	AgentCursor   ID = "cursor"
-	AgentOpenCode ID = "opencode"
+	AgentClaude        ID = "claude"
+	AgentCodex         ID = "codex"
+	AgentCursor        ID = "cursor"
+	AgentGitHubCopilot ID = "github-copilot"
+	AgentOpenCode      ID = "opencode"
 )
 
 type Adapter interface {
@@ -87,10 +88,11 @@ func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 
 func DefaultAdapters() map[string]Adapter {
 	return map[string]Adapter{
-		string(AgentClaude):   NewClaudeAdapter(),
-		string(AgentCodex):    NewCodexAdapter(),
-		string(AgentCursor):   NewNoopAdapter(string(AgentCursor), ".cursor"),
-		string(AgentOpenCode): NewOpenCodeAdapter(),
+		string(AgentClaude):        NewClaudeAdapter(),
+		string(AgentCodex):         NewCodexAdapter(),
+		string(AgentCursor):        NewNoopAdapter(string(AgentCursor), ".cursor"),
+		string(AgentGitHubCopilot): NewGitHubCopilotAdapter(),
+		string(AgentOpenCode):      NewOpenCodeAdapter(),
 	}
 }
 
