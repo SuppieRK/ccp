@@ -24,38 +24,19 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.x'
+          go-version: '1.26.x'
 
-      - name: Run go vet
+      - name: Install validation tools
         shell: bash
         run: |
-          go vet ./...
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/gordonklaus/ineffassign@latest
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 
-      - name: Run tests
+      - name: Run local validation helper
         shell: bash
         run: |
-          go test -count=1 ./...
-
-      - name: Run race detector
-        shell: bash
-        run: |
-          go test -count=1 -race ./...
-
-      - name: Generate internal coverage profile
-        shell: bash
-        run: |
-          mkdir -p .artifacts/coverage
-          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
-
-      - name: Enforce internal coverage gate (package + module)
-        shell: bash
-        run: |
-          go run ./cmd/coverage-gate \
-            -coverprofile .artifacts/coverage/internal.cover \
-            -module go-command-compression-proxy \
-            -internal-prefix internal/ \
-            -threshold 80 \
-            -summary-out .artifacts/coverage/summary.md
+          ./scripts/validate.sh
 
       - name: Publish coverage summary
         if: always()
@@ -111,7 +92,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.x'
+          go-version: '1.26.x'
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -252,7 +233,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.x'
+          go-version: '1.26.x'
 
       - name: Generate internal coverage profile for Sonar
         shell: bash

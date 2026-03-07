@@ -2,9 +2,7 @@
 
 Thank you for contributing to this project.
 
-This repository develops an agent-first command proxy designed to reduce command output consumed by coding agents while preserving the signal required for correct automated decision-making.
-
-Human terminal fidelity is secondary to deterministic, machine-consumable correctness.
+This repository develops an agent-first command proxy designed to reduce command output consumed by coding agents while preserving the signal required for correct automated decision-making. Human terminal fidelity is secondary to deterministic, machine-consumable correctness.
 
 This document describes expectations for contributors working in an open source environment while maintaining alignment with agent-oriented development constraints defined in `AGENTS.md`.
 
@@ -12,48 +10,21 @@ This document describes expectations for contributors working in an open source 
 
 # Project Principles
 
-## Optimization Target
-
-The primary optimization goal is reduction of command output volume as a practical proxy for reduced token consumption in automated agent workflows.
+Contributors should optimize for useful output reduction while preserving behavioral equivalence with wrapped native commands.
 
 Contributions MUST:
 
-- Optimize for lower output tokens when correctness is preserved.
-- Prefer semantic compaction over terminal-faithful formatting.
-- Remove repetitive or low-signal output when safe.
-- Preserve information required for correct downstream actions.
+- Reduce output only when correctness is preserved.
+- Prefer semantic, shape-preserving filtering over terminal-faithful formatting or denser representational rewrites.
+- Preserve native execution invariants: exit codes, critical diagnostics, exact `--raw` behavior, zero-byte output semantics, and safe passthrough on ambiguity.
+- Preserve deterministic behavior: stable output for identical inputs, no cross-command state leakage, and reproducible compaction behavior.
+- Avoid re-implementing native tooling when output filtering is sufficient.
 
 Contributions MUST NOT:
 
 - Retain verbosity solely for human readability.
 - Trade correctness for compaction gains.
-
----
-
-## Correctness Expectations
-
-All changes must preserve behavioral equivalence with wrapped native commands unless explicitly defined by filter behavior.
-
-Contributors MUST ensure:
-
-- Native command exit codes are preserved.
-- Critical diagnostics remain visible, including error, failure, panic, and root-cause indicators.
-- Raw execution mode remains byte-for-byte identical to native output.
-- If native output is 0 bytes, proxy output must be 0 bytes.
-- Ambiguous situations fall back safely to passthrough execution.
-- Native tooling is not reimplemented when output filtering is sufficient.
-
----
-
-## Determinism
-
-Deterministic behavior is a core project requirement.
-
-Changes MUST:
-
-- Produce stable output for identical inputs.
-- Avoid cross-command state leakage.
-- Maintain reproducible compaction behavior.
+- Introduce compressed output forms that make line-oriented shell reuse or coding-agent interpretation materially harder without explicit spec justification.
 
 ---
 
@@ -61,7 +32,7 @@ Changes MUST:
 
 ## Language
 
-- Go 1.24 or newer is required.
+- Go 1.26 or newer is required.
 - Code must be formatted using `gofmt`.
 - Errors must be handled explicitly.
 - Standard Go conventions for naming and package structure should be followed.
@@ -79,41 +50,15 @@ Complete architecture documentation is available in [ARCHITECTURE.md](./ARCHITEC
 All contributors must run the following from the repository root before submitting changes:
 
 ```bash
-gofmt -w $(find cmd internal -name '*.go')
-go vet ./...
-go test -count=1 ./...
-go mod tidy
+./scripts/validate.sh
 ```
 
-Recommended additional validation:
-
-```bash
-go test -count=1 -race ./...
-
-# https://github.com/dominikh/go-tools
-staticcheck ./...
-
-# https://github.com/gordonklaus/ineffassign
-ineffassign ./...
-
-# https://github.com/fzipp/gocyclo
-gocyclo -over 15 .
-```
+The script runs `gofmt`, `go vet`, `go test`, `go mod tidy`, `go test -race`, internal coverage-gate verification, and the local quality tools `staticcheck`, `ineffassign`, and `gocyclo` when they are installed. If one of those CLI tools is missing, the script prints an install suggestion instead of failing on the missing binary.
 
 CI is authoritative. Pull requests must pass all CI checks.
 
 Coverage gate expectation:
 - `internal/...` package coverage and aggregate module-group coverage must remain at or above `80%`.
-
-If coverage is below the limit, run:
-
-```bash
-mkdir -p .artifacts/coverage
-# 1) Generate the coverprofile file used by the gate.
-go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
-# 2) Evaluate coverage thresholds from that generated coverprofile.
-go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80
-```
 
 Then add or update tests in the failing `internal/...` packages until the gate passes.
 
@@ -155,8 +100,8 @@ When adding or modifying command filters:
 
 - Single-command tools must contain one filter file and one matching test file.
 - Parent-command tools should include one parent filter and parent test.
-    - Parent tools must use `ToolFilterRegistry`.
-    - Subcommand filters must live under `internal/engine/filters/<parent>/`.
+- Parent tools must use `ToolFilterRegistry`.
+- Subcommand filters must live under `internal/engine/filters/<parent>/`.
 - Each subcommand maps to a single filter and test file.
 - Shared logic should live in `common.go` or `helpers.go`.
 - Filters should remain small, focused, and responsibility-scoped.

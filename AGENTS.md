@@ -1,98 +1,54 @@
 # AGENTS.md – Command Compression Proxy
 
-This file defines hot-path operational invariants for automated coding agents.
-
 If instructions conflict:
 1. Follow explicit user instructions.
 2. Then follow this file.
 3. Then follow `CONTRIBUTING.md`.
 
-CI configuration is the canonical definition of release build mechanics.
+CI is the canonical definition of release build mechanics.
 
 ---
 
-# Execution Environment Invariants
+# Validation
 
-- MUST use Go 1.24+.
-- MUST format with: `gofmt -w $(find cmd internal -name '*.go')`
-- MUST run:
-```go
-go vet ./...
-go test -count=1 ./...
-go mod tidy
-```
 - All commands executed from repository root.
-
-Optional: `go test -count=1 -race ./...`
+- MUST use Go 1.26+.
+- MUST run `./scripts/validate.sh` from repository root.
+- MUST treat any non-zero exit from the validation script as a failed validation.
+- If the validation script reports missing optional tools, SHOULD suggest installing them.
 
 ---
 
-# CI and Quality Gates
+# Benchmarks
 
-- MUST pass all tests.
-- MUST pass cmd/coverage-gate for all pull requests.
-- MUST keep `internal/...` package coverage and aggregate module-group coverage at or above `80%`.
-- MUST have reproducible build artifacts.
-- MUST use `CGO_ENABLED=0` for release binaries.
-- MUST use deterministic benchmark assertions.
 - MUST NOT commit runtime benchmark artifacts.
-
-If coverage is below the threshold, MUST run and satisfy:
-```bash
-mkdir -p .artifacts/coverage
-# 1) Generate the coverprofile file consumed by coverage-gate.
-go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
-# 2) Enforce thresholds against that generated coverprofile.
-go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80
-```
+- SHOULD run `./scripts/benchmark-local.sh -t <tool>` before changing an existing tool filter to establish a local baseline when feasible.
+- MUST run `./scripts/benchmark-local.sh -t <tool>` after changing a tool filter or benchmarked execution behavior.
+- MUST treat any non-zero benchmark exit as a failure.
+- MUST use the script's `ccp gain` output, not just the harness summary, to evaluate compression results for the changed tool.
+- MUST investigate regressions when a before-change baseline exists, and MUST highlight runs with no `gain.db` or no meaningful compression result for the changed tool.
 
 ---
 
-# Mandatory OpenSpec Synchronization
+# OpenSpec Synchronization
 
-- ANY code modification requires corresponding OpenSpec spec modification.
-- No exceptions.
-- PRs without matching spec updates are invalid.
+- ANY code modification requires matching OpenSpec updates.
 - MUST keep specs, fixtures, tests, and implementation aligned.
 
 ---
 
-# Runtime Behavioral Invariants (Non-Negotiable)
+# Runtime Rules
 
-The proxy MUST:
-
-- Preserve native command exit code.
-- Preserve critical diagnostics.
-- Keep `--raw` byte-for-byte equivalent.
-- Fall back to passthrough on ambiguity or low confidence.
+- Preserve native execution semantics: exit code, critical diagnostics, exact `--raw` behavior, and 0-byte output semantics.
+- Fall back to passthrough on ambiguity, low confidence, or unsafe interactive/TTY-sensitive shapes.
+- Favor shape-preserving compaction over representational rewrites when filtering is sufficient.
 - Avoid re-implementing native tools when filtering suffices.
-- Produce stable deterministic output for identical input.
-- Maintain command-context isolation.
-- Emit 0 bytes when native output is 0 bytes.
-
----
-
-# Command Execution Constraints
-
+- Produce stable deterministic output with command-context isolation.
 - MUST execute command shape exactly as typed unless filter contract defines normalization.
+- MUST preserve native output affordances when possible, especially line-oriented forms that coding agents can reuse in follow-up shell expressions.
 - MUST treat structured/precision modes as byte-preserving passthrough when required.
-- MUST keep interactive/TTY-sensitive commands in passthrough when unsafe.
 - `--strict` MUST reject ambiguous plans.
 - `--capture-raw` MUST preserve execution semantics.
-
----
-
-# Release Logic Modification Constraints
-
-If modifying release or installer logic, MUST preserve:
-
-- Artifact format: `ccp_<tag>_<os>_<arch>.zip`
-- Tag format without `v` prefix.
-- Architecture mapping:
-  `x86_64` -> `amd64`
-  `aarch64` -> `arm64`
-- Stable-release resolution behavior.
-- `CGO_ENABLED=0` build requirement.
 
 ---
 
@@ -100,24 +56,20 @@ If modifying release or installer logic, MUST preserve:
 
 Agents MUST NOT:
 
-- Introduce new tooling without OpenSpec update.
-- Restructure directories without corresponding spec modification.
+- Introduce new code without OpenSpec update.
 - Modify generated benchmark artifacts manually.
 - Bypass benchmark gate logic.
-- Weaken deterministic guarantees.
 - Remove fallback safety behavior.
 - Relax exit-code parity.
-- Silence diagnostics for compaction gain.
+- Introduce non-native output syntaxes that make downstream shell filtering or coding-agent interpretation harder unless explicitly justified by spec.
 
 ---
 
-# Scoped Rule Retrieval
+# Scoped Rules
 
-When modifying specific subsystems, retrieve and follow:
-
-- [docs/agent-rules/TESTING.md](./docs/agent-rules/TESTING.md)
-- [docs/agent-rules/BENCHMARKS.md](./docs/agent-rules/BENCHMARKS.md)
-- [docs/agent-rules/RELEASE.md](./docs/agent-rules/RELEASE.md)
-- [docs/agent-rules/FILTERS.md](./docs/agent-rules/FILTERS.md)
+- Load [TESTING](./docs/agent-rules/TESTING.md) when adding or changing tests, or when a change affects planner, runner, or cross-tool test coverage.
+- Load [BENCHMARKS](./docs/agent-rules/BENCHMARKS.md) when changing benchmark fixtures, benchmark harness behavior, or tool benchmark expectations.
+- Load [FILTERS](./docs/agent-rules/FILTERS.md) when adding or changing command filters, filter fixtures, or filter-specific runner/benchmark coverage.
+- Load [RELEASE](./docs/agent-rules/RELEASE.md) when modifying release, installer, or distribution logic.
 
 Cold-path governance rules are intentionally separated to reduce working-memory load.

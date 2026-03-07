@@ -1,23 +1,10 @@
 # Agent Rule – Testing
 
-This file defines mandatory testing structure rules.
+## Test Selection
 
-## Planning vs Runtime Changes
-
-Planning change:
-- Affects `BuildExecPlan` outputs:
-  Tool, Name, Args, DispatchKey,
-  ambiguity handling,
-  strict behavior,
-  passthrough decisions.
-
-Runtime change:
-- Affects `Runner.Run` behavior:
-  stdout/stderr handling,
-  shared-context behavior,
-  compaction vs passthrough,
-  raw-mode bypass,
-  exit-code propagation.
+- Planning changes affect `BuildExecPlan` outputs such as tool/name resolution, args, dispatch keys, ambiguity handling, strict behavior, and passthrough decisions.
+- Runtime changes affect `Runner.Run` behavior such as stdout/stderr handling, shared-context behavior, compaction vs passthrough, raw-mode bypass, and exit-code propagation.
+- Filter-specific runner, benchmark, and fixture expectations belong in `docs/agent-rules/FILTERS.md`.
 
 ## Test Placement
 
@@ -25,9 +12,12 @@ Runtime change:
 - Generic planning: `internal/runner/plan_test.go`
 - Command-specific runtime: `internal/runner/runner_<command>_integration_test.go`
 - Generic runtime: `internal/runner/runner_test.go`
+- Fixture replay integration: `internal/engine/filters/tool_fixtures_integration_test.go`
 
 Command-specific behavior MUST NOT be placed in generic test files.
 
-## Coverage Gate
+## Expectations
 
-`cmd/coverage-gate` MUST pass in CI for all pull requests.
+- Add or update tests in the narrowest layer that exercises the changed behavior.
+- Prefer command-scoped tests over expanding generic suites when behavior is tool-specific.
+- `./scripts/validate.sh` is the canonical local validation command and must pass before changes are complete.
