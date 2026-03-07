@@ -15,7 +15,7 @@ This project prioritizes deterministic, machine-consumable correctness over term
 
 ## Why It’s Useful
 
-`ccp` optimizes for useful compression, not maximal compression.
+`ccp` reduces tokens consumed by command output, which leaves more room in the model context window for actual code, requirements, and reasoning. In practice, that gives coding agents more usable context to work with, improves the odds of better follow-up results, and lowers usage cost at the same time.
 
 - Removes repetitive or low-signal output when safe.
 - Favors filtering and omission over denser non-native output encodings.
@@ -23,8 +23,6 @@ This project prioritizes deterministic, machine-consumable correctness over term
 - Keeps deterministic behavior for identical inputs.
 - Emits zero bytes if native output is zero bytes.
 - Preserves exact byte stream in `--raw` mode unless explicit redaction is enabled with `--confidential`.
-
-For coding agents operating in large repositories, this reduces context size without sacrificing correctness or downstream operability.
 
 ## Example Gains
 

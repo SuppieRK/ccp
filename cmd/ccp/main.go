@@ -92,7 +92,32 @@ func defaultMetricsPath() string {
 }
 
 func usageText() string {
-	return "usage: ccp [--help|-h] [--version] [--raw] [--capture-raw --capture-raw-dir <dir>] [--confidential <a,b,...>] [--debug-filter] <command> [args...]"
+	return `ccp - command compression proxy for coding-agent workflows
+
+Usage:
+  ccp [execution flags] <command> [args...]
+  ccp <lifecycle-command> [args...]
+
+Execution flags:
+  --raw                 Bypass semantic compaction and pass through native output
+  --capture-raw         Save raw stdout/stderr capture files while executing
+  --capture-raw-dir     Directory for capture files (requires --capture-raw)
+  --confidential        Redact comma-separated substrings from emitted output
+  --debug-filter        Emit filter metadata on stderr
+  --help, -h            Show help
+  --version             Show version
+
+Lifecycle commands:
+  init                  Install or update supported agent integrations
+  gain                  Show token savings history
+  history               Show recorded command history
+  upgrade               Upgrade ccp
+  uninstall             Remove ccp integrations
+
+Notes:
+  - Structured or precision-sensitive output may pass through unchanged.
+  - --raw preserves native output unless --confidential is also used.
+  - --capture-raw preserves execution semantics while writing capture artifacts.`
 }
 
 func buildRuntime(opts cli.Options) (*runner.Runner, error) {

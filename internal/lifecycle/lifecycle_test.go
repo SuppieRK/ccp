@@ -88,15 +88,12 @@ func TestParseToolsSortsAndDedups(t *testing.T) {
 	}
 }
 
-func TestInitScopeRootLocal(t *testing.T) {
+func TestInitDetectRootUsesWorkingDirectory(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
-	root, scope, err := initScopeRoot(false)
+	root, err := initDetectRoot()
 	if err != nil {
-		t.Fatalf("initScopeRoot: %v", err)
-	}
-	if scope != "local" {
-		t.Fatalf("unexpected scope %s", scope)
+		t.Fatalf("initDetectRoot: %v", err)
 	}
 	rootResolved, rootErr := filepath.EvalSymlinks(root)
 	if rootErr != nil {
@@ -111,15 +108,15 @@ func TestInitScopeRootLocal(t *testing.T) {
 	}
 }
 
-func TestInitPathGlobal(t *testing.T) {
+func TestInitPathUsesHomeConfig(t *testing.T) {
 	home := t.TempDir()
 	setHomeDirForTest(t, home)
-	path, scope, err := initPath(true)
+	path, err := initPath()
 	if err != nil {
 		t.Fatalf("initPath: %v", err)
 	}
-	if scope != "global" || path == "" {
-		t.Fatalf("unexpected path %s scope %s", path, scope)
+	if path == "" {
+		t.Fatalf("unexpected empty path")
 	}
 	if rel, relErr := filepath.Rel(home, path); relErr != nil || strings.HasPrefix(rel, "..") {
 		t.Fatalf("path %s is not under home %s", path, home)
@@ -171,16 +168,12 @@ func TestApplyAdaptersVerifyFailureReturnsFailedState(t *testing.T) {
 	assertSingleFailedStateWithReason(t, states, "verify failed")
 }
 
-func TestInitScopeRootGlobalFailure(t *testing.T) {
+func TestInitPathWithoutHomeFails(t *testing.T) {
 	for _, key := range []string{"HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"} {
 		_ = os.Unsetenv(key)
 	}
-	root, scope, err := initScopeRoot(true)
-	if err != nil {
-		return
-	}
-	if scope != "global" || strings.TrimSpace(root) == "" {
-		t.Fatalf("unexpected scope/root %s/%s", scope, root)
+	if _, err := initPath(); err == nil {
+		t.Fatal("expected initPath to fail without a home directory")
 	}
 }
 

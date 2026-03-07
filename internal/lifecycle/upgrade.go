@@ -43,14 +43,24 @@ type githubAssetInfo struct {
 func RunUpgrade(args []string) error {
 	fs := newLifecycleFlagSet("upgrade")
 	version := fs.String("version", "", "specific release tag (for example 1.2.3)")
-	if err := fs.Parse(args); err != nil {
+	setLifecycleUsage(
+		fs,
+		"upgrade ccp from GitHub Releases",
+		[]string{"ccp upgrade [--version <tag>]"},
+		"When --version is omitted, the latest release is selected.",
+		"Upgrade always resolves releases from the canonical repository.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
 		return err
+	}
+	if handled {
+		return nil
 	}
 	repoName := defaultUpgradeRepo
 	manualURL := fmt.Sprintf("https://github.com/%s/releases", repoName)
 
 	tag := strings.TrimSpace(*version)
-	var err error
 	if tag == "" {
 		tag, err = latestReleaseTag(repoName)
 		if err != nil {
@@ -80,6 +90,10 @@ func RunUpgrade(args []string) error {
 		return fmt.Errorf("download/extract upgrade asset: %w; manual download: %s", err, manualURL)
 	}
 
+	return installUpgradeBinary(srcPath, assetName, tag)
+}
+
+func installUpgradeBinary(srcPath, assetName, tag string) error {
 	exePath, err := upgradeExecutablePath()
 	if err != nil {
 		return err
@@ -87,15 +101,22 @@ func RunUpgrade(args []string) error {
 	if err := upgradeReplaceBinary(exePath, srcPath); err != nil {
 		return err
 	}
-	if upgradeRuntimeOS() != "windows" {
-		if err := os.Chmod(exePath, 0o755); err != nil {
-			return err
-		}
-	}
-	if _, err := upgradePrintf("ccp upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag); err != nil {
+	if err := ensureUpgradeExecutablePermissions(exePath); err != nil {
 		return err
 	}
-	return nil
+	return printUpgradeSuccess(exePath, assetName, tag)
+}
+
+func ensureUpgradeExecutablePermissions(exePath string) error {
+	if upgradeRuntimeOS() == "windows" {
+		return nil
+	}
+	return os.Chmod(exePath, 0o755)
+}
+
+func printUpgradeSuccess(exePath, assetName, tag string) error {
+	_, err := upgradePrintf("ccp upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag)
+	return err
 }
 
 func latestReleaseTag(repo string) (string, error) {

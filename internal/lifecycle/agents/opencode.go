@@ -74,7 +74,7 @@ func opencodePluginPath(ctx Context) string {
 }
 
 func opencodeConfigRoot(ctx Context) string {
-	if strings.TrimSpace(ctx.HomeDir) != "" && filepath.Clean(ctx.ScopeRoot) == filepath.Clean(ctx.HomeDir) {
+	if strings.TrimSpace(ctx.HomeDir) != "" {
 		return filepath.Join(ctx.HomeDir, ".config", "opencode")
 	}
 	return filepath.Join(ctx.ScopeRoot, ".opencode")

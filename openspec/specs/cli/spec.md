@@ -2,22 +2,17 @@
 Define lifecycle and integration subcommands for `ccp` outside execution wrapping.
 ## Requirements
 ### Requirement: Init Command for Agent Tool Setup
-The CLI SHALL provide `ccp init` with repo-local default behavior and optional global mode to persist tool-specific configuration and proxy preferences (for example `--tools codex,opencode`).
+The CLI SHALL provide `ccp init` without lifecycle scope flags to persist tool-specific configuration and proxy preferences (for example `--tools codex,opencode`).
 
-#### Scenario: Repo-local initialization default
+#### Scenario: Managed initialization state
 - **WHEN** a user runs `ccp init --tools codex,opencode` from a repository
-- **THEN** `.ccp/` state is initialized in repo-local scope by default
-- **AND** an `init.json` manifest is generated with selected tool preferences.
+- **THEN** `ccp` writes its managed `init.json` manifest under the home-scoped config path
+- **AND** selected integrations are installed according to each adapter contract.
 
-#### Scenario: Repo-local gitignore update
-- **WHEN** `ccp init` runs in local scope and `.gitignore` exists in the current directory
-- **THEN** `.ccp` is present as a line in `.gitignore`
-- **AND** repeated runs do not duplicate the `.ccp` line.
-
-#### Scenario: Optional global initialization
-- **WHEN** a user runs `ccp init --global --tools codex,opencode`
-- **THEN** global `ccp` state is initialized in global scope
-- **AND** a global `init.json` manifest is generated with selected tool preferences.
+#### Scenario: Init detects tools from current repository
+- **WHEN** a user runs `ccp init` without `--tools`
+- **THEN** tool detection is based on the current repository
+- **AND** resulting managed state is still written under the home-scoped config path.
 
 ### Requirement: Lifecycle Command Dispatch
 The CLI SHALL dispatch lifecycle commands (`init`, `gain`, `history`, `upgrade`, `uninstall`) before wrapped execution routing.
