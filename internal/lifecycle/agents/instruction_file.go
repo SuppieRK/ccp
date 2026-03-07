@@ -13,8 +13,11 @@ const (
 )
 
 func ccpManagedBlockTemplate() string {
-	return ccpManagedBlockStart + "\n" +
-		"## CCP Integration (Managed)\n\n" +
+	return ccpManagedBlockStart + "\n" + ccpManagedGuidanceMarkdown() + ccpManagedBlockEnd + "\n"
+}
+
+func ccpManagedGuidanceMarkdown() string {
+	return "## CCP Integration (Managed)\n\n" +
 		"Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.\n\n" +
 		"Examples:\n" +
 		"- `ccp ls -la`\n" +
@@ -23,8 +26,7 @@ func ccpManagedBlockTemplate() string {
 		"- `ccp echo chain-ok && ccp echo chain-done`\n" +
 		"- `ccp false || ccp echo chain-recovered`\n" +
 		"- `ccp nl -ba spec.md | ccp sed -n '1,260p'`\n\n" +
-		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n" +
-		ccpManagedBlockEnd + "\n"
+		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n"
 }
 
 func verifyManagedInstructionBlock(target, missingFmt, markersFmt string) error {

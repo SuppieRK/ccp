@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -17,7 +18,9 @@ func TestParseToolsNormalizesSortsAndDedupes(t *testing.T) {
 }
 
 func TestRunInitRequiresTools(t *testing.T) {
-	t.Parallel()
+	tmp := t.TempDir()
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	chdirForTest(t, tmp)
 
 	if err := RunInit([]string{}); err == nil {
 		t.Fatal("expected error when no tools are provided or detected")
@@ -27,7 +30,9 @@ func TestRunInitRequiresTools(t *testing.T) {
 }
 
 func TestRunInitRejectsUnsupportedTool(t *testing.T) {
-	t.Parallel()
+	tmp := t.TempDir()
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	chdirForTest(t, tmp)
 
 	if err := RunInit([]string{"--tools", "unknown"}); err == nil {
 		t.Fatal("expected unsupported-tool error")
