@@ -250,6 +250,31 @@ func TestRunUninstallKiroRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallRooCodeRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".roo"), "mkdir .roo: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("roocode")); err != nil {
+		t.Fatalf("roocode init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("roocode")); err != nil {
+		t.Fatalf("roocode uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".roo", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected roocode rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallTraeRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -628,6 +653,34 @@ func TestRunUninstallKiroPreservesOtherKiroFilesAndDirectories(t *testing.T) {
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".kiro", "steering")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .kiro/steering directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallRooCodePreservesOtherRooCodeFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".roo", "rules"), "mkdir .roo/rules: %v")
+	otherRule := filepath.Join(tmp, ".roo", "rules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("roocode")); err != nil {
+		t.Fatalf("roocode init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("roocode")); err != nil {
+		t.Fatalf("roocode uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other roocode rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".roo", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .roo/rules directory preserved, err=%v", err)
 	}
 }
 
