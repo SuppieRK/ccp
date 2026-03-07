@@ -2,7 +2,7 @@
 
 ## Test Selection
 
-- Planning changes affect `BuildExecPlan` outputs such as tool/name resolution, args, dispatch keys, ambiguity handling, strict behavior, and passthrough decisions.
+- Planning changes affect `BuildExecPlan` outputs such as tool/name resolution, args, dispatch keys, ambiguity handling, and passthrough decisions.
 - Runtime changes affect `Runner.Run` behavior such as stdout/stderr handling, shared-context behavior, compaction vs passthrough, raw-mode bypass, and exit-code propagation.
 - Filter-specific runner, benchmark, and fixture expectations belong in `docs/agent-rules/FILTERS.md`.
 

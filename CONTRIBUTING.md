@@ -16,7 +16,7 @@ Contributions MUST:
 
 - Reduce output only when correctness is preserved.
 - Prefer semantic, shape-preserving filtering over terminal-faithful formatting or denser representational rewrites.
-- Preserve native execution invariants: exit codes, critical diagnostics, exact `--raw` behavior, zero-byte output semantics, and safe passthrough on ambiguity.
+- Preserve native execution invariants: exit codes, critical diagnostics, exact `--raw` behavior unless explicit redaction is enabled, zero-byte output semantics, and safe passthrough on ambiguity.
 - Preserve deterministic behavior: stable output for identical inputs, no cross-command state leakage, and reproducible compaction behavior.
 - Avoid re-implementing native tooling when output filtering is sufficient.
 

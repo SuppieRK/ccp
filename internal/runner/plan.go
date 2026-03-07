@@ -30,37 +30,28 @@ func initPlannerCapabilities() {
 }
 
 // BuildExecPlan normalizes command execution using registry-aware tool preparation.
-func BuildExecPlan(args []string, registry *engine.ToolFilterRegistry, strict bool) (engine.ExecPlan, error) {
+func BuildExecPlan(args []string, registry *engine.ToolFilterRegistry) (engine.ExecPlan, error) {
 	if len(args) == 0 {
 		return engine.ExecPlan{}, nil
 	}
 	rawInput := strings.Join(args, " ")
 
-	if plan, handled, err := maybeBuildAmbiguousShellPlan(args, rawInput, strict); handled {
-		return plan, err
+	if plan, handled := maybeBuildAmbiguousShellPlan(args, rawInput); handled {
+		return plan, nil
 	}
 
 	bin := args[0]
 	tail := args[1:]
 	f, prep, normalized := resolvePreparedToolPlan(bin, tail, registry)
-	plan := buildExecPlanFromPrepare(f, prep, normalized, bin, rawInput)
-	applyStrictPlannerPolicy(&plan, strict)
-	if err := validateStrictAmbiguity(plan, strict); err != nil {
-		return engine.ExecPlan{}, err
-	}
-	return plan, nil
+	return buildExecPlanFromPrepare(f, prep, normalized, bin, rawInput), nil
 }
 
-func maybeBuildAmbiguousShellPlan(args []string, rawInput string, strict bool) (engine.ExecPlan, bool, error) {
+func maybeBuildAmbiguousShellPlan(args []string, rawInput string) (engine.ExecPlan, bool) {
 	ambiguous, ops := detectAmbiguousOperators(args)
 	if !ambiguous {
-		return engine.ExecPlan{}, false, nil
+		return engine.ExecPlan{}, false
 	}
-	plan := buildAmbiguousShellPlan(rawInput, ops)
-	if !strict {
-		return plan, true, nil
-	}
-	return engine.ExecPlan{}, true, fmt.Errorf("strict mode: ambiguous command rejected (%s)", plan.AmbiguityReason)
+	return buildAmbiguousShellPlan(rawInput, ops), true
 }
 
 func buildAmbiguousShellPlan(rawInput string, ops []string) engine.ExecPlan {
@@ -117,30 +108,6 @@ func buildExecPlanFromPrepare(
 		plan.Tool = ""
 	}
 	return plan
-}
-
-func applyStrictPlannerPolicy(plan *engine.ExecPlan, strict bool) {
-	if !strict || plan.Tool != "grep" {
-		return
-	}
-	if plan.DispatchKey == "" {
-		plan.DispatchKey = "grep|strict_no_match=1"
-		return
-	}
-	if !strings.Contains(plan.DispatchKey, "strict_no_match=1") {
-		plan.DispatchKey += "|strict_no_match=1"
-	}
-}
-
-func validateStrictAmbiguity(plan engine.ExecPlan, strict bool) error {
-	if !(strict && plan.IsAmbiguous) {
-		return nil
-	}
-	reason := plan.AmbiguityReason
-	if reason == "" {
-		reason = "ambiguous tool preparation"
-	}
-	return fmt.Errorf("strict mode: ambiguous command rejected (%s)", reason)
 }
 
 func applyPreferredSubstitution(plan *engine.ExecPlan, prep engine.PrepareResult, normalized []string, bin string) {

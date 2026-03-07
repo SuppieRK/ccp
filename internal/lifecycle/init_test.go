@@ -63,14 +63,15 @@ func mkdirAllForTest(t *testing.T, path, errFmt string) {
 	}
 }
 
-func TestRunInitLocalIdempotentAndBackup(t *testing.T) {
+func TestRunInitGlobalConfigIdempotentAndBackup(t *testing.T) {
 	tmp := t.TempDir()
+	setHomeDirForTest(t, tmp)
 	chdirForTest(t, tmp)
 
 	if err := RunInit([]string{initToolsFlag, "cursor,opencode"}); err != nil {
 		t.Fatalf(initFirstFailedFmt, err)
 	}
-	path := filepath.Join(tmp, ".ccp", initConfigFileName)
+	path := filepath.Join(tmp, ".config", "ccp", initConfigFileName)
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("init file missing: %v", err)
 	}
@@ -88,8 +89,9 @@ func TestRunInitLocalIdempotentAndBackup(t *testing.T) {
 	}
 }
 
-func TestRunInitLocalAppendsDotCCPToExistingGitignore(t *testing.T) {
+func TestRunInitDoesNotModifyGitignore(t *testing.T) {
 	tmp := t.TempDir()
+	setHomeDirForTest(t, tmp)
 	chdirForTest(t, tmp)
 
 	if err := os.WriteFile(initGitignoreName, []byte("node_modules\n"), 0o644); err != nil {
@@ -104,37 +106,14 @@ func TestRunInitLocalAppendsDotCCPToExistingGitignore(t *testing.T) {
 		t.Fatalf("read .gitignore: %v", err)
 	}
 	got := string(b)
-	if got != "node_modules\n.ccp\n" {
+	if got != "node_modules\n" {
 		t.Fatalf("unexpected .gitignore content: %q", got)
 	}
 }
 
-func TestRunInitLocalDoesNotDuplicateDotCCPInGitignore(t *testing.T) {
+func TestRunInitSkipsGitignoreWhenMissing(t *testing.T) {
 	tmp := t.TempDir()
-	chdirForTest(t, tmp)
-
-	if err := os.WriteFile(initGitignoreName, []byte(".ccp\n"), 0o644); err != nil {
-		t.Fatalf("write .gitignore: %v", err)
-	}
-	if err := RunInit([]string{initToolsFlag, "opencode"}); err != nil {
-		t.Fatalf(initFailedFmt, err)
-	}
-	if err := RunInit([]string{initToolsFlag, "opencode,cursor"}); err != nil {
-		t.Fatalf(initSecondFailedFmt, err)
-	}
-
-	b, err := os.ReadFile(initGitignoreName)
-	if err != nil {
-		t.Fatalf("read .gitignore: %v", err)
-	}
-	got := string(b)
-	if got != ".ccp\n" {
-		t.Fatalf("expected single .ccp line, got: %q", got)
-	}
-}
-
-func TestRunInitLocalSkipsGitignoreWhenMissing(t *testing.T) {
-	tmp := t.TempDir()
+	setHomeDirForTest(t, tmp)
 	chdirForTest(t, tmp)
 
 	if err := RunInit([]string{initToolsFlag, "opencode"}); err != nil {
@@ -145,12 +124,12 @@ func TestRunInitLocalSkipsGitignoreWhenMissing(t *testing.T) {
 	}
 }
 
-func TestRunInitGlobalWritesConfigUnderHome(t *testing.T) {
+func TestRunInitWritesConfigUnderHome(t *testing.T) {
 	tmp := t.TempDir()
 	setHomeDirForTest(t, tmp)
 
-	if err := RunInit([]string{"--global", initToolsFlag, "cursor,opencode"}); err != nil {
-		t.Fatalf("global init failed: %v", err)
+	if err := RunInit([]string{initToolsFlag, "cursor,opencode"}); err != nil {
+		t.Fatalf("init failed: %v", err)
 	}
 
 	path := filepath.Join(tmp, ".config", "ccp", initConfigFileName)
@@ -161,10 +140,10 @@ func TestRunInitGlobalWritesConfigUnderHome(t *testing.T) {
 
 	var cfg map[string]any
 	if err := json.Unmarshal(b, &cfg); err != nil {
-		t.Fatalf("unmarshal global init config: %v", err)
+		t.Fatalf("unmarshal init config: %v", err)
 	}
-	if got, _ := cfg["scope"].(string); got != "global" {
-		t.Fatalf("scope = %q, want global", got)
+	if _, ok := cfg["scope"]; ok {
+		t.Fatalf("did not expect deprecated scope field in config: %v", cfg)
 	}
 }
 
@@ -177,7 +156,7 @@ func TestRunInitPersistsStateShape(t *testing.T) {
 		t.Fatalf("init failed: %v", err)
 	}
 
-	path := filepath.Join(tmp, ".ccp", initConfigFileName)
+	path := filepath.Join(tmp, ".config", "ccp", initConfigFileName)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read init config: %v", err)
@@ -208,7 +187,7 @@ func TestRunInitDetectsToolsWhenMissingToolsFlag(t *testing.T) {
 		t.Fatalf("detected init failed: %v", err)
 	}
 
-	path := filepath.Join(tmp, ".ccp", initConfigFileName)
+	path := filepath.Join(tmp, ".config", "ccp", initConfigFileName)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read init config: %v", err)
@@ -237,7 +216,7 @@ func TestRunInitExplicitToolsOverrideDetected(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "opencode"}); err != nil {
 		t.Fatalf("explicit init failed: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initOpenCodeDir, "plugins", initOpenCodeRewriteJS)); err != nil {
+	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "plugins", initOpenCodeRewriteJS)); err != nil {
 		t.Fatalf("expected opencode plugin to be installed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, initCodexDir, initAgentsFileName)); !os.IsNotExist(err) {
@@ -245,13 +224,14 @@ func TestRunInitExplicitToolsOverrideDetected(t *testing.T) {
 	}
 }
 
-func TestRunInitOpencodeInstallsLocalPlugin(t *testing.T) {
+func TestRunInitOpencodeInstallsGlobalPlugin(t *testing.T) {
 	tmp := t.TempDir()
+	setHomeDirForTest(t, tmp)
 	chdirForTest(t, tmp)
 	if err := RunInit([]string{initToolsFlag, "opencode"}); err != nil {
 		t.Fatalf("opencode init failed: %v", err)
 	}
-	pluginPath := filepath.Join(tmp, initOpenCodeDir, "plugins", initOpenCodeRewriteJS)
+	pluginPath := filepath.Join(tmp, ".config", "opencode", "plugins", initOpenCodeRewriteJS)
 	b, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read opencode plugin: %v", err)
@@ -280,28 +260,15 @@ func TestRunInitOpencodeInstallsLocalPlugin(t *testing.T) {
 	}
 }
 
-func TestRunInitOpencodeGlobalInstallsPluginUnderConfig(t *testing.T) {
-	tmp := t.TempDir()
-	home := filepath.Join(tmp, "home")
-	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
-	setHomeDirForTest(t, home)
-
-	if err := RunInit([]string{"--global", initToolsFlag, "opencode"}); err != nil {
-		t.Fatalf("global opencode init failed: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "plugins", initOpenCodeRewriteJS)); err != nil {
-		t.Fatalf("expected global opencode plugin, err=%v", err)
-	}
-}
-
 func TestRunInitOpencodeIdempotentRerun(t *testing.T) {
 	tmp := t.TempDir()
+	setHomeDirForTest(t, tmp)
 	chdirForTest(t, tmp)
 
 	if err := RunInit([]string{initToolsFlag, "opencode"}); err != nil {
 		t.Fatalf(initFirstFailedFmt, err)
 	}
-	pluginPath := filepath.Join(tmp, initOpenCodeDir, "plugins", initOpenCodeRewriteJS)
+	pluginPath := filepath.Join(tmp, ".config", "opencode", "plugins", initOpenCodeRewriteJS)
 	infoBefore, err := os.Stat(pluginPath)
 	if err != nil {
 		t.Fatalf("stat plugin before rerun: %v", err)

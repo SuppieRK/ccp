@@ -24,7 +24,7 @@ func mustDenoRegistry(t *testing.T) *engine.ToolFilterRegistry {
 func TestBuildExecPlanDenoModes(t *testing.T) {
 	registry := mustDenoRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"deno", "run", "main.ts"}, registry, false)
+	plan, err := BuildExecPlan([]string{"deno", "run", "main.ts"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedDenoFmt, err)
 	}
@@ -48,7 +48,7 @@ func TestBuildExecPlanDenoPassthroughCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, registry, false)
+			plan, err := BuildExecPlan(tc.args, registry)
 			if err != nil {
 				t.Fatalf(errUnexpectedDenoFmt, err)
 			}

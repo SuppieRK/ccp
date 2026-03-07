@@ -17,7 +17,7 @@ Define execution-path command proxy behavior for `ccp` command wrapping, plannin
 - **THEN** runner preserves bounded-line truncation behavior and continues deterministic stream processing.
 
 ### Requirement: Execution Flags
-`ccp` SHALL support execution-mode flags `--raw`, `--strict`, and `--debug-filter`.
+`ccp` SHALL support execution-mode flags `--raw`, `--debug-filter`, and `--confidential`.
 
 #### Scenario: Default compacted mode
 - **WHEN** `ccp` runs an execution command without `--raw`
@@ -35,25 +35,30 @@ Define execution-path command proxy behavior for `ccp` command wrapping, plannin
 - **WHEN** `--debug-filter` is enabled and filtered output is emitted
 - **THEN** debug metadata is emitted on stderr with sequence/key/action context.
 
+#### Scenario: Confidential flag is execution-scoped
+- **WHEN** `--confidential` is used with an execution command
+- **THEN** parsing succeeds without requiring `--capture-raw`.
+
+#### Scenario: Confidential flag remains invalid for lifecycle subcommands
+- **WHEN** `--confidential` is used with lifecycle subcommands (`init`, `gain`, `history`, `upgrade`, `uninstall`)
+- **THEN** argument parsing fails with an error indicating the flag is execution-only.
+
 ### Requirement: Ambiguity Handling
-Execution planning SHALL detect ambiguous shell-chain operators and apply strict/permissive policy.
-
-#### Scenario: Strict rejection
-- **WHEN** planning detects `&&`, `||`, `;`, or `|` and `--strict` is enabled
-- **THEN** planning fails pre-flight and execution does not start.
-
-#### Scenario: Strict mode requires single-tool semantic context
-- **WHEN** `--strict` is enabled and planner cannot guarantee a single-tool semantic context
-- **THEN** execution is refused pre-flight with a clear ambiguity diagnostic.
+Execution planning SHALL detect ambiguous shell-chain operators and preserve safety through permissive fallback behavior.
 
 #### Scenario: Permissive fallback
-- **WHEN** planning detects shell-chain operators and strict mode is disabled
+- **WHEN** planning detects `&&`, `||`, `;`, or `|`
 - **THEN** planning executes through shell fallback.
 
 #### Scenario: Permissive fallback uses neutral filtering
-- **WHEN** planning detects shell-chain operators and strict mode is disabled
+- **WHEN** planning detects shell-chain operators and falls back
 - **THEN** execution proceeds without tool-specific semantic compaction
 - **AND** output processing uses a neutral/noop path to avoid cross-tool miscompaction.
+
+#### Scenario: prepare ambiguity uses neutral fallback
+- **WHEN** planner cannot guarantee a single-tool semantic context from tool preparation
+- **THEN** execution proceeds through neutral/passthrough-safe behavior
+- **AND** execution is not rejected solely because the shape is ambiguous.
 
 ### Requirement: Shared Tool-Aware Planning
 Execution planning SHALL use the same registry-backed tool contracts used by the engine.
@@ -65,10 +70,6 @@ Execution planning SHALL use the same registry-backed tool contracts used by the
 #### Scenario: Unknown-tool neutral behavior
 - **WHEN** no registered filter matches a detected tool
 - **THEN** planner and engine both use tool-scoped no-op behavior instead of divergent tool logic.
-
-#### Scenario: Strict grep no-match tagging
-- **WHEN** planning a `grep` command with `--strict` enabled
-- **THEN** planner includes `strict_no_match=1` in dispatch metadata to enforce strict no-match runtime semantics.
 
 ### Requirement: Explicit Registry Construction
 The tool filter registry SHALL be constructed explicitly in startup wiring and shared across planner and engine.
@@ -146,6 +147,21 @@ The command proxy SHALL propagate stdin from the `ccp` process into wrapped comm
 - **THEN** the wrapped command receives the same stdin byte stream
 - **AND** `ccp` preserves raw passthrough semantics for resulting output and exit code.
 
+### Requirement: Confidential Output Redaction
+The command proxy SHALL redact configured confidential substrings from emitted execution output.
+
+#### Scenario: Semantic mode redacts emitted output
+- **WHEN** `ccp --confidential a,b <command>` emits stdout or stderr in semantic mode
+- **THEN** emitted output replaces each configured substring with `***`.
+
+#### Scenario: Raw mode redacts emitted output
+- **WHEN** `ccp --raw --confidential a,b <command>` emits stdout or stderr
+- **THEN** emitted output replaces each configured substring with `***`.
+
+#### Scenario: Capture mode also redacts capture files
+- **WHEN** `ccp --capture-raw --confidential a,b <command>` writes capture artifacts
+- **THEN** the capture files redact the same configured substrings.
+
 ### Requirement: Stdin-driven pipeline parity
 The command proxy SHALL preserve native observable behavior for stdin-driven pipeline scenarios.
 
@@ -174,8 +190,3 @@ When planner confidence is insufficient for stdin-sensitive command contexts, th
 - **WHEN** stdin is present and command planning falls back to ambiguous permissive execution
 - **THEN** execution proceeds via neutral/passthrough-safe filtering behavior
 - **AND** input delivery and exit semantics remain consistent with native execution.
-
-#### Scenario: Ambiguous stdin-sensitive context under strict mode
-- **WHEN** stdin is present and command planning cannot guarantee single-tool semantics with `--strict`
-- **THEN** command execution is rejected pre-flight
-- **AND** a clear ambiguity diagnostic is emitted.

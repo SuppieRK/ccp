@@ -29,12 +29,14 @@ This document explains the runtime architecture, benchmark architecture, and tes
 ```mermaid
 flowchart LR
     U[User command] --> C[ccp]
+    IN[Parent stdin] --> C
     C --> O[Parse CLI options]
     O -->|--raw| R0[Runner raw mode]
     O -->|default| R1[Runner semantic mode]
 
     R1 --> P[BuildExecPlan]
     P --> X[Exec native command or fallback]
+    IN --> X
     X --> S1[stdout stream]
     X --> S2[stderr stream]
     S1 --> E[Engine.Process]
@@ -44,6 +46,7 @@ flowchart LR
     OUT --> T[Terminal / agent]
 
     R0 --> XR[Direct exec passthrough]
+    IN --> XR
     XR --> TR[Unmodified output]
 ```
 
@@ -79,7 +82,7 @@ Important modes:
 
 - `--raw`: bypass semantic engine; direct passthrough.
 - `--capture-raw` / `--capture-raw-dir`: capture sequenced raw stdout/stderr files while preserving normal execution.
-- `--strict`: reject ambiguous plans.
+- ambiguous shell or low-confidence planner shapes: use safe permissive fallback with neutral filtering.
 
 ## Engine + Filter Layer (`internal/engine`)
 
@@ -112,10 +115,14 @@ Decision actions include immediate output, collect, ignore, and flush.
 
 ```mermaid
 sequenceDiagram
+    participant In as Parent stdin
     participant Proc as Native Process
     participant Run as Runner
     participant Eng as Engine
     participant Fil as Active Filter
+
+    In->>Run: stdin bytes / pipe / tty
+    Run->>Proc: forward stdin unchanged
 
     Proc->>Run: stdout line
     Run->>Eng: EventLine(stdout, line)

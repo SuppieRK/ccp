@@ -78,31 +78,30 @@ func (grepFilter) Process(ev engine.Event, mem *engine.OrderedSetBuffer) engine.
 func processGrepExit(ev engine.Event, raw string) engine.Decision {
 	cfg := parseGrepDispatch(ev.Dispatch)
 	if strings.TrimSpace(raw) == "" {
-		return grepNoMatchesDecision(ev.ExitCode, cfg)
+		return grepNoMatchesDecision(ev.ExitCode)
 	}
 	out, ok := compactGrepOutput(raw, cfg)
 	if !ok {
 		return engine.Decision{Action: engine.ActionFlush, Output: raw}
 	}
 	if out == "" {
-		return grepNoMatchesDecision(ev.ExitCode, cfg)
+		return grepNoMatchesDecision(ev.ExitCode)
 	}
 	return engine.Decision{Action: engine.ActionFlush, Output: out}
 }
 
-func grepNoMatchesDecision(exitCode int, cfg grepDispatch) engine.Decision {
-	if exitCode != 0 || cfg.strictNoMatch {
+func grepNoMatchesDecision(exitCode int) engine.Decision {
+	if exitCode != 0 {
 		return engine.Decision{Action: engine.ActionIgnore}
 	}
-	return engine.Decision{Action: engine.ActionFlush, Output: "0 matches\n"}
+	return engine.Decision{Action: engine.ActionIgnore}
 }
 
 func (grepFilter) MaskingHorizon() int { return 1024 }
 
 type grepDispatch struct {
-	maxResults    int
-	contextOnly   bool
-	strictNoMatch bool
+	maxResults  int
+	contextOnly bool
 }
 
 func parseGrepDispatch(dispatch string) grepDispatch {
@@ -113,8 +112,6 @@ func parseGrepDispatch(dispatch string) grepDispatch {
 			cfg.maxResults = filtercommon.ParsePositiveInt(v, cfg.maxResults)
 		case "context_only":
 			cfg.contextOnly = filtercommon.ParseBool01(v)
-		case "strict_no_match":
-			cfg.strictNoMatch = filtercommon.ParseBool01(v)
 		}
 	}
 	return cfg

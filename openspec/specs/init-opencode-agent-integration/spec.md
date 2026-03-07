@@ -6,14 +6,10 @@ Define OpenCode-specific init integration using OpenCode plugin hooks for comman
 ## Requirements
 
 ### Requirement: OpenCode Target Resolution
-OpenCode init adapter SHALL resolve a deterministic plugin target path from init scope.
+OpenCode init adapter SHALL resolve a deterministic plugin target path from the managed home-scoped config root.
 
-#### Scenario: local scope target
-- **WHEN** a user runs `ccp init --tools opencode` in a repository
-- **THEN** adapter targets `.opencode/plugins/ccp-rewrite.js` under repository scope root.
-
-#### Scenario: global scope target
-- **WHEN** a user runs `ccp init --global --tools opencode`
+#### Scenario: managed target
+- **WHEN** a user runs `ccp init --tools opencode`
 - **THEN** adapter targets `~/.config/opencode/plugins/ccp-rewrite.js`.
 
 ### Requirement: OpenCode Tool Interception Wiring

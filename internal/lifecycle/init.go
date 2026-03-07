@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/projectfiles"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,7 +14,6 @@ import (
 )
 
 type initConfig struct {
-	Scope string      `json:"scope"`
 	Tools []string    `json:"tools"`
 	State []toolState `json:"state"`
 }
@@ -26,17 +24,28 @@ type toolState struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// RunInit persists tool-selection configuration into ccp local/global state.
+// RunInit persists tool-selection configuration into ccp managed state.
 func RunInit(args []string) error {
 	fs := newLifecycleFlagSet("init")
-	global := fs.Bool("global", false, "install in global scope")
 	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: auto-detect when omitted)")
-	if err := fs.Parse(args); err != nil {
+	setLifecycleUsage(
+		fs,
+		"install or update supported agent integrations",
+		[]string{"ccp init [--tools <tool,tool,...>]"},
+		"When --tools is omitted, ccp auto-detects supported tools from the current repository.",
+		"ccp stores init state at ~/.config/ccp/init.json.",
+		"Each integration manages its own install target; agent adapters may use home-scoped locations.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
 		return err
+	}
+	if handled {
+		return nil
 	}
 
 	adapters := agents.DefaultAdapters()
-	tools, err := resolveInitTools(*toolsArg, *global, adapters)
+	tools, err := resolveInitTools(*toolsArg, adapters)
 	if err != nil {
 		return err
 	}
@@ -44,11 +53,11 @@ func RunInit(args []string) error {
 		return err
 	}
 
-	path, scope, err := initPath(*global)
+	path, err := initPath()
 	if err != nil {
 		return err
 	}
-	scopeRoot, _, err := initScopeRoot(*global)
+	scopeRoot, err := initDetectRoot()
 	if err != nil {
 		return err
 	}
@@ -65,7 +74,6 @@ func RunInit(args []string) error {
 		return err
 	}
 	cfg := initConfig{
-		Scope: scope,
 		Tools: tools,
 		State: states,
 	}
@@ -77,21 +85,16 @@ func RunInit(args []string) error {
 		fmt.Printf("ccp init: already configured (%s)\n", path)
 		return nil
 	}
-	if scope == "local" && scopeRoot != "" {
-		if err := projectfiles.EnsureGitignoreEntry(scopeRoot, ".ccp"); err != nil {
-			return err
-		}
-	}
-	fmt.Printf("ccp init: configured %s scope at %s\n", scope, path)
+	fmt.Printf("ccp init: configured integrations at %s\n", path)
 	return nil
 }
 
-func resolveInitTools(toolsArg string, global bool, adapters map[string]agents.Adapter) ([]string, error) {
+func resolveInitTools(toolsArg string, adapters map[string]agents.Adapter) ([]string, error) {
 	tools := parseTools(toolsArg)
 	if len(tools) > 0 {
 		return tools, nil
 	}
-	scopeRoot, _, err := initScopeRoot(global)
+	scopeRoot, err := initDetectRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -148,32 +151,16 @@ func parseTools(input string) []string {
 	return out
 }
 
-func initScopeRoot(global bool) (root string, scope string, err error) {
-	base, scope, err := initScopeBase(global)
-	if err != nil {
-		return "", "", err
-	}
-	return base, scope, nil
+func initDetectRoot() (string, error) {
+	return os.Getwd()
 }
 
-func initPath(global bool) (path string, scope string, err error) {
-	base, scope, err := initScopeBase(global)
+func initPath() (string, error) {
+	base, err := os.UserHomeDir()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	if scope == "global" {
-		return filepath.Join(base, ".config", "ccp", "init.json"), scope, nil
-	}
-	return filepath.Join(base, ".ccp", "init.json"), scope, nil
-}
-
-func initScopeBase(global bool) (base string, scope string, err error) {
-	if global {
-		base, err = os.UserHomeDir()
-		return base, "global", err
-	}
-	base, err = os.Getwd()
-	return base, "local", err
+	return filepath.Join(base, ".config", "ccp", "init.json"), nil
 }
 
 func applyAdapters(scope agents.Context, tools []string, adapters map[string]agents.Adapter) ([]toolState, error) {

@@ -12,7 +12,7 @@ func TestBuildExecPlanMavenWrapperAliasResolvesMavenTool(t *testing.T) {
 	if err := registry.Register(filters.NewMavenFilter()); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	plan, err := BuildExecPlan([]string{"./mvnw", "test"}, registry, false)
+	plan, err := BuildExecPlan([]string{"./mvnw", "test"}, registry)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

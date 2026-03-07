@@ -36,14 +36,14 @@ func TestBuildRuntimeUsesSharedRegistryForPlannerAndEngine(t *testing.T) {
 	if registry.Resolve("gradlew") == nil {
 		t.Fatal("expected gradle filter aliases in shared registry")
 	}
-	plan, err := runner.BuildExecPlan([]string{"ls"}, registry, false)
+	plan, err := runner.BuildExecPlan([]string{"ls"}, registry)
 	if err != nil {
 		t.Fatalf("build plan with shared registry: %v", err)
 	}
 	if plan.Tool != "" {
 		t.Fatalf("expected default ls passthrough tool binding, got %q", plan.Tool)
 	}
-	longPlan, err := runner.BuildExecPlan([]string{"ls", "-l"}, registry, false)
+	longPlan, err := runner.BuildExecPlan([]string{"ls", "-l"}, registry)
 	if err != nil {
 		t.Fatalf("build long ls plan with shared registry: %v", err)
 	}
@@ -57,8 +57,18 @@ func TestUsageTextIncludesHelpFlag(t *testing.T) {
 	if got == "" {
 		t.Fatal("expected non-empty usage text")
 	}
-	if !containsAll(got, []string{"--help|-h", "--version", "<command> [args...]"}) {
-		t.Fatalf("usage text missing expected fields: %q", got)
+	if !containsAll(got, []string{
+		"ccp - command compression proxy for coding-agent workflows",
+		"Usage:",
+		"Execution flags:",
+		"Lifecycle commands:",
+		"Notes:",
+		"--confidential",
+		"init",
+		"gain",
+		"--raw preserves native output unless --confidential is also used.",
+	}) {
+		t.Fatalf("usage text missing expected sections: %q", got)
 	}
 }
 
@@ -82,8 +92,28 @@ func TestMainWithoutExecutionCommandPrintsUsageAndExitsNonZero(t *testing.T) {
 	if exitErr.ExitCode() == 0 {
 		t.Fatalf("expected non-zero exit code, got %d", exitErr.ExitCode())
 	}
-	if !strings.Contains(stderr.String(), "usage: ccp ") {
+	if !containsAll(stderr.String(), []string{"Usage:", "Execution flags:", "Lifecycle commands:"}) {
 		t.Fatalf("expected usage on stderr, got %q", stderr.String())
+	}
+}
+
+func TestMainLifecycleHelpPrintsStructuredHelpAndExitsZero(t *testing.T) {
+	if os.Getenv("CCP_MAIN_LIFECYCLE_HELPER") == "1" {
+		os.Args = []string{"ccp", "history", "--help"}
+		main()
+		return
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestMainLifecycleHelpPrintsStructuredHelpAndExitsZero")
+	cmd.Env = append(os.Environ(), "CCP_MAIN_LIFECYCLE_HELPER=1")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("expected zero exit for lifecycle help, got %v", err)
+	}
+	if !containsAll(stderr.String(), []string{"ccp history - show recorded command history", "Usage:", "Flags:", "Notes:"}) {
+		t.Fatalf("expected structured lifecycle help on stderr, got %q", stderr.String())
 	}
 }
 

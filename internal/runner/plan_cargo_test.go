@@ -29,7 +29,7 @@ func TestBuildExecPlanCargoDispatchesKnownSubcommands(t *testing.T) {
 		{args: []string{"cargo", "clippy"}, dispatch: "cargo clippy"},
 	}
 	for _, tc := range tests {
-		plan, err := BuildExecPlan(tc.args, reg, false)
+		plan, err := BuildExecPlan(tc.args, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %#v: %v", tc.args, err)
 		}
@@ -41,7 +41,7 @@ func TestBuildExecPlanCargoDispatchesKnownSubcommands(t *testing.T) {
 
 func TestBuildExecPlanCargoRunAmbiguousPassthrough(t *testing.T) {
 	reg := mustCargoRegistry(t)
-	plan, err := BuildExecPlan([]string{"cargo", "run", "--", "hello"}, reg, false)
+	plan, err := BuildExecPlan([]string{"cargo", "run", "--", "hello"}, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

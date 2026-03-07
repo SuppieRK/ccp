@@ -2,7 +2,6 @@ package runner
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"go-command-compression-proxy/internal/engine"
@@ -19,7 +18,7 @@ const (
 var operatorChainArgs = []string{"echo", "a", "&&", "echo", "b"}
 
 func TestBuildExecPlanDirect(t *testing.T) {
-	plan, err := BuildExecPlan([]string{"echo", "hello"}, nil, false)
+	plan, err := BuildExecPlan([]string{"echo", "hello"}, nil)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -32,7 +31,7 @@ func TestBuildExecPlanDirect(t *testing.T) {
 }
 
 func TestBuildExecPlanShellForOperators(t *testing.T) {
-	plan, err := BuildExecPlan(operatorChainArgs, nil, false)
+	plan, err := BuildExecPlan(operatorChainArgs, nil)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -46,7 +45,7 @@ func TestBuildExecPlanShellForOperators(t *testing.T) {
 
 func TestBuildExecPlanLSPassthroughByDefault(t *testing.T) {
 	registry := mustLSRegistry(t)
-	plan, err := BuildExecPlan([]string{"ls"}, registry, false)
+	plan, err := BuildExecPlan([]string{"ls"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -63,7 +62,7 @@ func TestBuildExecPlanLSPassthroughByDefault(t *testing.T) {
 
 func TestBuildExecPlanLSNormalizesFlagsAndPaths(t *testing.T) {
 	registry := mustLSRegistry(t)
-	plan, err := BuildExecPlan([]string{"ls", "-lahR", "--all", "--color=always", "src"}, registry, false)
+	plan, err := BuildExecPlan([]string{"ls", "-lahR", "--all", "--color=always", "src"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -74,7 +73,7 @@ func TestBuildExecPlanLSNormalizesFlagsAndPaths(t *testing.T) {
 }
 
 func TestBuildExecPlanUnknownToolFallback(t *testing.T) {
-	plan, err := BuildExecPlan([]string{"unknown-tool", "--x", "y"}, engine.NewToolFilterRegistry(), false)
+	plan, err := BuildExecPlan([]string{"unknown-tool", "--x", "y"}, engine.NewToolFilterRegistry())
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -89,7 +88,7 @@ func TestBuildExecPlanUnknownToolFallback(t *testing.T) {
 
 func TestBuildExecPlanPropagatesPrepareAmbiguity(t *testing.T) {
 	registry := mustAmbiguousPrepareRegistry(t)
-	plan, err := BuildExecPlan([]string{"ambig", "a", "b"}, registry, false)
+	plan, err := BuildExecPlan([]string{"ambig", "a", "b"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -101,21 +100,24 @@ func TestBuildExecPlanPropagatesPrepareAmbiguity(t *testing.T) {
 	}
 }
 
-func TestBuildExecPlanStrictRejectsPrepareAmbiguity(t *testing.T) {
+func TestBuildExecPlanPrepareAmbiguityStaysPermissive(t *testing.T) {
 	registry := mustAmbiguousPrepareRegistry(t)
-	_, err := BuildExecPlan([]string{"ambig", "a", "b"}, registry, true)
-	if err == nil {
-		t.Fatal("expected strict-mode error for prepare ambiguity")
+	plan, err := BuildExecPlan([]string{"ambig", "a", "b"}, registry)
+	if err != nil {
+		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
-	if got := err.Error(); !containsAll(got, []string{"strict mode", "prepare ambiguous"}) {
-		t.Fatalf("unexpected strict ambiguity diagnostics: %q", got)
+	if !plan.IsAmbiguous {
+		t.Fatal("expected ambiguous plan from Prepare")
+	}
+	if plan.Tool != "ambig" {
+		t.Fatalf("expected ambiguous plan to keep tool binding until passthrough is requested, got %q", plan.Tool)
 	}
 }
 
 func TestBuildExecPlanGitUsesParentFilterAndSubcommandPrep(t *testing.T) {
 	registry := mustGitRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"git", "status"}, registry, false)
+	plan, err := BuildExecPlan([]string{"git", "status"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -134,7 +136,7 @@ func TestBuildExecPlanGitUsesParentFilterAndSubcommandPrep(t *testing.T) {
 func TestBuildExecPlanGitUnknownSubcommandFallsBackToPassthrough(t *testing.T) {
 	registry := mustGitRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"git", "unknown", "--x"}, registry, false)
+	plan, err := BuildExecPlan([]string{"git", "unknown", "--x"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -153,7 +155,7 @@ func TestBuildExecPlanGitUnknownSubcommandFallsBackToPassthrough(t *testing.T) {
 func TestBuildExecPlanUnsupportedShapeFallsBackToPassthrough(t *testing.T) {
 	registry := mustGitRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"git", "status", "&&", "git", "diff"}, registry, false)
+	plan, err := BuildExecPlan([]string{"git", "status", "&&", "git", "diff"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -197,7 +199,7 @@ func TestBuildExecPlanForcePassthroughFromPrepare(t *testing.T) {
 	if err := registry.Register(forcePassthroughFilter{runnerTestFilterBase: runnerTestFilterBase{tool: "git"}}); err != nil {
 		t.Fatalf(errRegisterPlanTestFmt, err)
 	}
-	plan, err := BuildExecPlan([]string{"git", "diff", "--stat"}, registry, false)
+	plan, err := BuildExecPlan([]string{"git", "diff", "--stat"}, registry)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -209,18 +211,21 @@ func TestBuildExecPlanForcePassthroughFromPrepare(t *testing.T) {
 	}
 }
 
-func TestBuildExecPlanStrictIncludesOperatorDiagnostics(t *testing.T) {
-	_, err := BuildExecPlan(operatorChainArgs, nil, true)
-	if err == nil {
-		t.Fatal("expected strict-mode error")
+func TestBuildExecPlanAmbiguousOperatorsStayPermissive(t *testing.T) {
+	plan, err := BuildExecPlan(operatorChainArgs, nil)
+	if err != nil {
+		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
-	if got := err.Error(); got == "" || !containsAll(got, []string{"strict mode", "&&"}) {
-		t.Fatalf("expected diagnostics with operator, got %q", got)
+	if !plan.IsAmbiguous {
+		t.Fatal("expected ambiguous operator plan")
+	}
+	if !slices.Contains(plan.AmbiguityOps, "&&") {
+		t.Fatalf("expected operator diagnostics on plan, got %#v", plan.AmbiguityOps)
 	}
 }
 
 func TestBuildExecPlanDoesNotTreatInfixPipeArgumentAsAmbiguous(t *testing.T) {
-	plan, err := BuildExecPlan([]string{"grep", "a|b", "file.txt"}, nil, false)
+	plan, err := BuildExecPlan([]string{"grep", "a|b", "file.txt"}, nil)
 	if err != nil {
 		t.Fatalf(errUnexpectedPlanTestFmt, err)
 	}
@@ -230,15 +235,6 @@ func TestBuildExecPlanDoesNotTreatInfixPipeArgumentAsAmbiguous(t *testing.T) {
 	if plan.Name != "grep" {
 		t.Fatalf("expected direct execution, got %q", plan.Name)
 	}
-}
-
-func containsAll(s string, parts []string) bool {
-	for _, p := range parts {
-		if !strings.Contains(s, p) {
-			return false
-		}
-	}
-	return true
 }
 
 type ambiguousPrepareFilter struct{}

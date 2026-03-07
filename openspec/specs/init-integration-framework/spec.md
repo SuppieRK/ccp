@@ -5,7 +5,7 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 
 ## Requirements
 ### Requirement: Init Flags
-`ccp init` SHALL support local/global scope selection and explicit tool selection.
+`ccp init` SHALL support explicit tool selection without exposing lifecycle scope selection.
 
 ### Requirement: Tool Resolution Order
 `ccp init` SHALL resolve tools from explicit selection first, then fall back to adapter-driven detection.
@@ -73,22 +73,17 @@ The framework SHALL mutate managed files using idempotent, backup-safe, atomic w
 - **THEN** framework creates a backup of previous content
 - **AND** applies replacement atomically.
 
-### Requirement: Init Configuration Persistence and Local Gitignore Management
-`ccp init` SHALL persist init configuration and manage local `.gitignore` for `.ccp`.
+### Requirement: Init Configuration Persistence
+`ccp init` SHALL persist init configuration at a single managed path.
 
 #### Scenario: persisted init config shape
 - **WHEN** init succeeds
-- **THEN** it writes config JSON containing `scope`, `tools`, and `state`.
+- **THEN** it writes config JSON containing `tools` and `state`.
 
-#### Scenario: local scope writes under repository
-- **WHEN** init runs without `--global`
-- **THEN** config path is `.ccp/init.json` under current working directory.
-
-#### Scenario: global scope writes under home config
-- **WHEN** init runs with `--global`
+#### Scenario: managed config writes under home config
+- **WHEN** init runs
 - **THEN** config path is `~/.config/ccp/init.json`.
 
-#### Scenario: local scope gitignore integration
-- **WHEN** init persists local configuration successfully
-- **THEN** `.ccp` is ensured in repository `.gitignore` without duplication
-- **AND** `.gitignore` is left absent when it does not already exist.
+#### Scenario: detection root remains repository-scoped
+- **WHEN** `--tools` is omitted
+- **THEN** tool detection still uses the current working directory as the repository root.

@@ -37,7 +37,7 @@ func TestBuildExecPlanPythonAliasesResolveAndForceNeutral(t *testing.T) {
 	reg := mustPythonRegistry(t)
 
 	for _, bin := range []string{"python", "python3"} {
-		plan, err := BuildExecPlan([]string{bin, "app.py"}, reg, false)
+		plan, err := BuildExecPlan([]string{bin, "app.py"}, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %s: %v", bin, err)
 		}
@@ -58,7 +58,7 @@ func TestBuildExecPlanPythonNoArgAndIInteractiveAreAmbiguous(t *testing.T) {
 
 	cases := [][]string{{"python"}, {"python", "-i"}, {"python", "--interactive"}}
 	for _, args := range cases {
-		plan, err := BuildExecPlan(args, reg, false)
+		plan, err := BuildExecPlan(args, reg)
 		if err != nil {
 			t.Fatalf("unexpected error for %#v: %v", args, err)
 		}
@@ -96,7 +96,7 @@ func TestBuildExecPlanPythonModuleInvocationCases(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, reg, false)
+			plan, err := BuildExecPlan(tc.args, reg)
 			if err != nil {
 				t.Fatalf(errUnexpectedPythonFmt, err)
 			}
@@ -116,7 +116,7 @@ func TestBuildExecPlanPythonModuleInvocationCases(t *testing.T) {
 func TestBuildExecPlanDirectPytestRouting(t *testing.T) {
 	reg := mustPythonPytestRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"pytest", "-q"}, reg, false)
+	plan, err := BuildExecPlan([]string{"pytest", "-q"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPythonFmt, err)
 	}
@@ -135,7 +135,7 @@ func TestBuildExecPlanPythonDoesNotInjectUnbufferedFlag(t *testing.T) {
 	reg := mustPythonRegistry(t)
 
 	args := []string{"python", pythonScriptName}
-	plan, err := BuildExecPlan(args, reg, false)
+	plan, err := BuildExecPlan(args, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedPythonFmt, err)
 	}

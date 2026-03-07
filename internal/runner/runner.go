@@ -25,7 +25,6 @@ type Options struct {
 	CaptureRaw    bool
 	CaptureRawDir string
 	Confidential  []string
-	Strict        bool
 	DebugFilter   bool
 	MetricsPath   string
 }
@@ -52,6 +51,12 @@ type rawCapture struct {
 type sequencedCaptureWriter struct {
 	file         *os.File
 	seq          *atomic.Int32
+	confidential []string
+	buf          []byte
+}
+
+type redactingWriter struct {
+	writer       io.Writer
 	confidential []string
 	buf          []byte
 }
@@ -93,7 +98,7 @@ func (r *Runner) Run(args []string) int {
 		return r.runRaw(args)
 	}
 
-	plan, err := BuildExecPlan(args, r.registry, r.opts.Strict)
+	plan, err := BuildExecPlan(args, r.registry)
 	if err != nil {
 		return writeStderrAndCode(1, err)
 	}
@@ -288,6 +293,41 @@ func (w *sequencedCaptureWriter) writeSequencedLine(line []byte) error {
 	return err
 }
 
+func (w *redactingWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 || w.writer == nil {
+		return len(p), nil
+	}
+	w.buf = append(w.buf, p...)
+	for {
+		idx := bytes.IndexByte(w.buf, '\n')
+		if idx < 0 {
+			break
+		}
+		line := w.buf[:idx+1]
+		if err := w.writeRedactedLine(line); err != nil {
+			return len(p), err
+		}
+		w.buf = w.buf[idx+1:]
+	}
+	return len(p), nil
+}
+
+func (w *redactingWriter) Flush() error {
+	if len(w.buf) == 0 || w.writer == nil {
+		return nil
+	}
+	if err := w.writeRedactedLine(w.buf); err != nil {
+		return err
+	}
+	w.buf = nil
+	return nil
+}
+
+func (w *redactingWriter) writeRedactedLine(line []byte) error {
+	_, err := io.WriteString(w.writer, redactConfidential(string(line), w.confidential))
+	return err
+}
+
 func commandWithPipes(name string, args []string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
@@ -425,15 +465,30 @@ func (r *Runner) emitExitAndMetrics(meta runMetricsMeta, stdoutStats *streamStat
 func (r *Runner) copyRawStream(src io.Reader, dst *os.File, captureFile *os.File) {
 	target := io.Writer(dst)
 	var capWriter *sequencedCaptureWriter
+	var outWriter *redactingWriter
+	if len(r.opts.Confidential) > 0 {
+		outWriter = &redactingWriter{
+			writer:       dst,
+			confidential: r.opts.Confidential,
+		}
+		target = outWriter
+	}
 	if captureFile != nil && r.capture != nil {
 		capWriter = &sequencedCaptureWriter{
 			file:         captureFile,
 			seq:          &r.capture.seq,
 			confidential: r.capture.confidential,
 		}
-		target = io.MultiWriter(dst, capWriter)
+		if outWriter != nil {
+			target = io.MultiWriter(outWriter, capWriter)
+		} else {
+			target = io.MultiWriter(dst, capWriter)
+		}
 	}
 	_, _ = io.Copy(target, src)
+	if outWriter != nil {
+		_ = outWriter.Flush()
+	}
 	if capWriter != nil {
 		_ = capWriter.Flush()
 	}
@@ -446,14 +501,15 @@ func (r *Runner) emitExitEvent(tool string, dispatch string, code int) (stdoutBy
 	out := r.eng.Process(string(engine.StdoutStream), tool, engine.Input{Dispatch: dispatch, Exit: true, Code: code})
 	if out.Ready && out.Output != "" {
 		target := os.Stdout
-		size := len(out.Output)
 		if out.Stream == engine.StderrStream {
 			target = os.Stderr
-			stderrBytes += size
-		} else {
-			stdoutBytes += size
 		}
-		r.writeOutput(target, out)
+		written := r.writeOutput(target, out)
+		if out.Stream == engine.StderrStream {
+			stderrBytes += written
+		} else {
+			stdoutBytes += written
+		}
 	}
 	return stdoutBytes, stderrBytes
 }
@@ -554,8 +610,7 @@ func (r *Runner) processLine(stream, tool, dispatch, line string, dst *os.File) 
 		case engine.StdoutStream:
 			target = os.Stdout
 		}
-		r.writeOutput(target, out)
-		return len(out.Output)
+		return r.writeOutput(target, out)
 	}
 	return 0
 }
@@ -565,16 +620,14 @@ func (r *Runner) processLineRawPassthrough(stream, line string, dst *os.File) in
 		return 0
 	}
 	r.captureRawLine(stream, line)
-	r.fallbackWrite(dst, line)
-	return len(line)
+	return r.fallbackWrite(dst, line)
 }
 
 func (r *Runner) writeLineIfNonEmpty(dst *os.File, line string) int {
 	if line == "" {
 		return 0
 	}
-	r.fallbackWrite(dst, line)
-	return len(line)
+	return r.fallbackWrite(dst, line)
 }
 
 func (r *Runner) isRawMode() bool {
@@ -597,21 +650,23 @@ func (r *Runner) tickLoop(done <-chan struct{}, tool string) {
 					continue
 				}
 				if out.Stream == engine.StderrStream {
-					r.writeOutput(os.Stderr, out)
+					_ = r.writeOutput(os.Stderr, out)
 				} else {
-					r.writeOutput(os.Stdout, out)
+					_ = r.writeOutput(os.Stdout, out)
 				}
 			}
 		}
 	}
 }
 
-func (r *Runner) writeOutput(dst *os.File, out engine.Output) {
+func (r *Runner) writeOutput(dst *os.File, out engine.Output) int {
+	written := 0
 	if r.opts.DebugFilter {
 		meta := fmt.Sprintf("[SEQ:%d][KEY:%s][ACT:%s] ", out.Audit.Sequence, out.Audit.DerivedKey, out.Audit.Action)
-		r.fallbackWrite(os.Stderr, meta)
+		written += r.fallbackWrite(os.Stderr, meta)
 	}
-	r.fallbackWrite(dst, out.Output)
+	written += r.fallbackWrite(dst, out.Output)
+	return written
 }
 
 func newRawCapture(dir string, confidential []string) (*rawCapture, error) {
@@ -728,14 +783,17 @@ func writeSequencePrefix(f *os.File, seq int32) error {
 	return err
 }
 
-func (r *Runner) fallbackWrite(dst *os.File, line string) {
-	if _, err := io.WriteString(dst, line); err != nil {
+func (r *Runner) fallbackWrite(dst *os.File, line string) int {
+	redacted := redactConfidential(line, r.opts.Confidential)
+	if _, err := io.WriteString(dst, redacted); err != nil {
 		if dst != os.Stderr {
 			if _, stderrErr := io.WriteString(os.Stderr, "ccp: failed to write output\n"); stderrErr != nil {
-				return
+				return 0
 			}
 		}
+		return 0
 	}
+	return len(redacted)
 }
 
 func countLines(s string) int {

@@ -23,7 +23,7 @@ func mustKubectlRegistry(t *testing.T) *engine.ToolFilterRegistry {
 
 func TestBuildExecPlanKubectlAllowlistedGetPodsDispatches(t *testing.T) {
 	reg := mustKubectlRegistry(t)
-	plan, err := BuildExecPlan([]string{"kubectl", "get", "pods", "-o", "wide"}, reg, false)
+	plan, err := BuildExecPlan([]string{"kubectl", "get", "pods", "-o", "wide"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedKubectlFmt, err)
 	}
@@ -37,7 +37,7 @@ func TestBuildExecPlanKubectlAllowlistedGetPodsDispatches(t *testing.T) {
 
 func TestBuildExecPlanKubectlStructuredOutputPassthrough(t *testing.T) {
 	reg := mustKubectlRegistry(t)
-	plan, err := BuildExecPlan([]string{"kubectl", "get", "pods", "-o", "json"}, reg, false)
+	plan, err := BuildExecPlan([]string{"kubectl", "get", "pods", "-o", "json"}, reg)
 	if err != nil {
 		t.Fatalf(errUnexpectedKubectlFmt, err)
 	}
@@ -61,7 +61,7 @@ func TestBuildExecPlanKubectlPassthroughCases(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			plan, err := BuildExecPlan(tc.args, reg, false)
+			plan, err := BuildExecPlan(tc.args, reg)
 			if err != nil {
 				t.Fatalf(errUnexpectedKubectlFmt, err)
 			}

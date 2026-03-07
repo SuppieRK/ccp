@@ -20,7 +20,7 @@ func mustFindRegistry(t *testing.T) *engine.ToolFilterRegistry {
 func TestBuildExecPlanFindDefaultsToSystemFind(t *testing.T) {
 	reg := mustFindRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"find", ".", "-name", "*.go"}, reg, false)
+	plan, err := BuildExecPlan([]string{"find", ".", "-name", "*.go"}, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestBuildExecPlanFindDefaultsToSystemFind(t *testing.T) {
 func TestBuildExecPlanFindAvoidsUnsafeSubstitution(t *testing.T) {
 	reg := mustFindRegistry(t)
 
-	plan, err := BuildExecPlan([]string{"find", ".", "-delete"}, reg, false)
+	plan, err := BuildExecPlan([]string{"find", ".", "-delete"}, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

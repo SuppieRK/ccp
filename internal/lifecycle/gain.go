@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"sort"
@@ -166,8 +167,13 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 	tool := fs.String("tool", "", "filter by tool")
 	failed := fs.Bool("failed", false, "include only failed runs")
 	legacyJSON := fs.Bool("json", false, "emit JSON (deprecated alias for --format json)")
-	if err := fs.Parse(args); err != nil {
+	setReportUsage(fs, name)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
 		return reportFlags{}, err
+	}
+	if handled {
+		return reportFlags{}, nil
 	}
 	out := reportFlags{
 		format: strings.ToLower(strings.TrimSpace(*format)),
@@ -189,6 +195,24 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 		return reportFlags{}, err
 	}
 	return out, nil
+}
+
+func setReportUsage(fs *flag.FlagSet, name string) {
+	summary := "show token savings history"
+	usage := []string{"ccp gain [--format text|json|csv] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed]"}
+	notes := []string{
+		"Use --period only with ccp gain.",
+		"Legacy --json remains available as an alias for --format json.",
+	}
+	if name == "history" {
+		summary = "show recorded command history"
+		usage = []string{"ccp history [--format text|json|csv] [--since <duration>] [--tool <tool>] [--failed]"}
+		notes = []string{
+			"ccp history does not support --period.",
+			"Legacy --json remains available as an alias for --format json.",
+		}
+	}
+	setLifecycleUsage(fs, summary, usage, notes...)
 }
 
 func validateReportFormat(format string) error {

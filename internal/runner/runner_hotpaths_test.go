@@ -248,6 +248,28 @@ func TestWriteOutputDebugMetadataBehavior(t *testing.T) {
 	}
 }
 
+func TestWriteOutputDebugMetadataRedactsConfidential(t *testing.T) {
+	r := &Runner{opts: Options{DebugFilter: true, Confidential: []string{"secret"}}}
+	out := engine.Output{
+		Output: "secret-payload\n",
+		Audit: engine.AuditRecord{
+			Sequence:   7,
+			DerivedKey: "secret-key",
+			Action:     engine.ActionFlush,
+		},
+	}
+	errOut, _ := captureStderr(t, func() int {
+		_ = r.writeOutput(os.Stderr, out)
+		return 0
+	})
+	if strings.Contains(errOut, "secret") {
+		t.Fatalf("expected debug output to redact confidential content, got %q", errOut)
+	}
+	if !strings.Contains(errOut, "***-payload") || !strings.Contains(errOut, "***-key") {
+		t.Fatalf("expected redacted debug output, got %q", errOut)
+	}
+}
+
 func TestTickLoopFlushesBufferedOutput(t *testing.T) {
 	reg := engine.NewToolFilterRegistry()
 	if err := reg.Register(tickFlushFilter{runnerTestFilterBase: runnerTestFilterBase{tool: "ticktool"}}); err != nil {

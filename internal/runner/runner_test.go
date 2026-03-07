@@ -168,6 +168,85 @@ func TestRunnerANSIBehaviorByMode(t *testing.T) {
 	}
 }
 
+func TestRunnerConfidentialRedactsSemanticStdout(t *testing.T) {
+	r := New(Options{Confidential: []string{"hello"}}, nil, nil)
+	out, code := captureStdout(t, func() int {
+		return r.Run(stdoutOnlyCommand("hello-stdout"))
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "hello") {
+		t.Fatalf("expected stdout to be redacted, got %q", out)
+	}
+	if !strings.Contains(out, "***-stdout") {
+		t.Fatalf("expected redacted stdout output, got %q", out)
+	}
+}
+
+func TestRunnerConfidentialRedactsSemanticStderr(t *testing.T) {
+	r := New(Options{Confidential: []string{"hello"}}, nil, nil)
+	out, code := captureStderr(t, func() int {
+		return r.Run(stderrOnlyCommand("hello-stderr"))
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "hello") {
+		t.Fatalf("expected stderr to be redacted, got %q", out)
+	}
+	if !strings.Contains(out, "***-stderr") {
+		t.Fatalf("expected redacted stderr output, got %q", out)
+	}
+}
+
+func TestRunnerConfidentialRedactsRawStdout(t *testing.T) {
+	r := New(Options{Raw: true, Confidential: []string{"hello"}}, nil, nil)
+	out, code := captureStdout(t, func() int {
+		return r.Run(stdoutOnlyCommand("hello-raw"))
+	})
+	if code != 0 {
+		t.Fatalf("expected raw exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "hello") {
+		t.Fatalf("expected raw stdout to be redacted, got %q", out)
+	}
+	if !strings.Contains(out, "***-raw") {
+		t.Fatalf("expected redacted raw stdout, got %q", out)
+	}
+}
+
+func TestRunnerCaptureRawAndTerminalBothRedactConfidential(t *testing.T) {
+	tmp := t.TempDir()
+	restoreWorkingDir(t, tmp)
+
+	r := New(Options{Raw: true, CaptureRaw: true, Confidential: []string{"hello"}}, nil, nil)
+	out, code := captureStdout(t, func() int {
+		return r.Run(stdoutOnlyCommand("hello-capture"))
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "hello") {
+		t.Fatalf("expected terminal output to be redacted, got %q", out)
+	}
+	matches := mustGlob(t, filepath.Join(tmp, "ccp-capture-*-input-stdout.txt"), "stdout")
+	if len(matches) != 1 {
+		t.Fatalf("expected one stdout capture file, got %d", len(matches))
+	}
+	b, err := os.ReadFile(matches[0])
+	if err != nil {
+		t.Fatalf("read stdout capture: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "hello") {
+		t.Fatalf("expected capture output to be redacted, got %q", got)
+	}
+	if !strings.Contains(got, "***-capture") {
+		t.Fatalf("expected redacted capture output, got %q", got)
+	}
+}
+
 func TestRunnerCaptureRawWritesStreamFiles(t *testing.T) {
 	tmp := t.TempDir()
 	oldWD, err := os.Getwd()
@@ -414,20 +493,7 @@ func TestRawBypassesRegistryCompletely(t *testing.T) {
 	}
 }
 
-func TestStrictModeRejectsAmbiguousChainedCommand(t *testing.T) {
-	r := New(Options{Strict: true}, nil, nil)
-	stderr, code := captureStderr(t, func() int {
-		return r.Run([]string{"echo", "a", "&&", "echo", "b"})
-	})
-	if code == 0 {
-		t.Fatal("expected strict-mode rejection code")
-	}
-	if !strings.Contains(stderr, "strict mode") || !strings.Contains(stderr, "&&") {
-		t.Fatalf("expected strict diagnostics with operator, got %q", stderr)
-	}
-}
-
-func TestPermissiveModeAllowsAmbiguousChainedCommand(t *testing.T) {
+func TestAmbiguousChainedCommandExecutesPermissively(t *testing.T) {
 	r := New(Options{}, nil, nil)
 	out, code := captureStdout(t, func() int {
 		return r.Run([]string{"echo", "a", "&&", "echo", "b"})
@@ -459,8 +525,8 @@ func TestPermissiveAmbiguousUsesNeutralFiltering(t *testing.T) {
 	}
 }
 
-func TestStrictModeAllowsDirectExecution(t *testing.T) {
-	r := New(Options{Strict: true}, nil, nil)
+func TestDirectExecutionStillWorks(t *testing.T) {
+	r := New(Options{}, nil, nil)
 	out, code := captureStdout(t, func() int {
 		if isWindows() {
 			return r.Run([]string{rtCmdExe, "/C", "echo ok"})
@@ -468,7 +534,7 @@ func TestStrictModeAllowsDirectExecution(t *testing.T) {
 		return r.Run([]string{"sh", "-c", "echo ok"})
 	})
 	if code != 0 {
-		t.Fatalf("expected strict direct execution success, got %d", code)
+		t.Fatalf("expected direct execution success, got %d", code)
 	}
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("expected output, got %q", out)
@@ -569,6 +635,20 @@ func stdoutStderrCommand() []string {
 		return []string{rtCmdExe, "/C", "(echo hello-stdout&echo hello-stderr 1>&2)"}
 	}
 	return []string{"sh", "-c", "printf 'hello-stdout\\n'; printf 'hello-stderr\\n' 1>&2"}
+}
+
+func stdoutOnlyCommand(line string) []string {
+	if isWindows() {
+		return []string{rtCmdExe, "/C", "echo " + line}
+	}
+	return []string{"sh", "-c", "printf '%s\\n' \"" + line + "\""}
+}
+
+func stderrOnlyCommand(line string) []string {
+	if isWindows() {
+		return []string{rtCmdExe, "/C", "echo " + line + " 1>&2"}
+	}
+	return []string{"sh", "-c", "printf '%s\\n' \"" + line + "\" 1>&2"}
 }
 
 func shellToolForTests() string {

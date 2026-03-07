@@ -16,14 +16,25 @@ import (
 // RunUninstall removes tool-specific integration artifacts and updates init state.
 func RunUninstall(args []string) error {
 	fs := newLifecycleFlagSet("uninstall")
-	global := fs.Bool("global", false, "remove global scope setup")
 	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: auto-detect when omitted)")
-	if err := fs.Parse(args); err != nil {
+	setLifecycleUsage(
+		fs,
+		"remove supported agent integrations",
+		[]string{"ccp uninstall [--tools <tool,tool,...>]"},
+		"When --tools is omitted, ccp uses configured tools or auto-detection from the current repository.",
+		"ccp removes its managed init state from ~/.config/ccp/init.json when no configured tools remain.",
+		"Each integration decides which managed files are removed during uninstall.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
 		return err
+	}
+	if handled {
+		return nil
 	}
 
 	adapters := agents.DefaultAdapters()
-	tools, err := resolveUninstallTools(*toolsArg, *global, adapters)
+	tools, err := resolveUninstallTools(*toolsArg, adapters)
 	if err != nil {
 		return err
 	}
@@ -31,7 +42,7 @@ func RunUninstall(args []string) error {
 		return err
 	}
 
-	scopeRoot, _, err := initScopeRoot(*global)
+	scopeRoot, err := initDetectRoot()
 	if err != nil {
 		return err
 	}
@@ -43,7 +54,7 @@ func RunUninstall(args []string) error {
 		return err
 	}
 
-	if err := updateInitConfigAfterUninstall(*global, tools); err != nil {
+	if err := updateInitConfigAfterUninstall(tools); err != nil {
 		return err
 	}
 	return nil
@@ -75,8 +86,8 @@ func applyUninstallAdapters(ctx agents.Context, tools []string, adapters map[str
 	return states, nil
 }
 
-func updateInitConfigAfterUninstall(global bool, removedTools []string) error {
-	path, _, err := initPath(global)
+func updateInitConfigAfterUninstall(removedTools []string) error {
+	path, err := initPath()
 	if err != nil {
 		return err
 	}
@@ -186,12 +197,12 @@ func joinTools(adapters map[string]agents.Adapter) string {
 	return strings.Join(agents.SupportedTools(adapters), ", ")
 }
 
-func resolveUninstallTools(toolsArg string, global bool, adapters map[string]agents.Adapter) ([]string, error) {
+func resolveUninstallTools(toolsArg string, adapters map[string]agents.Adapter) ([]string, error) {
 	tools := parseTools(toolsArg)
 	if len(tools) > 0 {
 		return tools, nil
 	}
-	path, _, err := initPath(global)
+	path, err := initPath()
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +210,7 @@ func resolveUninstallTools(toolsArg string, global bool, adapters map[string]age
 		return cfgTools, nil
 	}
 
-	scopeRoot, _, err := initScopeRoot(global)
+	scopeRoot, err := initDetectRoot()
 	if err != nil {
 		return nil, err
 	}

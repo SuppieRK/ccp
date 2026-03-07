@@ -43,15 +43,16 @@ func TestRunUninstallCodexRemovesManagedBlockAndInitConfig(t *testing.T) {
 	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
 		t.Fatalf("expected codex agents file to be removed, err=%v", err)
 	}
-	if _, err := os.Stat(filepath.Join(work, ".ccp", initConfigName)); !os.IsNotExist(err) {
-		t.Fatalf("expected local init config to be removed after uninstall, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
-	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	home := filepath.Join(tmp, "home")
+	setHomeDirForTest(t, home)
 
 	if err := RunInit(toolsArgs("opencode")); err != nil {
 		t.Fatalf("opencode init failed: %v", err)
@@ -60,12 +61,12 @@ func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 		t.Fatalf("opencode uninstall failed: %v", err)
 	}
 
-	pluginPath := filepath.Join(tmp, ".opencode", "plugins", "ccp-rewrite.js")
+	pluginPath := filepath.Join(home, ".config", "opencode", "plugins", "ccp-rewrite.js")
 	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
 		t.Fatalf("expected opencode plugin to be removed, err=%v", err)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, ".ccp", initConfigName)); !os.IsNotExist(err) {
-		t.Fatalf("expected local init config to be removed after uninstall, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
@@ -237,14 +238,14 @@ func TestLoadConfiguredToolsAndJoinTools(t *testing.T) {
 func TestUpdateInitConfigAfterUninstallUpdatesAndRemoves(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
+	setHomeDirForTest(t, tmp)
 
-	path, _, err := initPath(false)
+	path, err := initPath()
 	if err != nil {
 		t.Fatal(err)
 	}
 	mkdirAllForTest(t, filepath.Dir(path), "mkdir config dir: %v")
 	cfg := initConfig{
-		Scope: "local",
 		Tools: []string{"claude", "codex"},
 		State: []toolState{{Tool: "claude", Status: "applied"}, {Tool: "codex", Status: "applied"}},
 	}
@@ -257,7 +258,7 @@ func TestUpdateInitConfigAfterUninstallUpdatesAndRemoves(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := updateInitConfigAfterUninstall(false, []string{"claude"}); err != nil {
+	if err := updateInitConfigAfterUninstall([]string{"claude"}); err != nil {
 		t.Fatalf("update config: %v", err)
 	}
 	got, err := os.ReadFile(path)
@@ -272,7 +273,7 @@ func TestUpdateInitConfigAfterUninstallUpdatesAndRemoves(t *testing.T) {
 		t.Fatalf("expected backup file, matches=%v err=%v", matches, err)
 	}
 
-	if err := updateInitConfigAfterUninstall(false, []string{"codex"}); err != nil {
+	if err := updateInitConfigAfterUninstall([]string{"codex"}); err != nil {
 		t.Fatalf("remove final tool: %v", err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -288,13 +289,14 @@ func TestRunUninstallDetectsToolWhenToolsFlagOmitted(t *testing.T) {
 	if err := RunInit(toolsArgs("opencode")); err != nil {
 		t.Fatalf("init opencode: %v", err)
 	}
-	if err := os.Remove(filepath.Join(tmp, ".ccp", initConfigName)); err != nil {
+	if err := os.Remove(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); err != nil {
 		t.Fatalf("remove init config: %v", err)
 	}
+	mkdirAllForTest(t, filepath.Join(tmp, ".opencode"), "mkdir .opencode: %v")
 	if err := RunUninstall(nil); err != nil {
 		t.Fatalf("uninstall auto-detect: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, ".opencode", "plugins", "ccp-rewrite.js")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(tmp, "home", ".config", "opencode", "plugins", "ccp-rewrite.js")); !os.IsNotExist(err) {
 		t.Fatalf("expected plugin removed, err=%v", err)
 	}
 }
@@ -320,7 +322,7 @@ func TestRunUninstallUsesConfiguredToolsWhenFlagOmitted(t *testing.T) {
 	if err := RunUninstall(nil); err != nil {
 		t.Fatalf("uninstall using configured tools: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, ".ccp", initConfigName)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected init config removed, err=%v", err)
 	}
 }

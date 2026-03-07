@@ -91,25 +91,7 @@ func TestStartPlannedCommandFallbackPreservesStdin(t *testing.T) {
 	}
 }
 
-func TestStrictRejectsAmbiguousStdinSensitivePipeline(t *testing.T) {
-	if isWindows() {
-		t.Skip("stdin integration uses unix cat pipeline")
-	}
-	r := New(Options{Strict: true}, nil, nil)
-	withPipedStdin(t, "blocked\n", func() {
-		stderr, code := captureStderr(t, func() int {
-			return r.Run([]string{"cat", "|", "cat"})
-		})
-		if code == 0 {
-			t.Fatal("expected strict-mode rejection")
-		}
-		if !strings.Contains(stderr, "strict mode") {
-			t.Fatalf("expected strict diagnostic, got %q", stderr)
-		}
-	})
-}
-
-func TestPermissiveAmbiguousStdinSensitivePipelineUsesNeutralExecution(t *testing.T) {
+func TestAmbiguousStdinSensitivePipelineUsesNeutralExecution(t *testing.T) {
 	if isWindows() {
 		t.Skip("stdin integration uses unix cat pipeline")
 	}
