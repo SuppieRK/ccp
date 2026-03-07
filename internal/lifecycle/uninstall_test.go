@@ -125,6 +125,31 @@ func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallAmazonQRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".amazonq"), "mkdir .amazonq: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("amazon-q")); err != nil {
+		t.Fatalf("amazon q init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("amazon-q")); err != nil {
+		t.Fatalf("amazon q uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".amazonq", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected amazon q rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -310,6 +335,34 @@ func TestRunUninstallCursorPreservesOtherCursorFilesAndDirectories(t *testing.T)
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".cursor", "rules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .cursor/rules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallAmazonQPreservesOtherAmazonQFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".amazonq", "rules"), "mkdir .amazonq/rules: %v")
+	otherRule := filepath.Join(tmp, ".amazonq", "rules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("amazon-q")); err != nil {
+		t.Fatalf("amazon q init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("amazon-q")); err != nil {
+		t.Fatalf("amazon q uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other amazon q rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".amazonq", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .amazonq/rules directory preserved, err=%v", err)
 	}
 }
 
@@ -529,6 +582,26 @@ func TestRunUninstallDetectsCursorWhenToolsFlagOmitted(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, ".cursor", "rules", "ccp.mdc")); !os.IsNotExist(err) {
 		t.Fatalf("expected cursor rule removed, err=%v", err)
+	}
+}
+
+func TestRunUninstallDetectsAmazonQWhenToolsFlagOmitted(t *testing.T) {
+	tmp := t.TempDir()
+	chdirForTest(t, tmp)
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	mkdirAllForTest(t, filepath.Join(tmp, ".amazonq"), "mkdir .amazonq: %v")
+
+	if err := RunInit(toolsArgs("amazon-q")); err != nil {
+		t.Fatalf("init amazon q: %v", err)
+	}
+	if err := os.Remove(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); err != nil {
+		t.Fatalf("remove init config: %v", err)
+	}
+	if err := RunUninstall(nil); err != nil {
+		t.Fatalf("uninstall auto-detect: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, ".amazonq", "rules", "ccp.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected amazon q rule removed, err=%v", err)
 	}
 }
 

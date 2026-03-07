@@ -19,7 +19,6 @@ const (
 	errInstallFmt          = "install error: %v"
 	errUnexpectedIDFmt     = "unexpected id %q"
 	errUnexpectedRootFmt   = "unexpected detect root %q"
-	errUnexpectedInstFmt   = "unexpected install result %+v err=%v"
 	errUnexpectedUninstFmt = "unexpected uninstall result %+v err=%v"
 	errVerifyFmt           = "verify error: %v"
 	agentsFileName         = "AGENTS.md"
@@ -149,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"claude", "codex", "cursor", "gemini", "github-copilot", "opencode"} {
+	for _, id := range []string{"amazon-q", "claude", "codex", "cursor", "gemini", "github-copilot", "opencode"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -467,6 +466,36 @@ func TestCursorAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 }
 
+func TestAmazonQAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(filepath.Join(scopeRoot, ".amazonq"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewAmazonQAdapter()
+	if a.ID() != "amazon-q" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".amazonq") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".amazonq", "rules", "ccp.md")) {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
 func TestCursorRuleContentUsesMinimalAlwaysApplyMetadata(t *testing.T) {
 	content := cursorRuleContent()
 	if !strings.HasPrefix(content, "---\n") {
@@ -483,6 +512,22 @@ func TestCursorRuleContentUsesMinimalAlwaysApplyMetadata(t *testing.T) {
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in cursor rule, got: %s", content)
+	}
+}
+
+func TestAmazonQRuleContentUsesCanonicalGuidanceWithoutCursorMetadata(t *testing.T) {
+	content := amazonQRuleContent()
+	if !strings.Contains(content, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", content)
+	}
+	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "description:") {
+		t.Fatalf("did not expect cursor frontmatter in amazon q rule, got: %s", content)
+	}
+	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("did not expect managed block markers in amazon q rule, got: %s", content)
 	}
 }
 
