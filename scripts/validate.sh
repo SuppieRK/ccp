@@ -36,9 +36,6 @@ fi
 echo "[validate] go vet ./..."
 go vet ./...
 
-echo "[validate] go test -count=1 ./..."
-go test -count=1 ./...
-
 echo "[validate] go mod tidy"
 go mod tidy
 

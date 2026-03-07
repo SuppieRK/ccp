@@ -32,7 +32,7 @@ Contributions MUST NOT:
 
 ## Language
 
-- Go 1.24 or newer is required.
+- Go 1.26 or newer is required.
 - Code must be formatted using `gofmt`.
 - Errors must be handled explicitly.
 - Standard Go conventions for naming and package structure should be followed.

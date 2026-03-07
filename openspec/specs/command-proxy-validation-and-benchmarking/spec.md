@@ -161,5 +161,5 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 
 #### Scenario: Coverage and race gates are enforced in validation workflows
 - **WHEN** PR/main validation runs
-- **THEN** CI runs the repository local-validation helper covering `go vet ./...`, `go test -count=1 ./...`, `go test -count=1 -race ./...`, internal coverage gate enforcement at `80%`, `staticcheck ./...`, `ineffassign ./...`, and `gocyclo -over 15 .`
+- **THEN** CI runs the repository local-validation helper covering `go vet ./...`, `go test -count=1 -race ./...`, internal coverage gate enforcement at `80%`, `staticcheck ./...`, `ineffassign ./...`, and `gocyclo -over 15 .`
 - **AND** benchmark execution is part of main validation and does not block merge/release flow.

@@ -12,7 +12,7 @@ CI is the canonical definition of release build mechanics.
 # Validation
 
 - All commands executed from repository root.
-- MUST use Go 1.24+.
+- MUST use Go 1.26+.
 - MUST run `./scripts/validate.sh` from repository root.
 - MUST treat any non-zero exit from the validation script as a failed validation.
 - If the validation script reports missing optional tools, SHOULD suggest installing them.

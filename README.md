@@ -1,6 +1,6 @@
 # Command Compression Proxy (`ccp`)
 
-[![Go Version](https://img.shields.io/badge/go-1.24%2B-blue)](#development-environment)
+[![Go Version](https://img.shields.io/badge/go-1.26%2B-blue)](#development-environment)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-incubating-orange)](#security--stability)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp)
@@ -36,7 +36,7 @@ Install with the provided script:
 curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
 ```
 
-Or build from source (`Go 1.24+`):
+Or build from source (`Go 1.26+`):
 
 ```bash
 go build -o ccp ./cmd/ccp
