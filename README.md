@@ -28,7 +28,7 @@ For coding agents operating in large repositories, this reduces context size wit
 
 ## Example Gains
 
-Representative benchmark scenarios from CI:
+> These examples are benchmark-fixture results from CI. They illustrate both compression wins and deliberate passthrough for structured or precision-sensitive output.
 
 | Command | Scenario | Native tokens | CCP tokens | Savings | Overhead |
 |---|---|---:|---:|---:|---:|
@@ -40,8 +40,6 @@ Representative benchmark scenarios from CI:
 | `./.venv/bin/pytest -q tests/test_app.py::test_fail` | failing test | 259 | 73 | 71.81% | 5 ms |
 | `docker logs <container>` | noisy container logs | 1009 | 19 | 98.12% | 5 ms |
 | `docker ps --format {{json .}}` | structured passthrough safety | 169 | 167 | 0.00% | 7 ms |
-
-These examples are benchmark-fixture results from CI. They illustrate both compression wins and deliberate passthrough for structured or precision-sensitive output.
 
 ## Real-World Usage
 
