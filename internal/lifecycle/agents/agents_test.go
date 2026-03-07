@@ -149,7 +149,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"claude", "codex", "cursor", "opencode"} {
+	for _, id := range []string{"claude", "codex", "cursor", "github-copilot", "opencode"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -289,11 +289,11 @@ func TestClaudeAdapterPlanInstallVerifyAndUninstall(t *testing.T) {
 
 func TestCodexManagedBlockHelpers(t *testing.T) {
 	base := "hello\n"
-	updated, err := upsertCodexManagedBlock(filepath.Join(t.TempDir(), "missing", agentsFileName))
+	updated, err := upsertManagedInstructionBlock(filepath.Join(t.TempDir(), "missing", agentsFileName))
 	if err != nil {
 		t.Fatalf("upsert missing: %v", err)
 	}
-	if !strings.Contains(updated, codexManagedBlockStart) {
+	if !strings.Contains(updated, ccpManagedBlockStart) {
 		t.Fatalf("missing block in %q", updated)
 	}
 	if !strings.Contains(updated, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
@@ -308,14 +308,14 @@ func TestCodexManagedBlockHelpers(t *testing.T) {
 
 	tmp := t.TempDir()
 	p := filepath.Join(tmp, agentsFileName)
-	if err := os.WriteFile(p, []byte("start\n"+codexManagedBlockTemplate()+"tail\n"), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte("start\n"+ccpManagedBlockTemplate()+"tail\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, changed, removeAll, err := removeCodexManagedBlock(p)
+	out, changed, removeAll, err := removeManagedInstructionBlock(p)
 	if err != nil || !changed || removeAll {
 		t.Fatalf("unexpected remove result changed=%v removeAll=%v err=%v", changed, removeAll, err)
 	}
-	if strings.Contains(out, codexManagedBlockStart) {
+	if strings.Contains(out, ccpManagedBlockStart) {
 		t.Fatalf("expected block removed, got %q", out)
 	}
 }
@@ -371,35 +371,64 @@ func TestCodexPlanAndUpsertBranches(t *testing.T) {
 	if err := os.WriteFile(p, []byte("prefix\nsuffix\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, err := upsertCodexManagedBlock(p)
+	out, err := upsertManagedInstructionBlock(p)
 	if err != nil {
 		t.Fatalf("upsert append branch: %v", err)
 	}
-	if !strings.Contains(out, codexManagedBlockStart) || !strings.Contains(out, "prefix") {
+	if !strings.Contains(out, ccpManagedBlockStart) || !strings.Contains(out, "prefix") {
 		t.Fatalf("unexpected appended content: %q", out)
 	}
 
-	withBlock := "before\n" + codexManagedBlockTemplate() + "\nafter\n"
+	withBlock := "before\n" + ccpManagedBlockTemplate() + "\nafter\n"
 	if err := os.WriteFile(p, []byte(withBlock), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, err = upsertCodexManagedBlock(p)
+	out, err = upsertManagedInstructionBlock(p)
 	if err != nil {
 		t.Fatalf("upsert replace branch: %v", err)
 	}
-	if strings.Count(out, codexManagedBlockStart) != 1 {
+	if strings.Count(out, ccpManagedBlockStart) != 1 {
 		t.Fatalf("expected single managed block, got %q", out)
 	}
 }
 
 func TestCodexUpsertOnMissingFileUsesCanonicalTemplate(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "missing", agentsFileName)
-	out, err := upsertCodexManagedBlock(p)
+	out, err := upsertManagedInstructionBlock(p)
 	if err != nil {
 		t.Fatalf("upsert missing file: %v", err)
 	}
-	if out != codexManagedBlockTemplate() {
+	if out != ccpManagedBlockTemplate() {
 		t.Fatalf("expected canonical template for missing file, got %q", out)
+	}
+}
+
+func TestGitHubCopilotAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: filepath.Join(tmp, "repo"), HomeDir: home}
+	if err := os.MkdirAll(home, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewGitHubCopilotAdapter()
+	if a.ID() != "github-copilot" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".github") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	if got := len(a.Plan(ctx)); got != 1 {
+		t.Fatalf("plan len=%d want 1", got)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
 

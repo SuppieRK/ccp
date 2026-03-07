@@ -48,6 +48,32 @@ func TestRunUninstallCodexRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallGitHubCopilotRemovesManagedBlockAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+
+	work := filepath.Join(tmp, "work")
+	mkdirAllForTest(t, work, "mkdir work: %v")
+	chdirForTest(t, work)
+
+	if err := RunInit(toolsArgs("github-copilot")); err != nil {
+		t.Fatalf("github copilot init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("github-copilot")); err != nil {
+		t.Fatalf("github copilot uninstall failed: %v", err)
+	}
+
+	instructionsPath := filepath.Join(home, ".copilot", "copilot-instructions.md")
+	if _, err := os.Stat(instructionsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected github copilot instructions file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -139,6 +165,39 @@ func TestRunUninstallClaudePreservesNonCCPHooks(t *testing.T) {
 	}
 	if !strings.Contains(got, "other.sh") {
 		t.Fatalf("expected non-ccp hook preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallGitHubCopilotPreservesNonCCPContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, filepath.Join(home, ".copilot"), "mkdir .copilot: %v")
+	setHomeDirForTest(t, home)
+
+	instructionsPath := filepath.Join(home, ".copilot", "copilot-instructions.md")
+	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(instructionsPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write github copilot instructions: %v", err)
+	}
+
+	work := filepath.Join(tmp, "work")
+	mkdirAllForTest(t, work, "mkdir work: %v")
+	chdirForTest(t, work)
+
+	if err := RunUninstall(toolsArgs("github-copilot")); err != nil {
+		t.Fatalf("github copilot uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read instructions after uninstall: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "managed content") {
+		t.Fatalf("expected managed content removed, got: %s", got)
+	}
+	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
+		t.Fatalf("expected non-managed content preserved, got: %s", got)
 	}
 }
 
@@ -298,6 +357,26 @@ func TestRunUninstallDetectsToolWhenToolsFlagOmitted(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "home", ".config", "opencode", "plugins", "ccp-rewrite.js")); !os.IsNotExist(err) {
 		t.Fatalf("expected plugin removed, err=%v", err)
+	}
+}
+
+func TestRunUninstallDetectsGitHubCopilotWhenToolsFlagOmitted(t *testing.T) {
+	tmp := t.TempDir()
+	chdirForTest(t, tmp)
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+
+	if err := RunInit(toolsArgs("github-copilot")); err != nil {
+		t.Fatalf("init github copilot: %v", err)
+	}
+	if err := os.Remove(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); err != nil {
+		t.Fatalf("remove init config: %v", err)
+	}
+	mkdirAllForTest(t, filepath.Join(tmp, ".github"), "mkdir .github: %v")
+	if err := RunUninstall(nil); err != nil {
+		t.Fatalf("uninstall auto-detect: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, "home", ".copilot", "copilot-instructions.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected github copilot instructions removed, err=%v", err)
 	}
 }
 

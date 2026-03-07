@@ -13,6 +13,7 @@ warn_missing_tool() {
   local install="$2"
   echo "[validate] warning: ${tool} not found; install with:" >&2
   echo "[validate]   ${install}" >&2
+  return 0
 }
 
 run_if_available() {
@@ -29,6 +30,7 @@ run_if_available() {
 
 collect_go_files() {
   find cmd internal -name '*.go' | sort
+  return 0
 }
 
 GO_FILES="$(collect_go_files)"
