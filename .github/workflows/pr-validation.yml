@@ -183,4 +183,53 @@ jobs:
         with:
           name: proxy-benchmark-pr-${{ matrix.tool }}
           path: .artifacts/benchmark/${{ matrix.tool }}
+
+  sonarqube-scan:
+    name: SonarQube Scan (informational)
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+
+      - name: Generate internal coverage profile for Sonar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/coverage
+          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
+
+      - name: Validate SonarQube configuration
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo "SONAR_TOKEN is not configured. Add SONAR_TOKEN in repository secrets/environment to run SonarQube scan." >&2
+            exit 1
+          fi
+          if [[ ! -f sonar-project.properties ]]; then
+            echo "sonar-project.properties is missing from repository root." >&2
+            exit 1
+          fi
+          if [[ ! -f .artifacts/coverage/internal.cover ]]; then
+            echo "coverage profile missing at .artifacts/coverage/internal.cover." >&2
+            exit 1
+          fi
+
+      - name: Run SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           retention-days: 14

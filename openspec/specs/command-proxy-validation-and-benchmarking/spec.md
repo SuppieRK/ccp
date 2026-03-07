@@ -130,6 +130,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** SonarQube analysis is executed in that workflow
 - **AND** SonarQube execution is configured as non-blocking (`continue-on-error: true`).
 
+#### Scenario: SonarQube runs in PR validation as informational
+- **WHEN** pull request validation runs
+- **THEN** SonarQube analysis is executed in that workflow
+- **AND** SonarQube execution is configured as non-blocking (`continue-on-error: true`).
+
 #### Scenario: SonarQube job checks out full git history
 - **WHEN** SonarQube analysis runs in CI
 - **THEN** checkout uses full history (`fetch-depth: 0`) so SCM metadata is available
