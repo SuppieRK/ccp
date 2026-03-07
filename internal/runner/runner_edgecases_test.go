@@ -232,6 +232,23 @@ func TestSequencedCaptureWriterAppliesConfidentialRedactions(t *testing.T) {
 	}
 }
 
+func TestRedactingWriterFlushesTrailingPartialLine(t *testing.T) {
+	var out strings.Builder
+	w := &redactingWriter{
+		writer:       &out,
+		confidential: []string{"org.example.secret"},
+	}
+	if _, err := w.Write([]byte("org.example.secret.partial")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	if got := out.String(); got != "***.partial" {
+		t.Fatalf("expected flushed redacted partial output, got %q", got)
+	}
+}
+
 type edgePreferredSubstitutionFilter struct {
 	tool         string
 	fallbackArgs []string

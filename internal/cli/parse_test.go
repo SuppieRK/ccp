@@ -57,8 +57,14 @@ func TestParseCaptureRawWithConfidential(t *testing.T) {
 	}
 }
 
-func TestParseRejectsConfidentialWithoutCaptureRaw(t *testing.T) {
-	assertParseFails(t, []string{"--confidential", "com.foo", "ls"})
+func TestParseAllowsConfidentialWithoutCaptureRaw(t *testing.T) {
+	opts := mustParse(t, []string{"--confidential", "com.foo", "ls"})
+	if len(opts.ConfidentialRedactions) != 1 || opts.ConfidentialRedactions[0] != "com.foo" {
+		t.Fatalf("unexpected confidential values: %#v", opts.ConfidentialRedactions)
+	}
+	if opts.CaptureRaw {
+		t.Fatal("did not expect capture-raw mode to be enabled")
+	}
 }
 
 func TestParseRejectsRawForLifecycleCommands(t *testing.T) {
@@ -67,6 +73,16 @@ func TestParseRejectsRawForLifecycleCommands(t *testing.T) {
 
 func TestParseRejectsCaptureRawForLifecycleCommands(t *testing.T) {
 	assertLifecycleCommandsRejectFlag(t, flagCaptureRaw)
+}
+
+func TestParseRejectsConfidentialForLifecycleCommands(t *testing.T) {
+	t.Helper()
+	cases := []string{"init", "gain", "history", "upgrade", "uninstall"}
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			assertParseFails(t, []string{"--confidential", "com.foo", cmd})
+		})
+	}
 }
 
 func assertLifecycleCommandsRejectFlag(t *testing.T, flag string) {

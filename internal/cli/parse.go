@@ -88,7 +88,7 @@ func finalizeParsedOptions(opts Options) (Options, error) {
 	if opts.ShowHelp {
 		return opts, nil
 	}
-	if err := validateRawScope(opts); err != nil {
+	if err := validateExecutionFlagScope(opts); err != nil {
 		return Options{}, err
 	}
 	return opts, nil
@@ -101,22 +101,32 @@ func requireFlagValue(args []string, index int, flag string) (string, int, error
 	return args[index+1], index + 1, nil
 }
 
-func validateRawScope(opts Options) error {
+func validateExecutionFlagScope(opts Options) error {
 	if opts.CaptureRawDir != "" && !opts.CaptureRaw {
 		return fmt.Errorf("--capture-raw-dir requires --capture-raw")
 	}
-	if len(opts.ConfidentialRedactions) > 0 && !opts.CaptureRaw {
-		return fmt.Errorf("--confidential requires --capture-raw")
-	}
-	if !opts.Raw || len(opts.CommandArgs) == 0 {
+	if len(opts.CommandArgs) == 0 {
 		return nil
 	}
-
-	switch strings.TrimSpace(strings.ToLower(opts.CommandArgs[0])) {
-	case "init", "gain", "history", "upgrade", "uninstall":
+	if !isLifecycleCommand(opts.CommandArgs[0]) {
+		return nil
+	}
+	if opts.Raw {
 		return fmt.Errorf("--raw is only valid for execution commands")
 	}
+	if len(opts.ConfidentialRedactions) > 0 {
+		return fmt.Errorf("--confidential is only valid for execution commands")
+	}
 	return nil
+}
+
+func isLifecycleCommand(arg string) bool {
+	switch strings.TrimSpace(strings.ToLower(arg)) {
+	case "init", "gain", "history", "upgrade", "uninstall":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseConfidentialRedactions(raw string) []string {

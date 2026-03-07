@@ -17,7 +17,7 @@ Define execution-path command proxy behavior for `ccp` command wrapping, plannin
 - **THEN** runner preserves bounded-line truncation behavior and continues deterministic stream processing.
 
 ### Requirement: Execution Flags
-`ccp` SHALL support execution-mode flags `--raw` and `--debug-filter`.
+`ccp` SHALL support execution-mode flags `--raw`, `--debug-filter`, and `--confidential`.
 
 #### Scenario: Default compacted mode
 - **WHEN** `ccp` runs an execution command without `--raw`
@@ -34,6 +34,14 @@ Define execution-path command proxy behavior for `ccp` command wrapping, plannin
 #### Scenario: Debug annotation
 - **WHEN** `--debug-filter` is enabled and filtered output is emitted
 - **THEN** debug metadata is emitted on stderr with sequence/key/action context.
+
+#### Scenario: Confidential flag is execution-scoped
+- **WHEN** `--confidential` is used with an execution command
+- **THEN** parsing succeeds without requiring `--capture-raw`.
+
+#### Scenario: Confidential flag remains invalid for lifecycle subcommands
+- **WHEN** `--confidential` is used with lifecycle subcommands (`init`, `gain`, `history`, `upgrade`, `uninstall`)
+- **THEN** argument parsing fails with an error indicating the flag is execution-only.
 
 ### Requirement: Ambiguity Handling
 Execution planning SHALL detect ambiguous shell-chain operators and preserve safety through permissive fallback behavior.
@@ -138,6 +146,21 @@ The command proxy SHALL propagate stdin from the `ccp` process into wrapped comm
 - **WHEN** `ccp --raw` runs a stdin-driven command and stdin contains bytes
 - **THEN** the wrapped command receives the same stdin byte stream
 - **AND** `ccp` preserves raw passthrough semantics for resulting output and exit code.
+
+### Requirement: Confidential Output Redaction
+The command proxy SHALL redact configured confidential substrings from emitted execution output.
+
+#### Scenario: Semantic mode redacts emitted output
+- **WHEN** `ccp --confidential a,b <command>` emits stdout or stderr in semantic mode
+- **THEN** emitted output replaces each configured substring with `***`.
+
+#### Scenario: Raw mode redacts emitted output
+- **WHEN** `ccp --raw --confidential a,b <command>` emits stdout or stderr
+- **THEN** emitted output replaces each configured substring with `***`.
+
+#### Scenario: Capture mode also redacts capture files
+- **WHEN** `ccp --capture-raw --confidential a,b <command>` writes capture artifacts
+- **THEN** the capture files redact the same configured substrings.
 
 ### Requirement: Stdin-driven pipeline parity
 The command proxy SHALL preserve native observable behavior for stdin-driven pipeline scenarios.

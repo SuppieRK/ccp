@@ -22,7 +22,7 @@ This project prioritizes deterministic, machine-consumable correctness over term
 - Preserves actionable diagnostics and line-oriented output affordances when possible.
 - Keeps deterministic behavior for identical inputs.
 - Emits zero bytes if native output is zero bytes.
-- Preserves exact byte stream in `--raw` mode.
+- Preserves exact byte stream in `--raw` mode unless explicit redaction is enabled with `--confidential`.
 
 For coding agents operating in large repositories, this reduces context size without sacrificing correctness or downstream operability.
 
@@ -140,7 +140,7 @@ ccp --capture-raw --capture-raw-dir .artifacts/issue <command>
 ccp <command> > .artifacts/issue/ccp.stdout 2> .artifacts/issue/ccp.stderr
 ```
 
-If the raw captures contain internal package names or other sensitive strings, add `--confidential value1,value2,...` to the `--capture-raw` command to redact those substrings in the capture files before sharing them. This does not redact the separate `ccp <command>` output file, so review that file manually before posting.
+If the command output contains internal package names or other sensitive strings, add `--confidential value1,value2,...` to redact those substrings from `ccp` output before sharing it. When combined with `--capture-raw`, the same redactions are also applied to the capture files.
 
 Attach or paste:
 - the exact command you ran
