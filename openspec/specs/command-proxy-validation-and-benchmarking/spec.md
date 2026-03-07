@@ -159,6 +159,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** CI schedules one benchmark matrix job per tool
 - **AND** each job publishes tool-scoped benchmark artifacts independently.
 
+#### Scenario: Benchmark matrix entries carry runtime requirements
+- **WHEN** PR or main benchmark discovery selects tool fixtures for execution
+- **THEN** each emitted benchmark matrix entry includes the tool identifier plus runtime requirement metadata
+- **AND** benchmark jobs use that metadata to provision only the needed runtimes for that tool.
+
 #### Scenario: Coverage and race gates are enforced in validation workflows
 - **WHEN** PR/main validation runs
 - **THEN** CI runs the repository local-validation helper covering `go vet ./...`, `go test -count=1 -race ./...`, internal coverage gate enforcement at `80%`, `staticcheck ./...`, `ineffassign ./...`, and `gocyclo -over 15 .`
