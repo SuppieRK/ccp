@@ -24,6 +24,8 @@ const (
 	initCopilotFileName   = "copilot-instructions.md"
 	initCursorDir         = ".cursor"
 	initCursorRuleName    = "ccp.mdc"
+	initAmazonQDir        = ".amazonq"
+	initAmazonQRuleName   = "ccp.md"
 	initGeminiDir         = ".gemini"
 	initGeminiFileName    = "GEMINI.md"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
@@ -296,6 +298,36 @@ func TestRunInitDetectsGeminiWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(home, initGeminiDir, initGeminiFileName)); err != nil {
 		t.Fatalf("expected gemini instructions file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsAmazonQWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initAmazonQDir, "mkdir .amazonq: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "amazon-q" {
+		t.Fatalf("tools = %v, want [amazon-q]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAmazonQDir, "rules", initAmazonQRuleName)); err != nil {
+		t.Fatalf("expected amazon q rule file after detection, err=%v", err)
 	}
 }
 
