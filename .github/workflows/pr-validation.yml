@@ -48,7 +48,7 @@ jobs:
     name: Benchmark Discover (PR)
     runs-on: ubuntu-latest
     outputs:
-      tools: ${{ steps.select-tools.outputs.tools }}
+      benchmark_matrix: ${{ steps.select-tools.outputs.benchmark_matrix }}
       has_tools: ${{ steps.select-tools.outputs.has_tools }}
     steps:
       - name: Checkout
@@ -60,102 +60,13 @@ jobs:
         id: select-tools
         shell: bash
         run: |
-          set -euo pipefail
-
-          mapfile -t all_tools < <(find testdata/tool-fixtures -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
-          if [[ ${#all_tools[@]} -eq 0 ]]; then
-            echo "No benchmark tools found under testdata/tool-fixtures" >&2
-            exit 1
-          fi
-
-          declare -A selected=()
-          run_all=0
-
-          add_prefix() {
-            local prefix="$1"
-            local t
-            for t in "${all_tools[@]}"; do
-              if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
-                selected["$t"]=1
-              fi
-            done
-          }
-
-          add_exact_if_exists() {
-            local exact="$1"
-            local t
-            for t in "${all_tools[@]}"; do
-              if [[ "$t" == "$exact" ]]; then
-                selected["$t"]=1
-                return
-              fi
-            done
-          }
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base_sha="${{ github.event.pull_request.base.sha }}"
-            head_sha="${{ github.event.pull_request.head.sha }}"
-            mapfile -t changed < <(git diff --name-only "$base_sha" "$head_sha")
-          else
-            changed=()
-          fi
-
-          if [[ ${#changed[@]} -eq 0 && "${{ github.event_name }}" != "pull_request" ]]; then
-            run_all=1
-          fi
-
-          for path in "${changed[@]}"; do
-            [[ -z "$path" ]] && continue
-            case "$path" in
-              testdata/tool-fixtures/*)
-                tool="${path#testdata/tool-fixtures/}"
-                tool="${tool%%/*}"
-                add_exact_if_exists "$tool"
-                ;;
-              openspec/specs/*/spec.md)
-                cap="${path#openspec/specs/}"
-                cap="${cap%%/*}"
-                add_exact_if_exists "$cap"
-                ;;
-              internal/engine/filters/*)
-                rel="${path#internal/engine/filters/}"
-                first="${rel%%/*}"
-                first="${first%%.*}"
-                case "$first" in
-                  cargo|docker|git|go|kubectl|npx)
-                    add_prefix "$first"
-                    ;;
-                  *)
-                    add_exact_if_exists "$first"
-                    ;;
-                esac
-                ;;
-              cmd/ccp/*|internal/runner/*|internal/engine/*|internal/metrics/*|tools/benchmark/*|go.mod|go.sum)
-                run_all=1
-                ;;
-            esac
-          done
-
-          if [[ "$run_all" -eq 1 ]]; then
-            tools_json=$(printf "%s\n" "${all_tools[@]}" | jq -R -s -c 'split("\n")[:-1]')
-            has_tools=true
-          elif [[ ${#selected[@]} -gt 0 ]]; then
-            tools_json=$(printf "%s\n" "${!selected[@]}" | sort | jq -R -s -c 'split("\n")[:-1]')
-            has_tools=true
-          else
-            tools_json="[]"
-            has_tools=false
-          fi
-
-          echo "tools=${tools_json}" >> "$GITHUB_OUTPUT"
-          echo "has_tools=${has_tools}" >> "$GITHUB_OUTPUT"
-
-          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            echo "## PR Benchmark Tool Selection" >> "${GITHUB_STEP_SUMMARY}"
-            echo "" >> "${GITHUB_STEP_SUMMARY}"
-            echo "- Changed files analyzed: ${#changed[@]}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "- Selected tools: \`${tools_json}\`" >> "${GITHUB_STEP_SUMMARY}"
-          fi
+          bash ./scripts/benchmark-discover.sh \
+            --mode pr \
+            --event-name "${{ github.event_name }}" \
+            --base-sha "${{ github.event.pull_request.base.sha || '' }}" \
+            --head-sha "${{ github.event.pull_request.head.sha || '' }}" \
+            --output-file "$GITHUB_OUTPUT" \
+            --summary-file "${GITHUB_STEP_SUMMARY:-}"
 
   benchmark-tool:
     name: Benchmark (PR informational) / ${{ matrix.tool }}
@@ -166,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tool: ${{ fromJson(needs.benchmark-discover.outputs.tools) }}
+        include: ${{ fromJson(needs.benchmark-discover.outputs.benchmark_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -177,30 +88,36 @@ jobs:
           go-version: '1.26.x'
 
       - name: Setup Python
+        if: ${{ matrix.needs_python }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Setup Java
+        if: ${{ matrix.needs_java }}
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Setup Rust (cargo)
+        if: ${{ matrix.needs_rust }}
         uses: dtolnay/rust-toolchain@stable
 
       - name: Setup Deno
+        if: ${{ matrix.needs_deno }}
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
       - name: Setup Node.js
+        if: ${{ matrix.needs_node }}
         uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Setup pnpm
+        if: ${{ matrix.needs_pnpm }}
         shell: bash
         run: |
           corepack enable
@@ -208,6 +125,7 @@ jobs:
           pnpm --version
 
       - name: Setup kind
+        if: ${{ matrix.needs_kind }}
         uses: helm/kind-action@v1.14.0
         with:
           install_only: true
@@ -220,6 +138,7 @@ jobs:
           echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
 
       - name: Pre-pull Docker benchmark images
+        if: ${{ matrix.needs_docker_images }}
         shell: bash
         run: |
           docker pull nginx:alpine
@@ -264,4 +183,53 @@ jobs:
         with:
           name: proxy-benchmark-pr-${{ matrix.tool }}
           path: .artifacts/benchmark/${{ matrix.tool }}
+
+  sonarqube-scan:
+    name: SonarQube Scan (informational)
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+
+      - name: Generate internal coverage profile for Sonar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/coverage
+          go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
+
+      - name: Validate SonarQube configuration
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo "SONAR_TOKEN is not configured. Add SONAR_TOKEN in repository secrets/environment to run SonarQube scan." >&2
+            exit 1
+          fi
+          if [[ ! -f sonar-project.properties ]]; then
+            echo "sonar-project.properties is missing from repository root." >&2
+            exit 1
+          fi
+          if [[ ! -f .artifacts/coverage/internal.cover ]]; then
+            echo "coverage profile missing at .artifacts/coverage/internal.cover." >&2
+            exit 1
+          fi
+
+      - name: Run SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           retention-days: 14

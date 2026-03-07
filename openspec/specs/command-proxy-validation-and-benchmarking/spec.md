@@ -130,6 +130,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **THEN** SonarQube analysis is executed in that workflow
 - **AND** SonarQube execution is configured as non-blocking (`continue-on-error: true`).
 
+#### Scenario: SonarQube runs in PR validation as informational
+- **WHEN** pull request validation runs
+- **THEN** SonarQube analysis is executed in that workflow
+- **AND** SonarQube execution is configured as non-blocking (`continue-on-error: true`).
+
 #### Scenario: SonarQube job checks out full git history
 - **WHEN** SonarQube analysis runs in CI
 - **THEN** checkout uses full history (`fetch-depth: 0`) so SCM metadata is available
@@ -158,6 +163,11 @@ CI workflows SHALL publish benchmark and coverage results with explicit retentio
 - **WHEN** main validation benchmark runs for discovered tool fixtures
 - **THEN** CI schedules one benchmark matrix job per tool
 - **AND** each job publishes tool-scoped benchmark artifacts independently.
+
+#### Scenario: Benchmark matrix entries carry runtime requirements
+- **WHEN** PR or main benchmark discovery selects tool fixtures for execution
+- **THEN** each emitted benchmark matrix entry includes the tool identifier plus runtime requirement metadata
+- **AND** benchmark jobs use that metadata to provision only the needed runtimes for that tool.
 
 #### Scenario: Coverage and race gates are enforced in validation workflows
 - **WHEN** PR/main validation runs

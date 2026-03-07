@@ -25,6 +25,7 @@ const (
 )
 
 func initPlannerCapabilities() {
+	// Planner capability changes affect broad execution behavior, so CI treats this path as full-benchmark scope.
 	// Precompute known substitution capabilities once; BuildExecPlan remains O(1).
 	_ = executableExists("uv")
 }
