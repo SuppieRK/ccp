@@ -23,7 +23,7 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init detects tools using registered adapters for the selected scope root.
 
 #### Scenario: detect tool by known directory
-- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`, `.gemini`, `.amazonq`, `.windsurf`)
+- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`, `.gemini`, `.amazonq`, `.windsurf`, `.clinerules`)
 - **THEN** that tool is included in detected candidates for init selection.
 
 #### Scenario: ignore non-directory collisions
@@ -65,6 +65,11 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init accepts the tool ID as a valid registered adapter
 - **AND** routes installation through a real Windsurf adapter.
 
+#### Scenario: cline is a supported adapter-backed tool
+- **WHEN** user selects `cline`
+- **THEN** init accepts the tool ID as a valid registered adapter
+- **AND** routes installation through a real Cline adapter.
+
 ### Requirement: Adapter Installation Semantics
 `ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
 
@@ -82,7 +87,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes

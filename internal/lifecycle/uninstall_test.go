@@ -175,6 +175,31 @@ func TestRunUninstallWindsurfRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallClineRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".clinerules"), "mkdir .clinerules: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("cline")); err != nil {
+		t.Fatalf("cline init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("cline")); err != nil {
+		t.Fatalf("cline uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".clinerules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected cline rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -416,6 +441,34 @@ func TestRunUninstallWindsurfPreservesOtherWindsurfFilesAndDirectories(t *testin
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".windsurf", "rules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .windsurf/rules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallClinePreservesOtherClineFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".clinerules"), "mkdir .clinerules: %v")
+	otherRule := filepath.Join(tmp, ".clinerules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("cline")); err != nil {
+		t.Fatalf("cline init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("cline")); err != nil {
+		t.Fatalf("cline uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other cline rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".clinerules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .clinerules directory preserved, err=%v", err)
 	}
 }
 

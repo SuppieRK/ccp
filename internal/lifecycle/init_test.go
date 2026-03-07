@@ -30,6 +30,8 @@ const (
 	initGeminiFileName    = "GEMINI.md"
 	initWindsurfDir       = ".windsurf"
 	initWindsurfRuleName  = "ccp.md"
+	initClineDir          = ".clinerules"
+	initClineRuleName     = "ccp.md"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
@@ -360,6 +362,36 @@ func TestRunInitDetectsWindsurfWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initWindsurfDir, "rules", initWindsurfRuleName)); err != nil {
 		t.Fatalf("expected windsurf rule file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsClineWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initClineDir, "mkdir .clinerules: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "cline" {
+		t.Fatalf("tools = %v, want [cline]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initClineDir, initClineRuleName)); err != nil {
+		t.Fatalf("expected cline rule file after detection, err=%v", err)
 	}
 }
 

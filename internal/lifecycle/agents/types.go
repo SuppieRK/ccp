@@ -39,6 +39,7 @@ type ID string
 
 const (
 	AgentAmazonQ       ID = "amazon-q"
+	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
 	AgentCodex         ID = "codex"
 	AgentCursor        ID = "cursor"
@@ -92,6 +93,7 @@ func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 func DefaultAdapters() map[string]Adapter {
 	return map[string]Adapter{
 		string(AgentAmazonQ):       NewAmazonQAdapter(),
+		string(AgentCline):         NewClineAdapter(),
 		string(AgentClaude):        NewClaudeAdapter(),
 		string(AgentCodex):         NewCodexAdapter(),
 		string(AgentCursor):        NewCursorAdapter(),

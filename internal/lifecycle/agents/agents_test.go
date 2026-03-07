@@ -148,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"amazon-q", "claude", "codex", "cursor", "gemini", "github-copilot", "opencode", "windsurf"} {
+	for _, id := range []string{"amazon-q", "cline", "claude", "codex", "cursor", "gemini", "github-copilot", "opencode", "windsurf"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -580,6 +580,52 @@ func TestWindsurfRuleContentUsesAlwaysOnMetadata(t *testing.T) {
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in windsurf rule, got: %s", content)
+	}
+}
+
+func TestClineAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(filepath.Join(scopeRoot, ".clinerules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewClineAdapter()
+	if a.ID() != "cline" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".clinerules") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".clinerules", "ccp.md")) {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
+func TestClineRuleContentUsesCanonicalGuidance(t *testing.T) {
+	content := clineRuleContent()
+	if !strings.Contains(content, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", content)
+	}
+	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
+		t.Fatalf("did not expect cursor or windsurf metadata in cline rule, got: %s", content)
+	}
+	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("did not expect managed block markers in cline rule, got: %s", content)
 	}
 }
 
