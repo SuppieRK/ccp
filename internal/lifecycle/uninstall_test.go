@@ -200,6 +200,31 @@ func TestRunUninstallClineRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallContinueRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".continue"), "mkdir .continue: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("continue")); err != nil {
+		t.Fatalf("continue init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("continue")); err != nil {
+		t.Fatalf("continue uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".continue", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected continue rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -469,6 +494,34 @@ func TestRunUninstallClinePreservesOtherClineFilesAndDirectories(t *testing.T) {
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".clinerules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .clinerules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallContinuePreservesOtherContinueFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".continue", "rules"), "mkdir .continue/rules: %v")
+	otherRule := filepath.Join(tmp, ".continue", "rules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("continue")); err != nil {
+		t.Fatalf("continue init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("continue")); err != nil {
+		t.Fatalf("continue uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other continue rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".continue", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .continue/rules directory preserved, err=%v", err)
 	}
 }
 

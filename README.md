@@ -140,9 +140,7 @@ ccp nl -ba spec.md | ccp sed -n '1,260p'
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `amazon-q`, `cline`, `claude`, `codex`, `cursor`, `gemini`, `github-copilot`, `opencode`, `windsurf` |
-
-Cline integration is managed as a project rule at `.clinerules/ccp.md`.
+| Agent integrations | `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `gemini`, `github-copilot`, `opencode`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
