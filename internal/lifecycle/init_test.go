@@ -24,6 +24,8 @@ const (
 	initCopilotFileName   = "copilot-instructions.md"
 	initCursorDir         = ".cursor"
 	initCursorRuleName    = "ccp.mdc"
+	initGeminiDir         = ".gemini"
+	initGeminiFileName    = "GEMINI.md"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
@@ -128,14 +130,13 @@ func TestRunInitSkipsGitignoreWhenMissing(t *testing.T) {
 }
 
 func TestRunInitWritesConfigUnderHome(t *testing.T) {
-	tmp := t.TempDir()
-	setHomeDirForTest(t, tmp)
+	ws := newLifecycleWorkspace(t)
 
 	if err := RunInit([]string{initToolsFlag, "cursor,opencode"}); err != nil {
 		t.Fatalf("init failed: %v", err)
 	}
 
-	path := filepath.Join(tmp, ".config", "ccp", initConfigFileName)
+	path := filepath.Join(ws.home, ".config", "ccp", initConfigFileName)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read global init config: %v", err)
@@ -265,6 +266,36 @@ func TestRunInitDetectsCursorWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initCursorDir, "rules", initCursorRuleName)); err != nil {
 		t.Fatalf("expected cursor rule file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsGeminiWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initGeminiDir, "mkdir .gemini: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "gemini" {
+		t.Fatalf("tools = %v, want [gemini]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(home, initGeminiDir, initGeminiFileName)); err != nil {
+		t.Fatalf("expected gemini instructions file after detection, err=%v", err)
 	}
 }
 
@@ -555,6 +586,101 @@ func TestRunInitGitHubCopilotPreservesUserContentAndReplacesOnlyManagedRegion(t 
 
 	if err := RunInit([]string{initToolsFlag, "github-copilot"}); err != nil {
 		t.Fatalf("github copilot init failed: %v", err)
+	}
+	updated, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read updated instructions file: %v", err)
+	}
+	s := string(updated)
+	if !strings.Contains(s, "# User Header") || !strings.Contains(s, "# Tail") {
+		t.Fatalf("expected user-authored content to be preserved, got: %s", s)
+	}
+	if strings.Contains(s, "old content") {
+		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitGeminiUsesUserInstructionsManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+
+	work := filepath.Join(tmp, "work")
+	mkdirAllForTest(t, work, initMkdirWorkErrFmt)
+	chdirForTest(t, work)
+
+	if err := RunInit([]string{initToolsFlag, "gemini"}); err != nil {
+		t.Fatalf("gemini init failed: %v", err)
+	}
+	instructionsPath := filepath.Join(home, initGeminiDir, initGeminiFileName)
+	b, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read gemini instructions file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || !strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("expected managed markers, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
+		t.Fatalf("expected preferred ccp wording, got: %s", s)
+	}
+}
+
+func TestRunInitGeminiRerunDoesNotDuplicateManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+
+	work := filepath.Join(tmp, "work")
+	mkdirAllForTest(t, work, initMkdirWorkErrFmt)
+	chdirForTest(t, work)
+
+	if err := RunInit([]string{initToolsFlag, "gemini"}); err != nil {
+		t.Fatalf(initFirstFailedFmt, err)
+	}
+	instructionsPath := filepath.Join(home, initGeminiDir, initGeminiFileName)
+	before, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read before: %v", err)
+	}
+	if err := RunInit([]string{initToolsFlag, "gemini"}); err != nil {
+		t.Fatalf(initSecondFailedFmt, err)
+	}
+	after, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected idempotent rerun to keep file unchanged")
+	}
+	if strings.Count(string(after), "<!-- BEGIN: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected single begin marker")
+	}
+	if strings.Count(string(after), "<!-- END: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected single end marker")
+	}
+}
+
+func TestRunInitGeminiPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, filepath.Join(home, initGeminiDir), "mkdir gemini home: %v")
+	setHomeDirForTest(t, home)
+
+	instructionsPath := filepath.Join(home, initGeminiDir, initGeminiFileName)
+	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(instructionsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write initial instructions file: %v", err)
+	}
+
+	work := filepath.Join(tmp, "work")
+	mkdirAllForTest(t, work, initMkdirWorkErrFmt)
+	chdirForTest(t, work)
+
+	if err := RunInit([]string{initToolsFlag, "gemini"}); err != nil {
+		t.Fatalf("gemini init failed: %v", err)
 	}
 	updated, err := os.ReadFile(instructionsPath)
 	if err != nil {
