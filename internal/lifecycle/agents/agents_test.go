@@ -148,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"amazon-q", "claude", "codex", "cursor", "gemini", "github-copilot", "opencode"} {
+	for _, id := range []string{"amazon-q", "claude", "codex", "cursor", "gemini", "github-copilot", "opencode", "windsurf"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -528,6 +528,58 @@ func TestAmazonQRuleContentUsesCanonicalGuidanceWithoutCursorMetadata(t *testing
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in amazon q rule, got: %s", content)
+	}
+}
+
+func TestWindsurfAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(filepath.Join(scopeRoot, ".windsurf"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewWindsurfAdapter()
+	if a.ID() != "windsurf" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".windsurf") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".windsurf", "rules", "ccp.md")) {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
+func TestWindsurfRuleContentUsesAlwaysOnMetadata(t *testing.T) {
+	content := windsurfRuleContent()
+	if !strings.HasPrefix(content, "---\n") {
+		t.Fatalf("expected frontmatter start, got: %s", content)
+	}
+	if !strings.Contains(content, "trigger: always_on") {
+		t.Fatalf("expected always_on trigger, got: %s", content)
+	}
+	if !strings.Contains(content, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", content)
+	}
+	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if strings.Contains(content, "alwaysApply: true") {
+		t.Fatalf("did not expect cursor metadata in windsurf rule, got: %s", content)
+	}
+	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("did not expect managed block markers in windsurf rule, got: %s", content)
 	}
 }
 

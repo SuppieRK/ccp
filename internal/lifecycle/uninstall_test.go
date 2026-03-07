@@ -150,6 +150,31 @@ func TestRunUninstallAmazonQRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallWindsurfRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".windsurf"), "mkdir .windsurf: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("windsurf")); err != nil {
+		t.Fatalf("windsurf init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("windsurf")); err != nil {
+		t.Fatalf("windsurf uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".windsurf", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallOpenCodeRemovesPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
@@ -363,6 +388,34 @@ func TestRunUninstallAmazonQPreservesOtherAmazonQFilesAndDirectories(t *testing.
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".amazonq", "rules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .amazonq/rules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallWindsurfPreservesOtherWindsurfFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".windsurf", "rules"), "mkdir .windsurf/rules: %v")
+	otherRule := filepath.Join(tmp, ".windsurf", "rules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("windsurf")); err != nil {
+		t.Fatalf("windsurf init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("windsurf")); err != nil {
+		t.Fatalf("windsurf uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other windsurf rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".windsurf", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .windsurf/rules directory preserved, err=%v", err)
 	}
 }
 
@@ -602,6 +655,26 @@ func TestRunUninstallDetectsAmazonQWhenToolsFlagOmitted(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, ".amazonq", "rules", "ccp.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected amazon q rule removed, err=%v", err)
+	}
+}
+
+func TestRunUninstallDetectsWindsurfWhenToolsFlagOmitted(t *testing.T) {
+	tmp := t.TempDir()
+	chdirForTest(t, tmp)
+	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	mkdirAllForTest(t, filepath.Join(tmp, ".windsurf"), "mkdir .windsurf: %v")
+
+	if err := RunInit(toolsArgs("windsurf")); err != nil {
+		t.Fatalf("init windsurf: %v", err)
+	}
+	if err := os.Remove(filepath.Join(tmp, "home", ".config", "ccp", initConfigName)); err != nil {
+		t.Fatalf("remove init config: %v", err)
+	}
+	if err := RunUninstall(nil); err != nil {
+		t.Fatalf("uninstall auto-detect: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, ".windsurf", "rules", "ccp.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf rule removed, err=%v", err)
 	}
 }
 

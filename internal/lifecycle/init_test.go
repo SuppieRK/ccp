@@ -28,6 +28,8 @@ const (
 	initAmazonQRuleName   = "ccp.md"
 	initGeminiDir         = ".gemini"
 	initGeminiFileName    = "GEMINI.md"
+	initWindsurfDir       = ".windsurf"
+	initWindsurfRuleName  = "ccp.md"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
@@ -328,6 +330,36 @@ func TestRunInitDetectsAmazonQWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initAmazonQDir, "rules", initAmazonQRuleName)); err != nil {
 		t.Fatalf("expected amazon q rule file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsWindsurfWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initWindsurfDir, "mkdir .windsurf: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "windsurf" {
+		t.Fatalf("tools = %v, want [windsurf]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initWindsurfDir, "rules", initWindsurfRuleName)); err != nil {
+		t.Fatalf("expected windsurf rule file after detection, err=%v", err)
 	}
 }
 

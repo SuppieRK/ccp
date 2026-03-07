@@ -140,11 +140,7 @@ ccp nl -ba spec.md | ccp sed -n '1,260p'
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `amazon-q`, `claude`, `codex`, `cursor`, `gemini`, `github-copilot`, `opencode` |
-
-Cursor integration is managed as a project rule at `.cursor/rules/ccp.mdc`.
-Amazon Q integration is managed as a project rule at `.amazonq/rules/ccp.md`.
-Gemini integration is managed as a user context file at `~/.gemini/GEMINI.md`.
+| Agent integrations | `amazon-q`, `claude`, `codex`, `cursor`, `gemini`, `github-copilot`, `opencode`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
