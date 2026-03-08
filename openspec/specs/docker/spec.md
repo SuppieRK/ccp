@@ -7,7 +7,7 @@ Define `docker` parent filter routing, safety boundaries, and delegated runtime 
 The `docker` phase SHALL route only supported subcommands to local compactors and keep unsupported/unsafe shapes passthrough.
 
 #### Scenario: supported subcommand dispatch
-- **WHEN** subcommand is `ps`, `images`, or `logs`
+- **WHEN** subcommand is `ps`, `images`, `logs`, or `compose logs`
 - **THEN** parent emits dispatch keys for local subfilters.
 
 #### Scenario: structured output safety for ps/images
@@ -17,6 +17,15 @@ The `docker` phase SHALL route only supported subcommands to local compactors an
 #### Scenario: unsupported subcommand passthrough
 - **WHEN** subcommand is outside supported routes
 - **THEN** `ForcePassthrough=true`.
+
+#### Scenario: unsupported compose passthrough boundary
+- **WHEN** subcommand is `compose` with a nested subcommand outside supported routes
+- **THEN** parent returns passthrough for safety.
+
+#### Scenario: compose logs routed directly by docker parent
+- **WHEN** nested subcommand is `compose logs`
+- **THEN** the existing `docker` parent handles two-token dispatch directly.
+- **AND** no separate `docker compose` parent is required.
 
 #### Scenario: compose passthrough boundary
 - **WHEN** subcommand is `compose`

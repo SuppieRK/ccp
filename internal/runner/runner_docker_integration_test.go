@@ -79,6 +79,53 @@ func TestRunnerDockerRawBypass(t *testing.T) {
 	}
 }
 
+func TestRunnerDockerComposeLogsFlushAndExitParity(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"logs\" ]; then",
+		"  echo 'api-1  | started'",
+		"  echo 'web-1  | listening on :8080'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "logs", "api"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if !strings.Contains(out, "api-1  | started") || !strings.Contains(out, "web-1  | listening on :8080") {
+		t.Fatalf("expected raw compose logs output, got %q", out)
+	}
+}
+
+func TestRunnerDockerComposeLogsFollowPassthrough(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"logs\" ]; then",
+		"  echo 'api-1  | tail line'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "logs", "--follow", "api"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if !strings.Contains(out, "api-1  | tail line") {
+		t.Fatalf("expected passthrough output, got %q", out)
+	}
+}
+
 func skipWindowsDockerFixture(t *testing.T) {
 	t.Helper()
 	if runtime.GOOS == "windows" {

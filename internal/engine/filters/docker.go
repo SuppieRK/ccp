@@ -38,6 +38,7 @@ func NewDockerToolFilter() engine.ToolFilter {
 		dockerfilters.NewPSFilter(),
 		dockerfilters.NewImagesFilter(),
 		dockerfilters.NewLogsFilter(),
+		dockerfilters.NewComposeLogsFilter(),
 	)
 	return &dockerToolFilter{subcommands: reg, initErr: initErr}
 }
@@ -65,19 +66,21 @@ func (d *dockerToolFilter) Prepare(args []string) engine.PrepareResult {
 		return passthrough
 	}
 	sub := strings.ToLower(strings.TrimSpace(reordered[0]))
-	subArgs := append([]string{}, reordered[1:]...)
-	subArgs = append(subArgs, moved...)
 	switch sub {
 	case "compose":
-		return passthrough
+		return prepareDockerComposeRoute(args, reordered[1:], passthrough)
 	case "exec", "pull", "build":
 		return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "interactive or tty-heavy docker shape"}
 	case "ps":
+		subArgs := append([]string{}, reordered[1:]...)
+		subArgs = append(subArgs, moved...)
 		if filtercommon.HasOption(subArgs, dockerFormatFlag) {
 			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "structured output mode"}
 		}
 		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker ps"}
 	case "images":
+		subArgs := append([]string{}, reordered[1:]...)
+		subArgs = append(subArgs, moved...)
 		if filtercommon.HasOption(subArgs, dockerFormatFlag) {
 			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "structured output mode"}
 		}
@@ -89,6 +92,8 @@ func (d *dockerToolFilter) Prepare(args []string) engine.PrepareResult {
 		}
 		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker images"}
 	case "logs":
+		subArgs := append([]string{}, reordered[1:]...)
+		subArgs = append(subArgs, moved...)
 		if filtercommon.HasAnyFlag(subArgs, "-f", "--follow") {
 			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "follow-mode docker logs passthrough"}
 		}
@@ -123,7 +128,156 @@ func (d *dockerToolFilter) resolve(ev engine.Event) engine.ToolFilter {
 	if strings.HasPrefix(dispatch, "docker logs") {
 		return d.subcommands.Resolve("docker logs")
 	}
+	if strings.HasPrefix(dispatch, "docker compose logs") {
+		return d.subcommands.Resolve("docker compose logs")
+	}
 	return d.subcommands.Resolve(dispatch)
+}
+
+func prepareDockerComposeRoute(args, subArgs []string, passthrough engine.PrepareResult) engine.PrepareResult {
+	reordered, _ := moveLeadingDockerComposeFlags(subArgs)
+	if len(reordered) == 0 {
+		return passthrough
+	}
+	nested := strings.ToLower(strings.TrimSpace(reordered[0]))
+	if nested != "logs" {
+		return passthrough
+	}
+	scope, follow, ok := dockerComposeLogsScope(reordered[1:])
+	if follow {
+		return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "follow-mode docker compose logs passthrough"}
+	}
+	if !ok {
+		return passthrough
+	}
+	return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker compose logs|scope=" + scope}
+}
+
+func moveLeadingDockerComposeFlags(args []string) ([]string, []string) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	leading := make([]string, 0, len(args))
+	i := 0
+	for i < len(args) {
+		arg := strings.TrimSpace(args[i])
+		if arg == "--" || !strings.HasPrefix(arg, "-") {
+			break
+		}
+		needsValue, known := dockerComposeGlobalFlag(arg)
+		if !known {
+			break
+		}
+		leading = append(leading, args[i])
+		if needsValue && i+1 < len(args) {
+			i++
+			leading = append(leading, args[i])
+		}
+		i++
+	}
+	return args[i:], leading
+}
+
+func dockerComposeGlobalFlag(arg string) (needsValue bool, known bool) {
+	switch {
+	case strings.HasPrefix(arg, "--file="),
+		strings.HasPrefix(arg, "--project-name="),
+		strings.HasPrefix(arg, "--profile="),
+		strings.HasPrefix(arg, "--env-file="),
+		strings.HasPrefix(arg, "--project-directory="),
+		strings.HasPrefix(arg, "--parallel="),
+		strings.HasPrefix(arg, "--ansi="):
+		return false, true
+	}
+	switch arg {
+	case "-f", "--file", "-p", "--project-name", "--profile", "--env-file", "--project-directory", "--parallel", "--ansi":
+		return true, true
+	case "--compatibility", "--progress", "--dry-run":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func dockerComposeLogsScope(args []string) (scope string, follow bool, ok bool) {
+	services := make([]string, 0, 2)
+	for i := 0; i < len(args); i++ {
+		arg, decision, consumeNext := dockerComposeLogsArgDecision(args[i])
+		if consumeNext && i+1 < len(args) {
+			i++
+		}
+		switch decision {
+		case dockerComposeLogsSkipArg:
+			continue
+		case dockerComposeLogsFollowArg:
+			return "", true, true
+		case dockerComposeLogsInvalidArg:
+			return "", false, false
+		case dockerComposeLogsServiceArg:
+			services = append(services, arg)
+		}
+	}
+	if len(services) == 0 {
+		return "all", false, true
+	}
+	return strings.Join(services, ","), false, true
+}
+
+type dockerComposeLogsArgKind int
+
+const (
+	dockerComposeLogsSkipArg dockerComposeLogsArgKind = iota
+	dockerComposeLogsFollowArg
+	dockerComposeLogsInvalidArg
+	dockerComposeLogsServiceArg
+)
+
+func dockerComposeLogsArgDecision(raw string) (arg string, kind dockerComposeLogsArgKind, consumeNext bool) {
+	arg = strings.TrimSpace(raw)
+	if arg == "" {
+		return "", dockerComposeLogsSkipArg, false
+	}
+	if arg == "-f" || arg == "--follow" {
+		return "", dockerComposeLogsFollowArg, false
+	}
+	if skip, next, known := dockerComposeLogsFlag(arg); known {
+		if skip {
+			return "", dockerComposeLogsSkipArg, next
+		}
+		return "", dockerComposeLogsInvalidArg, next
+	}
+	if strings.HasPrefix(arg, "-") {
+		return "", dockerComposeLogsInvalidArg, false
+	}
+	return arg, dockerComposeLogsServiceArg, false
+}
+
+func dockerComposeLogsFlag(arg string) (skip bool, consumeNext bool, known bool) {
+	if !strings.HasPrefix(arg, "-") {
+		return false, false, false
+	}
+	if strings.Contains(arg, "=") {
+		switch {
+		case strings.HasPrefix(arg, "--tail="),
+			strings.HasPrefix(arg, "--since="),
+			strings.HasPrefix(arg, "--until="),
+			strings.HasPrefix(arg, "--index="),
+			strings.HasPrefix(arg, "--timestamps="),
+			strings.HasPrefix(arg, "--no-color="),
+			strings.HasPrefix(arg, "--no-log-prefix="):
+			return true, false, true
+		default:
+			return false, false, false
+		}
+	}
+	switch arg {
+	case "--tail", "--since", "--until", "--index":
+		return true, true, true
+	case "-n", "-t", "--timestamps", "--no-color", "--no-log-prefix":
+		return true, false, true
+	default:
+		return false, false, false
+	}
 }
 
 func moveLeadingDockerFlags(args []string) ([]string, []string) {

@@ -1,9 +1,8 @@
 package kubectlfilters
 
 import (
-	"strings"
-
 	"go-command-compression-proxy/internal/engine"
+	filtercommon "go-command-compression-proxy/internal/engine/filters/common"
 )
 
 // NewKubectlLogsFilter compacts non-follow kubectl logs output.
@@ -29,22 +28,10 @@ func (kubectlLogsFilter) ContextKey(ev engine.Event) string {
 }
 
 func (kubectlLogsFilter) Process(ev engine.Event, mem *engine.OrderedSetBuffer) engine.Decision {
-	if ev.Stream == engine.StderrStream {
-		if ev.Type == engine.EventLine {
-			return engine.Decision{Action: engine.ActionImmediate, Output: ev.Line}
-		}
-		return engine.Decision{Action: engine.ActionIgnore}
-	}
-	switch ev.Type {
-	case engine.EventEOF:
-		raw := mem.Joined()
-		if strings.TrimSpace(raw) == "" {
-			return engine.Decision{Action: engine.ActionIgnore}
-		}
-		return engine.Decision{Action: engine.ActionFlush, Output: raw}
-	default:
-		return engine.Decision{Action: engine.ActionCollect}
-	}
+	return filtercommon.ProcessRawLogs(ev, mem, filtercommon.RawLogRuntimeConfig{
+		FlushOnEOF:  true,
+		FlushOnExit: false,
+	})
 }
 
 func (kubectlLogsFilter) MaskingHorizon() int { return 4096 }

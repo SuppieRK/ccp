@@ -1,0 +1,19 @@
+services:
+  api:
+    image: alpine:latest
+    command:
+      - /bin/sh
+      - -c
+      - |
+        for i in $(seq 1 120); do echo 'INFO retrying connection'; done
+        echo 'ERROR final failure'
+        echo 'stderr-line-1' >&2
+        tail -f /dev/null
+  web:
+    image: alpine:latest
+    command:
+      - /bin/sh
+      - -c
+      - |
+        for i in $(seq 1 80); do echo 'WARN retrying connection'; done
+        tail -f /dev/null
