@@ -38,6 +38,7 @@ type Context struct {
 type ID string
 
 const (
+	AgentAider         ID = "aider"
 	AgentAmazonQ       ID = "amazon-q"
 	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
@@ -59,6 +60,11 @@ type Adapter interface {
 	Install(ctx Context, write WriterFunc) (InstallResult, error)
 	Plan(ctx Context) []PlannedArtifact
 	Verify(ctx Context) error
+}
+
+// Detector allows adapters to override the default directory-based detection check.
+type Detector interface {
+	Detect(scopeRoot string) bool
 }
 
 // Uninstaller is an optional adapter capability for removing installed artifacts.
@@ -87,6 +93,12 @@ func ValidateSelectedTools(tools []string, adapters map[string]Adapter) error {
 func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 	detected := make([]string, 0, len(adapters))
 	for _, id := range SupportedTools(adapters) {
+		if detector, ok := adapters[id].(Detector); ok {
+			if detector.Detect(scopeRoot) {
+				detected = append(detected, id)
+			}
+			continue
+		}
 		if st, err := os.Stat(adapters[id].DetectRoot(scopeRoot)); err == nil && st.IsDir() {
 			detected = append(detected, id)
 		}
@@ -96,6 +108,7 @@ func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 
 func DefaultAdapters() map[string]Adapter {
 	return map[string]Adapter{
+		string(AgentAider):         NewAiderAdapter(),
 		string(AgentAmazonQ):       NewAmazonQAdapter(),
 		string(AgentCline):         NewClineAdapter(),
 		string(AgentClaude):        NewClaudeAdapter(),

@@ -26,6 +26,7 @@ const (
 	initCursorRuleName    = "ccp.mdc"
 	initAmazonQDir        = ".amazonq"
 	initAmazonQRuleName   = "ccp.md"
+	initAiderConfigName   = ".aider.conf.yml"
 	initContinueDir       = ".continue"
 	initContinueRuleName  = "ccp.md"
 	initKiroDir           = ".kiro"
@@ -340,6 +341,42 @@ func TestRunInitDetectsAmazonQWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initAmazonQDir, "rules", initAmazonQRuleName)); err != nil {
 		t.Fatalf("expected amazon q rule file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsAiderWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	if err := os.WriteFile(initAiderConfigName, []byte("model: sonnet\n"), 0o644); err != nil {
+		t.Fatalf("write .aider.conf.yml: %v", err)
+	}
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "aider" {
+		t.Fatalf("tools = %v, want [aider]", tools)
+	}
+	configBytes, err := os.ReadFile(filepath.Join(tmp, initAiderConfigName))
+	if err != nil {
+		t.Fatalf("read aider config after detection: %v", err)
+	}
+	if !strings.Contains(string(configBytes), "AGENTS.md") {
+		t.Fatalf("expected AGENTS.md added to aider config, got: %s", string(configBytes))
 	}
 }
 
