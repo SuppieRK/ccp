@@ -1,0 +1,8 @@
+commit 05377dbf15f3
+author: bench <bench@example.com>
+date: Sun Mar 8 08:17:08 2026 +0100
+subject: third commit
+tracked.txt  +1 -1
+  -v2
+  +v3
+summary: 1 files changed, +1 -1

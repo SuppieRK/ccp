@@ -16,7 +16,7 @@ The git parent filter SHALL own a local subcommand registry.
 
 #### Scenario: supported subcommand registration
 - **WHEN** git parent filter is constructed
-- **THEN** handlers are registered for `status`, `diff`, `log`, `commit`, `push`, `pull`, `merge`, `rebase`, `blame`.
+- **THEN** handlers are registered for `status`, `diff`, `log`, `show`, `commit`, `push`, `pull`, `merge`, `rebase`, `blame`.
 
 #### Scenario: longest-prefix subcommand match
 - **WHEN** preparing git args for routing

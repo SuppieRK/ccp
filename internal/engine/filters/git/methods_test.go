@@ -21,6 +21,7 @@ func TestGitFilterMethodCoverage(t *testing.T) {
 		{name: "rebase", filter: NewGitRebaseFilter(), wantTool: "git rebase"},
 		{name: "status", filter: NewGitStatusFilter(), wantTool: "git status"},
 		{name: "log", filter: NewGitLogFilter(), wantTool: "git log"},
+		{name: "show", filter: NewGitShowFilter(), wantTool: "git show"},
 		{name: "diff", filter: NewGitDiffFilter(), wantTool: "git diff"},
 		{name: "blame", filter: NewGitBlameFilter(), wantTool: "git blame"},
 	}

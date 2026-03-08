@@ -87,6 +87,7 @@ func TestResolveGitSubcommandFromArgsMoveLeadingFlags(t *testing.T) {
 	}{
 		"status plain":                     {args: []string{"status"}, wantDispatch: gitStatusDispatch},
 		"log plain":                        {args: []string{"log"}, wantDispatch: "git log"},
+		"show plain":                       {args: []string{"show", "HEAD"}, wantDispatch: "git show", wantSubArgs: []string{"HEAD"}},
 		"blame plain":                      {args: []string{"blame", "x.txt"}, wantDispatch: "git blame", wantSubArgs: []string{"x.txt"}},
 		"commit plain":                     {args: []string{"commit", "-m", "x"}, wantDispatch: "git commit", wantSubArgs: []string{"-m", "x"}},
 		"leading -C":                       {args: []string{"-C", "repo", "status"}, wantDispatch: gitStatusDispatch},
@@ -117,6 +118,7 @@ func TestBuildGitSubcommandRegistryContainsSupportedHandlers(t *testing.T) {
 		"git status",
 		"git diff",
 		"git log",
+		"git show",
 		"git commit",
 		"git push",
 		"git pull",
@@ -211,11 +213,11 @@ func (t testGitDispatchFilter) Prepare(args []string) engine.PrepareResult {
 	return engine.PrepareResult{NormalizedArgs: args}
 }
 
-func (t testGitDispatchFilter) ContextKey(ev engine.Event) string {
-	return engine.StreamContextKey(ev.CommandID, ev.Tool, ev.Stream)
+func (t testGitDispatchFilter) ContextKey(_ engine.Event) string {
+	return "test-git-dispatch"
 }
 
-func (t testGitDispatchFilter) Process(ev engine.Event, _ *engine.OrderedSetBuffer) engine.Decision {
+func (t testGitDispatchFilter) Process(_ engine.Event, _ *engine.OrderedSetBuffer) engine.Decision {
 	return engine.Decision{Action: engine.ActionCollect}
 }
 
