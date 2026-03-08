@@ -174,7 +174,7 @@ If compressed output seems corrupted, malformed, or unusable for the task, retry
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `gemini`, `github-copilot`, `kiro`, `opencode`, `qwen`, `roocode`, `trae`, `windsurf` |
+| Agent integrations | `aider`, `antigravity`, `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `gemini`, `github-copilot`, `kiro`, `opencode`, `qwen`, `roocode`, `trae`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
