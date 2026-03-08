@@ -10,6 +10,7 @@ import (
 const (
 	ccpManagedBlockStart = "<!-- BEGIN: CCP MANAGED BLOCK -->"
 	ccpManagedBlockEnd   = "<!-- END: CCP MANAGED BLOCK -->"
+	ccpRawEscapeHatch    = "If output seems corrupted or unclear, retry the command with `ccp --raw` as an escape hatch."
 )
 
 func ccpManagedBlockTemplate() string {
@@ -26,6 +27,7 @@ func ccpManagedGuidanceMarkdown() string {
 		"- `ccp echo chain-ok && ccp echo chain-done`\n" +
 		"- `ccp false || ccp echo chain-recovered`\n" +
 		"- `ccp nl -ba spec.md | ccp sed -n '1,260p'`\n\n" +
+		ccpRawEscapeHatch + "\n\n" +
 		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n"
 }
 
@@ -36,6 +38,9 @@ func verifyManagedInstructionBlock(target, missingFmt, markersFmt string) error 
 	}
 	s := string(data)
 	if !strings.Contains(s, ccpManagedBlockStart) || !strings.Contains(s, ccpManagedBlockEnd) {
+		return fmt.Errorf(markersFmt, target)
+	}
+	if !strings.Contains(s, ccpRawEscapeHatch) {
 		return fmt.Errorf(markersFmt, target)
 	}
 	return nil

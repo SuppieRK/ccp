@@ -21,6 +21,7 @@ func NewAmazonQAdapter() AmazonQAdapter {
 				"## CCP Integration (Managed)",
 				"Use `ccp` as the command prefix for every executable in shell commands",
 				"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
+				ccpRawEscapeHatch,
 			},
 		),
 	}

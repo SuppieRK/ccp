@@ -643,6 +643,9 @@ func TestAmazonQRuleContentUsesCanonicalGuidanceWithoutCursorMetadata(t *testing
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
 	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	}
 	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "description:") {
 		t.Fatalf("did not expect cursor frontmatter in amazon q rule, got: %s", content)
 	}
@@ -658,6 +661,9 @@ func TestKiroSteeringContentUsesCanonicalGuidance(t *testing.T) {
 	}
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in kiro steering, got: %s", content)
@@ -720,6 +726,9 @@ func TestWindsurfRuleContentUsesAlwaysOnMetadata(t *testing.T) {
 	}
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
 	}
 	if strings.Contains(content, "alwaysApply: true") {
 		t.Fatalf("did not expect cursor metadata in windsurf rule, got: %s", content)
@@ -827,6 +836,9 @@ func TestClineRuleContentUsesCanonicalGuidance(t *testing.T) {
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
 	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	}
 	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
 		t.Fatalf("did not expect cursor or windsurf metadata in cline rule, got: %s", content)
 	}
@@ -843,6 +855,9 @@ func TestContinueRuleContentUsesCanonicalGuidance(t *testing.T) {
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
 	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	}
 	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
 		t.Fatalf("did not expect cursor or windsurf metadata in continue rule, got: %s", content)
 	}
@@ -858,6 +873,9 @@ func TestTraeRuleContentUsesCanonicalGuidance(t *testing.T) {
 	}
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
 	}
 	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
 		t.Fatalf("did not expect cursor or windsurf metadata in trae rule, got: %s", content)
