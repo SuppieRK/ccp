@@ -1,0 +1,53 @@
+[
+  {
+    "name": "success",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_success.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "fetch", "origin"],
+    "expect_exit": 0,
+    "must_contain": ["git fetch: ok", "new branches", "new tags"],
+    "must_not_contain": ["fatal:"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "up-to-date",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_up_to_date.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "fetch", "origin"],
+    "expect_exit": 0,
+    "must_contain": [],
+    "must_not_contain": ["git fetch: ok", "fatal:"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "failure",
+    "tool": "git",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_failure.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["git", "fetch", "origin"],
+    "expect_exit": 128,
+    "must_contain": ["fatal:", "not a git repository"],
+    "must_not_contain": [],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

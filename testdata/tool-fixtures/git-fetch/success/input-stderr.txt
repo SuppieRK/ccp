@@ -1,0 +1,7 @@
+00000|From ./tmp/remote
+00001|   f921715..132f45a  main       -> origin/main
+00002| * [new branch]      feature-a  -> origin/feature-a
+00003| * [new branch]      feature-b  -> origin/feature-b
+00004| * [new branch]      feature-c  -> origin/feature-c
+00005| * [new tag]         v2         -> v2
+00006| * [new tag]         v3         -> v3
