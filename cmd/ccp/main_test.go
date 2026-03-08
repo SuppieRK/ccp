@@ -65,7 +65,8 @@ func TestUsageTextIncludesHelpFlag(t *testing.T) {
 		"Notes:",
 		"--confidential",
 		"init",
-		"gain",
+		"gain                  Show token savings summary and recent proof output",
+		"Run ccp gain after install or init to verify savings on real work.",
 		"--raw preserves native output unless --confidential is also used.",
 	}) {
 		t.Fatalf("usage text missing expected sections: %q", got)

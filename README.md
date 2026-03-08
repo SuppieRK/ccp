@@ -11,7 +11,7 @@
 
 It executes native system commands and compacts their output to reduce tokens consumed by coding agents while preserving execution correctness, exit codes, critical diagnostics, and downstream usability.
 
-This project prioritizes deterministic, machine-consumable correctness over terminal-faithful human presentation and favors shape-preserving compaction so coding agents can still interpret output and compose follow-up shell commands naturally.
+It stays close to native commands. The goal is smaller output, not a new command language.
 
 ## Why It’s Useful
 
@@ -26,29 +26,11 @@ This project prioritizes deterministic, machine-consumable correctness over term
 
 ## Example Gains
 
-> These examples are benchmark-fixture results from CI. They illustrate both compression wins and deliberate passthrough for structured or precision-sensitive output.
+One real session from day-to-day work:
 
-| Command | Scenario | Native tokens | CCP tokens | Savings | Overhead |
-|---|---|---:|---:|---:|---:|
-| `find . -name *.go -type f` | recursive code search | 202 | 171 | 15.35% | 4 ms |
-| `grep -r -n needle .` | recursive match | 1159 | 745 | 35.72% | 4 ms |
-| `./gradlew build` | large generated-build failure | 22,917 | 1,132 | 95.06% | N/A |
-| `cargo build` | failing build | 280 | 32 | 88.57% | 5 ms |
-| `go test -count=1 ./...` | failing test run | 130 | 80 | 38.46% | 4 ms |
-| `./.venv/bin/pytest -q tests/test_app.py::test_fail` | failing test | 259 | 73 | 71.81% | 5 ms |
-| `docker logs <container>` | noisy container logs | 1009 | 19 | 98.12% | 5 ms |
-| `docker ps --format {{json .}}` | structured passthrough safety | 169 | 167 | 0.00% | 7 ms |
-
-## Real-World Usage
-
-In one research-heavy Claude session across 4 repositories:
-
-| Metric | Value |
-|---|---:|
-| Commands proxied | 96 |
-| Native tokens | 944,007 |
-| CCP tokens | 59,195 |
-| Total savings | 93.73% |
+- 96 commands proxied across 4 repositories
+- 944,007 estimated input tokens -> 59,195 output tokens
+- 93.73% total savings from `ccp gain`
 
 Largest contributors in that session:
 
@@ -56,7 +38,35 @@ Largest contributors in that session:
 - `grep`: 28 runs, ~42.56% savings
 - `ls`: 2 runs, ~79.67% savings
 
-These numbers come from `ccp gain` on actual work, not a synthetic benchmark summary. Results vary by repository shape and command mix.
+Short benchmark receipts from CI:
+
+| Command | Scenario | Native tokens | CCP tokens | Savings |
+|---|---|---:|---:|---:|
+| `./gradlew build` | large generated-build failure | 22,917 | 1,132 | 95.06% |
+| `docker logs <container>` | noisy container logs | 1009 | 19 | 98.12% |
+| `cargo build` | failing build | 280 | 32 | 88.57% |
+
+## Where It Helps Less
+
+`ccp` is conservative by design. Some commands are already compact, structured, or not worth rewriting.
+
+Current repository snapshot from `ccp gain`:
+
+- 1,055 commands proxied
+- 1,331,921 estimated input tokens -> 1,048,460 output tokens
+- 21.28% total savings
+- Biggest wins came from `go`, `ls`, `grep`, and `git`
+- Overall savings were held down by high-volume low-yield commands like `sed`, `openspec`, and `validate.sh`
+
+Short benchmark receipts where savings are limited on purpose:
+
+| Command | Scenario | Native tokens | CCP tokens | Savings |
+|---|---|---:|---:|---:|
+| `docker ps --format {{json .}}` | structured passthrough safety | 169 | 167 | 0.00% |
+| `find . -name *.go -type f` | small recursive code search | 202 | 171 | 15.35% |
+| `go test -count=1 ./...` | failing test run | 130 | 80 | 38.46% |
+
+Results depend on command mix. Run `ccp gain` after real work to see both the wins and the weak spots in your own repo.
 
 ---
 
@@ -93,6 +103,12 @@ Or select tools explicitly:
 ccp init --tools claude,codex,cursor,gemini,github-copilot
 ```
 
+Check what `ccp` is saving on your own work:
+
+```bash
+ccp gain
+```
+
 Uninstall:
 
 ```bash
@@ -107,6 +123,13 @@ Primary use case: initialize supported coding-agent integrations so agent shell 
 
 ```bash
 ccp init
+```
+
+Then verify the effect on real commands:
+
+```bash
+ccp gain
+ccp gain --table
 ```
 
 You can also wrap commands directly in local workflows or CI when you want smaller logs without changing the underlying command behavior:

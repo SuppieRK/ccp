@@ -109,12 +109,13 @@ Execution flags:
 
 Lifecycle commands:
   init                  Install or update supported agent integrations
-  gain                  Show token savings history
+  gain                  Show token savings summary and recent proof output
   history               Show recorded command history
   upgrade               Upgrade ccp
   uninstall             Remove ccp integrations
 
 Notes:
+  - Run ccp gain after install or init to verify savings on real work.
   - Structured or precision-sensitive output may pass through unchanged.
   - --raw preserves native output unless --confidential is also used.
   - --capture-raw preserves execution semantics while writing capture artifacts.`
