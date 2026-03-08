@@ -20,6 +20,7 @@ type reportFlags struct {
 	since  string
 	tool   string
 	failed bool
+	table  bool
 }
 
 type filtersEnvelope struct {
@@ -53,12 +54,16 @@ type periodEnvelope struct {
 const (
 	noResultsMsg     = "No results for selected filters."
 	savingsPctFormat = "~%.2f%%"
+	gainHeaderText   = "ccp gain (estimated tokens: 4B/token)"
 )
 
 // RunGain prints summary/period savings in text/json/csv form.
 func RunGain(args []string, metricsPath string) error {
 	flags, err := parseReportFlags("gain", args)
 	if err != nil {
+		return err
+	}
+	if err := validateGainFlags(flags); err != nil {
 		return err
 	}
 	opts, err := buildQueryOptions(flags)
@@ -70,58 +75,15 @@ func RunGain(args []string, metricsPath string) error {
 		Tool:   flags.tool,
 		Failed: flags.failed,
 	}
-
-	if opts.Period != "" {
-		rows, err := metrics.QueryPeriod(metricsPath, opts)
-		if err != nil {
-			return err
-		}
-		switch flags.format {
-		case "json":
-			return writeJSON(periodEnvelope{
-				Dataset: "period",
-				Period:  opts.Period,
-				Filters: filters,
-				Rows:    rows,
-			})
-		case "csv":
-			return writePeriodCSV(rows, opts.Period, filters)
-		default:
-			return printPeriodText(rows, opts.Period, filters)
-		}
+	if shouldRenderPeriodDataset(flags, opts) {
+		return renderPeriodDataset(metricsPath, flags, opts, filters)
 	}
-
-	total, err := metrics.QuerySummary(metricsPath, opts)
+	summaryOpts := summaryQueryOptions(flags, opts)
+	total, err := metrics.QuerySummary(metricsPath, summaryOpts)
 	if err != nil {
 		return err
 	}
-
-	switch flags.format {
-	case "json":
-		rows, err := metrics.QuerySummaryRows(metricsPath, opts)
-		if err != nil {
-			return err
-		}
-		return writeJSON(summaryEnvelope{
-			Dataset: "summary",
-			Period:  "",
-			Filters: filters,
-			Rows:    rows,
-			Total:   total,
-		})
-	case "csv":
-		rows, err := metrics.QuerySummaryRows(metricsPath, opts)
-		if err != nil {
-			return err
-		}
-		return writeSummaryCSV(rows, total, filters)
-	default:
-		toolRows, err := metrics.QuerySummaryRowsByTool(metricsPath, opts)
-		if err != nil {
-			return err
-		}
-		return printSummaryText(toolRows, total, filters)
-	}
+	return renderSummaryDataset(metricsPath, flags, opts, summaryOpts, filters, total)
 }
 
 // RunHistory prints execution history in text/json/csv form.
@@ -166,6 +128,7 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 	since := fs.String("since", "", "time filter (e.g. 24h, 7d, 2w)")
 	tool := fs.String("tool", "", "filter by tool")
 	failed := fs.Bool("failed", false, "include only failed runs")
+	table := fs.Bool("table", false, "render detailed text table output (gain only)")
 	legacyJSON := fs.Bool("json", false, "emit JSON (deprecated alias for --format json)")
 	setReportUsage(fs, name)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -181,6 +144,7 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 		since:  strings.TrimSpace(*since),
 		tool:   strings.TrimSpace(*tool),
 		failed: *failed,
+		table:  *table,
 	}
 	if *legacyJSON {
 		out.format = "json"
@@ -194,14 +158,98 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 	if err := validateReportPeriod(name, out.period); err != nil {
 		return reportFlags{}, err
 	}
+	if name == "history" && out.table {
+		return reportFlags{}, fmt.Errorf("--table is only valid for gain")
+	}
 	return out, nil
+}
+
+func validateGainFlags(flags reportFlags) error {
+	if flags.table && flags.format != "text" {
+		return fmt.Errorf("--table is only valid with text output")
+	}
+	return nil
+}
+
+func shouldRenderPeriodDataset(flags reportFlags, opts metrics.QueryOptions) bool {
+	return opts.Period != "" && (flags.format == "json" || flags.format == "csv" || flags.table)
+}
+
+func summaryQueryOptions(flags reportFlags, opts metrics.QueryOptions) metrics.QueryOptions {
+	summaryOpts := opts
+	if opts.Period != "" && flags.format == "text" && !flags.table {
+		summaryOpts.Period = ""
+		summaryOpts.Since = effectiveWindowSince(opts.Since, opts.Period)
+	}
+	return summaryOpts
+}
+
+func renderPeriodDataset(metricsPath string, flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope) error {
+	rows, err := metrics.QueryPeriod(metricsPath, opts)
+	if err != nil {
+		return err
+	}
+	switch flags.format {
+	case "json":
+		return writeJSON(periodEnvelope{
+			Dataset: "period",
+			Period:  opts.Period,
+			Filters: filters,
+			Rows:    rows,
+		})
+	case "csv":
+		return writePeriodCSV(rows, opts.Period, filters)
+	default:
+		return printPeriodText(rows, opts.Period, filters)
+	}
+}
+
+func renderSummaryDataset(metricsPath string, flags reportFlags, opts, summaryOpts metrics.QueryOptions, filters filtersEnvelope, total metrics.SummaryTotal) error {
+	switch flags.format {
+	case "json":
+		rows, err := metrics.QuerySummaryRows(metricsPath, summaryOpts)
+		if err != nil {
+			return err
+		}
+		return writeJSON(summaryEnvelope{
+			Dataset: "summary",
+			Period:  "",
+			Filters: filters,
+			Rows:    rows,
+			Total:   total,
+		})
+	case "csv":
+		rows, err := metrics.QuerySummaryRows(metricsPath, summaryOpts)
+		if err != nil {
+			return err
+		}
+		return writeSummaryCSV(rows, total, filters)
+	default:
+		return renderTextSummaryDataset(metricsPath, flags, opts, summaryOpts, filters, total)
+	}
+}
+
+func renderTextSummaryDataset(metricsPath string, flags reportFlags, opts, summaryOpts metrics.QueryOptions, filters filtersEnvelope, total metrics.SummaryTotal) error {
+	toolRows, err := metrics.QuerySummaryRowsByTool(metricsPath, summaryOpts)
+	if err != nil {
+		return err
+	}
+	if flags.table {
+		return printSummaryText(toolRows, total, filters)
+	}
+	if opts.Period != "" {
+		return printWindowSummaryText(metricsPath, summaryOpts, filters, toolRows, total, opts.Period)
+	}
+	return printShareableSummaryText(filters, toolRows, total)
 }
 
 func setReportUsage(fs *flag.FlagSet, name string) {
 	summary := "show token savings history"
-	usage := []string{"ccp gain [--format text|json|csv] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed]"}
+	usage := []string{"ccp gain [--format text|json|csv] [--table] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed]"}
 	notes := []string{
 		"Use --period only with ccp gain.",
+		"Run ccp gain after install or init to verify savings on real work.",
+		"Default text output is a short shareable summary; use --table for detailed text tables.",
 		"Legacy --json remains available as an alias for --format json.",
 	}
 	if name == "history" {
@@ -286,8 +334,28 @@ func writeJSON(v any) error {
 	return enc.Encode(v)
 }
 
+func printShareableSummaryText(filters filtersEnvelope, rows []metrics.SummaryToolRow, total metrics.SummaryTotal) error {
+	fmt.Println(gainHeaderText)
+	fmt.Printf("filters: since=%s tool=%s failed=%t period=none\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed)
+	if total.Commands == 0 {
+		fmt.Println(noResultsMsg)
+		return nil
+	}
+
+	fmt.Printf("- %d commands proxied, %s estimated input tokens -> %s output tokens, %s saved\n",
+		total.Commands,
+		formatInt(total.EstimatedInputTokens),
+		formatInt(total.EstimatedOutputTokens),
+		formatPercent(total.EstimatedSavingsPct),
+	)
+	fmt.Printf("- Biggest gains: %s\n", strongestGainsText(rows))
+	fmt.Printf("- Savings held down by: %s\n", detractorsText(rows))
+	fmt.Printf("- Bottom line: %s estimated tokens saved while preserving native execution semantics\n", formatInt(total.EstimatedSavedTokens))
+	return nil
+}
+
 func printSummaryText(rows []metrics.SummaryToolRow, total metrics.SummaryTotal, filters filtersEnvelope) error {
-	fmt.Println("ccp gain (estimated tokens: 4B/token)")
+	fmt.Println(gainHeaderText)
 	fmt.Printf("filters: since=%s tool=%s failed=%t period=none\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed)
 	if len(rows) == 0 {
 		fmt.Println(noResultsMsg)
@@ -381,8 +449,49 @@ func printHistoryText(rows []metrics.HistoryRow, filters filtersEnvelope) error 
 	return nil
 }
 
+func printWindowSummaryText(metricsPath string, opts metrics.QueryOptions, filters filtersEnvelope, toolRows []metrics.SummaryToolRow, total metrics.SummaryTotal, period string) error {
+	dayRows, err := metrics.QueryPeriod(metricsPath, windowDayQueryOptions(opts, period))
+	if err != nil {
+		return err
+	}
+	fmt.Println(gainHeaderText)
+	fmt.Printf("filters: since=%s tool=%s failed=%t period=%s\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed, period)
+	if total.Commands == 0 {
+		fmt.Println(noResultsMsg)
+		return nil
+	}
+
+	windowLabel := map[string]string{
+		"day":   "Last 24h",
+		"week":  "Last 7d",
+		"month": "Last 30d",
+	}[period]
+	if windowLabel == "" {
+		windowLabel = "Selected window"
+	}
+	fmt.Printf("- %s: %d commands, %s estimated input tokens -> %s output tokens, %s saved\n",
+		windowLabel,
+		total.Commands,
+		formatInt(total.EstimatedInputTokens),
+		formatInt(total.EstimatedOutputTokens),
+		formatPercent(total.EstimatedSavingsPct),
+	)
+	fmt.Printf("- Biggest gains: %s\n", strongestGainsText(toolRows))
+	if busiest := busiestDayText(dayRows); busiest != "" {
+		fmt.Printf("- Busiest day: %s\n", busiest)
+	}
+	if best := bestDayText(dayRows); best != "" {
+		fmt.Printf("- Best day: %s\n", best)
+	}
+	if trend := recentTrendText(dayRows, period); trend != "" {
+		fmt.Printf("- Recent trend: %s\n", trend)
+	}
+	fmt.Printf("- Savings held down by: %s\n", detractorsText(toolRows))
+	return nil
+}
+
 func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnvelope) error {
-	fmt.Println("ccp gain (estimated tokens: 4B/token)")
+	fmt.Println(gainHeaderText)
 	fmt.Printf("filters: since=%s tool=%s failed=%t period=%s\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed, period)
 	if len(rows) == 0 {
 		fmt.Println(noResultsMsg)
@@ -399,6 +508,192 @@ func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnv
 		)
 	}
 	return nil
+}
+
+func windowDayQueryOptions(opts metrics.QueryOptions, period string) metrics.QueryOptions {
+	windowed := opts
+	windowed.Period = "day"
+	windowed.Since = effectiveWindowSince(opts.Since, period)
+	return windowed
+}
+
+func effectiveWindowSince(base time.Duration, period string) time.Duration {
+	window := durationForPeriod(period)
+	if window <= 0 {
+		return base
+	}
+	if base <= 0 || base > window {
+		return window
+	}
+	return base
+}
+
+func durationForPeriod(period string) time.Duration {
+	switch period {
+	case "day":
+		return 24 * time.Hour
+	case "week":
+		return 7 * 24 * time.Hour
+	case "month":
+		return 30 * 24 * time.Hour
+	default:
+		return 0
+	}
+}
+
+func strongestGainsText(rows []metrics.SummaryToolRow) string {
+	sorted := append([]metrics.SummaryToolRow(nil), rows...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].EstimatedSavedTokens != sorted[j].EstimatedSavedTokens {
+			return sorted[i].EstimatedSavedTokens > sorted[j].EstimatedSavedTokens
+		}
+		if sorted[i].EstimatedSavingsPct != sorted[j].EstimatedSavingsPct {
+			return sorted[i].EstimatedSavingsPct > sorted[j].EstimatedSavingsPct
+		}
+		return sorted[i].Tool < sorted[j].Tool
+	})
+	parts := make([]string, 0, 3)
+	for _, row := range sorted {
+		if row.EstimatedSavedTokens <= 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s %s (%d cmds)", row.Tool, formatPercent(row.EstimatedSavingsPct), row.Commands))
+		if len(parts) == 3 {
+			break
+		}
+	}
+	if len(parts) == 0 {
+		return "no material gains in the selected dataset"
+	}
+	return strings.Join(parts, ", ")
+}
+
+func detractorsText(rows []metrics.SummaryToolRow) string {
+	sorted := append([]metrics.SummaryToolRow(nil), rows...)
+	sort.Slice(sorted, func(i, j int) bool {
+		iLow := sorted[i].EstimatedSavingsPct <= 5
+		jLow := sorted[j].EstimatedSavingsPct <= 5
+		if iLow != jLow {
+			return iLow
+		}
+		if sorted[i].Commands != sorted[j].Commands {
+			return sorted[i].Commands > sorted[j].Commands
+		}
+		if sorted[i].EstimatedSavingsPct != sorted[j].EstimatedSavingsPct {
+			return sorted[i].EstimatedSavingsPct < sorted[j].EstimatedSavingsPct
+		}
+		return sorted[i].Tool < sorted[j].Tool
+	})
+	parts := make([]string, 0, 3)
+	for _, row := range sorted {
+		if row.Commands == 0 {
+			continue
+		}
+		if row.EstimatedSavingsPct > 25 && len(parts) > 0 {
+			break
+		}
+		parts = append(parts, fmt.Sprintf("%s %s (%d cmds)", row.Tool, formatPercent(row.EstimatedSavingsPct), row.Commands))
+		if len(parts) == 3 {
+			break
+		}
+	}
+	if len(parts) == 0 {
+		return "no clear detractors in the selected dataset"
+	}
+	return strings.Join(parts, ", ")
+}
+
+func busiestDayText(rows []metrics.PeriodRow) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	best := rows[0]
+	for _, row := range rows[1:] {
+		if row.Commands > best.Commands || (row.Commands == best.Commands && row.BucketStart > best.BucketStart) {
+			best = row
+		}
+	}
+	return fmt.Sprintf("%s with %d commands", best.BucketStart, best.Commands)
+}
+
+func bestDayText(rows []metrics.PeriodRow) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	best := rows[0]
+	for _, row := range rows[1:] {
+		if row.EstimatedSavingsPct > best.EstimatedSavingsPct || (row.EstimatedSavingsPct == best.EstimatedSavingsPct && row.BucketStart > best.BucketStart) {
+			best = row
+		}
+	}
+	return fmt.Sprintf("%s at %s", best.BucketStart, formatPercent(best.EstimatedSavingsPct))
+}
+
+func recentTrendText(rows []metrics.PeriodRow, period string) string {
+	if len(rows) < 2 {
+		return "not enough daily history for a trend comparison"
+	}
+	sorted := append([]metrics.PeriodRow(nil), rows...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].BucketStart < sorted[j].BucketStart })
+	split := trendSplitIndex(len(sorted), period)
+	if split <= 0 || split >= len(sorted) {
+		return "not enough daily history for a trend comparison"
+	}
+	earlier := averageSavings(sorted[:split])
+	recent := averageSavings(sorted[split:])
+	diff := recent - earlier
+	switch {
+	case diff > 0.01:
+		return fmt.Sprintf("%s over %d recent buckets, up %.2f points from the earlier window", formatPercent(recent), len(sorted)-split, diff)
+	case diff < -0.01:
+		return fmt.Sprintf("%s over %d recent buckets, down %.2f points from the earlier window", formatPercent(recent), len(sorted)-split, -diff)
+	default:
+		return fmt.Sprintf("%s over %d recent buckets, flat against the earlier window", formatPercent(recent), len(sorted)-split)
+	}
+}
+
+func trendSplitIndex(n int, period string) int {
+	switch period {
+	case "week":
+		if n < 3 {
+			return 0
+		}
+		if n <= 4 {
+			return n / 2
+		}
+		return n - 3
+	case "month":
+		if n < 4 {
+			return 0
+		}
+		if n > 7 {
+			return n - 7
+		}
+		return n / 2
+	case "day":
+		return n / 2
+	default:
+		return n / 2
+	}
+}
+
+func averageSavings(rows []metrics.PeriodRow) float64 {
+	if len(rows) == 0 {
+		return 0
+	}
+	var sum float64
+	for _, row := range rows {
+		sum += row.EstimatedSavingsPct
+	}
+	return sum / float64(len(rows))
+}
+
+func formatPercent(v float64) string {
+	return fmt.Sprintf(savingsPctFormat, v)
+}
+
+func formatInt(v int64) string {
+	return strconv.FormatInt(v, 10)
 }
 
 func writeSummaryCSV(rows []metrics.SummaryRow, total metrics.SummaryTotal, filters filtersEnvelope) error {

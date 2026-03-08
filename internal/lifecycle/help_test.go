@@ -33,6 +33,8 @@ func TestRunGainHelpOutput(t *testing.T) {
 		"Notes:",
 		"--period",
 		"--format",
+		"--table",
+		"Run ccp gain after install or init to verify savings on real work.",
 	})
 }
 

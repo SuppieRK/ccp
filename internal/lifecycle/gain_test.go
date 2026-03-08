@@ -18,6 +18,7 @@ const (
 	flagFormat = "--format"
 	flagPeriod = "--period"
 	flagSince  = "--since"
+	flagTable  = "--table"
 )
 
 func TestRunGainJSON(t *testing.T) {
@@ -38,15 +39,15 @@ func TestRunGainDefaultRenderingIsText(t *testing.T) {
 	if !strings.Contains(out, "ccp gain (estimated tokens: 4B/token)") {
 		t.Fatalf("expected text renderer header, got %q", out)
 	}
-	if !strings.Contains(out, "TOOL") || !strings.Contains(out, "TOTAL") {
-		t.Fatalf("expected text summary table, got %q", out)
+	if !strings.Contains(out, "Biggest gains:") || !strings.Contains(out, "Bottom line:") {
+		t.Fatalf("expected shareable summary markers, got %q", out)
 	}
 }
 
-func TestRunGainTextIncludesCompactTableAndMissedOpportunities(t *testing.T) {
+func TestRunGainTableIncludesCompactTableAndMissedOpportunities(t *testing.T) {
 	path := seedGainDB(t)
 	out := captureStdout(t, func() error {
-		return RunGain([]string{flagFormat, "text"}, path)
+		return RunGain([]string{flagTable}, path)
 	})
 	if !strings.Contains(out, "TOOL") || !strings.Contains(out, "NATIVE") || !strings.Contains(out, "PROXIED") || !strings.Contains(out, "SAVINGS") || !strings.Contains(out, "TOTAL") {
 		t.Fatalf("missing summary table markers: %q", out)
@@ -62,10 +63,10 @@ func TestRunGainTextIncludesCompactTableAndMissedOpportunities(t *testing.T) {
 	}
 }
 
-func TestRunGainTextAlignsTotalRowWithCountColumn(t *testing.T) {
+func TestRunGainTableAlignsTotalRowWithCountColumn(t *testing.T) {
 	path := seedGainDB(t)
 	out := captureStdout(t, func() error {
-		return RunGain([]string{flagFormat, "text"}, path)
+		return RunGain([]string{flagTable}, path)
 	})
 
 	lines := strings.Split(out, "\n")
@@ -98,7 +99,7 @@ func TestRunGainTextAlignsTotalRowWithCountColumn(t *testing.T) {
 	}
 }
 
-func TestRunGainTextTieBreakOrderingCountThenNativeThenTool(t *testing.T) {
+func TestRunGainTableTieBreakOrderingCountThenNativeThenTool(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gain.db")
 	now := time.Now().UTC()
 	// Three tools with same COUNT=1. "alpha" and "zeta" tie on NATIVE and must sort by tool asc.
@@ -110,7 +111,7 @@ func TestRunGainTextTieBreakOrderingCountThenNativeThenTool(t *testing.T) {
 	appendGainMetrics(t, path, seed)
 
 	out := captureStdout(t, func() error {
-		return RunGain([]string{flagFormat, "text"}, path)
+		return RunGain([]string{flagTable}, path)
 	})
 	alphaIdx := strings.Index(out, "alpha")
 	zetaIdx := strings.Index(out, "zeta")
@@ -183,8 +184,15 @@ func TestRunGainCSVAndPeriodFormats(t *testing.T) {
 	periodText := captureStdout(t, func() error {
 		return RunGain([]string{flagPeriod, "day"}, path)
 	})
-	if !strings.Contains(periodText, "BUCKET") || !strings.Contains(periodText, "period=day") {
+	if !strings.Contains(periodText, "period=day") || !strings.Contains(periodText, "Last 24h:") || !strings.Contains(periodText, "Biggest gains:") {
 		t.Fatalf("unexpected gain period text: %q", periodText)
+	}
+
+	periodTable := captureStdout(t, func() error {
+		return RunGain([]string{flagPeriod, "day", flagTable}, path)
+	})
+	if !strings.Contains(periodTable, "BUCKET") || !strings.Contains(periodTable, "period=day") {
+		t.Fatalf("unexpected gain period table text: %q", periodTable)
 	}
 
 	periodCSV := captureStdout(t, func() error {
@@ -214,6 +222,28 @@ func TestRunHistoryTextOmitsToolColumn(t *testing.T) {
 	}
 }
 
+func TestRunGainWeekSummaryHighlightsBestAndBusiestDays(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gain.db")
+	now := time.Now().UTC()
+	bestDay := now.Add(-6 * 24 * time.Hour).Format("2006-01-02")
+	busiestDay := now.Add(-4 * 24 * time.Hour).Format("2006-01-02")
+	seed := []metrics.RunMetric{
+		{Timestamp: now.Add(-6*24*time.Hour + 9*time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 200},
+		{Timestamp: now.Add(-6*24*time.Hour + 10*time.Hour), Tool: "git", Command: "git status", RawBytes: 400, KeptBytes: 300},
+		{Timestamp: now.Add(-4*24*time.Hour + 9*time.Hour), Tool: "grep", Command: "grep -r needle .", RawBytes: 800, KeptBytes: 200},
+		{Timestamp: now.Add(-4*24*time.Hour + 10*time.Hour), Tool: "sed", Command: "sed -n 1,20p file", RawBytes: 100, KeptBytes: 100},
+		{Timestamp: now.Add(-4*24*time.Hour + 11*time.Hour), Tool: "git", Command: "git diff", RawBytes: 600, KeptBytes: 500},
+	}
+	appendGainMetrics(t, path, seed)
+
+	out := captureStdout(t, func() error {
+		return RunGain([]string{flagPeriod, "week"}, path)
+	})
+	if !strings.Contains(out, "Last 7d:") || !strings.Contains(out, "Busiest day: "+busiestDay) || !strings.Contains(out, "Best day: "+bestDay) || !strings.Contains(out, "Recent trend:") {
+		t.Fatalf("unexpected weekly summary output: %q", out)
+	}
+}
+
 func TestRunGainInvalidFlags(t *testing.T) {
 	path := seedGainDB(t)
 	if RunGain([]string{flagFormat, "xml"}, path) == nil {
@@ -228,12 +258,18 @@ func TestRunGainInvalidFlags(t *testing.T) {
 	if err := RunGain([]string{flagSince, "1w"}, path); err != nil {
 		t.Fatalf("expected week shorthand to parse, got: %v", err)
 	}
+	if RunGain([]string{flagFormat, "json", flagTable}, path) == nil {
+		t.Fatal("expected --table with json to fail")
+	}
 }
 
 func TestRunHistoryRejectsPeriodFlag(t *testing.T) {
 	path := seedGainDB(t)
 	if err := RunHistory([]string{flagPeriod, "day"}, path); err == nil || !strings.Contains(err.Error(), "--period is only valid for gain") {
 		t.Fatalf("expected history period rejection, got: %v", err)
+	}
+	if err := RunHistory([]string{flagTable}, path); err == nil || !strings.Contains(err.Error(), "--table is only valid for gain") {
+		t.Fatalf("expected history table rejection, got: %v", err)
 	}
 }
 

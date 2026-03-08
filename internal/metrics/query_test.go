@@ -223,6 +223,31 @@ func TestQueryPeriodWeekUsesMondayStartAndSundayEnd(t *testing.T) {
 	}
 }
 
+func TestQueryPeriodSinceFiltersRecentWindowBuckets(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), testGainDBPath)
+	now := time.Now().UTC()
+	seed := []RunMetric{
+		{Timestamp: now.Add(-10 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40},
+		{Timestamp: now.Add(-6 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 200, KeptBytes: 80},
+		{Timestamp: now.Add(-2 * 24 * time.Hour), Tool: "git", Command: "git status", RawBytes: 120, KeptBytes: 120},
+	}
+	appendSeedMetrics(t, path, seed)
+
+	rows, err := QueryPeriod(path, QueryOptions{Since: 7 * 24 * time.Hour, Period: periodDay})
+	if err != nil {
+		t.Fatalf("query period with since: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("recent daily rows = %d, want 2", len(rows))
+	}
+	for _, row := range rows {
+		if row.BucketStart == now.Add(-10*24*time.Hour).Format("2006-01-02") {
+			t.Fatalf("unexpected old bucket in recent window: %+v", row)
+		}
+	}
+}
+
 func TestQuerySummaryAndRowsUseEquivalentSelection(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), testGainDBPath)
