@@ -26,17 +26,25 @@ It stays close to native commands. The goal is smaller output, not a new command
 
 ## Example Gains
 
-One real session from day-to-day work:
+Two real `ccp gain` snapshots from day-to-day work:
 
-- 96 commands proxied across 4 repositories
-- 944,007 estimated input tokens -> 59,195 output tokens
-- 93.73% total savings from `ccp gain`
+- Research task across 4 repositories (Claude Code):
 
-Largest contributors in that session:
+```
+- 96 commands proxied, 944007 estimated input tokens -> 59195 output tokens, ~93.73% saved
+- Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
+- Savings held down by: wc ~0.00% (5 cmds)
+- Bottom line: 884812 estimated tokens saved while preserving native execution semantics
+```
 
-- `find`: 57 runs, ~93.98% savings
-- `grep`: 28 runs, ~42.56% savings
-- `ls`: 2 runs, ~79.67% savings
+- Refactoring tests in a Java project with Gradle (Claude Code):
+
+```
+- 88 commands proxied, 5330571 estimated input tokens -> 90127 output tokens, ~98.31% saved
+- Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
+- Savings held down by: cd ~0.00% (23 cmds), jar ~0.00% (21 cmds), grep ~1.44% (4 cmds)
+- Bottom line: 5240444 estimated tokens saved while preserving native execution semantics
+```
 
 Short benchmark receipts from CI:
 
@@ -50,13 +58,12 @@ Short benchmark receipts from CI:
 
 `ccp` is conservative by design. Some commands are already compact, structured, or not worth rewriting.
 
-Current repository snapshot from `ccp gain`:
+Current repository snapshot from `ccp gain` (Codex):
 
-- 1,055 commands proxied
-- 1,331,921 estimated input tokens -> 1,048,460 output tokens
-- 21.28% total savings
-- Biggest wins came from `go`, `ls`, `grep`, and `git`
-- Overall savings were held down by high-volume low-yield commands like `sed`, `openspec`, and `validate.sh`
+- 1243 commands proxied, 1627069 estimated input tokens -> 1287154 output tokens, ~20.89% saved
+- Biggest gains: grep ~55.35% (151 cmds), go ~93.25% (43 cmds), git ~62.91% (30 cmds)
+- Savings held down by: sed ~0.00% (536 cmds), openspec ~0.00% (226 cmds)
+- Bottom line: 339915 estimated tokens saved while preserving native execution semantics
 
 Short benchmark receipts where savings are limited on purpose:
 
