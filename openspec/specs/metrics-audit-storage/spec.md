@@ -29,20 +29,30 @@ The metrics store SHALL support query operations where dataset selection is inde
 - **THEN** the store returns rows grouped by command for the selected dataset
 - **AND** returns an additional total aggregate across all grouped rows.
 
-#### Scenario: Summary text output returns per-tool breakdown
-- **WHEN** `ccp gain --format text` renders summary output
+#### Scenario: Summary human output can derive postable totals and winners
+- **WHEN** `ccp gain` renders the default human-readable summary
+- **THEN** the available query views support deriving overall totals for the selected dataset
+- **AND** support identifying the strongest gains within the selected selection window.
+
+#### Scenario: Summary human output can derive detractor explanation
+- **WHEN** `ccp gain` renders the default human-readable summary
+- **THEN** the available query views support identifying high-volume near-zero-savings tools, passthrough-heavy mixes, or already-compact command mixes within the selected dataset
+- **AND** do not require new persisted metrics fields solely to explain detractors.
+
+#### Scenario: Summary table output returns per-tool breakdown
+- **WHEN** `ccp gain --table` renders summary output
 - **THEN** rows are aggregated by `tool` (not command)
 - **AND** output includes `COUNT`, `NATIVE`, `PROXIED`, and `SAVINGS` columns
 - **AND** `NATIVE` and `PROXIED` are estimated token counts derived from raw and kept bytes.
 
-#### Scenario: Summary text ordering is deterministic
-- **WHEN** `ccp gain --format text` renders multiple summary rows
+#### Scenario: Summary table ordering is deterministic
+- **WHEN** `ccp gain --table` renders multiple summary rows
 - **THEN** rows are ordered by `COUNT` descending
 - **AND** ties are ordered by `NATIVE` descending
 - **AND** remaining ties are ordered by tool name ascending.
 
-#### Scenario: Summary text output excludes passthrough top-list section
-- **WHEN** `ccp gain --format text` renders summary output
+#### Scenario: Summary table output excludes passthrough top-list section
+- **WHEN** `ccp gain --table` renders summary output
 - **THEN** it does not append a separate "missed opportunities" passthrough command list
 - **AND** the report ends after the tool summary table and `TOTAL` row.
 
@@ -50,8 +60,19 @@ The metrics store SHALL support query operations where dataset selection is inde
 - **WHEN** `ccp history` requests history with filters for `since`, `tool`, or `failed`
 - **THEN** the store returns only matching records in deterministic timestamp order.
 
-#### Scenario: Period aggregation query
-- **WHEN** `ccp gain` requests period aggregation for `day`, `week`, or `month`
+#### Scenario: Recent-window summary selection is supported
+- **WHEN** `ccp gain` requests human-readable summaries for `--period day|week|month`
+- **THEN** the available query views support selecting only the last `24h`, `7d`, or `30d` of matching records
+- **AND** preserve the same filter semantics used by non-period summary selection.
+
+#### Scenario: Recent-window summary can derive standout day signals
+- **WHEN** `ccp gain --period week` renders the last-seven-days summary
+- **THEN** the available query views support identifying the busiest day in that window by command count
+- **AND** support identifying the best day in that window by savings efficiency
+- **AND** support a recent-trend comparison within the same seven-day window.
+
+#### Scenario: Period aggregation query remains available for table and export views
+- **WHEN** `ccp gain` requests period aggregation for `day`, `week`, or `month` in detailed or machine-readable output modes
 - **THEN** the store returns aggregated buckets with total commands, raw bytes, kept bytes, estimated input tokens, estimated output tokens, estimated saved tokens, and savings percentage.
 
 #### Scenario: Weekly bucket semantics are stable

@@ -58,24 +58,54 @@ The upgrade command SHALL resolve binary updates from GitHub Releases and perfor
 The CLI SHALL provide `ccp gain` for summary savings and `ccp history` for execution history, with independent data-selection filters and output-representation formats.
 
 #### Scenario: Gain default rendering
-- **WHEN** a user runs `ccp gain` without explicit `--format`
-- **THEN** the CLI renders summary output in text format.
+- **WHEN** a user runs `ccp gain` without explicit `--format` or `--table`
+- **THEN** the CLI renders a concise human-readable summary in text format
+- **AND** the summary is short enough to copy directly into posts, comments, or release notes without requiring table formatting.
 
-#### Scenario: Gain summary output
-- **WHEN** a user runs `ccp gain`
-- **THEN** the CLI returns summary rows for the selected dataset
-- **AND** includes an additional total aggregate across all returned rows.
+#### Scenario: Gain default summary content
+- **WHEN** a user runs `ccp gain` in the default human-readable mode
+- **THEN** the CLI includes overall totals for the selected dataset
+- **AND** identifies strongest gains within the selected dataset
+- **AND** explains the main detractors or low-yield command mix that reduced aggregate savings
+- **AND** does not include promotional prompts or calls to action in the command output.
 
-#### Scenario: Gain text output includes filter header and total row
-- **WHEN** a user runs `ccp gain --format text`
+#### Scenario: Gain table output remains available on demand
+- **WHEN** a user runs `ccp gain --table`
 - **THEN** the CLI prints active filter metadata (`since`, `tool`, `failed`, `period`) before tabular rows
 - **AND** includes one row per grouped tool with compact columns: tool, invocation count, estimated native/proxied tokens, and estimated savings percent
 - **AND** prefixes estimated savings percent values with `~` in text output
 - **AND** appends a trailing `TOTAL` row when data exists.
 
-#### Scenario: Gain text table is compact and aligned
-- **WHEN** `ccp gain --format text` prints summary rows
+#### Scenario: Gain table output is compact and aligned
+- **WHEN** `ccp gain --table` prints summary rows
 - **THEN** the output uses stable column ordering and aligned cell widths for readability in terminal output.
+
+#### Scenario: Gain summary output remains available for machine-readable formats
+- **WHEN** a user runs `ccp gain --format json` or `ccp gain --format csv`
+- **THEN** the CLI returns summary rows for the selected dataset
+- **AND** includes an additional total aggregate across all returned rows.
+
+#### Scenario: Recent-window period summary
+- **WHEN** a user runs `ccp gain --period day`, `ccp gain --period week`, or `ccp gain --period month` without `--table`
+- **THEN** the CLI renders a recent-window summary covering the last `24h`, `7d`, or `30d` respectively
+- **AND** the summary includes recent-window totals
+- **AND** includes standout activity and trend signals drawn from the selected window.
+
+#### Scenario: Weekly period summary uses last seven days
+- **WHEN** a user runs `ccp gain --period week` without `--table`
+- **THEN** the CLI summarizes only the last seven days of data
+- **AND** does not render all historical ISO week buckets by default.
+
+#### Scenario: Recent-window summary highlights best and busiest days
+- **WHEN** a user runs `ccp gain --period week` without `--table`
+- **THEN** the CLI identifies the busiest day in the last seven days by command count
+- **AND** identifies the best day in the same window by savings efficiency
+- **AND** includes a recent trend comparison for that seven-day window.
+
+#### Scenario: Table mode preserves bucketed period view
+- **WHEN** a user runs `ccp gain --period day|week|month --table`
+- **THEN** the CLI renders a bucketed table for the selected period lens
+- **AND** does not replace that table with the default shareable summary output.
 
 #### Scenario: History command output
 - **WHEN** a user runs `ccp history` with optional `--since`, `--tool`, or `--failed`
@@ -108,15 +138,10 @@ The CLI SHALL provide `ccp gain` for summary savings and `ccp history` for execu
 - **THEN** the output includes summary rows for the selected dataset
 - **AND** appends a trailing total row covering the full selected dataset.
 
-#### Scenario: Period selection is independent of format
-- **WHEN** a user supplies `--period day|week|month` with any valid gain format (`text|json|csv`)
-- **THEN** the CLI applies period-based data aggregation for selection
-- **AND** renders the selected dataset using the requested format.
-
 #### Scenario: Shared filters apply to selected dataset
 - **WHEN** a user supplies any combination of `--since`, `--tool`, and `--failed` on reporting commands
 - **THEN** those filters are applied to the selected dataset before rendering
-- **AND** filtering semantics are consistent across supported `--format` values.
+- **AND** filtering semantics are consistent across supported `--format` values and `--table` mode.
 
 #### Scenario: Failed filter semantics
 - **WHEN** a user enables `--failed`
@@ -127,7 +152,7 @@ The CLI SHALL provide `ccp gain` for summary savings and `ccp history` for execu
 - **THEN** the output labels those values as estimated using a 4-bytes-per-token heuristic.
 
 #### Scenario: Empty text dataset behavior
-- **WHEN** `ccp gain --format text` or `ccp history --format text` resolves to zero rows
+- **WHEN** `ccp gain` or `ccp history` resolves to zero rows in text mode
 - **THEN** the CLI prints a no-results message
 - **AND** still prints active filter metadata.
 
