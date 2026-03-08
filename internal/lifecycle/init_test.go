@@ -22,6 +22,7 @@ const (
 	initCodexDir          = ".codex"
 	initCopilotDir        = ".copilot"
 	initCopilotFileName   = "copilot-instructions.md"
+	initRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
 	initCursorDir         = ".cursor"
 	initCursorRuleName    = "ccp.mdc"
 	initAmazonQDir        = ".amazonq"
@@ -690,6 +691,9 @@ func TestRunInitCodexUsesGlobalAgentsManagedBlock(t *testing.T) {
 	if !strings.Contains(s, "`ccp nl -ba spec.md | ccp sed -n '1,260p'`") {
 		t.Fatalf("expected tested pipeline example, got: %s", s)
 	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
 	if !strings.Contains(s, "If `ccp` is unavailable, run the original command and note that CCP is not installed.") {
 		t.Fatalf("expected fallback wording, got: %s", s)
 	}
@@ -791,6 +795,9 @@ func TestRunInitGitHubCopilotUsesUserInstructionsManagedBlock(t *testing.T) {
 	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
 		t.Fatalf("expected preferred ccp wording, got: %s", s)
 	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
 }
 
 func TestRunInitGitHubCopilotRerunDoesNotDuplicateManagedBlock(t *testing.T) {
@@ -886,6 +893,9 @@ func TestRunInitGeminiUsesUserInstructionsManagedBlock(t *testing.T) {
 	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
 		t.Fatalf("expected preferred ccp wording, got: %s", s)
 	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
 }
 
 func TestRunInitGeminiRerunDoesNotDuplicateManagedBlock(t *testing.T) {
@@ -978,6 +988,9 @@ func TestRunInitCursorUsesManagedProjectRule(t *testing.T) {
 	}
 	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
 		t.Fatalf("expected canonical ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
 	}
 	if !strings.Contains(s, "`ccp echo chain-ok && ccp echo chain-done`") {
 		t.Fatalf("expected chaining examples, got: %s", s)
