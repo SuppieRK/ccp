@@ -60,10 +60,12 @@ Short benchmark receipts from CI:
 
 Current repository snapshot from `ccp gain` (Codex):
 
+```
 - 1243 commands proxied, 1627069 estimated input tokens -> 1287154 output tokens, ~20.89% saved
 - Biggest gains: grep ~55.35% (151 cmds), go ~93.25% (43 cmds), git ~62.91% (30 cmds)
 - Savings held down by: sed ~0.00% (536 cmds), openspec ~0.00% (226 cmds)
 - Bottom line: 339915 estimated tokens saved while preserving native execution semantics
+```
 
 Short benchmark receipts where savings are limited on purpose:
 
