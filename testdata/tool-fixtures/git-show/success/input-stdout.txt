@@ -1,0 +1,13 @@
+commit 05377dbf15f3ab2b35bef3df0d7d47c58da6d688
+Author: bench <bench@example.com>
+Date:   Sun Mar 8 08:17:08 2026 +0100
+
+    third commit
+
+diff --git a/tracked.txt b/tracked.txt
+index 8c1384d..29ef827 100644
+--- a/tracked.txt
++++ b/tracked.txt
+@@ -1 +1 @@
+-v2
++v3
