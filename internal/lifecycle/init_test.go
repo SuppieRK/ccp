@@ -34,6 +34,8 @@ const (
 	initContinueRuleName  = "ccp.md"
 	initKiroDir           = ".kiro"
 	initKiroRuleName      = "ccp.md"
+	initKilocodeDir       = ".kilocode"
+	initKilocodeRuleName  = "ccp.md"
 	initRooCodeDir        = ".roo"
 	initRooCodeRuleName   = "ccp.md"
 	initTraeDir           = ".trae"
@@ -471,6 +473,36 @@ func TestRunInitDetectsKiroWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initKiroDir, "steering", initKiroRuleName)); err != nil {
 		t.Fatalf("expected kiro steering file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsKilocodeWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initKilocodeDir, "mkdir .kilocode: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "kilocode" {
+		t.Fatalf("tools = %v, want [kilocode]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)); err != nil {
+		t.Fatalf("expected kilocode rule file after detection, err=%v", err)
 	}
 }
 
@@ -913,6 +945,79 @@ func TestRunInitAntigravityRerunDoesNotRewriteUnchangedRule(t *testing.T) {
 		t.Fatalf("read before: %v", err)
 	}
 	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
+		t.Fatalf(initSecondFailedFmt, err)
+	}
+	infoAfter, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat after rerun: %v", err)
+	}
+	after, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	if !infoAfter.ModTime().Equal(infoBefore.ModTime()) {
+		t.Fatalf("expected idempotent rerun to keep timestamp, before=%v after=%v", infoBefore.ModTime(), infoAfter.ModTime())
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected idempotent rerun to keep file unchanged")
+	}
+	if matches, _ := filepath.Glob(rulePath + ".bak.*"); len(matches) != 0 {
+		t.Fatalf("expected no backups for idempotent rerun, got %d", len(matches))
+	}
+}
+
+func TestRunInitKilocodeUsesRepoRuleFile(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initKilocodeDir), "mkdir .kilocode: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
+		t.Fatalf("kilocode init failed: %v", err)
+	}
+	rulePath := filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)
+	b, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read kilocode rule file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected preferred ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
+	if strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("did not expect managed block markers in kilocode rule, got: %s", s)
+	}
+}
+
+func TestRunInitKilocodeRerunDoesNotRewriteUnchangedRule(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initKilocodeDir), "mkdir .kilocode: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
+		t.Fatalf(initFirstFailedFmt, err)
+	}
+	rulePath := filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)
+	infoBefore, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat before rerun: %v", err)
+	}
+	before, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read before: %v", err)
+	}
+	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
 		t.Fatalf(initSecondFailedFmt, err)
 	}
 	infoAfter, err := os.Stat(rulePath)

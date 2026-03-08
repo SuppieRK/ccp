@@ -148,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"aider", "antigravity", "amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "opencode", "qwen", "roocode", "trae", "windsurf"} {
+	for _, id := range []string{"aider", "antigravity", "amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "kilocode", "opencode", "qwen", "roocode", "trae", "windsurf"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -646,6 +646,36 @@ func TestKiroAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 }
 
+func TestKilocodeAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(filepath.Join(scopeRoot, ".kilocode"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewKilocodeAdapter()
+	if a.ID() != "kilocode" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".kilocode") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".kilocode", "rules", "ccp.md")) {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
 func TestRooCodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
@@ -746,6 +776,25 @@ func TestKiroSteeringContentUsesCanonicalGuidance(t *testing.T) {
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in kiro steering, got: %s", content)
+	}
+}
+
+func TestKilocodeRuleContentUsesCanonicalGuidance(t *testing.T) {
+	content := kilocodeRuleContent()
+	if !strings.Contains(content, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", content)
+	}
+	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	}
+	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
+		t.Fatalf("did not expect cursor or windsurf metadata in kilocode rule, got: %s", content)
+	}
+	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("did not expect managed block markers in kilocode rule, got: %s", content)
 	}
 }
 
