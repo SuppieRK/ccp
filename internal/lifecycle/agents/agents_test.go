@@ -148,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "opencode", "roocode", "trae", "windsurf"} {
+	for _, id := range []string{"aider", "amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "opencode", "roocode", "trae", "windsurf"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -367,6 +367,36 @@ func TestCodexPlanAndUpsertBranches(t *testing.T) {
 	}
 }
 
+func TestAiderConfigHelpersPreserveOtherReadEntries(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, aiderConfigPath)
+	if err := os.WriteFile(configPath, []byte("read:\n  - CONVENTIONS.md\nmodel: sonnet\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := upsertAiderReadConfig(configPath)
+	if err != nil {
+		t.Fatalf("upsert aider config: %v", err)
+	}
+	if !strings.Contains(updated, "- CONVENTIONS.md") || !strings.Contains(updated, "- AGENTS.md") {
+		t.Fatalf("expected both read entries preserved, got: %s", updated)
+	}
+	if err := os.WriteFile(configPath, []byte(updated), 0o644); err != nil {
+		t.Fatalf("write updated aider config: %v", err)
+	}
+
+	updated, changed, removeAll, err := removeAiderReadConfig(configPath)
+	if err != nil || !changed || removeAll {
+		t.Fatalf("unexpected remove result changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+	if strings.Contains(updated, "AGENTS.md") {
+		t.Fatalf("expected AGENTS removed, got: %s", updated)
+	}
+	if !strings.Contains(updated, "CONVENTIONS.md") || !strings.Contains(updated, "model: sonnet") {
+		t.Fatalf("expected unrelated config preserved, got: %s", updated)
+	}
+}
+
 func TestCodexUpsertOnMissingFileUsesCanonicalTemplate(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "missing", agentsFileName)
 	out, err := upsertManagedInstructionBlock(p)
@@ -394,6 +424,36 @@ func TestGitHubCopilotAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 	if got := len(a.Plan(ctx)); got != 1 {
 		t.Fatalf("plan len=%d want 1", got)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
+func TestAiderAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(scopeRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewAiderAdapter()
+	if a.ID() != "aider" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".aider.conf.yml") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, ".aider.conf.yml") {
+		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
 		t.Fatalf(errInstallFmt, err)

@@ -74,6 +74,29 @@ func TestRunUninstallGitHubCopilotRemovesManagedBlockAndInitConfig(t *testing.T)
 	}
 }
 
+func TestRunUninstallAiderRemovesManagedConfigAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("aider")); err != nil {
+		t.Fatalf("aider init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("aider")); err != nil {
+		t.Fatalf("aider uninstall failed: %v", err)
+	}
+
+	configPath := filepath.Join(tmp, ".aider.conf.yml")
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Fatalf("expected aider config to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallGeminiRemovesManagedBlockAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -424,6 +447,37 @@ func TestRunUninstallGitHubCopilotPreservesNonCCPContent(t *testing.T) {
 	}
 	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
 		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallAiderPreservesOtherConfigEntries(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	configPath := filepath.Join(tmp, ".aider.conf.yml")
+	if err := os.WriteFile(configPath, []byte("read:\n  - CONVENTIONS.md\nmodel: sonnet\n"), 0o644); err != nil {
+		t.Fatalf("write aider config: %v", err)
+	}
+
+	if err := RunInit(toolsArgs("aider")); err != nil {
+		t.Fatalf("aider init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("aider")); err != nil {
+		t.Fatalf("aider uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read aider config after uninstall: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "AGENTS.md") {
+		t.Fatalf("expected AGENTS removed, got: %s", got)
+	}
+	if !strings.Contains(got, "CONVENTIONS.md") || !strings.Contains(got, "model: sonnet") {
+		t.Fatalf("expected unrelated config preserved, got: %s", got)
 	}
 }
 

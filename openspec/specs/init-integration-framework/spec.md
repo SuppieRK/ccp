@@ -26,6 +26,10 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`, `.gemini`, `.amazonq`, `.windsurf`, `.clinerules`, `.continue`, `.trae`, `.kiro`, `.roo`)
 - **THEN** that tool is included in detected candidates for init selection.
 
+#### Scenario: detect tool by known config file
+- **WHEN** project root contains a known tool config file such as `.aider.conf.yml`
+- **THEN** that tool is included in detected candidates for init selection.
+
 #### Scenario: ignore non-directory collisions
 - **WHEN** a known tool path exists as a file instead of a directory
 - **THEN** detection ignores that path and does not treat it as a detected tool.
@@ -90,6 +94,11 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init accepts the tool ID as a valid registered adapter
 - **AND** routes installation through a real RooCode adapter.
 
+#### Scenario: aider is a supported adapter-backed tool
+- **WHEN** user selects `aider`
+- **THEN** init accepts the tool ID as a valid registered adapter
+- **AND** routes installation through a real Aider adapter.
+
 ### Requirement: Adapter Installation Semantics
 `ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
 
@@ -107,7 +116,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-roocode-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-roocode-agent-integration`, `init-aider-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes
