@@ -51,6 +51,7 @@ const (
 	AgentKiro          ID = "kiro"
 	AgentKilocode      ID = "kilocode"
 	AgentOpenCode      ID = "opencode"
+	AgentQoder         ID = "qoder"
 	AgentQwen          ID = "qwen"
 	AgentRooCode       ID = "roocode"
 	AgentTrae          ID = "trae"
@@ -124,6 +125,7 @@ func DefaultAdapters() map[string]Adapter {
 		string(AgentKiro):          NewKiroAdapter(),
 		string(AgentKilocode):      NewKilocodeAdapter(),
 		string(AgentOpenCode):      NewOpenCodeAdapter(),
+		string(AgentQoder):         NewQoderAdapter(),
 		string(AgentQwen):          NewQwenAdapter(),
 		string(AgentRooCode):       NewRooCodeAdapter(),
 		string(AgentTrae):          NewTraeAdapter(),

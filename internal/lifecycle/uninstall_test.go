@@ -147,6 +147,30 @@ func TestRunUninstallQwenRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallQoderRemovesManagedBlockAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".qoder"), "mkdir .qoder: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("qoder")); err != nil {
+		t.Fatalf("qoder init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("qoder")); err != nil {
+		t.Fatalf("qoder uninstall failed: %v", err)
+	}
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected qoder agents file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -605,6 +629,38 @@ func TestRunUninstallQwenPreservesNonCCPContent(t *testing.T) {
 
 	if err := RunUninstall(toolsArgs("qwen")); err != nil {
 		t.Fatalf("qwen uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read agents after uninstall: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "managed content") {
+		t.Fatalf("expected managed content removed, got: %s", got)
+	}
+	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
+		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallQoderPreservesNonCCPContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".qoder"), "mkdir .qoder: %v")
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write qoder agents file: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunUninstall(toolsArgs("qoder")); err != nil {
+		t.Fatalf("qoder uninstall failed: %v", err)
 	}
 
 	b, err := os.ReadFile(agentsPath)
