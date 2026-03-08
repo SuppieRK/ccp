@@ -89,6 +89,7 @@ func buildGitSubcommandRegistry() (*engine.ToolFilterRegistry, error) {
 		gitfilters.NewGitDiffFilter(),
 		gitfilters.NewGitLogFilter(),
 		gitfilters.NewGitShowFilter(),
+		gitfilters.NewGitFetchFilter(),
 		gitfilters.NewGitCommitFilter(),
 		gitfilters.NewGitPushFilter(),
 		gitfilters.NewGitPullFilter(),

@@ -68,6 +68,7 @@ var toolSpecNames = []string{
 	"git-blame",
 	"git-commit",
 	"git-diff",
+	"git-fetch",
 	"git-log",
 	"git-show",
 	"git-merge",

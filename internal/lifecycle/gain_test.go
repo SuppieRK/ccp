@@ -224,7 +224,7 @@ func TestRunHistoryTextOmitsToolColumn(t *testing.T) {
 
 func TestRunGainWeekSummaryHighlightsBestAndBusiestDays(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gain.db")
-	now := time.Now().UTC()
+	now := time.Date(2026, time.March, 8, 12, 0, 0, 0, time.UTC)
 	bestDay := now.Add(-6 * 24 * time.Hour).Format("2006-01-02")
 	busiestDay := now.Add(-4 * 24 * time.Hour).Format("2006-01-02")
 	seed := []metrics.RunMetric{
