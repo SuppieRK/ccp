@@ -40,6 +40,7 @@ var toolSpecNames = []string{
 	"docker-ps",
 	"docker-images",
 	"docker-logs",
+	"docker-compose-logs",
 	"find",
 	"go",
 	"go-test",

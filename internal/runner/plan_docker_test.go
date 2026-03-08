@@ -45,6 +45,14 @@ func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 	if logPlan.Tool != "docker" || !strings.HasPrefix(logPlan.DispatchKey, "docker logs|container=api") {
 		t.Fatalf("unexpected docker logs plan: %#v", logPlan)
 	}
+
+	composeLogPlan, err := BuildExecPlan([]string{"docker", "compose", "logs", "--tail", "20", "api"}, reg)
+	if err != nil {
+		t.Fatalf(errUnexpectedPlanFmt, err)
+	}
+	if composeLogPlan.Tool != "docker" || composeLogPlan.DispatchKey != "docker compose logs|scope=api" {
+		t.Fatalf("unexpected docker compose logs plan: %#v", composeLogPlan)
+	}
 }
 
 func TestBuildExecPlanDockerPassthroughBoundaries(t *testing.T) {
@@ -57,6 +65,7 @@ func TestBuildExecPlanDockerPassthroughBoundaries(t *testing.T) {
 		{"docker", "build", "."},
 		{"docker", "run", "--rm", "alpine", "echo", "ok"},
 		{"docker", "logs", "api", "-f"},
+		{"docker", "compose", "logs", "api", "--follow"},
 	}
 	for _, tc := range tests {
 		plan, err := BuildExecPlan(tc, reg)
