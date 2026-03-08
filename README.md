@@ -128,7 +128,7 @@ ccp false || ccp echo chain-recovered
 ccp nl -ba spec.md | ccp sed -n '1,260p'
 ```
 
-If compressed output seems corrupted or unclear, retry with `ccp --raw` as an escape hatch before falling back to the unwrapped command.
+If compressed output seems corrupted, malformed, or unusable for the task, retry with `ccp --raw` as an escape hatch before falling back to the unwrapped command.
 
 ---
 

@@ -22,7 +22,7 @@ const (
 	initCodexDir          = ".codex"
 	initCopilotDir        = ".copilot"
 	initCopilotFileName   = "copilot-instructions.md"
-	initRawEscapeHatch    = "If output seems corrupted or unclear, retry the command with `ccp --raw` as an escape hatch."
+	initRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
 	initCursorDir         = ".cursor"
 	initCursorRuleName    = "ccp.mdc"
 	initAmazonQDir        = ".amazonq"

@@ -10,7 +10,7 @@ import (
 const (
 	ccpManagedBlockStart = "<!-- BEGIN: CCP MANAGED BLOCK -->"
 	ccpManagedBlockEnd   = "<!-- END: CCP MANAGED BLOCK -->"
-	ccpRawEscapeHatch    = "If output seems corrupted or unclear, retry the command with `ccp --raw` as an escape hatch."
+	ccpRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
 )
 
 func ccpManagedBlockTemplate() string {

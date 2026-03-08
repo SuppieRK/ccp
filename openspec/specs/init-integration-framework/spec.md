@@ -120,7 +120,7 @@ Supported integrations MUST install CCP-managed guidance that preserves the cano
 - **GIVEN** a user runs `ccp init` for any supported adapter-backed integration
 - **WHEN** CCP installs or updates its managed guidance
 - **THEN** the managed content tells the agent to prefix shell commands with `ccp`
-- **AND** the managed content tells the agent to retry with `ccp --raw` if output seems corrupted, truncated, or unclear
+- **AND** the managed content tells the agent to retry with `ccp --raw` if output seems corrupted, malformed, or unusable for the task
 
 ### Requirement: Agent-Specific Artifacts Are Out of Scope
 This framework spec SHALL define only generic init orchestration behavior.
