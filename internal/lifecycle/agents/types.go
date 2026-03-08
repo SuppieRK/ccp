@@ -39,6 +39,7 @@ type ID string
 
 const (
 	AgentAider         ID = "aider"
+	AgentAntigravity   ID = "antigravity"
 	AgentAmazonQ       ID = "amazon-q"
 	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
@@ -110,6 +111,7 @@ func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 func DefaultAdapters() map[string]Adapter {
 	return map[string]Adapter{
 		string(AgentAider):         NewAiderAdapter(),
+		string(AgentAntigravity):   NewAntigravityAdapter(),
 		string(AgentAmazonQ):       NewAmazonQAdapter(),
 		string(AgentCline):         NewClineAdapter(),
 		string(AgentClaude):        NewClaudeAdapter(),

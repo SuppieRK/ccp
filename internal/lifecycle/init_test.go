@@ -28,6 +28,8 @@ const (
 	initAmazonQDir        = ".amazonq"
 	initAmazonQRuleName   = "ccp.md"
 	initAiderConfigName   = ".aider.conf.yml"
+	initAntigravityDir    = ".agent"
+	initAntigravityRule   = "ccp.md"
 	initContinueDir       = ".continue"
 	initContinueRuleName  = "ccp.md"
 	initKiroDir           = ".kiro"
@@ -343,6 +345,36 @@ func TestRunInitDetectsAmazonQWhenMissingToolsFlag(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(tmp, initAmazonQDir, "rules", initAmazonQRuleName)); err != nil {
 		t.Fatalf("expected amazon q rule file after detection, err=%v", err)
+	}
+}
+
+func TestRunInitDetectsAntigravityWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initAntigravityDir, "mkdir .agent: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "antigravity" {
+		t.Fatalf("tools = %v, want [antigravity]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)); err != nil {
+		t.Fatalf("expected antigravity rule file after detection, err=%v", err)
 	}
 }
 
@@ -826,6 +858,79 @@ func TestRunInitQwenUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 	if !strings.Contains(s, initRawEscapeHatch) {
 		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
+}
+
+func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initAntigravityDir), "mkdir .agent: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
+		t.Fatalf("antigravity init failed: %v", err)
+	}
+	rulePath := filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)
+	b, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read antigravity rule file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected preferred ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
+	if strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("did not expect managed block markers in antigravity rule, got: %s", s)
+	}
+}
+
+func TestRunInitAntigravityRerunDoesNotRewriteUnchangedRule(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initAntigravityDir), "mkdir .agent: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
+		t.Fatalf(initFirstFailedFmt, err)
+	}
+	rulePath := filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)
+	infoBefore, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat before rerun: %v", err)
+	}
+	before, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read before: %v", err)
+	}
+	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
+		t.Fatalf(initSecondFailedFmt, err)
+	}
+	infoAfter, err := os.Stat(rulePath)
+	if err != nil {
+		t.Fatalf("stat after rerun: %v", err)
+	}
+	after, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	if !infoAfter.ModTime().Equal(infoBefore.ModTime()) {
+		t.Fatalf("expected idempotent rerun to keep timestamp, before=%v after=%v", infoBefore.ModTime(), infoAfter.ModTime())
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected idempotent rerun to keep file unchanged")
+	}
+	if matches, _ := filepath.Glob(rulePath + ".bak.*"); len(matches) != 0 {
+		t.Fatalf("expected no backups for idempotent rerun, got %d", len(matches))
 	}
 }
 

@@ -197,6 +197,31 @@ func TestRunUninstallAmazonQRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallAntigravityRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".agent"), "mkdir .agent: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("antigravity")); err != nil {
+		t.Fatalf("antigravity init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("antigravity")); err != nil {
+		t.Fatalf("antigravity uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".agent", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected antigravity rule file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallWindsurfRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -623,6 +648,34 @@ func TestRunUninstallAmazonQPreservesOtherAmazonQFilesAndDirectories(t *testing.
 	}
 	if st, err := os.Stat(filepath.Join(tmp, ".amazonq", "rules")); err != nil || !st.IsDir() {
 		t.Fatalf("expected .amazonq/rules directory preserved, err=%v", err)
+	}
+}
+
+func TestRunUninstallAntigravityPreservesOtherAgentFilesAndDirectories(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".agent", "rules"), "mkdir .agent/rules: %v")
+	otherRule := filepath.Join(tmp, ".agent", "rules", "team.md")
+	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
+		t.Fatalf("write other rule: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("antigravity")); err != nil {
+		t.Fatalf("antigravity init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("antigravity")); err != nil {
+		t.Fatalf("antigravity uninstall failed: %v", err)
+	}
+
+	if _, err := os.Stat(otherRule); err != nil {
+		t.Fatalf("expected other antigravity rule preserved, err=%v", err)
+	}
+	if st, err := os.Stat(filepath.Join(tmp, ".agent", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected .agent/rules directory preserved, err=%v", err)
 	}
 }
 

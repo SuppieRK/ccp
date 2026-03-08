@@ -148,7 +148,7 @@ func TestResolveHomeScopedPath(t *testing.T) {
 
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
-	for _, id := range []string{"aider", "amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "opencode", "qwen", "roocode", "trae", "windsurf"} {
+	for _, id := range []string{"aider", "antigravity", "amazon-q", "cline", "claude", "codex", "continue", "cursor", "gemini", "github-copilot", "kiro", "opencode", "qwen", "roocode", "trae", "windsurf"} {
 		if _, ok := adapters[id]; !ok {
 			t.Fatalf("expected adapter %q", id)
 		}
@@ -586,6 +586,36 @@ func TestAmazonQAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 }
 
+func TestAntigravityAdapterInstallVerifyAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	scopeRoot := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	if err := os.MkdirAll(filepath.Join(scopeRoot, ".agent"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := NewAntigravityAdapter()
+	if a.ID() != "antigravity" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".agent") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".agent", "rules", "ccp.md")) {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf(errInstallFmt, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf(errVerifyFmt, err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
 func TestKiroAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
@@ -681,6 +711,25 @@ func TestAmazonQRuleContentUsesCanonicalGuidanceWithoutCursorMetadata(t *testing
 	}
 	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
 		t.Fatalf("did not expect managed block markers in amazon q rule, got: %s", content)
+	}
+}
+
+func TestAntigravityRuleContentUsesCanonicalGuidance(t *testing.T) {
+	content := antigravityRuleContent()
+	if !strings.Contains(content, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading, got: %s", content)
+	}
+	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	}
+	if !strings.Contains(content, ccpRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	}
+	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
+		t.Fatalf("did not expect cursor or windsurf metadata in antigravity rule, got: %s", content)
+	}
+	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("did not expect managed block markers in antigravity rule, got: %s", content)
 	}
 }
 
