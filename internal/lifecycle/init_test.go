@@ -45,6 +45,7 @@ const (
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
+	initQwenDir           = ".qwen"
 	initMkdirWorkErrFmt   = "mkdir work: %v"
 	initRewriteScriptName = "ccp-rewrite.sh"
 	initClaudeDir         = ".claude"
@@ -561,6 +562,36 @@ func TestRunInitDetectsClineWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitDetectsQwenWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initQwenDir, "mkdir .qwen: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "qwen" {
+		t.Fatalf("tools = %v, want [qwen]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
+		t.Fatalf("expected qwen AGENTS.md after detection, err=%v", err)
+	}
+}
+
 func TestRunInitExplicitToolsOverrideDetected(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -756,6 +787,98 @@ func TestRunInitCodexPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 
 	if err := RunInit([]string{initToolsFlag, "codex"}); err != nil {
 		t.Fatalf("codex init failed: %v", err)
+	}
+	updated, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read updated agents file: %v", err)
+	}
+	s := string(updated)
+	if !strings.Contains(s, "# User Header") || !strings.Contains(s, "# Tail") {
+		t.Fatalf("expected user-authored content to be preserved, got: %s", s)
+	}
+	if strings.Contains(s, "old content") {
+		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitQwenUsesRepoAgentsManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initQwenDir), "mkdir .qwen: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
+		t.Fatalf("qwen init failed: %v", err)
+	}
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	b, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read qwen agents file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || !strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("expected managed markers, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
+		t.Fatalf("expected preferred ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
+}
+
+func TestRunInitQwenRerunDoesNotDuplicateManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initQwenDir), "mkdir .qwen: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
+		t.Fatalf(initFirstFailedFmt, err)
+	}
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	before, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read before: %v", err)
+	}
+	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
+		t.Fatalf(initSecondFailedFmt, err)
+	}
+	after, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected idempotent rerun to keep file unchanged")
+	}
+	if strings.Count(string(after), "<!-- BEGIN: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected single begin marker")
+	}
+	if strings.Count(string(after), "<!-- END: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected single end marker")
+	}
+}
+
+func TestRunInitQwenPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initQwenDir), "mkdir .qwen: %v")
+
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write initial agents file: %v", err)
+	}
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
+		t.Fatalf("qwen init failed: %v", err)
 	}
 	updated, err := os.ReadFile(agentsPath)
 	if err != nil {

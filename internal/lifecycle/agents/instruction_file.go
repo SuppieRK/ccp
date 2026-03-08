@@ -188,3 +188,81 @@ func (a ManagedInstructionFileAdapter) Uninstall(ctx Context) (InstallResult, er
 	}
 	return InstallResult{Applied: 1}, nil
 }
+
+type ManagedRepoInstructionFileAdapter struct {
+	id            string
+	detectDir     string
+	targetRelPath string
+	missingFmt    string
+	markersFmt    string
+}
+
+func NewManagedRepoInstructionFileAdapter(id, detectDir, targetRelPath, missingFmt, markersFmt string) ManagedRepoInstructionFileAdapter {
+	return ManagedRepoInstructionFileAdapter{
+		id:            id,
+		detectDir:     detectDir,
+		targetRelPath: targetRelPath,
+		missingFmt:    missingFmt,
+		markersFmt:    markersFmt,
+	}
+}
+
+func (a ManagedRepoInstructionFileAdapter) ID() string { return a.id }
+
+func (a ManagedRepoInstructionFileAdapter) DetectRoot(scopeRoot string) string {
+	return filepath.Join(scopeRoot, a.detectDir)
+}
+
+func (a ManagedRepoInstructionFileAdapter) targetPath(ctx Context) string {
+	return filepath.Join(ctx.ScopeRoot, a.targetRelPath)
+}
+
+func (a ManagedRepoInstructionFileAdapter) Plan(ctx Context) []PlannedArtifact {
+	return []PlannedArtifact{{
+		Kind:    ArtifactSettings,
+		Path:    a.targetPath(ctx),
+		Content: ccpManagedBlockTemplate(),
+		Perm:    0o644,
+	}}
+}
+
+func (a ManagedRepoInstructionFileAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+	target := a.targetPath(ctx)
+	content, err := upsertManagedInstructionBlock(target)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	changed, err := write(target, []byte(content), 0o644)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	if !changed {
+		return InstallResult{Noop: 1}, nil
+	}
+	return InstallResult{Applied: 1}, nil
+}
+
+func (a ManagedRepoInstructionFileAdapter) Verify(ctx Context) error {
+	return verifyManagedInstructionBlock(a.targetPath(ctx), a.missingFmt, a.markersFmt)
+}
+
+func (a ManagedRepoInstructionFileAdapter) Uninstall(ctx Context) (InstallResult, error) {
+	target := a.targetPath(ctx)
+	updated, changed, removeAll, err := removeManagedInstructionBlock(target)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	if !changed {
+		return InstallResult{Noop: 1}, nil
+	}
+	if removeAll {
+		if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
+			return InstallResult{}, err
+		}
+		return InstallResult{Applied: 1}, nil
+	}
+	if err := os.WriteFile(target, []byte(updated), 0o644); err != nil {
+		return InstallResult{}, err
+	}
+	return InstallResult{Applied: 1}, nil
+}
