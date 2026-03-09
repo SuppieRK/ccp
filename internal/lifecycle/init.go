@@ -140,7 +140,7 @@ func parseTools(input string) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, p := range parts {
-		t := strings.TrimSpace(strings.ToLower(p))
+		t := agents.NormalizeToolID(strings.TrimSpace(strings.ToLower(p)))
 		if t == "" || seen[t] {
 			continue
 		}

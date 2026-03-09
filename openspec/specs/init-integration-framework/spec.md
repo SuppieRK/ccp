@@ -134,6 +134,11 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init accepts the tool ID as a valid registered adapter
 - **AND** routes installation through a real Auggie adapter.
 
+#### Scenario: costrict is a supported alias tool
+- **WHEN** user selects `costrict`
+- **THEN** init accepts the tool ID as a valid lifecycle selection
+- **AND** routes installation through the existing RooCode integration path rather than a second competing adapter.
+
 ### Requirement: Adapter Installation Semantics
 `ccp init` SHALL invoke adapter planning, installation, and verification for each selected tool, with per-tool states.
 
@@ -162,7 +167,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-qwen-agent-integration`, `init-roocode-agent-integration`, `init-aider-agent-integration`, `init-antigravity-agent-integration`, `init-kilocode-agent-integration`, `init-qoder-agent-integration`, `init-factory-agent-integration`, `init-auggie-agent-integration`, `init-codebuddy-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-qwen-agent-integration`, `init-roocode-agent-integration`, `init-aider-agent-integration`, `init-antigravity-agent-integration`, `init-kilocode-agent-integration`, `init-qoder-agent-integration`, `init-factory-agent-integration`, `init-auggie-agent-integration`, `init-codebuddy-agent-integration`, `init-costrict-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes

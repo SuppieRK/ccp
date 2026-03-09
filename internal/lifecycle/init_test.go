@@ -661,6 +661,36 @@ func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitCostrictAliasUsesRooCodeManagedRule(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initRooCodeDir, "mkdir .roo: %v")
+
+	if err := RunInit([]string{initToolsFlag, "costrict"}); err != nil {
+		t.Fatalf("costrict init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "roocode" {
+		t.Fatalf("tools = %v, want [roocode]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initRooCodeDir, "rules", initRooCodeRuleName)); err != nil {
+		t.Fatalf("expected roocode rule file after costrict alias init, err=%v", err)
+	}
+}
+
 func TestRunInitDetectsTraeWhenMissingToolsFlag(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
