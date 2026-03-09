@@ -79,19 +79,19 @@ Two real `ccp gain` snapshots from day-to-day work:
 - Refactoring tests in a Java project with Gradle (Claude Code):
 
 ```
-- 88 commands proxied, 5330571 estimated input tokens -> 90127 output tokens, ~98.31% saved
+- 88 commands proxied, 5,330,571 estimated input tokens -> 90,127 output tokens, ~98.31% saved
 - Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
-- Savings held down by: cd ~0.00% (23 cmds), jar ~0.00% (21 cmds), grep ~1.44% (4 cmds)
-- Bottom line: 5240444 estimated tokens saved while preserving native execution semantics
+- Savings held down by: cd (23 cmds, no savings), jar (21 cmds, no savings), grep ~1.44% (4 cmds)
+- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back for real work.
 ```
 
 - Research task across 4 repositories (Claude Code):
 
 ```
-- 96 commands proxied, 944007 estimated input tokens -> 59195 output tokens, ~93.73% saved
+- 96 commands proxied, 944,007 estimated input tokens -> 59,195 output tokens, ~93.73% saved
 - Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
-- Savings held down by: wc ~0.00% (5 cmds)
-- Bottom line: 884812 estimated tokens saved while preserving native execution semantics
+- Savings held down by: wc (5 cmds, no savings)
+- Bottom line: 884,812 estimated tokens saved. Breathtaking results, with plenty of context back for real work.
 ```
 
 Short benchmark receipts from CI:
@@ -109,10 +109,10 @@ Short benchmark receipts from CI:
 Current repository snapshot from `ccp gain` (Codex):
 
 ```
-- 1243 commands proxied, 1627069 estimated input tokens -> 1287154 output tokens, ~20.89% saved
-- Biggest gains: grep ~55.35% (151 cmds), go ~93.25% (43 cmds), git ~62.91% (30 cmds)
-- Savings held down by: sed ~0.00% (536 cmds), openspec ~0.00% (226 cmds)
-- Bottom line: 339915 estimated tokens saved while preserving native execution semantics
+- 1,825 commands proxied, 2,461,959 estimated input tokens -> 2,160,427 output tokens, ~12.25% saved
+- Biggest gains: grep ~59.48% (210 cmds), go ~90.25% (92 cmds), git ~59.25% (40 cmds)
+- Savings held down by: sed (765 cmds, no savings), openspec (245 cmds, no savings)
+- Bottom line: 301,532 estimated tokens saved. It ain't much, but it's honest work.
 ```
 
 Short benchmark receipts where savings are limited on purpose:
