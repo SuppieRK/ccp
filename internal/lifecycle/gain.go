@@ -744,13 +744,13 @@ func bottomLineMessage(savingsPct float64) string {
 	case savingsPct < 20:
 		return "It ain't much, but it's honest work."
 	case savingsPct < 40:
-		return "Pretty decent for the kind of noise that adds up all day."
+		return "Pretty decent for the noise that adds up all day."
 	case savingsPct < 60:
 		return "A solid result, and less noise to drag around."
 	case savingsPct < 80:
 		return "Now we're talking - much less noise to drag around."
 	default:
-		return "Breathtaking results, with plenty of context back for real work."
+		return "Breathtaking results, with plenty of context back."
 	}
 }
 

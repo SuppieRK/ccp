@@ -32,6 +32,7 @@ const (
 	initAntigravityRule   = "ccp.md"
 	initContinueDir       = ".continue"
 	initContinueRuleName  = "ccp.md"
+	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
 	initKiroRuleName      = "ccp.md"
 	initKilocodeDir       = ".kilocode"
@@ -537,6 +538,36 @@ func TestRunInitDetectsQoderWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitDetectsFactoryWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initFactoryDir, "mkdir .factory: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "factory" {
+		t.Fatalf("tools = %v, want [factory]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
+		t.Fatalf("expected factory AGENTS.md after detection, err=%v", err)
+	}
+}
+
 func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -952,6 +983,34 @@ func TestRunInitQoderUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 }
 
+func TestRunInitFactoryUsesRepoAgentsManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initFactoryDir), "mkdir .factory: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "factory"}); err != nil {
+		t.Fatalf("factory init failed: %v", err)
+	}
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	b, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read factory agents file: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || !strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("expected managed markers, got: %s", s)
+	}
+	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.") {
+		t.Fatalf("expected preferred ccp wording, got: %s", s)
+	}
+	if !strings.Contains(s, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	}
+}
+
 func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1178,6 +1237,36 @@ func TestRunInitQoderPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 
 	if err := RunInit([]string{initToolsFlag, "qoder"}); err != nil {
 		t.Fatalf("qoder init failed: %v", err)
+	}
+	updated, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read updated agents file: %v", err)
+	}
+	s := string(updated)
+	if !strings.Contains(s, "# User Header") || !strings.Contains(s, "# Tail") {
+		t.Fatalf("expected user-authored content to be preserved, got: %s", s)
+	}
+	if strings.Contains(s, "old content") {
+		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitFactoryPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initFactoryDir), "mkdir .factory: %v")
+
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write initial agents file: %v", err)
+	}
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "factory"}); err != nil {
+		t.Fatalf("factory init failed: %v", err)
 	}
 	updated, err := os.ReadFile(agentsPath)
 	if err != nil {

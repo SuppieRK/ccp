@@ -314,10 +314,10 @@ func TestBottomLineMessageUsesFriendlyBands(t *testing.T) {
 	}{
 		{0, "This is fine, better opportunities will come."},
 		{10, "It ain't much, but it's honest work."},
-		{30, "Pretty decent for the kind of noise that adds up all day."},
+		{30, "Pretty decent for the noise that adds up all day."},
 		{50, "A solid result, and less noise to drag around."},
 		{70, "Now we're talking - much less noise to drag around."},
-		{90, "Breathtaking results, with plenty of context back for real work."},
+		{90, "Breathtaking results, with plenty of context back."},
 	}
 	for _, tc := range cases {
 		if got := bottomLineMessage(tc.pct); got != tc.want {
