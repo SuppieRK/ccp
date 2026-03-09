@@ -1,41 +1,80 @@
-# Command Compression Proxy (`ccp`)
+<p align="center">
+  <a href="https://github.com/SuppieRK/ccp">
+    <picture>
+      <source srcset="assets/readme-banner.png">
+      <img src="assets/readme-banner.png" alt="CCP banner">
+    </picture>
+  </a>
+</p>
 
-[![Go Version](https://img.shields.io/badge/go-1.26%2B-blue)](#development-environment)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Status](https://img.shields.io/badge/status-incubating-orange)](#security--stability)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp)
+<p align="center">
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" /></a>
+  <a href="#security--stability"><img alt="Status: incubating" src="https://img.shields.io/badge/status-incubating-orange?style=flat-square" /></a>
+  <a href="https://github.com/SuppieRK/ccp/releases"><img alt="Release" src="https://img.shields.io/github/v/release/SuppieRK/ccp?style=flat-square" /></a>
+</p>
 
-`ccp` is an agent-first command proxy written in Go.
+<p align="center">
+  <a href="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml"><img alt="CI" src="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml/badge.svg" /></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Reliability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=reliability_rating" /></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Security Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=security_rating" /></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
+</p>
 
-It executes native system commands and compacts their output to reduce tokens consumed by coding agents while preserving execution correctness, exit codes, critical diagnostics, and downstream usability.
+<p align="center">
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#example-gains">Example Gains</a> &bull;
+  <a href="#where-it-helps-less">Where It Helps Less</a> &bull;
+  <a href="#usage">Usage</a> &bull;
+  <a href="./ARCHITECTURE.md">Architecture</a> &bull;
+  <a href="#support--documentation">Support</a>
+</p>
 
-It stays close to native commands. The goal is smaller output, not a new command language.
+`ccp` keeps native commands and trims noisy terminal output before it reaches coding agents, leaving more context for code and reasoning.
 
 ## Why It’s Useful
 
-`ccp` reduces tokens consumed by command output, which leaves more room in the model context window for actual code, requirements, and reasoning. In practice, that gives coding agents more usable context to work with, improves the odds of better follow-up results, and lowers usage cost at the same time.
+Use `ccp` when coding agents are burning too much context on terminal output.
 
-- Removes repetitive or low-signal output when safe.
-- Favors filtering and omission over denser non-native output encodings.
-- Preserves actionable diagnostics and line-oriented output affordances when possible.
-- Keeps deterministic behavior for identical inputs.
-- Emits zero bytes if native output is zero bytes.
-- Preserves exact byte stream in `--raw` mode unless explicit redaction is enabled with `--confidential`.
+- More room for code, requirements, and reasoning.
+- Same shell commands, exit codes, and critical diagnostics.
+- Safe fallback with `--raw` when exact output matters.
+
+Typical fit:
+- build failures
+- search/listing output
+- container and cluster logs
+
+`ccp` is conservative by design. It trims noisy output when safe and leaves structured, compact, or ambiguous cases closer to native output.
+
+## Quick Start
+
+Install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
+```
+
+Initialize supported coding-agent integrations (automatically or with `--tools`):
+
+```bash
+ccp init
+```
+
+See what it saved in your own work:
+
+```bash
+ccp gain
+```
+
+Want the detailed table instead of the short summary?
+
+```bash
+ccp gain --table
+```
 
 ## Example Gains
 
 Two real `ccp gain` snapshots from day-to-day work:
-
-- Research task across 4 repositories (Claude Code):
-
-```
-- 96 commands proxied, 944007 estimated input tokens -> 59195 output tokens, ~93.73% saved
-- Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
-- Savings held down by: wc ~0.00% (5 cmds)
-- Bottom line: 884812 estimated tokens saved while preserving native execution semantics
-```
 
 - Refactoring tests in a Java project with Gradle (Claude Code):
 
@@ -44,6 +83,15 @@ Two real `ccp gain` snapshots from day-to-day work:
 - Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
 - Savings held down by: cd ~0.00% (23 cmds), jar ~0.00% (21 cmds), grep ~1.44% (4 cmds)
 - Bottom line: 5240444 estimated tokens saved while preserving native execution semantics
+```
+
+- Research task across 4 repositories (Claude Code):
+
+```
+- 96 commands proxied, 944007 estimated input tokens -> 59195 output tokens, ~93.73% saved
+- Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
+- Savings held down by: wc ~0.00% (5 cmds)
+- Bottom line: 884812 estimated tokens saved while preserving native execution semantics
 ```
 
 Short benchmark receipts from CI:
@@ -80,6 +128,8 @@ Results depend on command mix. Run `ccp gain` after real work to see both the wi
 ---
 
 ## Getting Started
+
+If you want more control, install or build manually.
 
 Install with the provided script:
 

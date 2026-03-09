@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -55,6 +56,7 @@ const (
 	noResultsMsg     = "No results for selected filters."
 	savingsPctFormat = "~%.2f%%"
 	gainHeaderText   = "ccp gain (estimated tokens: 4B/token)"
+	summaryRowFormat = "%-*s  %*s  %*s  %*s  %*s\n"
 )
 
 // RunGain prints summary/period savings in text/json/csv form.
@@ -342,15 +344,15 @@ func printShareableSummaryText(filters filtersEnvelope, rows []metrics.SummaryTo
 		return nil
 	}
 
-	fmt.Printf("- %d commands proxied, %s estimated input tokens -> %s output tokens, %s saved\n",
-		total.Commands,
+	fmt.Printf("- %s commands proxied, %s estimated input tokens -> %s output tokens, %s saved\n",
+		formatInt(total.Commands),
 		formatInt(total.EstimatedInputTokens),
 		formatInt(total.EstimatedOutputTokens),
 		formatPercent(total.EstimatedSavingsPct),
 	)
 	fmt.Printf("- Biggest gains: %s\n", strongestGainsText(rows))
 	fmt.Printf("- Savings held down by: %s\n", detractorsText(rows))
-	fmt.Printf("- Bottom line: %s estimated tokens saved while preserving native execution semantics\n", formatInt(total.EstimatedSavedTokens))
+	fmt.Printf("- Bottom line: %s\n", bottomLineText(total))
 	return nil
 }
 
@@ -374,10 +376,13 @@ func printSummaryText(rows []metrics.SummaryToolRow, total metrics.SummaryTotal,
 
 	toolW, countW, nativeW, proxiedW, savingsW := summaryTextColumnWidths(sortedRows, total)
 	totalSavings := fmt.Sprintf(savingsPctFormat, total.EstimatedSavingsPct)
+	totalCommands := formatInt(total.Commands)
+	totalInput := formatInt(total.EstimatedInputTokens)
+	totalOutput := formatInt(total.EstimatedOutputTokens)
 
-	fmt.Printf("%-*s  %*s  %*s  %*s  %*s\n", toolW, "TOOL", countW, "COUNT", nativeW, "NATIVE", proxiedW, "PROXIED", savingsW, "SAVINGS")
+	fmt.Printf(summaryRowFormat, toolW, "TOOL", countW, "COUNT", nativeW, "NATIVE", proxiedW, "PROXIED", savingsW, "SAVINGS")
 	printSummaryRows(sortedRows, toolW, countW, nativeW, proxiedW, savingsW)
-	fmt.Printf("%-*s  %*d  %*d  %*d  %*s\n", toolW, "TOTAL", countW, total.Commands, nativeW, total.EstimatedInputTokens, proxiedW, total.EstimatedOutputTokens, savingsW, totalSavings)
+	fmt.Printf(summaryRowFormat, toolW, "TOTAL", countW, totalCommands, nativeW, totalInput, proxiedW, totalOutput, savingsW, totalSavings)
 
 	return nil
 }
@@ -390,9 +395,9 @@ func summaryTextColumnWidths(rows []metrics.SummaryToolRow, total metrics.Summar
 	savingsW = len("SAVINGS")
 	for _, r := range rows {
 		toolW = max(toolW, len(r.Tool))
-		countW = max(countW, len(strconv.FormatInt(r.Commands, 10)))
-		nativeW = max(nativeW, len(strconv.FormatInt(r.EstimatedInputTokens, 10)))
-		proxiedW = max(proxiedW, len(strconv.FormatInt(r.EstimatedOutputTokens, 10)))
+		countW = max(countW, len(formatInt(r.Commands)))
+		nativeW = max(nativeW, len(formatInt(r.EstimatedInputTokens)))
+		proxiedW = max(proxiedW, len(formatInt(r.EstimatedOutputTokens)))
 		savingsW = max(savingsW, len(fmt.Sprintf(savingsPctFormat, r.EstimatedSavingsPct)))
 	}
 	if toolW > 20 {
@@ -402,19 +407,19 @@ func summaryTextColumnWidths(rows []metrics.SummaryToolRow, total metrics.Summar
 		toolW = len("TOTAL")
 	}
 	savingsW = max(savingsW, len(fmt.Sprintf(savingsPctFormat, total.EstimatedSavingsPct)))
-	countW = max(countW, len(strconv.FormatInt(total.Commands, 10)))
-	nativeW = max(nativeW, len(strconv.FormatInt(total.EstimatedInputTokens, 10)))
-	proxiedW = max(proxiedW, len(strconv.FormatInt(total.EstimatedOutputTokens, 10)))
+	countW = max(countW, len(formatInt(total.Commands)))
+	nativeW = max(nativeW, len(formatInt(total.EstimatedInputTokens)))
+	proxiedW = max(proxiedW, len(formatInt(total.EstimatedOutputTokens)))
 	return toolW, countW, nativeW, proxiedW, savingsW
 }
 
 func printSummaryRows(rows []metrics.SummaryToolRow, toolW, countW, nativeW, proxiedW, savingsW int) {
 	for _, r := range rows {
-		fmt.Printf("%-*s  %*d  %*d  %*d  %*s\n",
+		fmt.Printf(summaryRowFormat,
 			toolW, truncateForDisplay(r.Tool, toolW),
-			countW, r.Commands,
-			nativeW, r.EstimatedInputTokens,
-			proxiedW, r.EstimatedOutputTokens,
+			countW, formatInt(r.Commands),
+			nativeW, formatInt(r.EstimatedInputTokens),
+			proxiedW, formatInt(r.EstimatedOutputTokens),
 			savingsW, fmt.Sprintf(savingsPctFormat, r.EstimatedSavingsPct),
 		)
 	}
@@ -469,9 +474,9 @@ func printWindowSummaryText(metricsPath string, opts metrics.QueryOptions, filte
 	if windowLabel == "" {
 		windowLabel = "Selected window"
 	}
-	fmt.Printf("- %s: %d commands, %s estimated input tokens -> %s output tokens, %s saved\n",
+	fmt.Printf("- %s: %s commands, %s estimated input tokens -> %s output tokens, %s saved\n",
 		windowLabel,
-		total.Commands,
+		formatInt(total.Commands),
 		formatInt(total.EstimatedInputTokens),
 		formatInt(total.EstimatedOutputTokens),
 		formatPercent(total.EstimatedSavingsPct),
@@ -499,11 +504,11 @@ func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnv
 	}
 	fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n", "BUCKET", "START", "END", "COUNT", "SAVINGS")
 	for _, r := range rows {
-		fmt.Printf("%-10s  %-10s  %-10s  %-8d  %s\n",
+		fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n",
 			r.Bucket,
 			r.BucketStart,
 			r.BucketEnd,
-			r.Commands,
+			formatInt(r.Commands),
 			fmt.Sprintf(savingsPctFormat, r.EstimatedSavingsPct),
 		)
 	}
@@ -557,7 +562,7 @@ func strongestGainsText(rows []metrics.SummaryToolRow) string {
 		if row.EstimatedSavedTokens <= 0 {
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("%s %s (%d cmds)", row.Tool, formatPercent(row.EstimatedSavingsPct), row.Commands))
+		parts = append(parts, summaryRowText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -592,7 +597,7 @@ func detractorsText(rows []metrics.SummaryToolRow) string {
 		if row.EstimatedSavingsPct > 25 && len(parts) > 0 {
 			break
 		}
-		parts = append(parts, fmt.Sprintf("%s %s (%d cmds)", row.Tool, formatPercent(row.EstimatedSavingsPct), row.Commands))
+		parts = append(parts, summaryRowText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -613,7 +618,7 @@ func busiestDayText(rows []metrics.PeriodRow) string {
 			best = row
 		}
 	}
-	return fmt.Sprintf("%s with %d commands", best.BucketStart, best.Commands)
+	return fmt.Sprintf("%s with %s commands", best.BucketStart, formatInt(best.Commands))
 }
 
 func bestDayText(rows []metrics.PeriodRow) string {
@@ -693,7 +698,60 @@ func formatPercent(v float64) string {
 }
 
 func formatInt(v int64) string {
-	return strconv.FormatInt(v, 10)
+	s := strconv.FormatInt(v, 10)
+	if len(s) <= 3 && !strings.HasPrefix(s, "-") {
+		return s
+	}
+	neg := strings.HasPrefix(s, "-")
+	if neg {
+		s = s[1:]
+	}
+	var b strings.Builder
+	if neg {
+		b.WriteByte('-')
+	}
+	head := len(s) % 3
+	if head == 0 {
+		head = 3
+	}
+	b.WriteString(s[:head])
+	for i := head; i < len(s); i += 3 {
+		b.WriteByte(',')
+		b.WriteString(s[i : i+3])
+	}
+	return b.String()
+}
+
+func summaryRowText(row metrics.SummaryToolRow) string {
+	if savingsRoundsToZero(row.EstimatedSavingsPct) {
+		return fmt.Sprintf("%s (%s cmds, no savings)", row.Tool, formatInt(row.Commands))
+	}
+	return fmt.Sprintf("%s %s (%s cmds)", row.Tool, formatPercent(row.EstimatedSavingsPct), formatInt(row.Commands))
+}
+
+func savingsRoundsToZero(v float64) bool {
+	return math.Abs(v) < 0.005
+}
+
+func bottomLineText(total metrics.SummaryTotal) string {
+	return fmt.Sprintf("%s estimated tokens saved. %s", formatInt(total.EstimatedSavedTokens), bottomLineMessage(total.EstimatedSavingsPct))
+}
+
+func bottomLineMessage(savingsPct float64) string {
+	switch {
+	case savingsPct <= 0:
+		return "This is fine, better opportunities will come."
+	case savingsPct < 20:
+		return "It ain't much, but it's honest work."
+	case savingsPct < 40:
+		return "Pretty decent for the kind of noise that adds up all day."
+	case savingsPct < 60:
+		return "A solid result, and less noise to drag around."
+	case savingsPct < 80:
+		return "Now we're talking - much less noise to drag around."
+	default:
+		return "Breathtaking results, with plenty of context back for real work."
+	}
 }
 
 func writeSummaryCSV(rows []metrics.SummaryRow, total metrics.SummaryTotal, filters filtersEnvelope) error {
