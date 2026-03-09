@@ -29,8 +29,6 @@
   <a href="#support--documentation">Support</a>
 </p>
 
-`ccp` keeps native commands and trims noisy terminal output before it reaches coding agents, leaving more context for code and reasoning.
-
 ## Why It’s Useful
 
 Use `ccp` when coding agents are burning too much context on terminal output.
@@ -82,7 +80,7 @@ Two real `ccp gain` snapshots from day-to-day work:
 - 88 commands proxied, 5,330,571 estimated input tokens -> 90,127 output tokens, ~98.31% saved
 - Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
 - Savings held down by: cd (23 cmds, no savings), jar (21 cmds, no savings), grep ~1.44% (4 cmds)
-- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back for real work.
+- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back.
 ```
 
 - Research task across 4 repositories (Claude Code):
@@ -91,7 +89,7 @@ Two real `ccp gain` snapshots from day-to-day work:
 - 96 commands proxied, 944,007 estimated input tokens -> 59,195 output tokens, ~93.73% saved
 - Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
 - Savings held down by: wc (5 cmds, no savings)
-- Bottom line: 884,812 estimated tokens saved. Breathtaking results, with plenty of context back for real work.
+- Bottom line: 884,812 estimated tokens saved. Breathtaking results, with plenty of context back.
 ```
 
 Short benchmark receipts from CI:
@@ -224,7 +222,7 @@ If compressed output seems corrupted, malformed, or unusable for the task, retry
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `antigravity`, `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf` |
+| Agent integrations | `aider`, `antigravity`, `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `factory`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
