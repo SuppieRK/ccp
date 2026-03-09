@@ -141,7 +141,7 @@ Results depend on command mix. Run `ccp gain` after real work to see both the wi
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codebuddy`, `codex`, `continue`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `costrict` (alias of `roocode`), `trae`, `windsurf` |
+| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codebuddy`, `codex`, `continue`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `costrict` (alias of `roocode`), `trae`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 

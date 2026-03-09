@@ -291,6 +291,30 @@ func TestRunUninstallIFlowRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallPiRemovesManagedBlockAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".pi"), "mkdir .pi: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("pi")); err != nil {
+		t.Fatalf("pi init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("pi")); err != nil {
+		t.Fatalf("pi uninstall failed: %v", err)
+	}
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected pi agents file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -946,6 +970,33 @@ func TestRunUninstallIFlowPreservesNonCCPContent(t *testing.T) {
 	}
 	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
 		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallPiPreservesNonCCPContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".pi"), "mkdir .pi: %v")
+	chdirForTest(t, tmp)
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	initial := "team notes\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n"
+	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write pi agents file: %v", err)
+	}
+
+	if err := RunUninstall(toolsArgs("pi")); err != nil {
+		t.Fatalf("pi uninstall failed: %v", err)
+	}
+
+	got, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read pi agents file: %v", err)
+	}
+	if strings.TrimSpace(string(got)) != "team notes" {
+		t.Fatalf("unexpected preserved content: %q", string(got))
 	}
 }
 
