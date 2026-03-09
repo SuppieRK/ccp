@@ -147,16 +147,6 @@ Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build
 
 ---
 
-## Inspired By
-
-`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
-
-You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output rather than introducing a broad meta-command layer. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
-
-That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
-
----
-
 ## Support & Documentation
 
 Primary documentation:
@@ -205,6 +195,16 @@ Project status: incubating (0.y.z zerover).
 - Users must upgrade to receive security fixes.
 
 See [SECURITY.md](SECURITY.md) for reporting and scope details.
+
+---
+
+## Inspired By
+
+`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
+
+You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output rather than introducing a broad meta-command layer. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
+
+That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
 
 ---
 
