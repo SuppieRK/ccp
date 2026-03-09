@@ -48,6 +48,7 @@ const (
 	AgentContinue      ID = "continue"
 	AgentCostrict      ID = "costrict"
 	AgentCodex         ID = "codex"
+	AgentCrush         ID = "crush"
 	AgentCursor        ID = "cursor"
 	AgentFactory       ID = "factory"
 	AgentGemini        ID = "gemini"
@@ -146,6 +147,7 @@ func DefaultAdapters() map[string]Adapter {
 		string(AgentClaude):        NewClaudeAdapter(),
 		string(AgentContinue):      NewContinueAdapter(),
 		string(AgentCodex):         NewCodexAdapter(),
+		string(AgentCrush):         NewCrushAdapter(),
 		string(AgentCursor):        NewCursorAdapter(),
 		string(AgentFactory):       NewFactoryAdapter(),
 		string(AgentGemini):        NewGeminiAdapter(),
