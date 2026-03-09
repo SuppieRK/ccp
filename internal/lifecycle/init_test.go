@@ -35,6 +35,7 @@ const (
 	initCodeBuddyFileName = "CODEBUDDY.md"
 	initContinueDir       = ".continue"
 	initContinueRuleName  = "ccp.md"
+	initCrushDir          = ".crush"
 	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
 	initKiroRuleName      = "ccp.md"
@@ -631,6 +632,36 @@ func TestRunInitDetectsCodeBuddyWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitDetectsCrushWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCrushDir, "mkdir .crush: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "crush" {
+		t.Fatalf("tools = %v, want [crush]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
+		t.Fatalf("expected crush AGENTS.md after detection, err=%v", err)
+	}
+}
+
 func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1158,6 +1189,32 @@ func TestRunInitCodeBuddyUsesRepoMemoryManagedBlock(t *testing.T) {
 	}
 }
 
+func TestRunInitCrushUsesRepoAgentsManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCrushDir, "mkdir .crush: %v")
+
+	if err := RunInit([]string{initToolsFlag, "crush"}); err != nil {
+		t.Fatalf("crush init failed: %v", err)
+	}
+
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	b, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read crush agents file: %v", err)
+	}
+	got := string(b)
+	if !strings.Contains(got, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading in Crush agents file, got: %s", got)
+	}
+	if !strings.Contains(got, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note in Crush agents file, got: %s", got)
+	}
+}
+
 func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1444,6 +1501,36 @@ func TestRunInitAuggiePreservesUserContentAndReplacesOnlyManagedRegion(t *testin
 
 	if err := RunInit([]string{initToolsFlag, "auggie"}); err != nil {
 		t.Fatalf("auggie init failed: %v", err)
+	}
+	updated, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read updated agents file: %v", err)
+	}
+	s := string(updated)
+	if !strings.Contains(s, "# User Header") || !strings.Contains(s, "# Tail") {
+		t.Fatalf("expected user-authored content to be preserved, got: %s", s)
+	}
+	if strings.Contains(s, "old content") {
+		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitCrushPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initCrushDir), "mkdir .crush: %v")
+
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write initial agents file: %v", err)
+	}
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "crush"}); err != nil {
+		t.Fatalf("crush init failed: %v", err)
 	}
 	updated, err := os.ReadFile(agentsPath)
 	if err != nil {
