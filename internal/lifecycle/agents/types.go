@@ -53,6 +53,7 @@ const (
 	AgentFactory       ID = "factory"
 	AgentGemini        ID = "gemini"
 	AgentGitHubCopilot ID = "github-copilot"
+	AgentIFlow         ID = "iflow"
 	AgentKiro          ID = "kiro"
 	AgentKilocode      ID = "kilocode"
 	AgentOpenCode      ID = "opencode"
@@ -152,6 +153,7 @@ func DefaultAdapters() map[string]Adapter {
 		string(AgentFactory):       NewFactoryAdapter(),
 		string(AgentGemini):        NewGeminiAdapter(),
 		string(AgentGitHubCopilot): NewGitHubCopilotAdapter(),
+		string(AgentIFlow):         NewIFlowAdapter(),
 		string(AgentKiro):          NewKiroAdapter(),
 		string(AgentKilocode):      NewKilocodeAdapter(),
 		string(AgentOpenCode):      NewOpenCodeAdapter(),

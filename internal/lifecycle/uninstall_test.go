@@ -267,6 +267,30 @@ func TestRunUninstallCrushRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallIFlowRemovesManagedBlockAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".iflow"), "mkdir .iflow: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("iflow")); err != nil {
+		t.Fatalf("iflow init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("iflow")); err != nil {
+		t.Fatalf("iflow uninstall failed: %v", err)
+	}
+
+	memoryPath := filepath.Join(tmp, "IFLOW.md")
+	if _, err := os.Stat(memoryPath); !os.IsNotExist(err) {
+		t.Fatalf("expected iflow memory file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -883,6 +907,38 @@ func TestRunUninstallCrushPreservesNonCCPContent(t *testing.T) {
 	b, err := os.ReadFile(agentsPath)
 	if err != nil {
 		t.Fatalf("read agents after uninstall: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "managed content") {
+		t.Fatalf("expected managed content removed, got: %s", got)
+	}
+	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
+		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallIFlowPreservesNonCCPContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".iflow"), "mkdir .iflow: %v")
+
+	memoryPath := filepath.Join(tmp, "IFLOW.md")
+	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(memoryPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write iflow memory file: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunUninstall(toolsArgs("iflow")); err != nil {
+		t.Fatalf("iflow uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(memoryPath)
+	if err != nil {
+		t.Fatalf("read memory after uninstall: %v", err)
 	}
 	got := string(b)
 	if strings.Contains(got, "managed content") {
