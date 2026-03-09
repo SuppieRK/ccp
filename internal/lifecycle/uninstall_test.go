@@ -195,6 +195,30 @@ func TestRunUninstallFactoryRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallAuggieRemovesManagedBlockAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".augment"), "mkdir .augment: %v")
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("auggie")); err != nil {
+		t.Fatalf("auggie init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("auggie")); err != nil {
+		t.Fatalf("auggie uninstall failed: %v", err)
+	}
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected auggie agents file to be removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallCursorRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -717,6 +741,38 @@ func TestRunUninstallFactoryPreservesNonCCPContent(t *testing.T) {
 
 	if err := RunUninstall(toolsArgs("factory")); err != nil {
 		t.Fatalf("factory uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read agents after uninstall: %v", err)
+	}
+	got := string(b)
+	if strings.Contains(got, "managed content") {
+		t.Fatalf("expected managed content removed, got: %s", got)
+	}
+	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
+		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	}
+}
+
+func TestRunUninstallAuggiePreservesNonCCPContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".augment"), "mkdir .augment: %v")
+
+	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write auggie agents file: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunUninstall(toolsArgs("auggie")); err != nil {
+		t.Fatalf("auggie uninstall failed: %v", err)
 	}
 
 	b, err := os.ReadFile(agentsPath)

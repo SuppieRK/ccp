@@ -52,6 +52,12 @@ Install:
 curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
 ```
 
+Verify the installation:
+
+```bash
+ccp --help
+```
+
 Initialize supported coding-agent integrations (automatically or with `--tools`):
 
 ```bash
@@ -125,93 +131,6 @@ Results depend on command mix. Run `ccp gain` after real work to see both the wi
 
 ---
 
-## Getting Started
-
-If you want more control, install or build manually.
-
-Install with the provided script:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
-```
-
-Or build from source (`Go 1.26+`):
-
-```bash
-go build -o ccp ./cmd/ccp
-install -m 0755 ./ccp /usr/local/bin/ccp
-```
-
-Verify the installation:
-
-```bash
-ccp --version
-```
-
-Initialize supported agent integrations:
-
-```bash
-ccp init
-```
-
-Or select tools explicitly:
-
-```bash
-ccp init --tools claude,codex,cursor,gemini,github-copilot
-```
-
-Check what `ccp` is saving on your own work:
-
-```bash
-ccp gain
-```
-
-Uninstall:
-
-```bash
-ccp uninstall
-```
-
----
-
-## Usage
-
-Primary use case: initialize supported coding-agent integrations so agent shell commands are routed through `ccp`.
-
-```bash
-ccp init
-```
-
-Then verify the effect on real commands:
-
-```bash
-ccp gain
-ccp gain --table
-```
-
-You can also wrap commands directly in local workflows or CI when you want smaller logs without changing the underlying command behavior:
-
-```bash
-ccp ls -la
-ccp git status
-ccp grep -R "TODO" .
-
-# byte-for-byte passthrough
-ccp --raw git status
-```
-
-Chained and piped commands should prefix each executable:
-
-```bash
-ccp echo chain-ok && ccp echo chain-done
-ccp false || ccp echo chain-recovered
-ccp nl -ba spec.md | ccp sed -n '1,260p'
-```
-
-If compressed output seems corrupted, malformed, or unusable for the task, retry with `ccp --raw` as an escape hatch before falling back to the unwrapped command.
-
----
-
 ## Capability Matrix
 
 | Area | Supported |
@@ -222,7 +141,7 @@ If compressed output seems corrupted, malformed, or unusable for the task, retry
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `antigravity`, `amazon-q`, `cline`, `claude`, `codex`, `continue`, `cursor`, `factory`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf` |
+| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codex`, `continue`, `cursor`, `factory`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
 
