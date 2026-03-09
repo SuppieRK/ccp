@@ -46,6 +46,7 @@ const (
 	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
 	AgentContinue      ID = "continue"
+	AgentCostrict      ID = "costrict"
 	AgentCodex         ID = "codex"
 	AgentCursor        ID = "cursor"
 	AgentFactory       ID = "factory"
@@ -60,6 +61,17 @@ const (
 	AgentTrae          ID = "trae"
 	AgentWindsurf      ID = "windsurf"
 )
+
+var toolAliases = map[string]string{
+	string(AgentCostrict): string(AgentRooCode),
+}
+
+func NormalizeToolID(id string) string {
+	if canonical, ok := toolAliases[id]; ok {
+		return canonical
+	}
+	return id
+}
 
 type Adapter interface {
 	ID() string
@@ -80,9 +92,14 @@ type Uninstaller interface {
 }
 
 func SupportedTools(adapters map[string]Adapter) []string {
-	keys := make([]string, 0, len(adapters))
+	keys := make([]string, 0, len(adapters)+len(toolAliases))
 	for k := range adapters {
 		keys = append(keys, k)
+	}
+	for alias, canonical := range toolAliases {
+		if _, ok := adapters[canonical]; ok {
+			keys = append(keys, alias)
+		}
 	}
 	sort.Strings(keys)
 	return keys
@@ -90,7 +107,7 @@ func SupportedTools(adapters map[string]Adapter) []string {
 
 func ValidateSelectedTools(tools []string, adapters map[string]Adapter) error {
 	for _, t := range tools {
-		if _, ok := adapters[t]; !ok {
+		if _, ok := adapters[NormalizeToolID(t)]; !ok {
 			return fmt.Errorf("unsupported tool %q (supported: %s)", t, strings.Join(SupportedTools(adapters), ", "))
 		}
 	}
@@ -99,7 +116,12 @@ func ValidateSelectedTools(tools []string, adapters map[string]Adapter) error {
 
 func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 	detected := make([]string, 0, len(adapters))
-	for _, id := range SupportedTools(adapters) {
+	ids := make([]string, 0, len(adapters))
+	for id := range adapters {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
 		if detector, ok := adapters[id].(Detector); ok {
 			if detector.Detect(scopeRoot) {
 				detected = append(detected, id)

@@ -16,6 +16,16 @@ func TestParseToolsNormalizesSortsAndDedupes(t *testing.T) {
 	}
 }
 
+func TestParseToolsNormalizesAliases(t *testing.T) {
+	t.Parallel()
+
+	got := parseTools(" costrict , roocode ")
+	want := []string{"roocode"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("parseTools() = %v, want %v", got, want)
+	}
+}
+
 func TestRunInitRequiresTools(t *testing.T) {
 	newLifecycleWorkspace(t)
 

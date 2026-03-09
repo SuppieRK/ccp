@@ -468,6 +468,31 @@ func TestRunUninstallRooCodeRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
+func TestRunUninstallCostrictAliasRemovesManagedRuleAndInitConfig(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".roo"), "mkdir .roo: %v")
+
+	chdirForTest(t, tmp)
+
+	if err := RunInit(toolsArgs("costrict")); err != nil {
+		t.Fatalf("costrict init failed: %v", err)
+	}
+	if err := RunUninstall(toolsArgs("costrict")); err != nil {
+		t.Fatalf("costrict uninstall failed: %v", err)
+	}
+
+	rulePath := filepath.Join(tmp, ".roo", "rules", "ccp.md")
+	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
+		t.Fatalf("expected roocode rule file to be removed via costrict alias, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
+		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
+	}
+}
+
 func TestRunUninstallTraeRemovesManagedRuleAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
