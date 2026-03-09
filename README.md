@@ -141,19 +141,9 @@ Results depend on command mix. Run `ccp gain` after real work to see both the wi
 | Java/build | `gradle`, `maven` |
 | JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
 | Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codebuddy`, `codex`, `continue`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `qoder`, `qwen`, `roocode`, `costrict` (alias of `roocode`), `trae`, `windsurf` |
+| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codebuddy`, `codex`, `continue`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `costrict` (alias of `roocode`), `trae`, `windsurf` |
 
 Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
-
----
-
-## Inspired By
-
-`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
-
-You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output rather than introducing a broad meta-command layer. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
-
-That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
 
 ---
 
@@ -205,6 +195,16 @@ Project status: incubating (0.y.z zerover).
 - Users must upgrade to receive security fixes.
 
 See [SECURITY.md](SECURITY.md) for reporting and scope details.
+
+---
+
+## Inspired By
+
+`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
+
+You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output rather than introducing a broad meta-command layer. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
+
+That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
 
 ---
 

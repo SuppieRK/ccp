@@ -38,6 +38,7 @@ const (
 	initCrushDir          = ".crush"
 	initIFlowDir          = ".iflow"
 	initIFlowFileName     = "IFLOW.md"
+	initPiDir             = ".pi"
 	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
 	initKiroRuleName      = "ccp.md"
@@ -694,6 +695,36 @@ func TestRunInitDetectsIFlowWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitDetectsPiWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initPiDir, "mkdir .pi: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "pi" {
+		t.Fatalf("tools = %v, want [pi]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
+		t.Fatalf("expected pi AGENTS.md after detection, err=%v", err)
+	}
+}
+
 func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1273,6 +1304,31 @@ func TestRunInitIFlowUsesRepoMemoryManagedBlock(t *testing.T) {
 	}
 }
 
+func TestRunInitPiUsesRepoAgentsManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initPiDir, "mkdir .pi: %v")
+
+	if err := RunInit([]string{initToolsFlag, "pi"}); err != nil {
+		t.Fatalf("pi init failed: %v", err)
+	}
+
+	gotBytes, err := os.ReadFile(filepath.Join(tmp, initAgentsFileName))
+	if err != nil {
+		t.Fatalf("read pi agents file: %v", err)
+	}
+	got := string(gotBytes)
+	if !strings.Contains(got, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading in Pi agents file, got: %s", got)
+	}
+	if !strings.Contains(got, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note in Pi agents file, got: %s", got)
+	}
+}
+
 func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1600,6 +1656,40 @@ func TestRunInitIFlowPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 	}
 	if strings.Contains(s, "old content") {
 		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitPiPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, filepath.Join(tmp, initPiDir), "mkdir .pi: %v")
+
+	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	initial := "project notes\n\n" + "<!-- BEGIN: CCP MANAGED BLOCK -->\noutdated\n<!-- END: CCP MANAGED BLOCK -->\n"
+	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write initial pi agents file: %v", err)
+	}
+
+	if err := RunInit([]string{initToolsFlag, "pi"}); err != nil {
+		t.Fatalf("pi init failed: %v", err)
+	}
+
+	gotBytes, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read updated pi agents file: %v", err)
+	}
+	got := string(gotBytes)
+	if !strings.Contains(got, "project notes") {
+		t.Fatalf("expected user content to be preserved, got: %s", got)
+	}
+	if strings.Count(got, "<!-- BEGIN: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected one managed block, got: %s", got)
+	}
+	if !strings.Contains(got, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note, got: %s", got)
 	}
 }
 
