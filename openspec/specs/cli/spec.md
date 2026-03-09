@@ -67,12 +67,16 @@ The CLI SHALL provide `ccp gain` for summary savings and `ccp history` for execu
 - **THEN** the CLI includes overall totals for the selected dataset
 - **AND** identifies strongest gains within the selected dataset
 - **AND** explains the main detractors or low-yield command mix that reduced aggregate savings
+- **AND** formats human-readable token and command counts with grouped thousands separators
+- **AND** renders rounded-zero savings entries in natural language rather than as `~0.00%`
+- **AND** varies the bottom-line follow-up sentence based on observed savings so the output reads naturally to humans
 - **AND** does not include promotional prompts or calls to action in the command output.
 
 #### Scenario: Gain table output remains available on demand
 - **WHEN** a user runs `ccp gain --table`
 - **THEN** the CLI prints active filter metadata (`since`, `tool`, `failed`, `period`) before tabular rows
 - **AND** includes one row per grouped tool with compact columns: tool, invocation count, estimated native/proxied tokens, and estimated savings percent
+- **AND** formats human-readable command and token counts with grouped thousands separators
 - **AND** prefixes estimated savings percent values with `~` in text output
 - **AND** appends a trailing `TOTAL` row when data exists.
 

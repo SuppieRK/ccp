@@ -44,6 +44,39 @@ func TestRunGainDefaultRenderingIsText(t *testing.T) {
 	}
 }
 
+func TestRunGainDefaultRenderingFormatsGroupedNumbersAndNoSavingsText(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gain.db")
+	now := time.Now().UTC()
+	appendGainMetrics(t, path, []metrics.RunMetric{
+		{
+			Timestamp: now.Add(-2 * time.Hour),
+			Tool:      "gradle",
+			Command:   "./gradlew test",
+			RawBytes:  20_000_000,
+			KeptBytes: 100_000,
+			ExitCode:  0,
+		},
+		{
+			Timestamp: now.Add(-1 * time.Hour),
+			Tool:      "jar",
+			Command:   "jar tf app.jar",
+			RawBytes:  8_000,
+			KeptBytes: 8_000,
+			ExitCode:  0,
+		},
+	})
+
+	out := captureStdout(t, func() error {
+		return RunGain([]string{}, path)
+	})
+	if !strings.Contains(out, "5,002,000") || !strings.Contains(out, "27,000") {
+		t.Fatalf("expected grouped-number formatting in summary output, got %q", out)
+	}
+	if !strings.Contains(out, "jar (1 cmds, no savings)") {
+		t.Fatalf("expected zero-savings phrasing in summary output, got %q", out)
+	}
+}
+
 func TestRunGainTableIncludesCompactTableAndMissedOpportunities(t *testing.T) {
 	path := seedGainDB(t)
 	out := captureStdout(t, func() error {
@@ -96,6 +129,36 @@ func TestRunGainTableAlignsTotalRowWithCountColumn(t *testing.T) {
 	}
 	if firstDataCountCol != totalCountCol {
 		t.Fatalf("expected TOTAL count column alignment, data=%d total=%d\noutput:\n%s", firstDataCountCol, totalCountCol, out)
+	}
+}
+
+func TestRunGainTableFormatsGroupedNumbers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gain.db")
+	now := time.Now().UTC()
+	appendGainMetrics(t, path, []metrics.RunMetric{
+		{
+			Timestamp: now.Add(-2 * time.Hour),
+			Tool:      "gradle",
+			Command:   "./gradlew test",
+			RawBytes:  20_000_000,
+			KeptBytes: 100_000,
+			ExitCode:  0,
+		},
+		{
+			Timestamp: now.Add(-1 * time.Hour),
+			Tool:      "jar",
+			Command:   "jar tf app.jar",
+			RawBytes:  8_000,
+			KeptBytes: 8_000,
+			ExitCode:  0,
+		},
+	})
+
+	out := captureStdout(t, func() error {
+		return RunGain([]string{flagTable}, path)
+	})
+	if !strings.Contains(out, "5,002,000") || !strings.Contains(out, "27,000") {
+		t.Fatalf("expected grouped-number formatting in table output, got %q", out)
 	}
 }
 
@@ -241,6 +304,25 @@ func TestRunGainWeekSummaryHighlightsBestAndBusiestDays(t *testing.T) {
 	})
 	if !strings.Contains(out, "Last 7d:") || !strings.Contains(out, "Busiest day: "+busiestDay) || !strings.Contains(out, "Best day: "+bestDay) || !strings.Contains(out, "Recent trend:") {
 		t.Fatalf("unexpected weekly summary output: %q", out)
+	}
+}
+
+func TestBottomLineMessageUsesFriendlyBands(t *testing.T) {
+	cases := []struct {
+		pct  float64
+		want string
+	}{
+		{0, "This is fine, better opportunities will come."},
+		{10, "It ain't much, but it's honest work."},
+		{30, "Pretty decent for the kind of noise that adds up all day."},
+		{50, "A solid result, and less noise to drag around."},
+		{70, "Now we're talking - much less noise to drag around."},
+		{90, "Breathtaking results, with plenty of context back for real work."},
+	}
+	for _, tc := range cases {
+		if got := bottomLineMessage(tc.pct); got != tc.want {
+			t.Fatalf("bottomLineMessage(%.2f) = %q, want %q", tc.pct, got, tc.want)
+		}
 	}
 }
 
