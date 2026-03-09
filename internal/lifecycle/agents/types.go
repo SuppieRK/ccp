@@ -42,6 +42,7 @@ const (
 	AgentAuggie        ID = "auggie"
 	AgentAntigravity   ID = "antigravity"
 	AgentAmazonQ       ID = "amazon-q"
+	AgentCodeBuddy     ID = "codebuddy"
 	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
 	AgentContinue      ID = "continue"
@@ -118,6 +119,7 @@ func DefaultAdapters() map[string]Adapter {
 		string(AgentAuggie):        NewAuggieAdapter(),
 		string(AgentAntigravity):   NewAntigravityAdapter(),
 		string(AgentAmazonQ):       NewAmazonQAdapter(),
+		string(AgentCodeBuddy):     NewCodeBuddyAdapter(),
 		string(AgentCline):         NewClineAdapter(),
 		string(AgentClaude):        NewClaudeAdapter(),
 		string(AgentContinue):      NewContinueAdapter(),

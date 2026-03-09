@@ -23,7 +23,7 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init detects tools using registered adapters for the selected scope root.
 
 #### Scenario: detect tool by known directory
-- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`, `.gemini`, `.amazonq`, `.windsurf`, `.clinerules`, `.continue`, `.trae`, `.kiro`, `.qwen`, `.roo`, `.agent`, `.kilocode`, `.qoder`, `.factory`, `.augment`)
+- **WHEN** project root contains a known tool directory (for example `.claude`, `.cursor`, `.codex`, `.opencode`, `.github`, `.gemini`, `.amazonq`, `.windsurf`, `.clinerules`, `.continue`, `.trae`, `.kiro`, `.qwen`, `.roo`, `.agent`, `.kilocode`, `.qoder`, `.factory`, `.augment`, `.codebuddy`)
 - **THEN** that tool is included in detected candidates for init selection.
 
 #### Scenario: detect tool by known config file
@@ -124,6 +124,11 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **THEN** init accepts the tool ID as a valid registered adapter
 - **AND** routes installation through a real Factory adapter.
 
+#### Scenario: codebuddy is a supported adapter-backed tool
+- **WHEN** user selects `codebuddy`
+- **THEN** init accepts the tool ID as a valid registered adapter
+- **AND** routes installation through a real CodeBuddy adapter.
+
 #### Scenario: auggie is a supported adapter-backed tool
 - **WHEN** user selects `auggie`
 - **THEN** init accepts the tool ID as a valid registered adapter
@@ -157,7 +162,7 @@ This framework spec SHALL define only generic init orchestration behavior.
 
 #### Scenario: per-agent install details delegated to dedicated specs
 - **WHEN** validating concrete artifact paths/content for specific agents
-- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-qwen-agent-integration`, `init-roocode-agent-integration`, `init-aider-agent-integration`, `init-antigravity-agent-integration`, `init-kilocode-agent-integration`, `init-qoder-agent-integration`, `init-factory-agent-integration`, `init-auggie-agent-integration`)
+- **THEN** behavior is defined in dedicated specs (for example `init-claude-agent-integration`, `init-codex-agent-integration`, `init-opencode-agent-integration`, `init-github-copilot-agent-integration`, `init-cursor-agent-integration`, `init-gemini-agent-integration`, `init-amazon-q-agent-integration`, `init-windsurf-agent-integration`, `init-cline-agent-integration`, `init-continue-agent-integration`, `init-trae-agent-integration`, `init-kiro-agent-integration`, `init-qwen-agent-integration`, `init-roocode-agent-integration`, `init-aider-agent-integration`, `init-antigravity-agent-integration`, `init-kilocode-agent-integration`, `init-qoder-agent-integration`, `init-factory-agent-integration`, `init-auggie-agent-integration`, `init-codebuddy-agent-integration`)
 - **AND** this framework spec remains agent-agnostic.
 
 ### Requirement: Idempotent and Safe Writes

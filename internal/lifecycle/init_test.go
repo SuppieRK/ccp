@@ -31,6 +31,8 @@ const (
 	initAuggieDir         = ".augment"
 	initAntigravityDir    = ".agent"
 	initAntigravityRule   = "ccp.md"
+	initCodeBuddyDir      = ".codebuddy"
+	initCodeBuddyFileName = "CODEBUDDY.md"
 	initContinueDir       = ".continue"
 	initContinueRuleName  = "ccp.md"
 	initFactoryDir        = ".factory"
@@ -599,6 +601,36 @@ func TestRunInitDetectsAuggieWhenMissingToolsFlag(t *testing.T) {
 	}
 }
 
+func TestRunInitDetectsCodeBuddyWhenMissingToolsFlag(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCodeBuddyDir, "mkdir .codebuddy: %v")
+
+	if err := RunInit(nil); err != nil {
+		t.Fatalf("detected init failed: %v", err)
+	}
+
+	path := filepath.Join(home, ".config", "ccp", initConfigFileName)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read init config: %v", err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		t.Fatalf("unmarshal init config: %v", err)
+	}
+	tools, _ := cfg["tools"].([]any)
+	if len(tools) != 1 || tools[0] != "codebuddy" {
+		t.Fatalf("tools = %v, want [codebuddy]", tools)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, initCodeBuddyFileName)); err != nil {
+		t.Fatalf("expected codebuddy CODEBUDDY.md after detection, err=%v", err)
+	}
+}
+
 func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1070,6 +1102,32 @@ func TestRunInitAuggieUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 }
 
+func TestRunInitCodeBuddyUsesRepoMemoryManagedBlock(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCodeBuddyDir, "mkdir .codebuddy: %v")
+
+	if err := RunInit([]string{initToolsFlag, "codebuddy"}); err != nil {
+		t.Fatalf("codebuddy init failed: %v", err)
+	}
+
+	memoryPath := filepath.Join(tmp, initCodeBuddyFileName)
+	b, err := os.ReadFile(memoryPath)
+	if err != nil {
+		t.Fatalf("read codebuddy memory file: %v", err)
+	}
+	got := string(b)
+	if !strings.Contains(got, "## CCP Integration (Managed)") {
+		t.Fatalf("expected managed heading in CodeBuddy memory file, got: %s", got)
+	}
+	if !strings.Contains(got, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note in CodeBuddy memory file, got: %s", got)
+	}
+}
+
 func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1367,6 +1425,43 @@ func TestRunInitAuggiePreservesUserContentAndReplacesOnlyManagedRegion(t *testin
 	}
 	if strings.Contains(s, "old content") {
 		t.Fatalf("expected old managed content to be replaced, got: %s", s)
+	}
+}
+
+func TestRunInitCodeBuddyPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	chdirForTest(t, tmp)
+	mkdirAllForTest(t, initCodeBuddyDir, "mkdir .codebuddy: %v")
+
+	memoryPath := filepath.Join(tmp, initCodeBuddyFileName)
+	initial := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold managed block\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(memoryPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write codebuddy memory file: %v", err)
+	}
+
+	if err := RunInit([]string{initToolsFlag, "codebuddy"}); err != nil {
+		t.Fatalf("codebuddy init failed: %v", err)
+	}
+
+	b, err := os.ReadFile(memoryPath)
+	if err != nil {
+		t.Fatalf("read codebuddy memory file: %v", err)
+	}
+	got := string(b)
+	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
+		t.Fatalf("expected user content preserved, got: %s", got)
+	}
+	if strings.Contains(got, "old managed block") {
+		t.Fatalf("expected old managed content replaced, got: %s", got)
+	}
+	if strings.Count(got, "<!-- BEGIN: CCP MANAGED BLOCK -->") != 1 {
+		t.Fatalf("expected one managed block, got: %s", got)
+	}
+	if !strings.Contains(got, initRawEscapeHatch) {
+		t.Fatalf("expected raw escape hatch note in updated CodeBuddy memory file, got: %s", got)
 	}
 }
 
