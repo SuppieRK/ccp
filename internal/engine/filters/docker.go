@@ -11,6 +11,7 @@ import (
 const dockerImagesStructuredFormat = "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 const dockerFormatFlag = "--format"
 const dockerStructuredOutputReason = "structured output mode"
+const dockerComposeBuildDispatchKey = "docker compose build"
 const dockerComposePSDispatchKey = "docker compose ps"
 
 var dockerGlobalFlags = map[string]struct{}{
@@ -40,6 +41,7 @@ func NewDockerToolFilter() engine.ToolFilter {
 		dockerfilters.NewPSFilter(),
 		dockerfilters.NewImagesFilter(),
 		dockerfilters.NewLogsFilter(),
+		dockerfilters.NewComposeBuildFilter(),
 		dockerfilters.NewComposePSFilter(),
 		dockerfilters.NewComposeLogsFilter(),
 	)
@@ -131,6 +133,9 @@ func (d *dockerToolFilter) resolve(ev engine.Event) engine.ToolFilter {
 	if strings.HasPrefix(dispatch, "docker logs") {
 		return d.subcommands.Resolve("docker logs")
 	}
+	if strings.HasPrefix(dispatch, dockerComposeBuildDispatchKey) {
+		return d.subcommands.Resolve(dockerComposeBuildDispatchKey)
+	}
 	if strings.HasPrefix(dispatch, dockerComposePSDispatchKey) {
 		return d.subcommands.Resolve(dockerComposePSDispatchKey)
 	}
@@ -161,9 +166,27 @@ func prepareDockerComposeRoute(args, subArgs []string, passthrough engine.Prepar
 			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: dockerStructuredOutputReason}
 		}
 		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: dockerComposePSDispatchKey}
+	case "build":
+		if dockerComposeBuildArgsSupported(reordered[1:]) {
+			return engine.PrepareResult{NormalizedArgs: args, DispatchKey: dockerComposeBuildDispatchKey}
+		}
+		return passthrough
 	default:
 		return passthrough
 	}
+}
+
+func dockerComposeBuildArgsSupported(args []string) bool {
+	for _, raw := range args {
+		arg := strings.TrimSpace(raw)
+		if arg == "" {
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			return false
+		}
+	}
+	return true
 }
 
 func moveLeadingDockerComposeFlags(args []string) ([]string, []string) {

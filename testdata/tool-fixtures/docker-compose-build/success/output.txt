@@ -1,0 +1,4 @@
+ project-web  Built
+ project-api  Built
+[ok] api built
+[ok] web built
