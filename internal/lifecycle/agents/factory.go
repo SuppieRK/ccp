@@ -2,15 +2,15 @@ package agents
 
 import "path/filepath"
 
-const factoryAgentsPath = "AGENTS.md"
+const factoryAgentsPath = ".factory/AGENTS.md"
 
 type FactoryAdapter struct {
-	ManagedRepoInstructionFileAdapter
+	ManagedInstructionFileAdapter
 }
 
 func NewFactoryAdapter() FactoryAdapter {
 	return FactoryAdapter{
-		ManagedRepoInstructionFileAdapter: NewManagedRepoInstructionFileAdapter(
+		ManagedInstructionFileAdapter: NewManagedInstructionFileAdapter(
 			string(AgentFactory),
 			".factory",
 			factoryAgentsPath,
@@ -22,4 +22,8 @@ func NewFactoryAdapter() FactoryAdapter {
 
 func (a FactoryAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, ".factory")
+}
+
+func (a FactoryAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+	return a.ManagedInstructionFileAdapter.Install(ctx, write)
 }

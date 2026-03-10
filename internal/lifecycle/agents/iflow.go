@@ -2,15 +2,15 @@ package agents
 
 import "path/filepath"
 
-const iflowMemoryPath = "IFLOW.md"
+const iflowMemoryPath = ".iflow/IFLOW.md"
 
 type IFlowAdapter struct {
-	ManagedRepoInstructionFileAdapter
+	ManagedInstructionFileAdapter
 }
 
 func NewIFlowAdapter() IFlowAdapter {
 	return IFlowAdapter{
-		ManagedRepoInstructionFileAdapter: NewManagedRepoInstructionFileAdapter(
+		ManagedInstructionFileAdapter: NewManagedInstructionFileAdapter(
 			string(AgentIFlow),
 			".iflow",
 			iflowMemoryPath,
@@ -22,4 +22,8 @@ func NewIFlowAdapter() IFlowAdapter {
 
 func (a IFlowAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, ".iflow")
+}
+
+func (a IFlowAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+	return a.ManagedInstructionFileAdapter.Install(ctx, write)
 }

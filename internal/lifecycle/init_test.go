@@ -30,20 +30,16 @@ const (
 	initAiderConfigName   = ".aider.conf.yml"
 	initAuggieDir         = ".augment"
 	initAntigravityDir    = ".agent"
-	initAntigravityRule   = "ccp.md"
 	initCodeBuddyDir      = ".codebuddy"
-	initCodeBuddyFileName = "CODEBUDDY.md"
 	initContinueDir       = ".continue"
-	initContinueRuleName  = "ccp.md"
 	initCrushDir          = ".crush"
 	initIFlowDir          = ".iflow"
 	initIFlowFileName     = "IFLOW.md"
 	initPiDir             = ".pi"
 	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
-	initKiroRuleName      = "ccp.md"
+	initKiroRuleName      = "AGENTS.md"
 	initKilocodeDir       = ".kilocode"
-	initKilocodeRuleName  = "ccp.md"
 	initQoderDir          = ".qoder"
 	initRooCodeDir        = ".roo"
 	initRooCodeRuleName   = "ccp.md"
@@ -54,7 +50,7 @@ const (
 	initWindsurfDir       = ".windsurf"
 	initWindsurfRuleName  = "ccp.md"
 	initClineDir          = ".clinerules"
-	initClineRuleName     = "ccp.md"
+	initClineHookName     = "PreToolUse"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
 	initOpenCodeRewriteJS = "ccp-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
@@ -384,8 +380,8 @@ func TestRunInitDetectsAntigravityWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "antigravity" {
 		t.Fatalf("tools = %v, want [antigravity]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)); err != nil {
-		t.Fatalf("expected antigravity rule file after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, initGeminiDir, initGeminiFileName)); err != nil {
+		t.Fatalf("expected antigravity gemini-family instructions after detection, err=%v", err)
 	}
 }
 
@@ -416,12 +412,26 @@ func TestRunInitDetectsAiderWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "aider" {
 		t.Fatalf("tools = %v, want [aider]", tools)
 	}
-	configBytes, err := os.ReadFile(filepath.Join(tmp, initAiderConfigName))
+	configBytes, err := os.ReadFile(filepath.Join(home, initAiderConfigName))
 	if err != nil {
 		t.Fatalf("read aider config after detection: %v", err)
 	}
-	if !strings.Contains(string(configBytes), "AGENTS.md") {
-		t.Fatalf("expected AGENTS.md added to aider config, got: %s", string(configBytes))
+	if !strings.Contains(string(configBytes), filepath.Join(home, ".aider.rules.md")) {
+		t.Fatalf("expected home aider rules path added to aider config, got: %s", string(configBytes))
+	}
+	rulesBytes, err := os.ReadFile(filepath.Join(home, ".aider.rules.md"))
+	if err != nil {
+		t.Fatalf("read aider rules after detection: %v", err)
+	}
+	if !strings.Contains(string(rulesBytes), "Use `ccp` as the command prefix for every executable in shell commands") {
+		t.Fatalf("expected managed aider guidance, got: %s", string(rulesBytes))
+	}
+	repoBytes, err := os.ReadFile(filepath.Join(tmp, initAiderConfigName))
+	if err != nil {
+		t.Fatalf("read repo aider config after detection: %v", err)
+	}
+	if string(repoBytes) != "model: sonnet\n" {
+		t.Fatalf("expected repo aider config preserved, got: %s", string(repoBytes))
 	}
 }
 
@@ -450,8 +460,11 @@ func TestRunInitDetectsContinueWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "continue" {
 		t.Fatalf("tools = %v, want [continue]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initContinueDir, "rules", initContinueRuleName)); err != nil {
-		t.Fatalf("expected continue rule file after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, initContinueDir, "hooks", initRewriteScriptName)); err != nil {
+		t.Fatalf("expected continue hook script after detection, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, initContinueDir, initSettingsFileName)); err != nil {
+		t.Fatalf("expected continue settings after detection, err=%v", err)
 	}
 }
 
@@ -480,7 +493,7 @@ func TestRunInitDetectsKiroWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "kiro" {
 		t.Fatalf("tools = %v, want [kiro]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initKiroDir, "steering", initKiroRuleName)); err != nil {
+	if _, err := os.Stat(filepath.Join(home, initKiroDir, "steering", initKiroRuleName)); err != nil {
 		t.Fatalf("expected kiro steering file after detection, err=%v", err)
 	}
 }
@@ -510,8 +523,8 @@ func TestRunInitDetectsKilocodeWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "kilocode" {
 		t.Fatalf("tools = %v, want [kilocode]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)); err != nil {
-		t.Fatalf("expected kilocode rule file after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".config", "kilocode", "plugins", initOpenCodeRewriteJS)); err != nil {
+		t.Fatalf("expected kilocode plugin after detection, err=%v", err)
 	}
 }
 
@@ -540,7 +553,7 @@ func TestRunInitDetectsQoderWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "qoder" {
 		t.Fatalf("tools = %v, want [qoder]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
+	if _, err := os.Stat(filepath.Join(home, ".qoder", "AGENTS.md")); err != nil {
 		t.Fatalf("expected qoder AGENTS.md after detection, err=%v", err)
 	}
 }
@@ -570,8 +583,8 @@ func TestRunInitDetectsFactoryWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "factory" {
 		t.Fatalf("tools = %v, want [factory]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
-		t.Fatalf("expected factory AGENTS.md after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, initFactoryDir, initAgentsFileName)); err != nil {
+		t.Fatalf("expected home factory AGENTS.md after detection, err=%v", err)
 	}
 }
 
@@ -630,8 +643,11 @@ func TestRunInitDetectsCodeBuddyWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "codebuddy" {
 		t.Fatalf("tools = %v, want [codebuddy]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initCodeBuddyFileName)); err != nil {
-		t.Fatalf("expected codebuddy CODEBUDDY.md after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, initCodeBuddyDir, "hooks", initRewriteScriptName)); err != nil {
+		t.Fatalf("expected codebuddy hook after detection, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, initCodeBuddyDir, initSettingsFileName)); err != nil {
+		t.Fatalf("expected codebuddy settings after detection, err=%v", err)
 	}
 }
 
@@ -660,8 +676,11 @@ func TestRunInitDetectsCrushWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "crush" {
 		t.Fatalf("tools = %v, want [crush]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
-		t.Fatalf("expected crush AGENTS.md after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".config", "crush", "CRUSH.md")); err != nil {
+		t.Fatalf("expected crush context file after detection, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "crush", "crush.json")); err != nil {
+		t.Fatalf("expected crush config after detection, err=%v", err)
 	}
 }
 
@@ -690,8 +709,8 @@ func TestRunInitDetectsIFlowWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "iflow" {
 		t.Fatalf("tools = %v, want [iflow]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initIFlowFileName)); err != nil {
-		t.Fatalf("expected iflow IFLOW.md after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, initIFlowDir, initIFlowFileName)); err != nil {
+		t.Fatalf("expected home iflow IFLOW.md after detection, err=%v", err)
 	}
 }
 
@@ -750,7 +769,7 @@ func TestRunInitDetectsRooCodeWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "roocode" {
 		t.Fatalf("tools = %v, want [roocode]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initRooCodeDir, "rules", initRooCodeRuleName)); err != nil {
+	if _, err := os.Stat(filepath.Join(home, initRooCodeDir, "rules", initRooCodeRuleName)); err != nil {
 		t.Fatalf("expected roocode rule file after detection, err=%v", err)
 	}
 }
@@ -780,7 +799,7 @@ func TestRunInitCostrictAliasUsesRooCodeManagedRule(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "roocode" {
 		t.Fatalf("tools = %v, want [roocode]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initRooCodeDir, "rules", initRooCodeRuleName)); err != nil {
+	if _, err := os.Stat(filepath.Join(home, initRooCodeDir, "rules", initRooCodeRuleName)); err != nil {
 		t.Fatalf("expected roocode rule file after costrict alias init, err=%v", err)
 	}
 }
@@ -840,8 +859,11 @@ func TestRunInitDetectsWindsurfWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "windsurf" {
 		t.Fatalf("tools = %v, want [windsurf]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initWindsurfDir, "rules", initWindsurfRuleName)); err != nil {
-		t.Fatalf("expected windsurf rule file after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".codeium", "windsurf", "hooks", "ccp-block.sh")); err != nil {
+		t.Fatalf("expected windsurf hook script after detection, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".codeium", "windsurf", "hooks.json")); err != nil {
+		t.Fatalf("expected windsurf hooks file after detection, err=%v", err)
 	}
 }
 
@@ -870,8 +892,8 @@ func TestRunInitDetectsClineWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "cline" {
 		t.Fatalf("tools = %v, want [cline]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initClineDir, initClineRuleName)); err != nil {
-		t.Fatalf("expected cline rule file after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, "Documents", "Cline", "Hooks", initClineHookName)); err != nil {
+		t.Fatalf("expected cline hook file after detection, err=%v", err)
 	}
 }
 
@@ -900,8 +922,15 @@ func TestRunInitDetectsQwenWhenMissingToolsFlag(t *testing.T) {
 	if len(tools) != 1 || tools[0] != "qwen" {
 		t.Fatalf("tools = %v, want [qwen]", tools)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, initAgentsFileName)); err != nil {
-		t.Fatalf("expected qwen AGENTS.md after detection, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".qwen", "AGENTS.md")); err != nil {
+		t.Fatalf("expected home qwen AGENTS.md after detection, err=%v", err)
+	}
+	settingsBytes, err := os.ReadFile(filepath.Join(home, ".qwen", "settings.json"))
+	if err != nil {
+		t.Fatalf("read qwen settings after detection: %v", err)
+	}
+	if !strings.Contains(string(settingsBytes), `"fileName": "AGENTS.md"`) {
+		t.Fatalf("expected qwen settings to use AGENTS.md, got: %s", string(settingsBytes))
 	}
 }
 
@@ -1114,7 +1143,7 @@ func TestRunInitCodexPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 	}
 }
 
-func TestRunInitQwenUsesRepoAgentsManagedBlock(t *testing.T) {
+func TestRunInitQwenUsesHomeAgentsManagedBlock(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1125,7 +1154,7 @@ func TestRunInitQwenUsesRepoAgentsManagedBlock(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
 		t.Fatalf("qwen init failed: %v", err)
 	}
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".qwen", "AGENTS.md")
 	b, err := os.ReadFile(agentsPath)
 	if err != nil {
 		t.Fatalf("read qwen agents file: %v", err)
@@ -1140,9 +1169,17 @@ func TestRunInitQwenUsesRepoAgentsManagedBlock(t *testing.T) {
 	if !strings.Contains(s, initRawEscapeHatch) {
 		t.Fatalf("expected raw escape hatch note, got: %s", s)
 	}
+	settingsPath := filepath.Join(home, ".qwen", "settings.json")
+	settingsBytes, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read qwen settings: %v", err)
+	}
+	if !strings.Contains(string(settingsBytes), `"fileName": "AGENTS.md"`) {
+		t.Fatalf("expected qwen settings to reference AGENTS.md, got: %s", string(settingsBytes))
+	}
 }
 
-func TestRunInitQoderUsesRepoAgentsManagedBlock(t *testing.T) {
+func TestRunInitQoderUsesHomeAgentsManagedBlock(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1153,7 +1190,7 @@ func TestRunInitQoderUsesRepoAgentsManagedBlock(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "qoder"}); err != nil {
 		t.Fatalf("qoder init failed: %v", err)
 	}
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".qoder", "AGENTS.md")
 	b, err := os.ReadFile(agentsPath)
 	if err != nil {
 		t.Fatalf("read qoder agents file: %v", err)
@@ -1170,7 +1207,7 @@ func TestRunInitQoderUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 }
 
-func TestRunInitFactoryUsesRepoAgentsManagedBlock(t *testing.T) {
+func TestRunInitFactoryUsesHomeAgentsManagedBlock(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1181,7 +1218,7 @@ func TestRunInitFactoryUsesRepoAgentsManagedBlock(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "factory"}); err != nil {
 		t.Fatalf("factory init failed: %v", err)
 	}
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, initFactoryDir, initAgentsFileName)
 	b, err := os.ReadFile(agentsPath)
 	if err != nil {
 		t.Fatalf("read factory agents file: %v", err)
@@ -1226,7 +1263,7 @@ func TestRunInitAuggieUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 }
 
-func TestRunInitCodeBuddyUsesRepoMemoryManagedBlock(t *testing.T) {
+func TestRunInitCodeBuddyUsesUserSettingsHookIntegration(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1238,21 +1275,25 @@ func TestRunInitCodeBuddyUsesRepoMemoryManagedBlock(t *testing.T) {
 		t.Fatalf("codebuddy init failed: %v", err)
 	}
 
-	memoryPath := filepath.Join(tmp, initCodeBuddyFileName)
-	b, err := os.ReadFile(memoryPath)
+	hookPath := filepath.Join(home, initCodeBuddyDir, "hooks", initRewriteScriptName)
+	if _, err := os.Stat(hookPath); err != nil {
+		t.Fatalf("expected codebuddy hook installed: %v", err)
+	}
+	settingsPath := filepath.Join(home, initCodeBuddyDir, initSettingsFileName)
+	b, err := os.ReadFile(settingsPath)
 	if err != nil {
-		t.Fatalf("read codebuddy memory file: %v", err)
+		t.Fatalf("read codebuddy settings file: %v", err)
 	}
 	got := string(b)
-	if !strings.Contains(got, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading in CodeBuddy memory file, got: %s", got)
+	if !strings.Contains(got, `"PreToolUse"`) {
+		t.Fatalf("expected PreToolUse entry in CodeBuddy settings, got: %s", got)
 	}
-	if !strings.Contains(got, initRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note in CodeBuddy memory file, got: %s", got)
+	if !strings.Contains(got, strings.ReplaceAll(hookPath, "\\", "\\\\")) {
+		t.Fatalf("expected managed hook path in CodeBuddy settings, got: %s", got)
 	}
 }
 
-func TestRunInitCrushUsesRepoAgentsManagedBlock(t *testing.T) {
+func TestRunInitCrushUsesHomeContextAndConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1264,21 +1305,29 @@ func TestRunInitCrushUsesRepoAgentsManagedBlock(t *testing.T) {
 		t.Fatalf("crush init failed: %v", err)
 	}
 
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
-	b, err := os.ReadFile(agentsPath)
+	contextPath := filepath.Join(home, ".config", "crush", "CRUSH.md")
+	b, err := os.ReadFile(contextPath)
 	if err != nil {
-		t.Fatalf("read crush agents file: %v", err)
+		t.Fatalf("read crush context file: %v", err)
 	}
 	got := string(b)
 	if !strings.Contains(got, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading in Crush agents file, got: %s", got)
+		t.Fatalf("expected managed heading in Crush context file, got: %s", got)
 	}
 	if !strings.Contains(got, initRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note in Crush agents file, got: %s", got)
+		t.Fatalf("expected raw escape hatch note in Crush context file, got: %s", got)
+	}
+	configPath := filepath.Join(home, ".config", "crush", "crush.json")
+	cfg, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read crush config file: %v", err)
+	}
+	if !strings.Contains(string(cfg), strings.ReplaceAll(contextPath, "\\", "\\\\")) {
+		t.Fatalf("expected crush config to reference context path, got: %s", string(cfg))
 	}
 }
 
-func TestRunInitIFlowUsesRepoMemoryManagedBlock(t *testing.T) {
+func TestRunInitIFlowUsesHomeMemoryManagedBlock(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1290,7 +1339,7 @@ func TestRunInitIFlowUsesRepoMemoryManagedBlock(t *testing.T) {
 		t.Fatalf("iflow init failed: %v", err)
 	}
 
-	memoryPath := filepath.Join(tmp, initIFlowFileName)
+	memoryPath := filepath.Join(home, initIFlowDir, initIFlowFileName)
 	b, err := os.ReadFile(memoryPath)
 	if err != nil {
 		t.Fatalf("read iflow memory file: %v", err)
@@ -1329,7 +1378,7 @@ func TestRunInitPiUsesRepoAgentsManagedBlock(t *testing.T) {
 	}
 }
 
-func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
+func TestRunInitAntigravityUsesGeminiFamilyHomeTarget(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1340,10 +1389,10 @@ func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
 		t.Fatalf("antigravity init failed: %v", err)
 	}
-	rulePath := filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)
-	b, err := os.ReadFile(rulePath)
+	instructionsPath := filepath.Join(home, initGeminiDir, initGeminiFileName)
+	b, err := os.ReadFile(instructionsPath)
 	if err != nil {
-		t.Fatalf("read antigravity rule file: %v", err)
+		t.Fatalf("read antigravity gemini-family instructions file: %v", err)
 	}
 	s := string(b)
 	if !strings.Contains(s, "## CCP Integration (Managed)") {
@@ -1355,12 +1404,12 @@ func TestRunInitAntigravityUsesRepoRuleFile(t *testing.T) {
 	if !strings.Contains(s, initRawEscapeHatch) {
 		t.Fatalf("expected raw escape hatch note, got: %s", s)
 	}
-	if strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
-		t.Fatalf("did not expect managed block markers in antigravity rule, got: %s", s)
+	if !strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || !strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
+		t.Fatalf("expected managed block markers in antigravity gemini-family instructions, got: %s", s)
 	}
 }
 
-func TestRunInitAntigravityRerunDoesNotRewriteUnchangedRule(t *testing.T) {
+func TestRunInitAntigravityRerunDoesNotRewriteUnchangedGeminiFamilyTarget(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1371,23 +1420,23 @@ func TestRunInitAntigravityRerunDoesNotRewriteUnchangedRule(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
 		t.Fatalf(initFirstFailedFmt, err)
 	}
-	rulePath := filepath.Join(tmp, initAntigravityDir, "rules", initAntigravityRule)
-	infoBefore, err := os.Stat(rulePath)
+	instructionsPath := filepath.Join(home, initGeminiDir, initGeminiFileName)
+	infoBefore, err := os.Stat(instructionsPath)
 	if err != nil {
 		t.Fatalf("stat before rerun: %v", err)
 	}
-	before, err := os.ReadFile(rulePath)
+	before, err := os.ReadFile(instructionsPath)
 	if err != nil {
 		t.Fatalf("read before: %v", err)
 	}
 	if err := RunInit([]string{initToolsFlag, "antigravity"}); err != nil {
 		t.Fatalf(initSecondFailedFmt, err)
 	}
-	infoAfter, err := os.Stat(rulePath)
+	infoAfter, err := os.Stat(instructionsPath)
 	if err != nil {
 		t.Fatalf("stat after rerun: %v", err)
 	}
-	after, err := os.ReadFile(rulePath)
+	after, err := os.ReadFile(instructionsPath)
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
@@ -1397,12 +1446,12 @@ func TestRunInitAntigravityRerunDoesNotRewriteUnchangedRule(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatalf("expected idempotent rerun to keep file unchanged")
 	}
-	if matches, _ := filepath.Glob(rulePath + ".bak.*"); len(matches) != 0 {
+	if matches, _ := filepath.Glob(instructionsPath + ".bak.*"); len(matches) != 0 {
 		t.Fatalf("expected no backups for idempotent rerun, got %d", len(matches))
 	}
 }
 
-func TestRunInitKilocodeUsesRepoRuleFile(t *testing.T) {
+func TestRunInitKilocodeUsesHomePluginFile(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1413,27 +1462,24 @@ func TestRunInitKilocodeUsesRepoRuleFile(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
 		t.Fatalf("kilocode init failed: %v", err)
 	}
-	rulePath := filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)
-	b, err := os.ReadFile(rulePath)
+	pluginPath := filepath.Join(home, ".config", "kilocode", "plugins", initOpenCodeRewriteJS)
+	b, err := os.ReadFile(pluginPath)
 	if err != nil {
-		t.Fatalf("read kilocode rule file: %v", err)
+		t.Fatalf("read kilocode plugin file: %v", err)
 	}
 	s := string(b)
-	if !strings.Contains(s, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", s)
+	if !strings.Contains(s, `"tool.execute.before"`) {
+		t.Fatalf("expected kilocode plugin hook, got: %s", s)
 	}
-	if !strings.Contains(s, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected preferred ccp wording, got: %s", s)
-	}
-	if !strings.Contains(s, initRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", s)
+	if !strings.Contains(s, `input.tool !== "bash"`) {
+		t.Fatalf("expected bash guard, got: %s", s)
 	}
 	if strings.Contains(s, "<!-- BEGIN: CCP MANAGED BLOCK -->") || strings.Contains(s, "<!-- END: CCP MANAGED BLOCK -->") {
-		t.Fatalf("did not expect managed block markers in kilocode rule, got: %s", s)
+		t.Fatalf("did not expect managed block markers in kilocode plugin, got: %s", s)
 	}
 }
 
-func TestRunInitKilocodeRerunDoesNotRewriteUnchangedRule(t *testing.T) {
+func TestRunInitKilocodeRerunDoesNotRewriteUnchangedPlugin(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
@@ -1444,23 +1490,23 @@ func TestRunInitKilocodeRerunDoesNotRewriteUnchangedRule(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
 		t.Fatalf(initFirstFailedFmt, err)
 	}
-	rulePath := filepath.Join(tmp, initKilocodeDir, "rules", initKilocodeRuleName)
-	infoBefore, err := os.Stat(rulePath)
+	pluginPath := filepath.Join(home, ".config", "kilocode", "plugins", initOpenCodeRewriteJS)
+	infoBefore, err := os.Stat(pluginPath)
 	if err != nil {
 		t.Fatalf("stat before rerun: %v", err)
 	}
-	before, err := os.ReadFile(rulePath)
+	before, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read before: %v", err)
 	}
 	if err := RunInit([]string{initToolsFlag, "kilocode"}); err != nil {
 		t.Fatalf(initSecondFailedFmt, err)
 	}
-	infoAfter, err := os.Stat(rulePath)
+	infoAfter, err := os.Stat(pluginPath)
 	if err != nil {
 		t.Fatalf("stat after rerun: %v", err)
 	}
-	after, err := os.ReadFile(rulePath)
+	after, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
@@ -1470,7 +1516,7 @@ func TestRunInitKilocodeRerunDoesNotRewriteUnchangedRule(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatalf("expected idempotent rerun to keep file unchanged")
 	}
-	if matches, _ := filepath.Glob(rulePath + ".bak.*"); len(matches) != 0 {
+	if matches, _ := filepath.Glob(pluginPath + ".bak.*"); len(matches) != 0 {
 		t.Fatalf("expected no backups for idempotent rerun, got %d", len(matches))
 	}
 }
@@ -1486,10 +1532,15 @@ func TestRunInitQwenRerunDoesNotDuplicateManagedBlock(t *testing.T) {
 	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
 		t.Fatalf(initFirstFailedFmt, err)
 	}
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".qwen", "AGENTS.md")
 	before, err := os.ReadFile(agentsPath)
 	if err != nil {
 		t.Fatalf("read before: %v", err)
+	}
+	settingsPath := filepath.Join(home, ".qwen", "settings.json")
+	settingsBefore, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings before: %v", err)
 	}
 	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
 		t.Fatalf(initSecondFailedFmt, err)
@@ -1507,6 +1558,13 @@ func TestRunInitQwenRerunDoesNotDuplicateManagedBlock(t *testing.T) {
 	if strings.Count(string(after), "<!-- END: CCP MANAGED BLOCK -->") != 1 {
 		t.Fatalf("expected single end marker")
 	}
+	settingsAfter, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings after: %v", err)
+	}
+	if string(settingsBefore) != string(settingsAfter) {
+		t.Fatalf("expected idempotent rerun to keep qwen settings unchanged")
+	}
 }
 
 func TestRunInitQwenPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
@@ -1516,8 +1574,9 @@ func TestRunInitQwenPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, initQwenDir), "mkdir .qwen: %v")
 
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".qwen", "AGENTS.md")
 	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	mkdirAllForTest(t, filepath.Dir(agentsPath), "mkdir ~/.qwen: %v")
 	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("write initial agents file: %v", err)
 	}
@@ -1539,6 +1598,33 @@ func TestRunInitQwenPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.
 	}
 }
 
+func TestRunInitQwenPreservesUnrelatedSettingsWhileSettingContextFileName(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, initQwenDir), "mkdir .qwen: %v")
+	settingsPath := filepath.Join(home, ".qwen", "settings.json")
+	mkdirAllForTest(t, filepath.Dir(settingsPath), "mkdir ~/.qwen: %v")
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"dark\"\n}\n"), 0o644); err != nil {
+		t.Fatalf("write initial qwen settings: %v", err)
+	}
+	chdirForTest(t, tmp)
+
+	if err := RunInit([]string{initToolsFlag, "qwen"}); err != nil {
+		t.Fatalf("qwen init failed: %v", err)
+	}
+
+	b, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read updated qwen settings: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, `"theme": "dark"`) || !strings.Contains(s, `"fileName": "AGENTS.md"`) {
+		t.Fatalf("expected unrelated settings preserved and context.fileName added, got: %s", s)
+	}
+}
+
 func TestRunInitQoderPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
@@ -1546,7 +1632,8 @@ func TestRunInitQoderPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, initQoderDir), "mkdir .qoder: %v")
 
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".qoder", "AGENTS.md")
+	mkdirAllForTest(t, filepath.Dir(agentsPath), "mkdir ~/.qoder: %v")
 	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("write initial agents file: %v", err)
@@ -1569,14 +1656,15 @@ func TestRunInitQoderPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 	}
 }
 
-func TestRunInitFactoryPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+func TestRunInitFactoryPreservesHomeUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, initFactoryDir), "mkdir .factory: %v")
+	mkdirAllForTest(t, filepath.Join(home, initFactoryDir), "mkdir home .factory: %v")
 
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, initFactoryDir, initAgentsFileName)
 	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("write initial agents file: %v", err)
@@ -1629,14 +1717,15 @@ func TestRunInitAuggiePreservesUserContentAndReplacesOnlyManagedRegion(t *testin
 	}
 }
 
-func TestRunInitIFlowPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+func TestRunInitIFlowPreservesHomeUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, initIFlowDir), "mkdir .iflow: %v")
+	mkdirAllForTest(t, filepath.Join(home, initIFlowDir), "mkdir home .iflow: %v")
 
-	memoryPath := filepath.Join(tmp, initIFlowFileName)
+	memoryPath := filepath.Join(home, initIFlowDir, initIFlowFileName)
 	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(memoryPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("write initial iflow memory file: %v", err)
@@ -1693,17 +1782,22 @@ func TestRunInitPiPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T)
 	}
 }
 
-func TestRunInitCrushPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+func TestRunInitCrushPreservesUserContentAndConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, initCrushDir), "mkdir .crush: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".config", "crush"), "mkdir crush config: %v")
 
-	agentsPath := filepath.Join(tmp, initAgentsFileName)
+	agentsPath := filepath.Join(home, ".config", "crush", "CRUSH.md")
 	initial := "# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(initial), 0o644); err != nil {
 		t.Fatalf("write initial agents file: %v", err)
+	}
+	configPath := filepath.Join(home, ".config", "crush", "crush.json")
+	if err := os.WriteFile(configPath, []byte("{\n  \"theme\": \"dark\"\n}\n"), 0o644); err != nil {
+		t.Fatalf("write crush config file: %v", err)
 	}
 	chdirForTest(t, tmp)
 
@@ -1721,42 +1815,47 @@ func TestRunInitCrushPreservesUserContentAndReplacesOnlyManagedRegion(t *testing
 	if strings.Contains(s, "old content") {
 		t.Fatalf("expected old managed content to be replaced, got: %s", s)
 	}
+	cfg, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read updated crush config: %v", err)
+	}
+	if !strings.Contains(string(cfg), `"theme": "dark"`) {
+		t.Fatalf("expected unrelated crush config preserved, got: %s", string(cfg))
+	}
 }
 
-func TestRunInitCodeBuddyPreservesUserContentAndReplacesOnlyManagedRegion(t *testing.T) {
+func TestRunInitCodeBuddyPreservesUnrelatedSettings(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, initMkdirHomeErrFmt)
 	setHomeDirForTest(t, home)
 	chdirForTest(t, tmp)
 	mkdirAllForTest(t, initCodeBuddyDir, "mkdir .codebuddy: %v")
+	mkdirAllForTest(t, filepath.Join(home, initCodeBuddyDir), "mkdir home .codebuddy: %v")
 
-	memoryPath := filepath.Join(tmp, initCodeBuddyFileName)
-	initial := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold managed block\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
-	if err := os.WriteFile(memoryPath, []byte(initial), 0o644); err != nil {
-		t.Fatalf("write codebuddy memory file: %v", err)
+	settingsPath := filepath.Join(home, initCodeBuddyDir, initSettingsFileName)
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"light\"\n}\n"), 0o644); err != nil {
+		t.Fatalf("write codebuddy settings file: %v", err)
 	}
 
 	if err := RunInit([]string{initToolsFlag, "codebuddy"}); err != nil {
 		t.Fatalf("codebuddy init failed: %v", err)
 	}
 
-	b, err := os.ReadFile(memoryPath)
+	b, err := os.ReadFile(settingsPath)
 	if err != nil {
-		t.Fatalf("read codebuddy memory file: %v", err)
+		t.Fatalf("read codebuddy settings file: %v", err)
 	}
 	got := string(b)
-	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
-		t.Fatalf("expected user content preserved, got: %s", got)
+	if !strings.Contains(got, `"theme": "light"`) {
+		t.Fatalf("expected unrelated CodeBuddy settings preserved, got: %s", got)
 	}
-	if strings.Contains(got, "old managed block") {
-		t.Fatalf("expected old managed content replaced, got: %s", got)
+	if !strings.Contains(got, `"PreToolUse"`) {
+		t.Fatalf("expected managed hook added, got: %s", got)
 	}
-	if strings.Count(got, "<!-- BEGIN: CCP MANAGED BLOCK -->") != 1 {
-		t.Fatalf("expected one managed block, got: %s", got)
-	}
-	if !strings.Contains(got, initRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note in updated CodeBuddy memory file, got: %s", got)
+	escapedHook := strings.ReplaceAll(filepath.Join(home, initCodeBuddyDir, "hooks", initRewriteScriptName), "\\", "\\\\")
+	if strings.Count(got, escapedHook) != 1 {
+		t.Fatalf("expected one managed codebuddy hook path, got: %s", got)
 	}
 }
 

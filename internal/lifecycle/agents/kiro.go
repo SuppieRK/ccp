@@ -2,27 +2,20 @@ package agents
 
 import "path/filepath"
 
-const kiroSteeringPath = ".kiro/steering/ccp.md"
+const kiroSteeringPath = ".kiro/steering/AGENTS.md"
 
 type KiroAdapter struct {
-	ManagedRepoRuleFileAdapter
+	ManagedInstructionFileAdapter
 }
 
 func NewKiroAdapter() KiroAdapter {
 	return KiroAdapter{
-		ManagedRepoRuleFileAdapter: NewManagedRepoRuleFileAdapter(
+		ManagedInstructionFileAdapter: NewManagedInstructionFileAdapter(
 			string(AgentKiro),
 			".kiro",
 			kiroSteeringPath,
 			"missing kiro steering file: %s",
-			"missing kiro managed guidance in %s",
-			kiroSteeringContent,
-			[]string{
-				"## CCP Integration (Managed)",
-				"Use `ccp` as the command prefix for every executable in shell commands",
-				"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
-				ccpRawEscapeHatch,
-			},
+			"missing kiro managed block markers in %s",
 		),
 	}
 }
@@ -31,6 +24,6 @@ func (a KiroAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, ".kiro")
 }
 
-func kiroSteeringContent() string {
-	return ccpManagedGuidanceMarkdown()
+func (a KiroAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+	return a.ManagedInstructionFileAdapter.Install(ctx, write)
 }

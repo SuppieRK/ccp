@@ -34,7 +34,8 @@ func RunInit(args []string) error {
 		[]string{"ccp init [--tools <tool,tool,...>]"},
 		"When --tools is omitted, ccp auto-detects supported tools from the current repository.",
 		"ccp stores init state at ~/.config/ccp/init.json.",
-		"Each integration manages its own install target; agent adapters may use home-scoped locations.",
+		"Repository markers drive detection only; each integration manages its own canonical install target.",
+		"Agent adapters may install into home-scoped locations when that is the supported integration surface.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {

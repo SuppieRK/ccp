@@ -2,15 +2,15 @@ package agents
 
 import "path/filepath"
 
-const qoderAgentsPath = "AGENTS.md"
+const qoderAgentsPath = ".qoder/AGENTS.md"
 
 type QoderAdapter struct {
-	ManagedRepoInstructionFileAdapter
+	ManagedInstructionFileAdapter
 }
 
 func NewQoderAdapter() QoderAdapter {
 	return QoderAdapter{
-		ManagedRepoInstructionFileAdapter: NewManagedRepoInstructionFileAdapter(
+		ManagedInstructionFileAdapter: NewManagedInstructionFileAdapter(
 			string(AgentQoder),
 			".qoder",
 			qoderAgentsPath,

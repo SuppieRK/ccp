@@ -118,9 +118,7 @@ func TestInitPathUsesHomeConfig(t *testing.T) {
 	if path == "" {
 		t.Fatalf("unexpected empty path")
 	}
-	if rel, relErr := filepath.Rel(home, path); relErr != nil || strings.HasPrefix(rel, "..") {
-		t.Fatalf("path %s is not under home %s", path, home)
-	}
+	assertPathUnderBase(t, home, path)
 }
 
 func TestApplyAdapters(t *testing.T) {

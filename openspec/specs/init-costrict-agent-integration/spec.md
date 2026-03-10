@@ -6,18 +6,18 @@ Define how `ccp init` accepts `costrict` as an alias for the existing RooCode in
 ## Requirements
 ### Requirement: Normalize `costrict` to RooCode
 
-`ccp init` and `ccp uninstall` MUST treat `costrict` as an alias of the existing RooCode integration.
+`ccp init` and `ccp uninstall` MUST treat `costrict` as an alias of the canonical RooCode integration target.
 
-#### Scenario: init alias resolves to RooCode integration
+#### Scenario: init alias resolves to canonical roocode target
 - **WHEN** the user runs `ccp init --tools costrict`
 - **THEN** CCP accepts `costrict` as a valid tool selection
 - **AND** normalizes it to the RooCode integration path
-- **AND** installs CCP-managed guidance into `.roo/rules/ccp.md`
+- **AND** installs CCP-managed guidance into the canonical RooCode target under `~/.roo/rules/`
 
-#### Scenario: uninstall alias resolves to RooCode integration
+#### Scenario: uninstall alias resolves to canonical roocode target
 - **WHEN** the user runs `ccp uninstall --tools costrict`
 - **THEN** CCP accepts `costrict` as a valid tool selection
-- **AND** removes the same CCP-managed RooCode rule file content it would remove for `roocode`
+- **AND** removes the same CCP-managed RooCode artifacts it would remove for `roocode`
 
 ### Requirement: Preserve Singular `.roo` Auto-Detection
 
@@ -30,10 +30,10 @@ Auto-detection for `.roo` projects MUST remain singular.
 
 ### Requirement: Reuse Existing RooCode Managed Path
 
-The `costrict` alias MUST reuse RooCode's existing managed target at `.roo/rules/ccp.md`.
+The `costrict` alias MUST reuse RooCode's canonical managed target at the home-scoped `.roo` rules directory.
 
 #### Scenario: rerun remains idempotent through alias
-- **GIVEN** `.roo/rules/ccp.md` already contains the CCP-managed RooCode guidance
+- **GIVEN** the canonical RooCode managed guidance already exists in the home-scoped `.roo` rules directory
 - **WHEN** the user reruns `ccp init --tools costrict`
 - **THEN** CCP does not duplicate the managed content
-- **AND** the resulting file remains semantically unchanged
+- **AND** the resulting configuration remains semantically unchanged

@@ -5,12 +5,12 @@ import "path/filepath"
 const roocodeRulePath = ".roo/rules/ccp.md"
 
 type RooCodeAdapter struct {
-	ManagedRepoRuleFileAdapter
+	ManagedHomeRuleFileAdapter
 }
 
 func NewRooCodeAdapter() RooCodeAdapter {
 	return RooCodeAdapter{
-		ManagedRepoRuleFileAdapter: NewManagedRepoRuleFileAdapter(
+		ManagedHomeRuleFileAdapter: NewManagedHomeRuleFileAdapter(
 			string(AgentRooCode),
 			".roo",
 			roocodeRulePath,
@@ -29,6 +29,10 @@ func NewRooCodeAdapter() RooCodeAdapter {
 
 func (a RooCodeAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, ".roo")
+}
+
+func (a RooCodeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+	return a.ManagedHomeRuleFileAdapter.Install(ctx, write)
 }
 
 func roocodeRuleContent() string {

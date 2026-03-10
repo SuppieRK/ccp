@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	aiderConfigPath     = ".aider.conf.yml"
-	aiderAgentsReadPath = "AGENTS.md"
+	aiderConfigPath = ".aider.conf.yml"
+	aiderRulesPath  = ".aider.rules.md"
 )
 
 type AiderAdapter struct{}
@@ -31,80 +31,132 @@ func (a AiderAdapter) Detect(scopeRoot string) bool {
 }
 
 func (a AiderAdapter) targetPath(ctx Context) string {
-	return filepath.Join(ctx.ScopeRoot, aiderConfigPath)
+	return ResolveHomeScopedPath(ctx.HomeDir, aiderConfigPath)
+}
+
+func (a AiderAdapter) rulesPath(ctx Context) string {
+	return ResolveHomeScopedPath(ctx.HomeDir, aiderRulesPath)
 }
 
 func (a AiderAdapter) Plan(ctx Context) []PlannedArtifact {
-	return []PlannedArtifact{{
-		Kind:    ArtifactSettings,
-		Path:    a.targetPath(ctx),
-		Content: "read:\n  - AGENTS.md\n",
-		Perm:    0o644,
-	}}
+	return []PlannedArtifact{
+		{
+			Kind:    ArtifactSettings,
+			Path:    a.targetPath(ctx),
+			Content: fmt.Sprintf("read:\n  - %s\n", a.rulesPath(ctx)),
+			Perm:    0o644,
+		},
+		{
+			Kind:    ArtifactSettings,
+			Path:    a.rulesPath(ctx),
+			Content: ccpManagedBlockTemplate(),
+			Perm:    0o644,
+		},
+	}
 }
 
 func (a AiderAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
 	target := a.targetPath(ctx)
-	content, err := upsertAiderReadConfig(target)
+	readPath := a.rulesPath(ctx)
+	content, err := upsertAiderReadConfig(target, readPath)
 	if err != nil {
 		return InstallResult{}, err
 	}
-	changed, err := write(target, []byte(content), 0o644)
+	configChanged, err := write(target, []byte(content), 0o644)
 	if err != nil {
 		return InstallResult{}, err
 	}
-	if !changed {
-		return InstallResult{Noop: 1}, nil
+	rulesContent, err := upsertManagedInstructionBlock(readPath)
+	if err != nil {
+		return InstallResult{}, err
 	}
-	return InstallResult{Applied: 1}, nil
+	rulesChanged, err := write(readPath, []byte(rulesContent), 0o644)
+	if err != nil {
+		return InstallResult{}, err
+	}
+
+	res := InstallResult{}
+	for _, changed := range []bool{configChanged, rulesChanged} {
+		if changed {
+			res.Applied++
+		} else {
+			res.Noop++
+		}
+	}
+	return res, nil
 }
 
 func (a AiderAdapter) Verify(ctx Context) error {
-	ok, err := aiderConfigHasAgentsRead(a.targetPath(ctx))
+	target := a.targetPath(ctx)
+	readPath := a.rulesPath(ctx)
+	ok, err := aiderConfigHasRead(target, readPath)
 	if err != nil {
-		return fmt.Errorf("missing aider config file: %s", a.targetPath(ctx))
+		return fmt.Errorf("missing aider config file: %s", target)
 	}
 	if !ok {
-		return fmt.Errorf("missing aider managed read guidance in %s", a.targetPath(ctx))
+		return fmt.Errorf("missing aider managed read guidance in %s", target)
+	}
+	if err := verifyManagedInstructionBlock(readPath, "missing aider rules file: %s", "missing aider managed block markers in %s"); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (a AiderAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	target := a.targetPath(ctx)
-	updated, changed, removeAll, err := removeAiderReadConfig(target)
+	readPath := a.rulesPath(ctx)
+	updated, changed, removeAll, err := removeAiderReadConfig(target, readPath)
 	if err != nil {
 		return InstallResult{}, err
 	}
+	res, err := applyAiderUninstallChange(target, updated, changed, removeAll)
+	if err != nil {
+		return InstallResult{}, err
+	}
+
+	rulesUpdated, rulesChanged, rulesRemoveAll, err := removeManagedInstructionBlock(readPath)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	rulesRes, err := applyAiderUninstallChange(readPath, rulesUpdated, rulesChanged, rulesRemoveAll)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	res.Applied += rulesRes.Applied
+	res.Noop += rulesRes.Noop
+	return res, nil
+}
+
+func applyAiderUninstallChange(path, updated string, changed, removeAll bool) (InstallResult, error) {
 	if !changed {
 		return InstallResult{Noop: 1}, nil
 	}
 	if removeAll {
-		if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return InstallResult{}, err
 		}
 		return InstallResult{Applied: 1}, nil
 	}
-	if err := os.WriteFile(target, []byte(updated), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
 		return InstallResult{}, err
 	}
 	return InstallResult{Applied: 1}, nil
 }
 
-func upsertAiderReadConfig(path string) (string, error) {
+func upsertAiderReadConfig(path, readPath string) (string, error) {
 	cfg, err := readAiderConfig(path)
 	if err != nil {
 		return "", err
 	}
 	read := normalizeAiderRead(cfg["read"])
-	if !containsAiderReadEntry(read, aiderAgentsReadPath) {
-		read = append(read, aiderAgentsReadPath)
+	if !containsAiderReadEntry(read, readPath) {
+		read = append(read, readPath)
 	}
 	cfg["read"] = read
 	return marshalAiderConfig(cfg)
 }
 
-func removeAiderReadConfig(path string) (updated string, changed bool, removeAll bool, err error) {
+func removeAiderReadConfig(path, readPath string) (updated string, changed bool, removeAll bool, err error) {
 	cfg, err := readAiderConfig(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -116,7 +168,7 @@ func removeAiderReadConfig(path string) (updated string, changed bool, removeAll
 	next := make([]string, 0, len(read))
 	found := false
 	for _, entry := range read {
-		if entry == aiderAgentsReadPath {
+		if entry == readPath {
 			found = true
 			continue
 		}
@@ -140,12 +192,12 @@ func removeAiderReadConfig(path string) (updated string, changed bool, removeAll
 	return content, true, false, nil
 }
 
-func aiderConfigHasAgentsRead(path string) (bool, error) {
+func aiderConfigHasRead(path, readPath string) (bool, error) {
 	cfg, err := readAiderConfig(path)
 	if err != nil {
 		return false, err
 	}
-	return containsAiderReadEntry(normalizeAiderRead(cfg["read"]), aiderAgentsReadPath), nil
+	return containsAiderReadEntry(normalizeAiderRead(cfg["read"]), readPath), nil
 }
 
 func readAiderConfig(path string) (map[string]any, error) {

@@ -1,5 +1,9 @@
-## ADDED Requirements
+# init-kiro-agent-integration Specification
 
+## Purpose
+Define how `ccp init` detects, installs, verifies, and uninstalls the Kiro integration.
+
+## Requirements
 ### Requirement: Detect Kiro Repositories
 
 `ccp init` MUST treat a repository-local `.kiro` directory as the initial detection heuristic for Kiro integration.
@@ -12,37 +16,29 @@
 
 ### Requirement: Install CCP-Managed Kiro Steering
 
-`ccp init --tools kiro` MUST install CCP-managed guidance at `.kiro/steering/ccp.md`.
+`ccp init --tools kiro` MUST install CCP through Kiro's home-scoped global steering surface rather than through `.kiro/steering/ccp.md`.
 
-#### Scenario: Install managed steering file
+#### Scenario: install managed home-scoped steering
 
 - **WHEN** the user runs `ccp init --tools kiro`
-- **THEN** `ccp` creates `.kiro/steering/ccp.md` if needed
-- **AND** writes deterministic CCP-managed steering content to that file
-- **AND** does not modify unrelated Kiro files
-
-#### Scenario: Reapply managed steering file
-
-- **WHEN** `.kiro/steering/ccp.md` already exists from a previous CCP-managed install
-- **AND** the user runs `ccp init --tools kiro` again
-- **THEN** `ccp` rewrites only `.kiro/steering/ccp.md`
-- **AND** the resulting file content remains deterministic
+- **THEN** `ccp` writes CCP-managed guidance into `~/.kiro/steering/AGENTS.md`
+- **AND** repository `.kiro` markers remain detection inputs rather than the install target
 
 ### Requirement: Verify Kiro Integration
 
-`ccp init` verification MUST confirm that the CCP-managed Kiro steering file exists and still contains the expected CCP-managed guidance.
+`ccp init` verification MUST confirm that the managed Kiro global steering file still exists and contains the expected CCP behavior.
 
-#### Scenario: Verify managed Kiro steering file
+#### Scenario: verify managed kiro steering
 
-- **WHEN** `.kiro/steering/ccp.md` exists with intact CCP-managed content
+- **WHEN** the managed Kiro global steering file exists with intact CCP behavior
 - **THEN** verification succeeds for the Kiro integration
 
 ### Requirement: Uninstall Only CCP-Managed Kiro Steering
 
-`ccp uninstall --tools kiro` MUST remove only the CCP-managed steering file and preserve unrelated Kiro files and directories.
+`ccp uninstall --tools kiro` MUST remove only the CCP-managed Kiro global steering contribution and preserve unrelated Kiro configuration.
 
-#### Scenario: Remove only managed steering file
+#### Scenario: remove only managed steering contribution
 
 - **WHEN** the user runs `ccp uninstall --tools kiro`
-- **THEN** `ccp` removes `.kiro/steering/ccp.md`
-- **AND** leaves `.kiro`, `.kiro/steering`, and unrelated Kiro files untouched
+- **THEN** `ccp` removes only the managed Kiro global steering contribution
+- **AND** preserves unrelated Kiro steering files and configuration
