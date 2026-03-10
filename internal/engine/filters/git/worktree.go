@@ -86,13 +86,13 @@ func parseGitWorktreeListLine(line string) (string, bool) {
 	if trimmed == "" {
 		return "", false
 	}
-	open := strings.LastIndex(trimmed, "[")
-	close := strings.LastIndex(trimmed, "]")
-	if open < 0 || close <= open {
+	openBracket := strings.LastIndex(trimmed, "[")
+	closeBracket := strings.LastIndex(trimmed, "]")
+	if openBracket < 0 || closeBracket <= openBracket {
 		return "", false
 	}
-	branch := strings.TrimSpace(trimmed[open+1 : close])
-	prefix := strings.TrimSpace(trimmed[:open])
+	branch := strings.TrimSpace(trimmed[openBracket+1 : closeBracket])
+	prefix := strings.TrimSpace(trimmed[:openBracket])
 	fields := strings.Fields(prefix)
 	if len(fields) < 2 {
 		return "", false
@@ -110,7 +110,9 @@ func shortenWorktreePath(path string) string {
 	if err != nil || strings.TrimSpace(cwd) == "" {
 		return path
 	}
-	rel, err := filepath.Rel(cwd, path)
+	resolvedCWD := resolvedWorktreePath(cwd)
+	resolvedPath := resolvedWorktreePath(path)
+	rel, err := filepath.Rel(resolvedCWD, resolvedPath)
 	if err != nil {
 		return path
 	}
@@ -120,11 +122,19 @@ func shortenWorktreePath(path string) string {
 	}
 	if strings.HasPrefix(rel, ".."+string(filepath.Separator)) || !filepath.IsAbs(path) {
 		if len(rel) < len(path) {
-			return rel
+			return filepath.ToSlash(rel)
 		}
 	}
 	if len(rel) < len(path) {
-		return rel
+		return filepath.ToSlash(rel)
 	}
-	return path
+	return filepath.ToSlash(path)
+}
+
+func resolvedWorktreePath(path string) string {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil || strings.TrimSpace(resolved) == "" {
+		return filepath.Clean(path)
+	}
+	return filepath.Clean(resolved)
 }

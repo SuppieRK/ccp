@@ -36,18 +36,19 @@ func TestGitWorktreeListCompaction(t *testing.T) {
 	f := NewGitWorktreeFilter()
 	mem := engine.NewOrderedSetBuffer()
 	wd := t.TempDir()
-	sibling := filepath.Join(filepath.Dir(wd), "wt-feature")
+	resolvedWD := resolvedWorktreePath(wd)
+	sibling := filepath.Join(filepath.Dir(resolvedWD), "wt-feature")
 	origWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
 	}
-	if err := os.Chdir(wd); err != nil {
+	if err := os.Chdir(resolvedWD); err != nil {
 		t.Fatalf("chdir temp wd: %v", err)
 	}
 	t.Cleanup(func() {
 		_ = os.Chdir(origWD)
 	})
-	_ = mem.Add(wd+"  e77e6a2 [master]\n", "k1", 1)
+	_ = mem.Add(resolvedWD+"  e77e6a2 [master]\n", "k1", 1)
 	_ = mem.Add(sibling+"  e77e6a2 [feature]\n", "k2", 2)
 	out := f.Process(engine.Event{Type: engine.EventEOF, Dispatch: "git worktree"}, mem)
 	if out.Action != engine.ActionFlush {
