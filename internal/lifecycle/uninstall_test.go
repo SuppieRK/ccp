@@ -88,9 +88,13 @@ func TestRunUninstallAiderRemovesManagedConfigAndInitConfig(t *testing.T) {
 		t.Fatalf("aider uninstall failed: %v", err)
 	}
 
-	configPath := filepath.Join(tmp, ".aider.conf.yml")
+	configPath := filepath.Join(home, ".aider.conf.yml")
 	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
 		t.Fatalf("expected aider config to be removed, err=%v", err)
+	}
+	rulesPath := filepath.Join(home, ".aider.rules.md")
+	if _, err := os.Stat(rulesPath); !os.IsNotExist(err) {
+		t.Fatalf("expected aider rules file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
@@ -138,9 +142,13 @@ func TestRunUninstallQwenRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("qwen uninstall failed: %v", err)
 	}
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".qwen", "AGENTS.md")
 	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
 		t.Fatalf("expected qwen agents file to be removed, err=%v", err)
+	}
+	settingsPath := filepath.Join(home, ".qwen", "settings.json")
+	if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected qwen settings file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
@@ -162,7 +170,7 @@ func TestRunUninstallQoderRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("qoder uninstall failed: %v", err)
 	}
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".qoder", "AGENTS.md")
 	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
 		t.Fatalf("expected qoder agents file to be removed, err=%v", err)
 	}
@@ -171,7 +179,7 @@ func TestRunUninstallQoderRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
-func TestRunUninstallFactoryRemovesManagedBlockAndInitConfig(t *testing.T) {
+func TestRunUninstallFactoryRemovesManagedHomeBlockAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -186,7 +194,7 @@ func TestRunUninstallFactoryRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("factory uninstall failed: %v", err)
 	}
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".factory", "AGENTS.md")
 	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
 		t.Fatalf("expected factory agents file to be removed, err=%v", err)
 	}
@@ -219,7 +227,7 @@ func TestRunUninstallAuggieRemovesManagedBlockAndInitConfig(t *testing.T) {
 	}
 }
 
-func TestRunUninstallCodeBuddyRemovesManagedBlockAndInitConfig(t *testing.T) {
+func TestRunUninstallCodeBuddyRemovesManagedSettingsHookAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -234,16 +242,20 @@ func TestRunUninstallCodeBuddyRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("codebuddy uninstall failed: %v", err)
 	}
 
-	memoryPath := filepath.Join(tmp, "CODEBUDDY.md")
-	if _, err := os.Stat(memoryPath); !os.IsNotExist(err) {
-		t.Fatalf("expected codebuddy memory file to be removed, err=%v", err)
+	hookPath := filepath.Join(home, ".codebuddy", "hooks", "ccp-rewrite.sh")
+	if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
+		t.Fatalf("expected codebuddy hook script to be removed, err=%v", err)
+	}
+	settingsPath := filepath.Join(home, ".codebuddy", "settings.json")
+	if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected codebuddy settings file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallCrushRemovesManagedBlockAndInitConfig(t *testing.T) {
+func TestRunUninstallCrushRemovesManagedContextAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -258,16 +270,20 @@ func TestRunUninstallCrushRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("crush uninstall failed: %v", err)
 	}
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
-	if _, err := os.Stat(agentsPath); !os.IsNotExist(err) {
-		t.Fatalf("expected crush agents file to be removed, err=%v", err)
+	contextPath := filepath.Join(home, ".config", "crush", "CRUSH.md")
+	if _, err := os.Stat(contextPath); !os.IsNotExist(err) {
+		t.Fatalf("expected crush context file to be removed, err=%v", err)
+	}
+	configPath := filepath.Join(home, ".config", "crush", "crush.json")
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Fatalf("expected crush config file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallIFlowRemovesManagedBlockAndInitConfig(t *testing.T) {
+func TestRunUninstallIFlowRemovesManagedHomeBlockAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -282,7 +298,7 @@ func TestRunUninstallIFlowRemovesManagedBlockAndInitConfig(t *testing.T) {
 		t.Fatalf("iflow uninstall failed: %v", err)
 	}
 
-	memoryPath := filepath.Join(tmp, "IFLOW.md")
+	memoryPath := filepath.Join(home, ".iflow", "IFLOW.md")
 	if _, err := os.Stat(memoryPath); !os.IsNotExist(err) {
 		t.Fatalf("expected iflow memory file to be removed, err=%v", err)
 	}
@@ -365,7 +381,7 @@ func TestRunUninstallAmazonQRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
-func TestRunUninstallAntigravityRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallAntigravityRemovesManagedGeminiFamilyTargetAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -381,16 +397,16 @@ func TestRunUninstallAntigravityRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("antigravity uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".agent", "rules", "ccp.md")
-	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
-		t.Fatalf("expected antigravity rule file to be removed, err=%v", err)
+	instructionsPath := filepath.Join(home, ".gemini", "GEMINI.md")
+	if _, err := os.Stat(instructionsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected antigravity gemini-family instructions to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallWindsurfRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallWindsurfRemovesManagedHooksAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -406,16 +422,20 @@ func TestRunUninstallWindsurfRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("windsurf uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".windsurf", "rules", "ccp.md")
-	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
-		t.Fatalf("expected windsurf rule file to be removed, err=%v", err)
+	hookPath := filepath.Join(home, ".codeium", "windsurf", "hooks", "ccp-block.sh")
+	if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf hook script to be removed, err=%v", err)
+	}
+	hooksPath := filepath.Join(home, ".codeium", "windsurf", "hooks.json")
+	if _, err := os.Stat(hooksPath); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf hooks file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallClineRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallClineRemovesManagedHookAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -431,16 +451,16 @@ func TestRunUninstallClineRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("cline uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".clinerules", "ccp.md")
-	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
-		t.Fatalf("expected cline rule file to be removed, err=%v", err)
+	hookPath := filepath.Join(home, "Documents", "Cline", "Hooks", "PreToolUse")
+	if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
+		t.Fatalf("expected cline hook file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallContinueRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallContinueRemovesManagedSettingsHookAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -456,16 +476,60 @@ func TestRunUninstallContinueRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("continue uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".continue", "rules", "ccp.md")
-	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
-		t.Fatalf("expected continue rule file to be removed, err=%v", err)
+	hookPath := filepath.Join(home, ".continue", "hooks", "ccp-rewrite.sh")
+	if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
+		t.Fatalf("expected continue hook script to be removed, err=%v", err)
+	}
+	settingsPath := filepath.Join(home, ".continue", "settings.json")
+	if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
+		t.Fatalf("expected continue settings file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
 	}
 }
 
-func TestRunUninstallKiroRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallContinuePreservesUnrelatedSettings(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	mkdirAllForTest(t, home, "mkdir home: %v")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".continue"), "mkdir .continue: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".continue"), "mkdir global .continue: %v")
+
+	settingsPath := filepath.Join(home, ".continue", "settings.json")
+	hookPath := filepath.Join(home, ".continue", "hooks", "ccp-rewrite.sh")
+	escapedHook := strings.ReplaceAll(hookPath, "\\", "\\\\")
+	settings := "{\n  \"model\": \"gpt-5\",\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"" + escapedHook + "\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
+		t.Fatalf("mkdir continue hooks: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, []byte(settings), 0o644); err != nil {
+		t.Fatalf("write continue settings: %v", err)
+	}
+	if err := os.WriteFile(hookPath, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write continue hook: %v", err)
+	}
+
+	chdirForTest(t, tmp)
+
+	if err := RunUninstall(toolsArgs("continue")); err != nil {
+		t.Fatalf("continue uninstall failed: %v", err)
+	}
+
+	b, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read continue settings after uninstall: %v", err)
+	}
+	if !strings.Contains(string(b), `"model": "gpt-5"`) {
+		t.Fatalf("expected unrelated continue settings preserved, got: %s", string(b))
+	}
+	if strings.Contains(string(b), escapedHook) {
+		t.Fatalf("expected managed continue hook removed, got: %s", string(b))
+	}
+}
+
+func TestRunUninstallKiroRemovesManagedSteeringAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -481,7 +545,7 @@ func TestRunUninstallKiroRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("kiro uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".kiro", "steering", "ccp.md")
+	rulePath := filepath.Join(home, ".kiro", "steering", "AGENTS.md")
 	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
 		t.Fatalf("expected kiro steering file to be removed, err=%v", err)
 	}
@@ -490,7 +554,7 @@ func TestRunUninstallKiroRemovesManagedRuleAndInitConfig(t *testing.T) {
 	}
 }
 
-func TestRunUninstallKilocodeRemovesManagedRuleAndInitConfig(t *testing.T) {
+func TestRunUninstallKilocodeRemovesManagedPluginAndInitConfig(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
@@ -506,9 +570,9 @@ func TestRunUninstallKilocodeRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("kilocode uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".kilocode", "rules", "ccp.md")
-	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
-		t.Fatalf("expected kilocode rule file to be removed, err=%v", err)
+	pluginPath := filepath.Join(home, ".config", "kilocode", "plugins", initOpenCodeRewriteJS)
+	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
+		t.Fatalf("expected kilocode plugin file to be removed, err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ccp", initConfigName)); !os.IsNotExist(err) {
 		t.Fatalf("expected managed init config to be removed after uninstall, err=%v", err)
@@ -531,7 +595,7 @@ func TestRunUninstallRooCodeRemovesManagedRuleAndInitConfig(t *testing.T) {
 		t.Fatalf("roocode uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".roo", "rules", "ccp.md")
+	rulePath := filepath.Join(home, ".roo", "rules", "ccp.md")
 	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
 		t.Fatalf("expected roocode rule file to be removed, err=%v", err)
 	}
@@ -556,7 +620,7 @@ func TestRunUninstallCostrictAliasRemovesManagedRuleAndInitConfig(t *testing.T) 
 		t.Fatalf("costrict uninstall failed: %v", err)
 	}
 
-	rulePath := filepath.Join(tmp, ".roo", "rules", "ccp.md")
+	rulePath := filepath.Join(home, ".roo", "rules", "ccp.md")
 	if _, err := os.Stat(rulePath); !os.IsNotExist(err) {
 		t.Fatalf("expected roocode rule file to be removed via costrict alias, err=%v", err)
 	}
@@ -723,9 +787,13 @@ func TestRunUninstallAiderPreservesOtherConfigEntries(t *testing.T) {
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
 	chdirForTest(t, tmp)
-	configPath := filepath.Join(tmp, ".aider.conf.yml")
+	configPath := filepath.Join(home, ".aider.conf.yml")
 	if err := os.WriteFile(configPath, []byte("read:\n  - CONVENTIONS.md\nmodel: sonnet\n"), 0o644); err != nil {
 		t.Fatalf("write aider config: %v", err)
+	}
+	rulesPath := filepath.Join(home, ".aider.rules.md")
+	if err := os.WriteFile(rulesPath, []byte("# User Notes\n\n"+`<!-- BEGIN: CCP MANAGED BLOCK -->`+"\nmanaged content\n"+`<!-- END: CCP MANAGED BLOCK -->`+"\n"), 0o644); err != nil {
+		t.Fatalf("write aider rules: %v", err)
 	}
 
 	if err := RunInit(toolsArgs("aider")); err != nil {
@@ -740,11 +808,21 @@ func TestRunUninstallAiderPreservesOtherConfigEntries(t *testing.T) {
 		t.Fatalf("read aider config after uninstall: %v", err)
 	}
 	got := string(b)
-	if strings.Contains(got, "AGENTS.md") {
-		t.Fatalf("expected AGENTS removed, got: %s", got)
+	if strings.Contains(got, ".aider.rules.md") {
+		t.Fatalf("expected aider rules path removed, got: %s", got)
 	}
 	if !strings.Contains(got, "CONVENTIONS.md") || !strings.Contains(got, "model: sonnet") {
 		t.Fatalf("expected unrelated config preserved, got: %s", got)
+	}
+	rulesBytes, err := os.ReadFile(rulesPath)
+	if err != nil {
+		t.Fatalf("read aider rules after uninstall: %v", err)
+	}
+	if strings.Contains(string(rulesBytes), "managed content") {
+		t.Fatalf("expected managed aider rules removed, got: %s", string(rulesBytes))
+	}
+	if !strings.Contains(string(rulesBytes), "# User Notes") {
+		t.Fatalf("expected unrelated aider rules content preserved, got: %s", string(rulesBytes))
 	}
 }
 
@@ -788,10 +866,15 @@ func TestRunUninstallQwenPreservesNonCCPContent(t *testing.T) {
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".qwen"), "mkdir .qwen: %v")
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".qwen", "AGENTS.md")
+	mkdirAllForTest(t, filepath.Dir(agentsPath), "mkdir ~/.qwen: %v")
 	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write qwen agents file: %v", err)
+	}
+	settingsPath := filepath.Join(home, ".qwen", "settings.json")
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"light\",\n  \"context\": {\n    \"fileName\": \"AGENTS.md\"\n  }\n}\n"), 0o644); err != nil {
+		t.Fatalf("write qwen settings file: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -811,6 +894,16 @@ func TestRunUninstallQwenPreservesNonCCPContent(t *testing.T) {
 	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
 		t.Fatalf("expected non-managed content preserved, got: %s", got)
 	}
+	settingsBytes, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings after uninstall: %v", err)
+	}
+	if !strings.Contains(string(settingsBytes), `"theme": "light"`) {
+		t.Fatalf("expected unrelated qwen settings preserved, got: %s", string(settingsBytes))
+	}
+	if strings.Contains(string(settingsBytes), `"fileName": "AGENTS.md"`) {
+		t.Fatalf("expected managed qwen context.fileName removed, got: %s", string(settingsBytes))
+	}
 }
 
 func TestRunUninstallQoderPreservesNonCCPContent(t *testing.T) {
@@ -820,7 +913,8 @@ func TestRunUninstallQoderPreservesNonCCPContent(t *testing.T) {
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".qoder"), "mkdir .qoder: %v")
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".qoder", "AGENTS.md")
+	mkdirAllForTest(t, filepath.Dir(agentsPath), "mkdir ~/.qoder: %v")
 	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write qoder agents file: %v", err)
@@ -845,14 +939,15 @@ func TestRunUninstallQoderPreservesNonCCPContent(t *testing.T) {
 	}
 }
 
-func TestRunUninstallFactoryPreservesNonCCPContent(t *testing.T) {
+func TestRunUninstallFactoryPreservesHomeNonCCPContent(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".factory"), "mkdir .factory: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".factory"), "mkdir home .factory: %v")
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".factory", "AGENTS.md")
 	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write factory agents file: %v", err)
@@ -915,11 +1010,18 @@ func TestRunUninstallCrushPreservesNonCCPContent(t *testing.T) {
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".crush"), "mkdir .crush: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".config", "crush"), "mkdir crush config: %v")
 
-	agentsPath := filepath.Join(tmp, "AGENTS.md")
+	agentsPath := filepath.Join(home, ".config", "crush", "CRUSH.md")
 	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write crush agents file: %v", err)
+	}
+	configPath := filepath.Join(home, ".config", "crush", "crush.json")
+	contextRef := strings.ReplaceAll(agentsPath, "\\", "\\\\")
+	config := "{\n  \"theme\": \"dark\",\n  \"options\": {\n    \"context_paths\": [\n      \"" + contextRef + "\"\n    ]\n  }\n}\n"
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
+		t.Fatalf("write crush config file: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -939,16 +1041,27 @@ func TestRunUninstallCrushPreservesNonCCPContent(t *testing.T) {
 	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
 		t.Fatalf("expected non-managed content preserved, got: %s", got)
 	}
+	cfg, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read crush config after uninstall: %v", err)
+	}
+	if !strings.Contains(string(cfg), `"theme": "dark"`) {
+		t.Fatalf("expected unrelated crush config preserved, got: %s", string(cfg))
+	}
+	if strings.Contains(string(cfg), contextRef) {
+		t.Fatalf("expected managed crush context path removed, got: %s", string(cfg))
+	}
 }
 
-func TestRunUninstallIFlowPreservesNonCCPContent(t *testing.T) {
+func TestRunUninstallIFlowPreservesHomeNonCCPContent(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".iflow"), "mkdir .iflow: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".iflow"), "mkdir home .iflow: %v")
 
-	memoryPath := filepath.Join(tmp, "IFLOW.md")
+	memoryPath := filepath.Join(home, ".iflow", "IFLOW.md")
 	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
 	if err := os.WriteFile(memoryPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write iflow memory file: %v", err)
@@ -1000,17 +1113,26 @@ func TestRunUninstallPiPreservesNonCCPContent(t *testing.T) {
 	}
 }
 
-func TestRunUninstallCodeBuddyPreservesNonCCPContent(t *testing.T) {
+func TestRunUninstallCodeBuddyPreservesUnrelatedSettings(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".codebuddy"), "mkdir .codebuddy: %v")
+	mkdirAllForTest(t, filepath.Join(home, ".codebuddy"), "mkdir home .codebuddy: %v")
 
-	memoryPath := filepath.Join(tmp, "CODEBUDDY.md")
-	content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
-	if err := os.WriteFile(memoryPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write codebuddy memory file: %v", err)
+	settingsPath := filepath.Join(home, ".codebuddy", "settings.json")
+	hookPath := filepath.Join(home, ".codebuddy", "hooks", "ccp-rewrite.sh")
+	escapedHook := strings.ReplaceAll(hookPath, "\\", "\\\\")
+	settings := "{\n  \"theme\": \"light\",\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"" + escapedHook + "\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
+		t.Fatalf("mkdir codebuddy hooks: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, []byte(settings), 0o644); err != nil {
+		t.Fatalf("write codebuddy settings: %v", err)
+	}
+	if err := os.WriteFile(hookPath, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write codebuddy hook: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -1019,16 +1141,16 @@ func TestRunUninstallCodeBuddyPreservesNonCCPContent(t *testing.T) {
 		t.Fatalf("codebuddy uninstall failed: %v", err)
 	}
 
-	b, err := os.ReadFile(memoryPath)
+	b, err := os.ReadFile(settingsPath)
 	if err != nil {
-		t.Fatalf("read codebuddy memory after uninstall: %v", err)
+		t.Fatalf("read codebuddy settings after uninstall: %v", err)
 	}
 	got := string(b)
-	if strings.Contains(got, "managed content") {
-		t.Fatalf("expected managed content removed, got: %s", got)
+	if !strings.Contains(got, `"theme": "light"`) {
+		t.Fatalf("expected unrelated codebuddy settings preserved, got: %s", got)
 	}
-	if !strings.Contains(got, "# User Content") || !strings.Contains(got, "# Tail") {
-		t.Fatalf("expected non-managed content preserved, got: %s", got)
+	if strings.Contains(got, escapedHook) {
+		t.Fatalf("expected managed codebuddy hook removed, got: %s", got)
 	}
 }
 
@@ -1088,31 +1210,32 @@ func TestRunUninstallAmazonQPreservesOtherAmazonQFilesAndDirectories(t *testing.
 	}
 }
 
-func TestRunUninstallAntigravityPreservesOtherAgentFilesAndDirectories(t *testing.T) {
+func TestRunUninstallAntigravityPreservesOtherGeminiFamilyContent(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".agent", "rules"), "mkdir .agent/rules: %v")
-	otherRule := filepath.Join(tmp, ".agent", "rules", "team.md")
-	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
-		t.Fatalf("write other rule: %v", err)
+	mkdirAllForTest(t, filepath.Join(home, ".gemini"), "mkdir home .gemini: %v")
+	instructionsPath := filepath.Join(home, ".gemini", "GEMINI.md")
+	initial := "# User Header\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+	if err := os.WriteFile(instructionsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write gemini-family instructions: %v", err)
 	}
 
 	chdirForTest(t, tmp)
-
-	if err := RunInit(toolsArgs("antigravity")); err != nil {
-		t.Fatalf("antigravity init failed: %v", err)
-	}
 	if err := RunUninstall(toolsArgs("antigravity")); err != nil {
 		t.Fatalf("antigravity uninstall failed: %v", err)
 	}
-
-	if _, err := os.Stat(otherRule); err != nil {
-		t.Fatalf("expected other antigravity rule preserved, err=%v", err)
+	got, err := os.ReadFile(instructionsPath)
+	if err != nil {
+		t.Fatalf("read gemini-family instructions after uninstall: %v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".agent", "rules")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .agent/rules directory preserved, err=%v", err)
+	s := string(got)
+	if strings.Contains(s, "managed content") {
+		t.Fatalf("expected managed content removed, got: %s", s)
+	}
+	if !strings.Contains(s, "# User Header") || !strings.Contains(s, "# Tail") {
+		t.Fatalf("expected non-managed gemini-family content preserved, got: %s", s)
 	}
 }
 
@@ -1121,10 +1244,16 @@ func TestRunUninstallWindsurfPreservesOtherWindsurfFilesAndDirectories(t *testin
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".windsurf", "rules"), "mkdir .windsurf/rules: %v")
-	otherRule := filepath.Join(tmp, ".windsurf", "rules", "team.md")
-	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
-		t.Fatalf("write other rule: %v", err)
+	hooksDir := filepath.Join(home, ".codeium", "windsurf", "hooks")
+	mkdirAllForTest(t, hooksDir, "mkdir windsurf hooks: %v")
+	otherHook := filepath.Join(hooksDir, "other.sh")
+	if err := os.WriteFile(otherHook, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write other hook: %v", err)
+	}
+	hooksPath := filepath.Join(home, ".codeium", "windsurf", "hooks.json")
+	otherConfig := "{\n  \"pre_run_command\": [\n    {\n      \"name\": \"other\",\n      \"command\": \"" + strings.ReplaceAll(otherHook, "\\", "\\\\") + "\",\n      \"enabled\": true\n    }\n  ]\n}\n"
+	if err := os.WriteFile(hooksPath, []byte(otherConfig), 0o644); err != nil {
+		t.Fatalf("write hooks config: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -1136,11 +1265,18 @@ func TestRunUninstallWindsurfPreservesOtherWindsurfFilesAndDirectories(t *testin
 		t.Fatalf("windsurf uninstall failed: %v", err)
 	}
 
-	if _, err := os.Stat(otherRule); err != nil {
-		t.Fatalf("expected other windsurf rule preserved, err=%v", err)
+	if _, err := os.Stat(otherHook); err != nil {
+		t.Fatalf("expected other windsurf hook preserved, err=%v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".windsurf", "rules")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .windsurf/rules directory preserved, err=%v", err)
+	b, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatalf("read hooks config after uninstall: %v", err)
+	}
+	if !strings.Contains(string(b), "other") {
+		t.Fatalf("expected unrelated windsurf hook config preserved, got: %s", string(b))
+	}
+	if st, err := os.Stat(hooksDir); err != nil || !st.IsDir() {
+		t.Fatalf("expected windsurf hooks directory preserved, err=%v", err)
 	}
 }
 
@@ -1149,10 +1285,11 @@ func TestRunUninstallClinePreservesOtherClineFilesAndDirectories(t *testing.T) {
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".clinerules"), "mkdir .clinerules: %v")
-	otherRule := filepath.Join(tmp, ".clinerules", "team.md")
-	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
-		t.Fatalf("write other rule: %v", err)
+	hooksDir := filepath.Join(home, "Documents", "Cline", "Hooks")
+	mkdirAllForTest(t, hooksDir, "mkdir cline hooks: %v")
+	otherHook := filepath.Join(hooksDir, "PostToolUse")
+	if err := os.WriteFile(otherHook, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write other hook: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -1164,11 +1301,11 @@ func TestRunUninstallClinePreservesOtherClineFilesAndDirectories(t *testing.T) {
 		t.Fatalf("cline uninstall failed: %v", err)
 	}
 
-	if _, err := os.Stat(otherRule); err != nil {
-		t.Fatalf("expected other cline rule preserved, err=%v", err)
+	if _, err := os.Stat(otherHook); err != nil {
+		t.Fatalf("expected other cline hook preserved, err=%v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".clinerules")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .clinerules directory preserved, err=%v", err)
+	if st, err := os.Stat(hooksDir); err != nil || !st.IsDir() {
+		t.Fatalf("expected cline hooks directory preserved, err=%v", err)
 	}
 }
 
@@ -1233,8 +1370,8 @@ func TestRunUninstallKiroPreservesOtherKiroFilesAndDirectories(t *testing.T) {
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".kiro", "steering"), "mkdir .kiro/steering: %v")
-	otherRule := filepath.Join(tmp, ".kiro", "steering", "team.md")
+	mkdirAllForTest(t, filepath.Join(home, ".kiro", "steering"), "mkdir ~/.kiro/steering: %v")
+	otherRule := filepath.Join(home, ".kiro", "steering", "team.md")
 	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
 		t.Fatalf("write other rule: %v", err)
 	}
@@ -1251,20 +1388,20 @@ func TestRunUninstallKiroPreservesOtherKiroFilesAndDirectories(t *testing.T) {
 	if _, err := os.Stat(otherRule); err != nil {
 		t.Fatalf("expected other kiro steering preserved, err=%v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".kiro", "steering")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .kiro/steering directory preserved, err=%v", err)
+	if st, err := os.Stat(filepath.Join(home, ".kiro", "steering")); err != nil || !st.IsDir() {
+		t.Fatalf("expected ~/.kiro/steering directory preserved, err=%v", err)
 	}
 }
 
-func TestRunUninstallKilocodePreservesOtherKilocodeFilesAndDirectories(t *testing.T) {
+func TestRunUninstallKilocodePreservesOtherHomePluginFilesAndDirectories(t *testing.T) {
 	tmp := t.TempDir()
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".kilocode", "rules"), "mkdir .kilocode/rules: %v")
-	otherRule := filepath.Join(tmp, ".kilocode", "rules", "team.md")
-	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
-		t.Fatalf("write other rule: %v", err)
+	mkdirAllForTest(t, filepath.Join(home, ".config", "kilocode", "plugins"), "mkdir kilocode plugins: %v")
+	otherPlugin := filepath.Join(home, ".config", "kilocode", "plugins", "team.js")
+	if err := os.WriteFile(otherPlugin, []byte("export default {}\n"), 0o644); err != nil {
+		t.Fatalf("write other plugin: %v", err)
 	}
 
 	chdirForTest(t, tmp)
@@ -1276,11 +1413,11 @@ func TestRunUninstallKilocodePreservesOtherKilocodeFilesAndDirectories(t *testin
 		t.Fatalf("kilocode uninstall failed: %v", err)
 	}
 
-	if _, err := os.Stat(otherRule); err != nil {
-		t.Fatalf("expected other kilocode rule preserved, err=%v", err)
+	if _, err := os.Stat(otherPlugin); err != nil {
+		t.Fatalf("expected other kilocode plugin preserved, err=%v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".kilocode", "rules")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .kilocode/rules directory preserved, err=%v", err)
+	if st, err := os.Stat(filepath.Join(home, ".config", "kilocode", "plugins")); err != nil || !st.IsDir() {
+		t.Fatalf("expected kilocode plugins directory preserved, err=%v", err)
 	}
 }
 
@@ -1289,8 +1426,8 @@ func TestRunUninstallRooCodePreservesOtherRooCodeFilesAndDirectories(t *testing.
 	home := filepath.Join(tmp, "home")
 	mkdirAllForTest(t, home, "mkdir home: %v")
 	setHomeDirForTest(t, home)
-	mkdirAllForTest(t, filepath.Join(tmp, ".roo", "rules"), "mkdir .roo/rules: %v")
-	otherRule := filepath.Join(tmp, ".roo", "rules", "team.md")
+	mkdirAllForTest(t, filepath.Join(home, ".roo", "rules"), "mkdir ~/.roo/rules: %v")
+	otherRule := filepath.Join(home, ".roo", "rules", "team.md")
 	if err := os.WriteFile(otherRule, []byte("team rule\n"), 0o644); err != nil {
 		t.Fatalf("write other rule: %v", err)
 	}
@@ -1307,8 +1444,8 @@ func TestRunUninstallRooCodePreservesOtherRooCodeFilesAndDirectories(t *testing.
 	if _, err := os.Stat(otherRule); err != nil {
 		t.Fatalf("expected other roocode rule preserved, err=%v", err)
 	}
-	if st, err := os.Stat(filepath.Join(tmp, ".roo", "rules")); err != nil || !st.IsDir() {
-		t.Fatalf("expected .roo/rules directory preserved, err=%v", err)
+	if st, err := os.Stat(filepath.Join(home, ".roo", "rules")); err != nil || !st.IsDir() {
+		t.Fatalf("expected ~/.roo/rules directory preserved, err=%v", err)
 	}
 }
 
@@ -1554,7 +1691,8 @@ func TestRunUninstallDetectsAmazonQWhenToolsFlagOmitted(t *testing.T) {
 func TestRunUninstallDetectsWindsurfWhenToolsFlagOmitted(t *testing.T) {
 	tmp := t.TempDir()
 	chdirForTest(t, tmp)
-	setHomeDirForTest(t, filepath.Join(tmp, "home"))
+	home := filepath.Join(tmp, "home")
+	setHomeDirForTest(t, home)
 	mkdirAllForTest(t, filepath.Join(tmp, ".windsurf"), "mkdir .windsurf: %v")
 
 	if err := RunInit(toolsArgs("windsurf")); err != nil {
@@ -1566,8 +1704,32 @@ func TestRunUninstallDetectsWindsurfWhenToolsFlagOmitted(t *testing.T) {
 	if err := RunUninstall(nil); err != nil {
 		t.Fatalf("uninstall auto-detect: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(tmp, ".windsurf", "rules", "ccp.md")); !os.IsNotExist(err) {
-		t.Fatalf("expected windsurf rule removed, err=%v", err)
+	if _, err := os.Stat(filepath.Join(home, ".codeium", "windsurf", "hooks", "ccp-block.sh")); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf hook removed, err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".codeium", "windsurf", "hooks.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected windsurf hooks config removed, err=%v", err)
+	}
+}
+
+func TestRunUninstallDetectsRooCodeWhenToolsFlagOmitted(t *testing.T) {
+	tmp := t.TempDir()
+	chdirForTest(t, tmp)
+	home := filepath.Join(tmp, "home")
+	setHomeDirForTest(t, home)
+	mkdirAllForTest(t, filepath.Join(tmp, ".roo"), "mkdir .roo: %v")
+
+	if err := RunInit(toolsArgs("roocode")); err != nil {
+		t.Fatalf("init roocode: %v", err)
+	}
+	if err := os.Remove(filepath.Join(home, ".config", "ccp", initConfigName)); err != nil {
+		t.Fatalf("remove init config: %v", err)
+	}
+	if err := RunUninstall(nil); err != nil {
+		t.Fatalf("uninstall auto-detect: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".roo", "rules", "ccp.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected roocode rule removed, err=%v", err)
 	}
 }
 

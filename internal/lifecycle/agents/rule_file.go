@@ -22,6 +22,14 @@ func verifyManagedRuleFile(target, missingFmt, guidanceFmt string, required []st
 }
 
 type ManagedRepoRuleFileAdapter struct {
+	managedRuleFileAdapter
+}
+
+type ManagedHomeRuleFileAdapter struct {
+	managedRuleFileAdapter
+}
+
+type managedRuleFileAdapter struct {
 	id             string
 	detectDir      string
 	targetRelPath  string
@@ -29,6 +37,18 @@ type ManagedRepoRuleFileAdapter struct {
 	guidanceFmt    string
 	render         func() string
 	verifyRequired []string
+	resolveTarget  func(ctx Context, rel string) string
+}
+
+type managedRuleFileConfig struct {
+	id             string
+	detectDir      string
+	targetRelPath  string
+	missingFmt     string
+	guidanceFmt    string
+	render         func() string
+	verifyRequired []string
+	resolveTarget  func(ctx Context, rel string) string
 }
 
 func NewManagedRepoRuleFileAdapter(
@@ -41,27 +61,61 @@ func NewManagedRepoRuleFileAdapter(
 	verifyRequired []string,
 ) ManagedRepoRuleFileAdapter {
 	return ManagedRepoRuleFileAdapter{
-		id:             id,
-		detectDir:      detectDir,
-		targetRelPath:  targetRelPath,
-		missingFmt:     missingFmt,
-		guidanceFmt:    guidanceFmt,
-		render:         render,
-		verifyRequired: verifyRequired,
+		managedRuleFileAdapter: newManagedRuleFileAdapter(managedRuleFileConfig{
+			id:             id,
+			detectDir:      detectDir,
+			targetRelPath:  targetRelPath,
+			missingFmt:     missingFmt,
+			guidanceFmt:    guidanceFmt,
+			render:         render,
+			verifyRequired: verifyRequired,
+			resolveTarget: func(ctx Context, rel string) string {
+				return ResolveRepoScopedPath(ctx.ScopeRoot, rel)
+			},
+		}),
 	}
 }
 
-func (a ManagedRepoRuleFileAdapter) ID() string { return a.id }
+func NewManagedHomeRuleFileAdapter(
+	id,
+	detectDir,
+	targetRelPath,
+	missingFmt,
+	guidanceFmt string,
+	render func() string,
+	verifyRequired []string,
+) ManagedHomeRuleFileAdapter {
+	return ManagedHomeRuleFileAdapter{
+		managedRuleFileAdapter: newManagedRuleFileAdapter(managedRuleFileConfig{
+			id:             id,
+			detectDir:      detectDir,
+			targetRelPath:  targetRelPath,
+			missingFmt:     missingFmt,
+			guidanceFmt:    guidanceFmt,
+			render:         render,
+			verifyRequired: verifyRequired,
+			resolveTarget: func(ctx Context, rel string) string {
+				return ResolveHomeScopedPath(ctx.HomeDir, rel)
+			},
+		}),
+	}
+}
 
-func (a ManagedRepoRuleFileAdapter) DetectRoot(scopeRoot string) string {
+func newManagedRuleFileAdapter(cfg managedRuleFileConfig) managedRuleFileAdapter {
+	return managedRuleFileAdapter(cfg)
+}
+
+func (a managedRuleFileAdapter) ID() string { return a.id }
+
+func (a managedRuleFileAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, a.detectDir)
 }
 
-func (a ManagedRepoRuleFileAdapter) targetPath(ctx Context) string {
-	return filepath.Join(ctx.ScopeRoot, a.targetRelPath)
+func (a managedRuleFileAdapter) targetPath(ctx Context) string {
+	return a.resolveTarget(ctx, a.targetRelPath)
 }
 
-func (a ManagedRepoRuleFileAdapter) Plan(ctx Context) []PlannedArtifact {
+func (a managedRuleFileAdapter) Plan(ctx Context) []PlannedArtifact {
 	return []PlannedArtifact{{
 		Kind:    ArtifactSettings,
 		Path:    a.targetPath(ctx),
@@ -70,7 +124,7 @@ func (a ManagedRepoRuleFileAdapter) Plan(ctx Context) []PlannedArtifact {
 	}}
 }
 
-func (a ManagedRepoRuleFileAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
+func (a managedRuleFileAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
 	changed, err := write(a.targetPath(ctx), []byte(a.render()), 0o644)
 	if err != nil {
 		return InstallResult{}, err
@@ -81,11 +135,11 @@ func (a ManagedRepoRuleFileAdapter) Install(ctx Context, write WriterFunc) (Inst
 	return InstallResult{Applied: 1}, nil
 }
 
-func (a ManagedRepoRuleFileAdapter) Verify(ctx Context) error {
+func (a managedRuleFileAdapter) Verify(ctx Context) error {
 	return verifyManagedRuleFile(a.targetPath(ctx), a.missingFmt, a.guidanceFmt, a.verifyRequired)
 }
 
-func (a ManagedRepoRuleFileAdapter) Uninstall(ctx Context) (InstallResult, error) {
+func (a managedRuleFileAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	target := a.targetPath(ctx)
 	if err := os.Remove(target); err != nil {
 		if os.IsNotExist(err) {

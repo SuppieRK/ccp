@@ -48,3 +48,14 @@ func newLifecycleWorkspace(t *testing.T) lifecycleWorkspace {
 		work: work,
 	}
 }
+
+func assertPathUnderBase(t *testing.T, base, path string) {
+	t.Helper()
+	rel, err := filepath.Rel(base, path)
+	if err != nil {
+		t.Fatalf("rel path from %s to %s: %v", base, path, err)
+	}
+	if strings.HasPrefix(rel, "..") {
+		t.Fatalf("path %s is not under base %s", path, base)
+	}
+}

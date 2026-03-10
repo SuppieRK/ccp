@@ -22,7 +22,6 @@ const (
 	errUnexpectedUninstFmt = "unexpected uninstall result %+v err=%v"
 	errVerifyFmt           = "verify error: %v"
 	agentsFileName         = "AGENTS.md"
-	codebuddyFileName      = "CODEBUDDY.md"
 	iflowFileName          = "IFLOW.md"
 )
 
@@ -148,6 +147,18 @@ func TestResolveHomeScopedPath(t *testing.T) {
 	}
 }
 
+func TestResolveRepoScopedPath(t *testing.T) {
+	if got := ResolveRepoScopedPath("", "rel"); got != "rel" {
+		t.Fatalf("expected rel when scope root empty, got %s", got)
+	}
+	root := filepath.Join(t.TempDir(), "repo")
+	got := ResolveRepoScopedPath(root, "rules/ccp.md")
+	rel, err := filepath.Rel(root, got)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		t.Fatalf("expected joined path under repo root, got %s (root=%s)", got, root)
+	}
+}
+
 func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
 	adapters := DefaultAdapters()
 	for _, id := range []string{"aider", "auggie", "antigravity", "amazon-q", "codebuddy", "cline", "claude", "codex", "continue", "crush", "cursor", "factory", "gemini", "github-copilot", "iflow", "kiro", "kilocode", "opencode", "pi", "qoder", "qwen", "roocode", "trae", "windsurf"} {
@@ -232,11 +243,130 @@ func TestCodexAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 }
 
+func TestManagedHomeRuleFileAdapterSeparatesDetectionFromInstallTarget(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	repo := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: repo, HomeDir: home}
+	a := NewManagedHomeRuleFileAdapter(
+		"alpha",
+		".alpha",
+		filepath.Join(".alpha", "rules", "ccp.md"),
+		"missing alpha rule file: %s",
+		"missing alpha managed guidance in %s",
+		func() string { return "ccp-managed\n" },
+		[]string{"ccp-managed"},
+	)
+
+	if got := a.DetectRoot(repo); got != filepath.Join(repo, ".alpha") {
+		t.Fatalf("unexpected detect root %q", got)
+	}
+	plan := a.Plan(ctx)
+	if len(plan) != 1 {
+		t.Fatalf("plan len=%d want 1", len(plan))
+	}
+	if !strings.HasPrefix(plan[0].Path, home) {
+		t.Fatalf("expected home-scoped install target, got %s", plan[0].Path)
+	}
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf("install error: %v", err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf("verify error: %v", err)
+	}
+}
+
+func TestManagedInstructionFileAdapterUninstallPreservesUserContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: filepath.Join(tmp, "repo"), HomeDir: home}
+	a := NewManagedInstructionFileAdapter(
+		"alpha",
+		".alpha",
+		filepath.Join(".alpha", "AGENTS.md"),
+		"missing alpha agents file: %s",
+		"missing alpha managed markers in %s",
+	)
+	target := filepath.Join(home, ".alpha", "AGENTS.md")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("user header\n\n"+ccpManagedBlockTemplate()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target after uninstall: %v", err)
+	}
+	if string(got) != "user header\n" {
+		t.Fatalf("unexpected content after uninstall: %q", string(got))
+	}
+}
+
+func TestManagedRepoRuleFileAdapterUninstallPreservesSiblingFiles(t *testing.T) {
+	tmp := t.TempDir()
+	repo := filepath.Join(tmp, "repo")
+	ctx := Context{ScopeRoot: repo, HomeDir: filepath.Join(tmp, "home")}
+	a := NewManagedRepoRuleFileAdapter(
+		"alpha",
+		".alpha",
+		filepath.Join(".alpha", "rules", "ccp.md"),
+		"missing alpha rule file: %s",
+		"missing alpha managed guidance in %s",
+		func() string { return "ccp-managed\n" },
+		[]string{"ccp-managed"},
+	)
+	target := filepath.Join(repo, ".alpha", "rules", "ccp.md")
+	sibling := filepath.Join(repo, ".alpha", "rules", "user.md")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("ccp-managed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sibling, []byte("keep-me\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := a.Uninstall(ctx)
+	if err != nil || res.Applied != 1 {
+		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("expected target removed, err=%v", err)
+	}
+	if got, err := os.ReadFile(sibling); err != nil || string(got) != "keep-me\n" {
+		t.Fatalf("expected sibling preserved, got=%q err=%v", string(got), err)
+	}
+}
+
+func TestCostrictAliasReusesRooCodeCanonicalTarget(t *testing.T) {
+	tmp := t.TempDir()
+	ctx := Context{ScopeRoot: filepath.Join(tmp, "repo"), HomeDir: filepath.Join(tmp, "home")}
+	adapters := DefaultAdapters()
+
+	aliasPlan := adapters[NormalizeToolID(string(AgentCostrict))].Plan(ctx)
+	canonicalPlan := adapters[string(AgentRooCode)].Plan(ctx)
+	if len(aliasPlan) != 1 || len(canonicalPlan) != 1 {
+		t.Fatalf("unexpected alias/canonical plan lengths: alias=%d canonical=%d", len(aliasPlan), len(canonicalPlan))
+	}
+	if aliasPlan[0].Path != canonicalPlan[0].Path {
+		t.Fatalf("expected alias target %s to match canonical target %s", aliasPlan[0].Path, canonicalPlan[0].Path)
+	}
+}
+
 func TestQwenAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".qwen"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewQwenAdapter()
@@ -247,7 +377,7 @@ func TestQwenAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, agentsFileName) {
+	if len(plan) != 2 || !strings.HasSuffix(plan[0].Path, filepath.Join(".qwen", "settings.json")) || !strings.HasSuffix(plan[1].Path, filepath.Join(".qwen", "AGENTS.md")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -257,7 +387,7 @@ func TestQwenAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
@@ -265,8 +395,12 @@ func TestQwenAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestQoderAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".qoder"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewQoderAdapter()
@@ -277,7 +411,7 @@ func TestQoderAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, agentsFileName) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".qoder", "AGENTS.md")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -295,7 +429,8 @@ func TestQoderAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestCrushAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".crush"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +442,7 @@ func TestCrushAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, agentsFileName) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".config", "crush", "CRUSH.md")) || !strings.HasPrefix(plan[0].Path, home) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -317,7 +452,7 @@ func TestCrushAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
@@ -325,7 +460,8 @@ func TestCrushAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestFactoryAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".factory"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +473,7 @@ func TestFactoryAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, agentsFileName) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".factory", "AGENTS.md")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -385,7 +521,8 @@ func TestAuggieAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestCodeBuddyAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".codebuddy"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +534,7 @@ func TestCodeBuddyAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, codebuddyFileName) {
+	if len(plan) != 2 || !strings.HasSuffix(plan[0].Path, filepath.Join(".codebuddy", "hooks", codebuddyHookScriptName)) || !strings.HasSuffix(plan[1].Path, filepath.Join(".codebuddy", codebuddySettingsName)) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -407,15 +544,219 @@ func TestCodeBuddyAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
+	}
+}
+
+func TestCodeBuddySettingsUseHook(t *testing.T) {
+	tmp := t.TempDir()
+	settings := filepath.Join(tmp, codebuddySettingsName)
+	hook := filepath.Join(tmp, codebuddyHookScriptName)
+	escapedHook := strings.ReplaceAll(hook, "\\", "\\\\")
+	content := "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"" + escapedHook + "\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+	if err := os.WriteFile(settings, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := codebuddySettingsUseHook(settings, hook)
+	if err != nil || !ok {
+		t.Fatalf("expected settings to contain managed hook, ok=%v err=%v", ok, err)
+	}
+}
+
+func TestCrushConfigHelpersUpsertAndVerify(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "crush.json")
+	contextPath := filepath.Join(tmp, "CRUSH.md")
+
+	if err := os.WriteFile(configPath, []byte("{\n  \"theme\": \"dark\",\n  \"options\": {\n    \"context_paths\": [\n      \"/tmp/team.md\"\n    ]\n  }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := upsertCrushConfig(configPath, contextPath)
+	if err != nil {
+		t.Fatalf("upsertCrushConfig: %v", err)
+	}
+	if !strings.Contains(updated, `"theme": "dark"`) || !strings.Contains(updated, contextPath) {
+		t.Fatalf("expected preserved theme and managed context path, got: %s", updated)
+	}
+
+	if err := os.WriteFile(configPath, []byte(updated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := crushConfigUsesContext(configPath, contextPath)
+	if err != nil || !ok {
+		t.Fatalf("expected crush config to use context, ok=%v err=%v", ok, err)
+	}
+}
+
+func TestCrushConfigHelpersRemoveBranches(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "crush.json")
+	contextPath := filepath.Join(tmp, "CRUSH.md")
+
+	if err := os.WriteFile(configPath, []byte("{\n  \"theme\": \"dark\",\n  \"options\": {\n    \"context_paths\": [\n      \""+strings.ReplaceAll(contextPath, "\\", "\\\\")+"\"\n    ]\n  }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	removed, changed, removeAll, err := removeCrushContextPath(configPath, contextPath)
+	if err != nil || !changed || removeAll {
+		t.Fatalf("unexpected removeCrushContextPath result changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+	if strings.Contains(removed, contextPath) || !strings.Contains(removed, `"theme": "dark"`) {
+		t.Fatalf("expected managed context removed and unrelated config preserved, got: %s", removed)
+	}
+
+	if err := os.WriteFile(configPath, []byte("{\n  \"options\": {\n    \"context_paths\": [\n      \""+strings.ReplaceAll(contextPath, "\\", "\\\\")+"\"\n    ]\n  }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, changed, removeAll, err = removeCrushContextPath(configPath, contextPath)
+	if err != nil || !changed || !removeAll {
+		t.Fatalf("expected remove-all branch, changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+}
+
+func TestQwenSettingsHelpersReadUpsertAndVerify(t *testing.T) {
+	tmp := t.TempDir()
+	settingsPath := filepath.Join(tmp, "settings.json")
+
+	if err := os.WriteFile(settingsPath, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root, err := readQwenSettings(settingsPath)
+	if err != nil || len(root) != 0 {
+		t.Fatalf("expected empty qwen settings map, root=%v err=%v", root, err)
+	}
+
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"light\"\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := upsertQwenSettings(settingsPath)
+	if err != nil {
+		t.Fatalf("upsertQwenSettings: %v", err)
+	}
+	if !strings.Contains(updated, `"theme": "light"`) || !strings.Contains(updated, `"fileName": "AGENTS.md"`) {
+		t.Fatalf("expected qwen settings update to preserve unrelated config, got: %s", updated)
+	}
+
+	if err := os.WriteFile(settingsPath, []byte(updated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := qwenSettingsUseAgents(settingsPath)
+	if err != nil || !ok {
+		t.Fatalf("expected qwen settings to use AGENTS.md, ok=%v err=%v", ok, err)
+	}
+}
+
+func TestQwenSettingsHelpersRemoveBranches(t *testing.T) {
+	tmp := t.TempDir()
+	settingsPath := filepath.Join(tmp, "settings.json")
+
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"light\",\n  \"context\": {\n    \"fileName\": \"AGENTS.md\"\n  }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	removed, changed, removeAll, err := removeQwenSettings(settingsPath)
+	if err != nil || !changed || removeAll {
+		t.Fatalf("unexpected removeQwenSettings result changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+	if strings.Contains(removed, `"fileName": "AGENTS.md"`) || !strings.Contains(removed, `"theme": "light"`) {
+		t.Fatalf("expected AGENTS.md removed and theme preserved, got: %s", removed)
+	}
+
+	if err := os.WriteFile(settingsPath, []byte("{\n  \"context\": {\n    \"fileName\": \"OTHER.md\"\n  }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, changed, removeAll, err = removeQwenSettings(settingsPath)
+	if err != nil || changed || removeAll {
+		t.Fatalf("expected no-op removeQwenSettings for non-AGENTS value, changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+}
+
+func TestWindsurfHooksConfigHelpersUpsertAndVerify(t *testing.T) {
+	tmp := t.TempDir()
+	hooksPath := filepath.Join(tmp, "hooks.json")
+	managedHook := filepath.Join(tmp, "ccp-block.sh")
+
+	updated, err := upsertWindsurfHooksConfig(hooksPath, managedHook)
+	if err != nil {
+		t.Fatalf("upsertWindsurfHooksConfig: %v", err)
+	}
+	if !strings.Contains(updated, managedHook) {
+		t.Fatalf("expected managed hook path in config, got: %s", updated)
+	}
+	if err := os.WriteFile(hooksPath, []byte(updated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := windsurfHooksConfigHasEntry(hooksPath, managedHook)
+	if err != nil || !ok {
+		t.Fatalf("expected windsurf config to contain managed hook, ok=%v err=%v", ok, err)
+	}
+}
+
+func TestWindsurfHooksConfigHelpersRemoveBranches(t *testing.T) {
+	tmp := t.TempDir()
+	hooksPath := filepath.Join(tmp, "hooks.json")
+	managedHook := filepath.Join(tmp, "ccp-block.sh")
+	otherHook := filepath.Join(tmp, "other.sh")
+
+	content := "{\n  \"pre_run_command\": [\n    {\n      \"name\": \"ccp-pre-run-command\",\n      \"command\": \"" + strings.ReplaceAll(managedHook, "\\", "\\\\") + "\",\n      \"enabled\": true\n    },\n    {\n      \"name\": \"other\",\n      \"command\": \"" + strings.ReplaceAll(otherHook, "\\", "\\\\") + "\",\n      \"enabled\": true\n    }\n  ]\n}\n"
+	if err := os.WriteFile(hooksPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	removed, changed, removeAll, err := removeWindsurfHooksConfig(hooksPath, managedHook)
+	if err != nil || !changed || removeAll {
+		t.Fatalf("unexpected removeWindsurfHooksConfig result changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+	if strings.Contains(removed, managedHook) || !strings.Contains(removed, otherHook) {
+		t.Fatalf("expected managed hook removed and other hook preserved, got: %s", removed)
+	}
+
+	if err := os.WriteFile(hooksPath, []byte("{\n  \"pre_run_command\": [\n    {\n      \"name\": \"ccp-pre-run-command\",\n      \"command\": \""+strings.ReplaceAll(managedHook, "\\", "\\\\")+"\",\n      \"enabled\": true\n    }\n  ]\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, changed, removeAll, err = removeWindsurfHooksConfig(hooksPath, managedHook)
+	if err != nil || !changed || !removeAll {
+		t.Fatalf("expected remove-all windsurf branch, changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+}
+
+func TestSmallHelperFallbacks(t *testing.T) {
+	if got := crushContextPaths("unexpected"); len(got) != 0 {
+		t.Fatalf("expected no crush context paths for non-slice input, got=%v", got)
+	}
+	if got := normalizeWindsurfHookEntries("unexpected"); got != nil {
+		t.Fatalf("expected nil windsurf entries for non-slice input, got=%v", got)
+	}
+}
+
+func TestNoopAdapter(t *testing.T) {
+	a := NewNoopAdapter("noop", ".noop")
+	ctx := Context{ScopeRoot: t.TempDir(), HomeDir: t.TempDir()}
+	if a.ID() != "noop" {
+		t.Fatalf(errUnexpectedIDFmt, a.ID())
+	}
+	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".noop") {
+		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
+	}
+	if plan := a.Plan(ctx); len(plan) != 0 {
+		t.Fatalf("expected empty noop plan, got %+v", plan)
+	}
+	res, err := a.Install(ctx, writeFileWriter)
+	if err != nil || res.Noop != 1 {
+		t.Fatalf("unexpected noop install result %+v err=%v", res, err)
+	}
+	if err := a.Verify(ctx); err != nil {
+		t.Fatalf("unexpected noop verify error: %v", err)
+	}
+	res, err = a.Uninstall(ctx)
+	if err != nil || res.Noop != 1 {
+		t.Fatalf("unexpected noop uninstall result %+v err=%v", res, err)
 	}
 }
 
 func TestIFlowAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".iflow"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -427,7 +768,7 @@ func TestIFlowAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, iflowFileName) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".iflow", iflowFileName)) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -613,27 +954,28 @@ func TestCodexPlanAndUpsertBranches(t *testing.T) {
 func TestAiderConfigHelpersPreserveOtherReadEntries(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, aiderConfigPath)
+	readPath := filepath.Join(tmp, aiderRulesPath)
 	if err := os.WriteFile(configPath, []byte("read:\n  - CONVENTIONS.md\nmodel: sonnet\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	updated, err := upsertAiderReadConfig(configPath)
+	updated, err := upsertAiderReadConfig(configPath, readPath)
 	if err != nil {
 		t.Fatalf("upsert aider config: %v", err)
 	}
-	if !strings.Contains(updated, "- CONVENTIONS.md") || !strings.Contains(updated, "- AGENTS.md") {
+	if !strings.Contains(updated, "- CONVENTIONS.md") || !strings.Contains(updated, "- "+readPath) {
 		t.Fatalf("expected both read entries preserved, got: %s", updated)
 	}
 	if err := os.WriteFile(configPath, []byte(updated), 0o644); err != nil {
 		t.Fatalf("write updated aider config: %v", err)
 	}
 
-	updated, changed, removeAll, err := removeAiderReadConfig(configPath)
+	updated, changed, removeAll, err := removeAiderReadConfig(configPath, readPath)
 	if err != nil || !changed || removeAll {
 		t.Fatalf("unexpected remove result changed=%v removeAll=%v err=%v", changed, removeAll, err)
 	}
-	if strings.Contains(updated, "AGENTS.md") {
-		t.Fatalf("expected AGENTS removed, got: %s", updated)
+	if strings.Contains(updated, readPath) {
+		t.Fatalf("expected aider read path removed, got: %s", updated)
 	}
 	if !strings.Contains(updated, "CONVENTIONS.md") || !strings.Contains(updated, "model: sonnet") {
 		t.Fatalf("expected unrelated config preserved, got: %s", updated)
@@ -683,8 +1025,12 @@ func TestGitHubCopilotAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestAiderAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(scopeRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewAiderAdapter()
@@ -695,7 +1041,7 @@ func TestAiderAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, ".aider.conf.yml") {
+	if len(plan) != 2 || !strings.HasSuffix(plan[0].Path, ".aider.conf.yml") || !strings.HasSuffix(plan[1].Path, ".aider.rules.md") {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -705,7 +1051,7 @@ func TestAiderAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
@@ -802,7 +1148,8 @@ func TestAmazonQAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestAntigravityAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".agent"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -814,7 +1161,7 @@ func TestAntigravityAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".agent", "rules", "ccp.md")) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".gemini", "GEMINI.md")) || !strings.HasPrefix(plan[0].Path, home) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -829,11 +1176,28 @@ func TestAntigravityAdapterInstallVerifyAndUninstall(t *testing.T) {
 	}
 }
 
+func TestAntigravityPlanReusesGeminiFamilyTarget(t *testing.T) {
+	tmp := t.TempDir()
+	ctx := Context{ScopeRoot: filepath.Join(tmp, "repo"), HomeDir: filepath.Join(tmp, "home")}
+	antigravityPlan := NewAntigravityAdapter().Plan(ctx)
+	geminiPlan := NewGeminiAdapter().Plan(ctx)
+	if len(antigravityPlan) != 1 || len(geminiPlan) != 1 {
+		t.Fatalf("unexpected antigravity/gemini plan lengths: antigravity=%d gemini=%d", len(antigravityPlan), len(geminiPlan))
+	}
+	if antigravityPlan[0].Path != geminiPlan[0].Path {
+		t.Fatalf("expected antigravity target %s to match gemini target %s", antigravityPlan[0].Path, geminiPlan[0].Path)
+	}
+}
+
 func TestKiroAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".kiro"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewKiroAdapter()
@@ -844,7 +1208,7 @@ func TestKiroAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".kiro", "steering", "ccp.md")) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".kiro", "steering", "AGENTS.md")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -862,7 +1226,8 @@ func TestKiroAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestKilocodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".kilocode"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -874,7 +1239,7 @@ func TestKilocodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".kilocode", "rules", "ccp.md")) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".config", "kilocode", "plugins", opencodePluginName)) || !strings.HasPrefix(plan[0].Path, home) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -892,8 +1257,12 @@ func TestKilocodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestRooCodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".roo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewRooCodeAdapter()
@@ -904,7 +1273,7 @@ func TestRooCodeAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".roo", "rules", "ccp.md")) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".roo", "rules", "ccp.md")) || !strings.HasPrefix(plan[0].Path, home) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -957,57 +1326,26 @@ func TestAmazonQRuleContentUsesCanonicalGuidanceWithoutCursorMetadata(t *testing
 	}
 }
 
-func TestAntigravityRuleContentUsesCanonicalGuidance(t *testing.T) {
-	content := antigravityRuleContent()
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
-	}
-	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected canonical ccp guidance, got: %s", content)
-	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
-	}
-	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
-		t.Fatalf("did not expect cursor or windsurf metadata in antigravity rule, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in antigravity rule, got: %s", content)
-	}
-}
-
 func TestKiroSteeringContentUsesCanonicalGuidance(t *testing.T) {
-	content := kiroSteeringContent()
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
+	content := ccpManagedBlockTemplate()
+	if !strings.Contains(content, ccpManagedBlockStart) || !strings.Contains(content, ccpManagedBlockEnd) {
+		t.Fatalf("expected managed block markers, got: %s", content)
 	}
 	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
 		t.Fatalf("expected canonical ccp guidance, got: %s", content)
-	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in kiro steering, got: %s", content)
 	}
 }
 
-func TestKilocodeRuleContentUsesCanonicalGuidance(t *testing.T) {
-	content := kilocodeRuleContent()
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
+func TestKilocodePluginContentUsesOpenCodeFamilyHook(t *testing.T) {
+	content := opencodePluginContent()
+	if !strings.Contains(content, `"tool.execute.before"`) {
+		t.Fatalf("expected tool.execute.before hook, got: %s", content)
 	}
-	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+	if !strings.Contains(content, `input.tool !== "bash"`) {
+		t.Fatalf("expected bash-only guard, got: %s", content)
 	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
-	}
-	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
-		t.Fatalf("did not expect cursor or windsurf metadata in kilocode rule, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in kilocode rule, got: %s", content)
+	if !strings.Contains(content, `output.args.command = rewritten`) {
+		t.Fatalf("expected command rewrite, got: %s", content)
 	}
 }
 
@@ -1027,8 +1365,12 @@ func TestRooCodeRuleContentUsesCanonicalGuidance(t *testing.T) {
 func TestWindsurfAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".windsurf"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewWindsurfAdapter()
@@ -1039,7 +1381,7 @@ func TestWindsurfAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".windsurf", "rules", "ccp.md")) {
+	if len(plan) != 2 || !strings.HasSuffix(plan[0].Path, filepath.Join(".codeium", "windsurf", "hooks", "ccp-block.sh")) || !strings.HasSuffix(plan[1].Path, filepath.Join(".codeium", "windsurf", "hooks.json")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -1049,41 +1391,34 @@ func TestWindsurfAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
 
 func TestWindsurfRuleContentUsesAlwaysOnMetadata(t *testing.T) {
-	content := windsurfRuleContent()
-	if !strings.HasPrefix(content, "---\n") {
-		t.Fatalf("expected frontmatter start, got: %s", content)
-	}
-	if !strings.Contains(content, "trigger: always_on") {
-		t.Fatalf("expected always_on trigger, got: %s", content)
-	}
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
-	}
-	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected canonical ccp guidance, got: %s", content)
-	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
-	}
-	if strings.Contains(content, "alwaysApply: true") {
-		t.Fatalf("did not expect cursor metadata in windsurf rule, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in windsurf rule, got: %s", content)
+	content := windsurfHookScriptContent()
+	for _, needle := range []string{
+		"generated by ccp init for windsurf",
+		"pre_run_command hook",
+		"Use ccp as the command prefix for shell commands",
+		"exit 2",
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("expected canonical windsurf hook content %q, got: %s", needle, content)
+		}
 	}
 }
 
 func TestClineAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".clinerules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewClineAdapter()
@@ -1094,7 +1429,7 @@ func TestClineAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".clinerules", "ccp.md")) {
+	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join("Cline", "Hooks", "PreToolUse")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -1112,8 +1447,12 @@ func TestClineAdapterInstallVerifyAndUninstall(t *testing.T) {
 func TestContinueAdapterInstallVerifyAndUninstall(t *testing.T) {
 	tmp := t.TempDir()
 	scopeRoot := filepath.Join(tmp, "repo")
-	ctx := Context{ScopeRoot: scopeRoot, HomeDir: filepath.Join(tmp, "home")}
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: scopeRoot, HomeDir: home}
 	if err := os.MkdirAll(filepath.Join(scopeRoot, ".continue"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	a := NewContinueAdapter()
@@ -1124,7 +1463,7 @@ func TestContinueAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
 	plan := a.Plan(ctx)
-	if len(plan) != 1 || !strings.HasSuffix(plan[0].Path, filepath.Join(".continue", "rules", "ccp.md")) {
+	if len(plan) != 2 || !strings.HasSuffix(plan[0].Path, filepath.Join(".continue", "hooks", "ccp-rewrite.sh")) || !strings.HasSuffix(plan[1].Path, filepath.Join(".continue", "settings.json")) {
 		t.Fatalf("unexpected plan: %+v", plan)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
@@ -1134,7 +1473,7 @@ func TestContinueAdapterInstallVerifyAndUninstall(t *testing.T) {
 		t.Fatalf(errVerifyFmt, err)
 	}
 	res, err := a.Uninstall(ctx)
-	if err != nil || res.Applied != 1 {
+	if err != nil || res.Applied != 2 {
 		t.Fatalf(errUnexpectedUninstFmt, res, err)
 	}
 }
@@ -1170,40 +1509,54 @@ func TestTraeAdapterInstallVerifyAndUninstall(t *testing.T) {
 }
 
 func TestClineRuleContentUsesCanonicalGuidance(t *testing.T) {
-	content := clineRuleContent()
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
+	content := clineHookScriptContent()
+	for _, needle := range []string{
+		"generated by ccp init for cline",
+		"execute_command",
+		`"Decision":"block"`,
+		"Use ccp as the command prefix for shell commands",
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("expected canonical cline hook content %q, got: %s", needle, content)
+		}
 	}
-	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected canonical ccp guidance, got: %s", content)
+}
+
+func TestResolveClineHooksDirPrefersExistingGlobalDirectory(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	preferred := filepath.Join(home, "Cline", "Hooks")
+	if err := os.MkdirAll(preferred, 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
+	got := resolveClineHooksDir(Context{HomeDir: home})
+	if got != preferred {
+		t.Fatalf("expected existing hooks dir %s, got %s", preferred, got)
 	}
-	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
-		t.Fatalf("did not expect cursor or windsurf metadata in cline rule, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in cline rule, got: %s", content)
+}
+
+func TestResolveClineHooksDirUsesDocumentsOverride(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	docs := filepath.Join(tmp, "docs")
+	t.Setenv("XDG_DOCUMENTS_DIR", docs)
+	got := resolveClineHooksDir(Context{HomeDir: home})
+	want := filepath.Join(docs, "Cline", "Hooks")
+	if got != want {
+		t.Fatalf("expected documents override %s, got %s", want, got)
 	}
 }
 
 func TestContinueRuleContentUsesCanonicalGuidance(t *testing.T) {
-	content := continueRuleContent()
-	if !strings.Contains(content, "## CCP Integration (Managed)") {
-		t.Fatalf("expected managed heading, got: %s", content)
-	}
-	if !strings.Contains(content, "Use `ccp` as the command prefix for every executable in shell commands") {
-		t.Fatalf("expected canonical ccp guidance, got: %s", content)
-	}
-	if !strings.Contains(content, ccpRawEscapeHatch) {
-		t.Fatalf("expected raw escape hatch note, got: %s", content)
-	}
-	if strings.Contains(content, "alwaysApply: true") || strings.Contains(content, "trigger: always_on") {
-		t.Fatalf("did not expect cursor or windsurf metadata in continue rule, got: %s", content)
-	}
-	if strings.Contains(content, ccpManagedBlockStart) || strings.Contains(content, ccpManagedBlockEnd) {
-		t.Fatalf("did not expect managed block markers in continue rule, got: %s", content)
+	content := claudeHookScriptContent()
+	for _, needle := range []string{
+		"generated by ccp init for claude",
+		"optionally rewrite Bash command",
+		"ccp auto-rewrite",
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("expected canonical continue hook content %q, got: %s", needle, content)
+		}
 	}
 }
 

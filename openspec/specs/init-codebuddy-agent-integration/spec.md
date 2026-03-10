@@ -12,41 +12,19 @@ Define how `ccp init` detects, installs, verifies, and uninstalls the CodeBuddy 
 - **WHEN** the current repository contains a `.codebuddy` directory
 - **THEN** `codebuddy` is included in detected init candidates
 
-### Requirement: Manage CodeBuddy Guidance in Repo-Root `CODEBUDDY.md`
+### Requirement: CodeBuddy Uses User-Scoped Settings Hook Integration
+CodeBuddy init integration SHALL install CCP through CodeBuddy's user-scoped `settings.json` hook system rather than through repo-root memory files.
 
-`ccp init --tools codebuddy` MUST install CCP-managed guidance into repo-root `CODEBUDDY.md`.
-
-#### Scenario: install managed CCP block into repo memory file
+#### Scenario: install user-scoped codebuddy settings hook
 - **WHEN** the user runs `ccp init --tools codebuddy`
-- **THEN** CCP resolves `CODEBUDDY.md` in the current repository root as the managed CodeBuddy target
-- **AND** installs a CCP-managed block with begin and end markers
-- **AND** preserves unrelated user-authored content outside the managed block
+- **THEN** CCP installs a managed hook script under `~/.codebuddy/hooks/`
+- **AND** CCP installs or updates `~/.codebuddy/settings.json`
+- **AND** the managed integration uses `PreToolUse` with `updatedInput` command interception to route shell execution through `ccp`
 
-#### Scenario: rerun remains idempotent
-- **GIVEN** repo-root `CODEBUDDY.md` already contains the CCP-managed block for CodeBuddy
-- **WHEN** the user reruns `ccp init --tools codebuddy`
-- **THEN** CCP does not duplicate the managed block
-- **AND** the resulting file remains semantically unchanged
+### Requirement: CodeBuddy Uninstall Removes Managed Settings Artifacts
+CodeBuddy uninstall integration SHALL remove only the CCP-managed settings and hook artifacts.
 
-### Requirement: Verify CodeBuddy Managed Guidance
-
-CodeBuddy verification MUST confirm that repo-root `CODEBUDDY.md` still contains the CCP-managed block.
-
-#### Scenario: verify repo CodeBuddy memory file managed block
-- **WHEN** repo-root `CODEBUDDY.md` contains the CCP-managed block
-- **THEN** CodeBuddy verification succeeds
-
-### Requirement: Remove Only CCP-Managed CodeBuddy Content
-
-`ccp uninstall` MUST remove only the CCP-managed CodeBuddy block from repo-root `CODEBUDDY.md`.
-
-#### Scenario: uninstall preserves unrelated CodeBuddy memory content
-- **GIVEN** repo-root `CODEBUDDY.md` contains user-authored content and the CCP-managed block
+#### Scenario: uninstall preserves unrelated settings
 - **WHEN** the user uninstalls CodeBuddy integration
-- **THEN** CCP removes only the managed block
-- **AND** preserves the user-authored content
-
-#### Scenario: uninstall removes empty CodeBuddy memory file
-- **GIVEN** repo-root `CODEBUDDY.md` contains only the CCP-managed block
-- **WHEN** the user uninstalls CodeBuddy integration
-- **THEN** CCP removes the file entirely
+- **THEN** CCP removes only the CCP-managed settings entry and hook artifacts
+- **AND** preserves unrelated CodeBuddy settings, hooks, and memory files

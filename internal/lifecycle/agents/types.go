@@ -195,3 +195,11 @@ func ResolveHomeScopedPath(home, rel string) string {
 	}
 	return rel
 }
+
+func ResolveRepoScopedPath(scopeRoot, rel string) string {
+	base := strings.TrimSpace(scopeRoot)
+	if base != "" {
+		return filepath.Join(base, rel)
+	}
+	return rel
+}

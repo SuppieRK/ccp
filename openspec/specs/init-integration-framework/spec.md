@@ -38,6 +38,35 @@ Define `ccp init` behavior for coding-agent detection, installation, and persist
 - **WHEN** `--tools` is omitted and no tools are detected
 - **THEN** init fails with `no tools detected; specify --tools (...)` guidance.
 
+### Requirement: Canonical Install Scope Resolution
+`ccp init` SHALL resolve a canonical managed install target per agent independently from repository-scoped detection.
+
+#### Scenario: repository detection with home-scoped install
+- **WHEN** an adapter detects an agent from repository-local markers
+- **AND** that agent has a documented home-scoped integration surface
+- **THEN** `ccp init` installs CCP-managed integration artifacts at the documented home-scoped target
+- **AND** repository-scoped markers remain detection inputs rather than the default install target
+
+#### Scenario: repository scope remains fallback
+- **WHEN** an adapter does not have a documented and automatable home-scoped integration surface
+- **THEN** `ccp init` keeps the canonical install target at repository scope
+
+### Requirement: Canonical Target May Use Hooks Or Plugins
+`ccp init` SHALL prefer the agent-native integration mechanism that provides command interception when that mechanism is documented and automatable.
+
+#### Scenario: hook or plugin surface is preferred over static guidance
+- **WHEN** an agent documents a hook or plugin surface that can intercept shell or tool execution
+- **THEN** `ccp init` uses that hook or plugin surface as the canonical CCP integration target
+- **AND** static rule or instruction files remain fallback or contextual guidance layers only when still needed by that agent
+
+### Requirement: Alias Tools Reuse Canonical Install Targets
+Aliases SHALL reuse the canonical install target and behavior of the integration they normalize to.
+
+#### Scenario: alias shares canonical target
+- **WHEN** an alias tool is selected for init or uninstall
+- **THEN** CCP applies the canonical integration target and lifecycle behavior of the normalized tool
+- **AND** it does not create a second competing managed install target for the alias name
+
 ### Requirement: Tool Validation
 `ccp init` SHALL reject unsupported tool IDs before adapter installation.
 

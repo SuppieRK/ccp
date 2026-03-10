@@ -5,57 +5,42 @@ Define the managed Cline integration installed and removed by `ccp init` and `cc
 
 ## Requirements
 ### Requirement: Cline Detection vs Install Scope
-Cline init integration SHALL detect from repository scope and install to a repository-scoped Cline rules target.
+Cline init integration SHALL detect from repository scope and install to a home-scoped hooks target.
 
-#### Scenario: repository detection with repository-scoped install
+#### Scenario: repository detection with home-scoped hooks install
 - **WHEN** init resolves tool adapters for `cline`
 - **THEN** Cline detection is based on repository `.clinerules` path presence
-- **AND** installation target remains under the repository at `.clinerules/ccp.md`.
+- **AND** installation target resolves to the global hooks directory under `~/Documents/Cline/Rules/Hooks/`
 
-### Requirement: Cline Managed Rule Target
-Cline init integration SHALL manage a deterministic rule file at `.clinerules/ccp.md`.
+### Requirement: Cline Hook-Based Integration
+Cline init integration SHALL install a managed `PreToolUse` hook that enforces the `ccp` command-prefix contract before shell execution.
 
-#### Scenario: deterministic managed target
+#### Scenario: install managed pre-tool hook
 - **WHEN** user runs `ccp init --tools cline`
-- **THEN** integration resolves `.clinerules/ccp.md` as the canonical Cline target for installation or update.
+- **THEN** CCP installs a managed hook in the global Cline hooks directory
+- **AND** the hook applies before tool execution
+- **AND** the hook blocks unsupported shell execution that does not follow the `ccp` prefix contract
 
-### Requirement: Cline Managed Rule Content
-Cline init integration SHALL install Cline guidance that routes shell command execution through `ccp`.
+### Requirement: Cline Home Path Discovery
+Cline init integration SHALL resolve the global hooks directory from the user's home base path rather than from a hardcoded localized folder string.
 
-#### Scenario: first-run managed rule creation
+#### Scenario: derive hooks path from user home
 - **WHEN** user runs `ccp init --tools cline`
-- **THEN** `.clinerules/ccp.md` is created or updated
-- **AND** the managed rule instructs Cline to prefer executing shell commands through `ccp`.
-
-#### Scenario: canonical CCP guidance is preserved
-- **WHEN** integration writes the managed Cline rule
-- **THEN** it preserves the same behavioral guidance as the other managed agent integrations where possible
-- **AND** it includes explicit `ccp` prefix instruction, command-shape examples, and missing-binary fallback guidance.
-
-### Requirement: Cline Dedicated Managed Rule File
-Cline init integration SHALL use a dedicated managed rule file rather than a managed block inside a shared instruction document.
-
-#### Scenario: managed file is wholly owned by CCP
-- **WHEN** Cline integration is installed
-- **THEN** CCP manages `.clinerules/ccp.md` as a dedicated rule file
-- **AND** it does not upsert managed block markers into unrelated Cline files.
+- **THEN** CCP derives the global Cline hooks path from the user's home directory or equivalent platform-resolved base path
+- **AND** it does not assume a hardcoded folder literal such as `~/Documents` is correct on every system
 
 ### Requirement: Cline Idempotent Reapply
 Cline adapter SHALL be idempotent on repeated runs.
 
 #### Scenario: re-run cline init
 - **WHEN** `ccp init --tools cline` is run twice
-- **THEN** the second run does not create duplicate CCP rule files
-- **AND** reports no-op or already-configured status when the managed rule content is unchanged.
+- **THEN** the second run does not create duplicate CCP-managed hook artifacts
+- **AND** reports no-op or already-configured status when the managed hook content is unchanged.
 
-### Requirement: Cline Uninstall Cleanup
-Cline uninstall integration SHALL remove only the CCP-managed Cline rule file.
+### Requirement: Cline Hook Uninstall Cleanup
+Cline uninstall integration SHALL remove only the CCP-managed Cline hook artifacts.
 
-#### Scenario: uninstall removes managed rule file
-- **WHEN** uninstall runs after Cline integration has been applied
-- **THEN** uninstall removes `.clinerules/ccp.md`.
-
-#### Scenario: uninstall preserves other Cline project files
-- **WHEN** uninstall removes the managed Cline rule file
-- **THEN** it does not remove other files under `.clinerules`
-- **AND** it does not prune parent directories solely because they become empty.
+#### Scenario: uninstall removes managed hook
+- **WHEN** uninstall runs after Cline hook integration has been applied
+- **THEN** uninstall removes only the CCP-managed Cline hook artifacts
+- **AND** preserves unrelated Cline rules and hooks

@@ -23,7 +23,7 @@ func RunUninstall(args []string) error {
 		[]string{"ccp uninstall [--tools <tool,tool,...>]"},
 		"When --tools is omitted, ccp uses configured tools or auto-detection from the current repository.",
 		"ccp removes its managed init state from ~/.config/ccp/init.json when no configured tools remain.",
-		"Each integration decides which managed files are removed during uninstall.",
+		"Each integration removes managed artifacts from the same canonical install target used during init.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {

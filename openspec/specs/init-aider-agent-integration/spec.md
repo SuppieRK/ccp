@@ -1,5 +1,9 @@
-## ADDED Requirements
+# init-aider-agent-integration Specification
 
+## Purpose
+Define how `ccp init` detects, installs, verifies, and uninstalls the Aider integration.
+
+## Requirements
 ### Requirement: Detect Aider Repositories
 
 `ccp init` MUST treat a repository-local `.aider.conf.yml` file as the initial detection heuristic for Aider integration.
@@ -12,48 +16,48 @@
 
 ### Requirement: Ensure AGENTS.md Is Loaded by Aider
 
-`ccp init --tools aider` MUST ensure that `.aider.conf.yml` loads `AGENTS.md` through Aider’s persistent `read` configuration.
+`ccp init --tools aider` MUST ensure that Aider loads CCP-managed guidance from a home-scoped markdown file through the user's home-scoped config.
 
-#### Scenario: Add AGENTS.md to empty or missing config
+#### Scenario: install home-scoped aider guidance
 
 - **WHEN** the user runs `ccp init --tools aider`
-- **AND** `.aider.conf.yml` is missing or does not configure `read`
-- **THEN** `ccp` writes config that causes Aider to load `AGENTS.md`
+- **THEN** `ccp` resolves `~/.aider.conf.yml` as the canonical Aider config target
+- **AND** `ccp` ensures that config loads a home-scoped guidance file such as `~/.aider.rules.md`
 
-#### Scenario: Preserve existing read entries
+#### Scenario: preserve existing home config entries
 
-- **WHEN** `.aider.conf.yml` already contains other `read` entries
+- **WHEN** `~/.aider.conf.yml` already contains other `read` entries
 - **AND** the user runs `ccp init --tools aider`
 - **THEN** `ccp` preserves the existing entries
-- **AND** adds `AGENTS.md` without duplication
+- **AND** adds the CCP-managed home guidance file without duplication
 
 #### Scenario: Reapply managed config change deterministically
 
-- **WHEN** `.aider.conf.yml` already includes the CCP-managed Aider config contribution
+- **WHEN** `~/.aider.conf.yml` already includes the CCP-managed Aider config contribution
 - **AND** the user runs `ccp init --tools aider` again
 - **THEN** the resulting config remains deterministic
 
 ### Requirement: Verify Aider Integration
 
-`ccp init` verification MUST confirm that `.aider.conf.yml` still causes Aider to load `AGENTS.md`.
+`ccp init` verification MUST confirm that the home-scoped Aider config still loads the CCP-managed home guidance file.
 
-#### Scenario: Verify AGENTS.md read configuration
+#### Scenario: verify home aider read configuration
 
-- **WHEN** `.aider.conf.yml` contains config that loads `AGENTS.md`
+- **WHEN** `~/.aider.conf.yml` contains config that loads the CCP-managed home guidance file
 - **THEN** verification succeeds for the Aider integration
 
 ### Requirement: Remove Only CCP-Managed Aider Config State
 
-`ccp uninstall --tools aider` MUST remove only the CCP-managed Aider config contribution and preserve unrelated Aider configuration.
+`ccp uninstall --tools aider` MUST remove only the CCP-managed home-scoped Aider config contribution and preserve unrelated Aider configuration.
 
-#### Scenario: Remove AGENTS.md from read configuration
+#### Scenario: remove managed home guidance reference
 
 - **WHEN** the user runs `ccp uninstall --tools aider`
-- **THEN** `ccp` removes `AGENTS.md` from the managed Aider `read` configuration
+- **THEN** `ccp` removes the CCP-managed home guidance file reference from `~/.aider.conf.yml`
 - **AND** preserves unrelated `read` entries and unrelated config settings
 
 #### Scenario: Remove config file only when empty
 
-- **WHEN** `.aider.conf.yml` only contains the CCP-managed Aider contribution
+- **WHEN** `~/.aider.conf.yml` only contains the CCP-managed Aider contribution
 - **AND** the user runs `ccp uninstall --tools aider`
-- **THEN** `ccp` may remove `.aider.conf.yml`
+- **THEN** `ccp` may remove `~/.aider.conf.yml`

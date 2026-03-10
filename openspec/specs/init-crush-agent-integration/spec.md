@@ -1,3 +1,5 @@
+# init-crush-agent-integration Specification
+
 ## Purpose
 Define how `ccp init` installs and manages CCP guidance for Crush CLI projects.
 
@@ -12,44 +14,30 @@ Define how `ccp init` installs and manages CCP guidance for Crush CLI projects.
 
 ### Requirement: Install CCP Guidance Into Repo-Root `AGENTS.md`
 
-The Crush integration MUST install CCP-managed guidance into the repository's `AGENTS.md`.
+The Crush integration MUST install CCP-managed guidance through the home-scoped Crush configuration and user context path rather than through repo-root `AGENTS.md`.
 
-#### Scenario: install managed Crush block into existing AGENTS file
-- **GIVEN** the repository contains a `.crush` directory
-- **AND** repo-root `AGENTS.md` already exists with non-CCP content
+#### Scenario: install home-scoped crush context path
 - **WHEN** the user runs `ccp init --tools crush`
-- **THEN** CCP upserts its managed block into repo-root `AGENTS.md`
-- **AND** preserves unrelated user content
-
-#### Scenario: install managed Crush block into new AGENTS file
-- **GIVEN** the repository contains a `.crush` directory
-- **AND** repo-root `AGENTS.md` does not exist
-- **WHEN** the user runs `ccp init --tools crush`
-- **THEN** CCP creates repo-root `AGENTS.md`
-- **AND** writes the CCP-managed Crush guidance block into that file
+- **THEN** CCP resolves `~/.config/crush/crush.json` as the canonical Crush config target
+- **AND** CCP ensures that `options.context_paths` includes `~/.config/crush/CRUSH.md`
+- **AND** CCP writes or updates the managed home-scoped `CRUSH.md` guidance file
 
 ### Requirement: Reapply Crush Guidance Idempotently
 
-Crush installs MUST remain idempotent across repeated `ccp init` runs.
+Crush installs MUST remain idempotent across repeated `ccp init` runs when using the home-scoped config and context file.
 
-#### Scenario: rerun does not duplicate managed block
-- **GIVEN** repo-root `AGENTS.md` already contains the CCP-managed Crush guidance
+#### Scenario: rerun does not duplicate managed home context wiring
+- **GIVEN** `~/.config/crush/crush.json` already references the CCP-managed home `CRUSH.md`
 - **WHEN** the user reruns `ccp init --tools crush`
-- **THEN** CCP does not duplicate the managed block
-- **AND** the resulting file remains semantically unchanged
+- **THEN** CCP does not duplicate the managed context-path entry
+- **AND** the resulting config and home guidance remain semantically unchanged
 
 ### Requirement: Remove Only CCP-Managed Crush Content
 
-`ccp uninstall --tools crush` MUST remove only CCP-managed Crush content from repo-root `AGENTS.md`.
+`ccp uninstall --tools crush` MUST remove only the CCP-managed Crush home context contribution.
 
-#### Scenario: uninstall preserves unrelated AGENTS content
-- **GIVEN** repo-root `AGENTS.md` contains both the CCP-managed Crush block and unrelated user content
+#### Scenario: uninstall preserves unrelated crush config
+- **GIVEN** `~/.config/crush/crush.json` contains unrelated settings and the CCP-managed context-path entry
 - **WHEN** the user runs `ccp uninstall --tools crush`
-- **THEN** CCP removes only the managed Crush block
-- **AND** preserves the unrelated user content
-
-#### Scenario: uninstall removes AGENTS file when block is sole content
-- **GIVEN** repo-root `AGENTS.md` contains only the CCP-managed Crush block
-- **WHEN** the user runs `ccp uninstall --tools crush`
-- **THEN** CCP removes the managed block
-- **AND** deletes repo-root `AGENTS.md`
+- **THEN** CCP removes only the managed context-path entry and managed home guidance
+- **AND** preserves unrelated Crush configuration
