@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -1102,6 +1103,9 @@ func runClaudeHookScript(t *testing.T, input string, withCCP bool) (string, stri
 
 func runHookScript(t *testing.T, scriptName, logName, script, input string, withCCP bool) hookRunResult {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("hook runtime tests are skipped on Windows")
+	}
 
 	bashPath, err := exec.LookPath("bash")
 	if err != nil {
@@ -1123,14 +1127,15 @@ func runHookScript(t *testing.T, scriptName, logName, script, input string, with
 		if err := os.WriteFile(fakeCCP, []byte("#!/bin/bash\nexit 0\n"), 0o755); err != nil {
 			t.Fatalf("write fake ccp: %v", err)
 		}
-		pathParts = append([]string{binDir}, pathParts...)
+		pathParts = append(pathParts, binDir)
 	}
 
-	cmd := exec.Command(bashPath, scriptPath)
+	cmd := exec.Command(bashPath, "./"+scriptName)
+	cmd.Dir = tmp
 	cmd.Stdin = strings.NewReader(input)
 	cmd.Env = append(os.Environ(),
-		"TMPDIR="+tmp,
-		"PATH="+strings.Join(pathParts, string(os.PathListSeparator)),
+		"TMPDIR=.",
+		"PATH="+bashFriendlyTestPATH(pathParts),
 	)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -1157,6 +1162,24 @@ func runHookScript(t *testing.T, scriptName, logName, script, input string, with
 		log:      string(logData),
 		exitCode: exitCode,
 	}
+}
+
+func bashFriendlyTestPath(path string) string {
+	if runtime.GOOS != "windows" {
+		return path
+	}
+	return filepath.ToSlash(path)
+}
+
+func bashFriendlyTestPATH(prefixes []string) string {
+	parts := make([]string, 0, len(prefixes))
+	for _, prefix := range prefixes {
+		parts = append(parts, bashFriendlyTestPath(prefix))
+	}
+	if runtime.GOOS == "windows" {
+		return strings.Join(parts, ":")
+	}
+	return strings.Join(parts, string(os.PathListSeparator))
 }
 
 func decodeClaudeHookOutput(t *testing.T, raw string) string {
