@@ -67,6 +67,12 @@ Execution planning SHALL use the same registry-backed tool contracts used by the
 - **WHEN** a detected tool has a registered filter
 - **THEN** planner applies `Prepare(...)` from that tool contract to normalize args.
 
+#### Scenario: recognized passthrough retains tool identity
+- **WHEN** a detected tool has a registered filter
+- **AND** that tool contract selects passthrough-safe execution for the command shape
+- **THEN** the execution plan retains the canonical tool identity for metrics and history classification
+- **AND** passthrough behavior is represented through the passthrough execution path rather than by clearing the tool identity
+
 #### Scenario: Unknown-tool neutral behavior
 - **WHEN** no registered filter matches a detected tool
 - **THEN** planner and engine both use tool-scoped no-op behavior instead of divergent tool logic.
@@ -125,6 +131,16 @@ The command proxy SHALL record one metrics entry for each completed non-raw exec
 #### Scenario: Passthrough proxy path records metrics
 - **WHEN** an execution command is passed through within proxy execution flow
 - **THEN** the proxy records a metrics entry with byte measurements and marks passthrough as true.
+
+#### Scenario: recognized passthrough preserves canonical tool classification
+- **WHEN** an execution command is passed through within proxy execution flow
+- **AND** the command was recognized by a registered tool contract
+- **THEN** the proxy records the canonical tool identity for that command in metrics and history outputs.
+
+#### Scenario: ambiguous shell fallback remains neutral
+- **WHEN** planning falls back to neutral shell execution because command shape is ambiguous
+- **THEN** the proxy may persist a neutral or unknown tool classification for that execution
+- **AND** does not claim a specific canonical tool identity solely from the shell-chain contents.
 
 #### Scenario: Raw mode remains excluded from gain tracking
 - **WHEN** an execution command runs with `--raw`

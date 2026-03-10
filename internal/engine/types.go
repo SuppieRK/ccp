@@ -40,12 +40,14 @@ type Event struct {
 // ExecPlan is the prepared execution plan produced by runner planning.
 type ExecPlan struct {
 	Tool            string
+	MetricsTool     string
 	DispatchKey     string
 	Name            string
 	Args            []string
 	FallbackName    string
 	FallbackArgs    []string
 	RawInput        string
+	Passthrough     bool
 	IsAmbiguous     bool
 	AmbiguityReason string
 	AmbiguityOps    []string

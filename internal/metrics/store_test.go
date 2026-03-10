@@ -141,6 +141,43 @@ func TestAppendTruncatesLongCommandText(t *testing.T) {
 	}
 }
 
+func TestAppendPreservesExplicitToolAndNormalizesBlankToolToUnknown(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "metrics.db")
+	if err := Append(path, RunMetric{
+		Tool:        "git",
+		Command:     "git ls-files --stage",
+		RawBytes:    10,
+		KeptBytes:   10,
+		Passthrough: true,
+	}); err != nil {
+		t.Fatalf("append explicit tool metric: %v", err)
+	}
+	if err := Append(path, RunMetric{
+		Command:     "echo a && echo b",
+		RawBytes:    4,
+		KeptBytes:   4,
+		Passthrough: true,
+	}); err != nil {
+		t.Fatalf("append blank tool metric: %v", err)
+	}
+
+	history, err := QueryHistory(path, QueryOptions{})
+	if err != nil {
+		t.Fatalf("query history: %v", err)
+	}
+	if len(history) != 2 {
+		t.Fatalf("history rows = %d, want 2", len(history))
+	}
+	if history[0].Tool != "unknown" {
+		t.Fatalf("expected most recent blank tool metric to normalize to unknown, got %+v", history[0])
+	}
+	if history[1].Tool != "git" || !history[1].Passthrough {
+		t.Fatalf("expected explicit canonical passthrough tool to be preserved, got %+v", history[1])
+	}
+}
+
 func initGitProjectForMetrics(t *testing.T, gitignoreContent string) string {
 	t.Helper()
 	project := t.TempDir()

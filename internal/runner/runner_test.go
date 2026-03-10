@@ -409,10 +409,14 @@ func TestRawDisablesMetricsPersistence(t *testing.T) {
 func TestRunnerPersistsPassthroughAndProxiedMarkers(t *testing.T) {
 	tmp := t.TempDir()
 	metricsPath := filepath.Join(tmp, "gain.db")
-	r := New(Options{MetricsPath: metricsPath}, nil, nil)
+	registry := engine.NewToolFilterRegistry()
+	if err := registry.Register(filters.NewLSCompactor()); err != nil {
+		t.Fatalf("register ls filter: %v", err)
+	}
+	r := New(Options{MetricsPath: metricsPath}, nil, registry)
 
-	if code := r.Run(successCommand()); code != 0 {
-		t.Fatalf("expected proxied-style command success, got %d", code)
+	if code := r.Run([]string{"ls", tmp}); code != 0 {
+		t.Fatalf("expected ls passthrough success, got %d", code)
 	}
 	if code := r.Run([]string{"echo", "a", "&&", "echo", "b"}); code != 0 {
 		t.Fatalf("expected ambiguous shell-chain success, got %d", code)
@@ -427,15 +431,56 @@ func TestRunnerPersistsPassthroughAndProxiedMarkers(t *testing.T) {
 	}
 	var sawPassthrough bool
 	var sawProxied bool
+	var sawLSPassthrough bool
+	var sawUnknownPassthrough bool
 	for _, row := range history {
 		if row.Passthrough {
 			sawPassthrough = true
+			if row.Tool == "ls" {
+				sawLSPassthrough = true
+			}
+			if row.Tool == "unknown" {
+				sawUnknownPassthrough = true
+			}
 		} else {
 			sawProxied = true
 		}
 	}
-	if !sawPassthrough || !sawProxied {
-		t.Fatalf("expected both passthrough and proxied markers, sawPassthrough=%t sawProxied=%t", sawPassthrough, sawProxied)
+	if !sawPassthrough {
+		t.Fatalf("expected passthrough marker in history")
+	}
+	if !sawLSPassthrough {
+		t.Fatalf("expected recognized ls passthrough row, history=%+v", history)
+	}
+	if !sawUnknownPassthrough {
+		t.Fatalf("expected ambiguous shell passthrough row to remain unknown, history=%+v", history)
+	}
+	if sawProxied {
+		t.Fatalf("did not expect proxied rows in this passthrough-only scenario, history=%+v", history)
+	}
+}
+
+func TestRunnerPreservesCanonicalMetricsToolForRecognizedPassthrough(t *testing.T) {
+	metricsPath := filepath.Join(t.TempDir(), "gain.db")
+	registry := engine.NewToolFilterRegistry()
+	if err := registry.Register(filters.NewGitToolFilter()); err != nil {
+		t.Fatalf("register git filter: %v", err)
+	}
+	r := New(Options{MetricsPath: metricsPath}, nil, registry)
+
+	if code := r.Run([]string{"git", "ls-files", "--stage"}); code != 0 {
+		t.Fatalf("expected git ls-files success, got %d", code)
+	}
+
+	history, err := metrics.QueryHistory(metricsPath, metrics.QueryOptions{})
+	if err != nil {
+		t.Fatalf("query history: %v", err)
+	}
+	if len(history) != 1 {
+		t.Fatalf("expected 1 history row, got %d", len(history))
+	}
+	if history[0].Tool != "git" || !history[0].Passthrough {
+		t.Fatalf("expected canonical git passthrough metrics row, got %+v", history[0])
 	}
 }
 

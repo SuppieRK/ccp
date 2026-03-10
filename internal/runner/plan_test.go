@@ -41,6 +41,9 @@ func TestBuildExecPlanShellForOperators(t *testing.T) {
 	if plan.Tool != "" {
 		t.Fatalf("expected neutral tool binding for ambiguous plan, got %q", plan.Tool)
 	}
+	if plan.MetricsTool != "" || !plan.Passthrough {
+		t.Fatalf("expected ambiguous plan to remain neutral passthrough, got %#v", plan)
+	}
 }
 
 func TestBuildExecPlanLSPassthroughByDefault(t *testing.T) {
@@ -57,6 +60,9 @@ func TestBuildExecPlanLSPassthroughByDefault(t *testing.T) {
 	}
 	if plan.Tool != "" {
 		t.Fatalf("expected passthrough tool binding for default ls, got %q", plan.Tool)
+	}
+	if plan.MetricsTool != "ls" || !plan.Passthrough {
+		t.Fatalf("expected ls metrics classification preserved for passthrough, got %#v", plan)
 	}
 }
 
@@ -79,6 +85,9 @@ func TestBuildExecPlanUnknownToolFallback(t *testing.T) {
 	}
 	if plan.Tool != "unknown-tool" {
 		t.Fatalf("expected fallback tool unknown-tool, got %q", plan.Tool)
+	}
+	if plan.MetricsTool != "" || plan.Passthrough {
+		t.Fatalf("expected unknown tool to stay unclassified without forced passthrough, got %#v", plan)
 	}
 	want := []string{"--x", "y"}
 	if !slices.Equal(plan.Args, want) {
@@ -147,6 +156,9 @@ func TestBuildExecPlanGitUnknownSubcommandFallsBackToPassthrough(t *testing.T) {
 	if plan.Tool != "" {
 		t.Fatalf("expected passthrough tool binding for unknown subcommand, got %q", plan.Tool)
 	}
+	if plan.MetricsTool != "git" || !plan.Passthrough {
+		t.Fatalf("expected git metrics identity preserved for passthrough, got %#v", plan)
+	}
 	if plan.DispatchKey != "" {
 		t.Fatalf("expected empty dispatch key for unknown subcommand, got %q", plan.DispatchKey)
 	}
@@ -205,6 +217,9 @@ func TestBuildExecPlanForcePassthroughFromPrepare(t *testing.T) {
 	}
 	if plan.Tool != "" {
 		t.Fatalf("expected neutral passthrough tool, got %q", plan.Tool)
+	}
+	if plan.MetricsTool != "git" || !plan.Passthrough {
+		t.Fatalf("expected passthrough metrics identity preserved, got %#v", plan)
 	}
 	if plan.Name != "git" {
 		t.Fatalf("expected direct binary, got %q", plan.Name)

@@ -40,8 +40,37 @@ func TestBuildExecPlanGitShowPrecisionSensitiveShapesPassthrough(t *testing.T) {
 			if plan.Tool != "" {
 				t.Fatalf("expected passthrough tool binding, got %#v", plan)
 			}
+			if plan.MetricsTool != "git" || !plan.Passthrough {
+				t.Fatalf("expected git metrics identity preserved for passthrough, got %#v", plan)
+			}
 			if plan.DispatchKey != "git show" {
 				t.Fatalf("expected delegated git show dispatch, got %q", plan.DispatchKey)
+			}
+		})
+	}
+}
+
+func TestBuildExecPlanGitAdministrativePassthroughKeepsCanonicalMetricsTool(t *testing.T) {
+	reg := mustGitRegistry(t)
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "ls-files", args: []string{"git", "ls-files", "--stage"}},
+		{name: "update-index", args: []string{"git", "update-index", "--refresh"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			plan, err := BuildExecPlan(tc.args, reg)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if plan.Tool != "" {
+				t.Fatalf("expected neutral tool binding for passthrough shape, got %#v", plan)
+			}
+			if plan.MetricsTool != "git" || !plan.Passthrough {
+				t.Fatalf("expected canonical git metrics identity for passthrough, got %#v", plan)
 			}
 		})
 	}

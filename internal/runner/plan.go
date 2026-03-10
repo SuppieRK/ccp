@@ -43,8 +43,8 @@ func BuildExecPlan(args []string, registry *engine.ToolFilterRegistry) (engine.E
 
 	bin := args[0]
 	tail := args[1:]
-	f, prep, normalized := resolvePreparedToolPlan(bin, tail, registry)
-	return buildExecPlanFromPrepare(f, prep, normalized, bin, rawInput), nil
+	f, prep, normalized, recognized := resolvePreparedToolPlan(bin, tail, registry)
+	return buildExecPlanFromPrepare(f, prep, normalized, bin, rawInput, recognized), nil
 }
 
 func maybeBuildAmbiguousShellPlan(args []string, rawInput string) (engine.ExecPlan, bool) {
@@ -59,9 +59,11 @@ func buildAmbiguousShellPlan(rawInput string, ops []string) engine.ExecPlan {
 	return engine.ExecPlan{
 		// Ambiguous shell chains run with neutral tool binding in permissive mode.
 		Tool:            "",
+		MetricsTool:     "",
 		Name:            engine.ShellCommand(),
 		Args:            engine.ShellArgs(rawInput),
 		RawInput:        rawInput,
+		Passthrough:     true,
 		IsAmbiguous:     true,
 		AmbiguityReason: fmt.Sprintf("contains %q", strings.Join(ops, ", ")),
 		AmbiguityOps:    ops,
@@ -72,12 +74,14 @@ func resolvePreparedToolPlan(
 	bin string,
 	tail []string,
 	registry *engine.ToolFilterRegistry,
-) (engine.ToolFilter, engine.PrepareResult, []string) {
+) (engine.ToolFilter, engine.PrepareResult, []string, bool) {
 	detectedTool := filepath.Base(bin)
 	f := engine.NewNoopFilter(detectedTool)
+	recognized := false
 	if registry != nil {
 		if resolved := registry.Resolve(detectedTool); resolved != nil {
 			f = resolved
+			recognized = true
 		}
 	}
 	prep := f.Prepare(tail)
@@ -85,7 +89,7 @@ func resolvePreparedToolPlan(
 	if normalized == nil {
 		normalized = tail
 	}
-	return f, prep, normalized
+	return f, prep, normalized, recognized
 }
 
 func buildExecPlanFromPrepare(
@@ -93,13 +97,16 @@ func buildExecPlanFromPrepare(
 	prep engine.PrepareResult,
 	normalized []string,
 	bin, rawInput string,
+	recognized bool,
 ) engine.ExecPlan {
 	plan := engine.ExecPlan{
 		Tool:            f.Tool(),
+		MetricsTool:     metricsToolForPlan(f, recognized),
 		DispatchKey:     prep.DispatchKey,
 		Name:            bin,
 		Args:            normalized,
 		RawInput:        rawInput,
+		Passthrough:     prep.ForcePassthrough,
 		IsAmbiguous:     prep.Ambiguous,
 		AmbiguityReason: prep.Reason,
 	}
@@ -109,6 +116,13 @@ func buildExecPlanFromPrepare(
 		plan.Tool = ""
 	}
 	return plan
+}
+
+func metricsToolForPlan(f engine.ToolFilter, recognized bool) string {
+	if !recognized {
+		return ""
+	}
+	return f.Tool()
 }
 
 func applyPreferredSubstitution(plan *engine.ExecPlan, prep engine.PrepareResult, normalized []string, bin string) {

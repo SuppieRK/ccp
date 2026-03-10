@@ -115,6 +115,7 @@ The CLI SHALL provide `ccp gain` for summary savings and `ccp history` for execu
 - **WHEN** a user runs `ccp history` with optional `--since`, `--tool`, or `--failed`
 - **THEN** the CLI returns matching execution records ordered by time
 - **AND** each record includes command, tool, exit outcome, passthrough status, byte metrics, and estimated token metrics.
+- **AND** recognized passthrough executions report their canonical tool classification instead of being relabeled as `unknown`.
 
 #### Scenario: History text output exposes passthrough and ordering
 - **WHEN** a user runs `ccp history --format text`
