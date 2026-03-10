@@ -1,0 +1,19 @@
+[
+  {
+    "name": "success",
+    "tool": "docker",
+    "dispatch": "docker compose build",
+    "project": "project",
+    "before_start": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["docker", "compose", "build"],
+    "expect_exit": 0,
+    "must_contain": ["[ok] api built", "[ok] web built"],
+    "must_not_contain": [],
+    "required": true
+  }
+]

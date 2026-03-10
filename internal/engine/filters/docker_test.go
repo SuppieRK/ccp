@@ -17,6 +17,7 @@ func TestDockerParentPrepareRouting(t *testing.T) {
 		dispatch string
 	}{
 		{name: "ps", args: []string{"ps"}, dispatch: dockerPSDispatch},
+		{name: "compose build", args: []string{"compose", "build"}, dispatch: "docker compose build"},
 		{name: "compose ps", args: []string{"compose", "ps"}, dispatch: "docker compose ps"},
 		{name: "compose logs", args: []string{"compose", "logs", "--tail", "50", "api"}, dispatch: "docker compose logs|scope=api"},
 		{name: "compose logs with file", args: []string{"compose", "-f", "compose.yml", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
@@ -64,6 +65,7 @@ func TestDockerParentPreparePassthroughCases(t *testing.T) {
 		wantAmbiguous bool
 	}{
 		{name: "compose-format", args: []string{"compose", "ps", "--format", "json"}, wantAmbiguous: true},
+		{name: "compose-build-flag", args: []string{"compose", "build", "--progress", "plain"}, wantAmbiguous: false},
 		{name: "exec", args: []string{"exec", "-it", "c1", "sh"}, wantAmbiguous: true},
 		{name: "pull", args: []string{"pull", "alpine:latest"}, wantAmbiguous: true},
 		{name: "build", args: []string{"build", "."}, wantAmbiguous: true},
@@ -91,16 +93,17 @@ func TestDockerParentPrepareMoveLeadingFlags(t *testing.T) {
 		args     []string
 		dispatch string
 	}{
-		"leading context images":    {args: []string{"--context", "bench", "images"}, dispatch: "docker images"},
-		"leading context eq ps":     {args: []string{"--context=bench", "ps"}, dispatch: dockerPSDispatch},
-		"leading host logs":         {args: []string{"-H", "unix:///var/run/docker.sock", "logs", "api"}, dispatch: "docker logs|container=api"},
-		"leading host compose":      {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
-		"leading host compose ps":   {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "ps"}, dispatch: "docker compose ps"},
-		"leading host compose file": {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "-f", "compose.yml", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
-		"leading config logs":       {args: []string{"--config", "/tmp/docker", "logs", "web"}, dispatch: "docker logs|container=web"},
-		"leading log-level ps":      {args: []string{"--log-level", "debug", "ps"}, dispatch: dockerPSDispatch},
-		"leading tlsverify ps":      {args: []string{"--tlsverify", "ps"}, dispatch: dockerPSDispatch},
-		"leading debug bool":        {args: []string{"--debug", "ps"}, dispatch: dockerPSDispatch},
+		"leading context images":     {args: []string{"--context", "bench", "images"}, dispatch: "docker images"},
+		"leading context eq ps":      {args: []string{"--context=bench", "ps"}, dispatch: dockerPSDispatch},
+		"leading host logs":          {args: []string{"-H", "unix:///var/run/docker.sock", "logs", "api"}, dispatch: "docker logs|container=api"},
+		"leading host compose build": {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "build"}, dispatch: "docker compose build"},
+		"leading host compose":       {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
+		"leading host compose ps":    {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "ps"}, dispatch: "docker compose ps"},
+		"leading host compose file":  {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "-f", "compose.yml", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
+		"leading config logs":        {args: []string{"--config", "/tmp/docker", "logs", "web"}, dispatch: "docker logs|container=web"},
+		"leading log-level ps":       {args: []string{"--log-level", "debug", "ps"}, dispatch: dockerPSDispatch},
+		"leading tlsverify ps":       {args: []string{"--tlsverify", "ps"}, dispatch: dockerPSDispatch},
+		"leading debug bool":         {args: []string{"--debug", "ps"}, dispatch: dockerPSDispatch},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

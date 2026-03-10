@@ -28,6 +28,7 @@ func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 	}{
 		{name: "docker ps", args: []string{"docker", "ps"}, dispatch: "docker ps"},
 		{name: "docker images", args: []string{"docker", "images"}, dispatch: "docker images"},
+		{name: "docker compose build", args: []string{"docker", "compose", "build"}, dispatch: "docker compose build"},
 		{name: "docker compose logs", args: []string{"docker", "compose", "logs", "--tail", "20", "api"}, dispatch: "docker compose logs|scope=api"},
 		{name: "docker compose ps", args: []string{"docker", "compose", "ps"}, dispatch: "docker compose ps"},
 	}
@@ -61,6 +62,7 @@ func TestBuildExecPlanDockerPassthroughBoundaries(t *testing.T) {
 
 	tests := [][]string{
 		{"docker", "compose", "ps", "--format", "json"},
+		{"docker", "compose", "build", "--progress", "plain"},
 		{"docker", "exec", "-it", "c1", "sh"},
 		{"docker", "pull", "nginx"},
 		{"docker", "build", "."},

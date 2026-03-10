@@ -157,6 +157,61 @@ func TestRunnerDockerComposePSFormatPassthrough(t *testing.T) {
 	}
 }
 
+func TestRunnerDockerComposeBuildCompactionAndExitParity(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"build\" ]; then",
+		"  echo 'project-api  Built'",
+		"  echo 'project-web  Built'",
+		"  echo '#2 [web internal] load build definition from Dockerfile           0.0s'",
+		"  echo '#8 [api 1/4] FROM docker.io/library/golang:1.26-alpine           0.0s'",
+		"  echo '#9 [web 1/4] FROM docker.io/library/node:20-alpine               0.0s'",
+		"  echo '#18 [api] exporting to image                                     0.0s'",
+		"  echo '#19 [web] exporting to image                                     0.0s'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "build"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "[+] Building") {
+		t.Fatalf("did not expect synthetic build summary, got %q", out)
+	}
+	if !strings.Contains(out, "[ok] api built") || !strings.Contains(out, "[ok] web built") {
+		t.Fatalf("expected per-service build summary, got %q", out)
+	}
+}
+
+func TestRunnerDockerComposeBuildFlagPassthrough(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"build\" ]; then",
+		"  echo 'raw build output'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "build", "--progress", "plain"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if !strings.Contains(out, "raw build output") {
+		t.Fatalf("expected passthrough output, got %q", out)
+	}
+}
+
 func TestRunnerDockerComposeLogsFollowPassthrough(t *testing.T) {
 	skipWindowsDockerFixture(t)
 	r, script := newDockerFixtureRunner(t, Options{}, []string{
