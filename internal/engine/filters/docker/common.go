@@ -10,6 +10,7 @@ const defaultMaxRows = 15
 
 var columnSplit = regexp.MustCompile(`\s{2,}`)
 var requiredPSHeaders = []string{"CONTAINER ID", "IMAGE", "STATUS", "NAMES"}
+var requiredComposePSHeaders = []string{"NAME", "IMAGE", "SERVICE", "STATUS"}
 var requiredImagesHeaders = []string{"REPOSITORY", "TAG", "SIZE"}
 
 type psRow struct {
@@ -20,6 +21,15 @@ type psRow struct {
 	name            string
 	statusIsHealthy bool
 	portFoldKey     string
+}
+
+type composePSRow struct {
+	name            string
+	service         string
+	image           string
+	status          string
+	ports           string
+	statusIsHealthy bool
 }
 
 func splitColumns(line string) []string {
@@ -41,6 +51,10 @@ func isPSHeader(headers []string) bool {
 
 func isImagesHeader(headers []string) bool {
 	return hasRequiredHeaders(headers, requiredImagesHeaders)
+}
+
+func isComposePSHeader(headers []string) bool {
+	return hasRequiredHeaders(headers, requiredComposePSHeaders)
 }
 
 func hasRequiredHeaders(headers, required []string) bool {
@@ -90,6 +104,37 @@ func parsePSRow(headers []string, line string) (psRow, bool) {
 		name:            name,
 		statusIsHealthy: strings.HasPrefix(statusLower, "up "),
 		portFoldKey:     normalizePortsForFold(ports),
+	}, true
+}
+
+func parseComposePSRow(headers []string, line string) (composePSRow, bool) {
+	cols := splitColumns(line)
+	if len(headers) == 7 && len(cols) == 6 {
+		cols = append(cols[:5], append([]string{"-"}, cols[5:]...)...)
+	}
+	if len(cols) < len(headers) {
+		return composePSRow{}, false
+	}
+	name := columnValue(headers, cols, "NAME")
+	image := columnValue(headers, cols, "IMAGE")
+	service := columnValue(headers, cols, "SERVICE")
+	status := columnValue(headers, cols, "STATUS")
+	ports := columnValue(headers, cols, "PORTS")
+	if strings.TrimSpace(ports) == "" {
+		ports = "-"
+	}
+	if name == "" || image == "" || service == "" || status == "" {
+		return composePSRow{}, false
+	}
+	status = strings.TrimSpace(strings.TrimSuffix(status, " -"))
+	statusLower := strings.ToLower(status)
+	return composePSRow{
+		name:            name,
+		service:         service,
+		image:           image,
+		status:          status,
+		ports:           ports,
+		statusIsHealthy: strings.Contains(statusLower, "running") || strings.HasPrefix(statusLower, "up "),
 	}, true
 }
 

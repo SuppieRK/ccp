@@ -1,0 +1,19 @@
+[
+  {
+    "name": "success",
+    "tool": "docker",
+    "dispatch": "docker compose ps",
+    "project": "project",
+    "before_start": [
+      ["./scripts/setup_success.sh"]
+    ],
+    "after_stop": [
+      ["./scripts/cleanup.sh"]
+    ],
+    "native": ["docker", "compose", "ps"],
+    "expect_exit": 0,
+    "must_contain": ["service=web", "service=cache"],
+    "must_not_contain": [],
+    "required": true
+  }
+]

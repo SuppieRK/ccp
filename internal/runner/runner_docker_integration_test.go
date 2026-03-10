@@ -30,8 +30,8 @@ func TestRunnerDockerPSCompactionAndExitParity(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d", code)
 	}
-	if !strings.Contains(out, "docker ps: 2 containers") {
-		t.Fatalf("expected compact summary, got %q", out)
+	if strings.Contains(out, "docker ps: ") {
+		t.Fatalf("expected no summary line, got %q", out)
 	}
 	if !strings.Contains(out, "[ok x2] nginx") {
 		t.Fatalf("expected folded healthy rows, got %q", out)
@@ -100,6 +100,60 @@ func TestRunnerDockerComposeLogsFlushAndExitParity(t *testing.T) {
 	}
 	if !strings.Contains(out, "api-1  | started") || !strings.Contains(out, "web-1  | listening on :8080") {
 		t.Fatalf("expected raw compose logs output, got %q", out)
+	}
+}
+
+func TestRunnerDockerComposePSCompactionAndExitParity(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"ps\" ]; then",
+		"  echo 'NAME                IMAGE            COMMAND          SERVICE   CREATED         STATUS                     PORTS'",
+		"  echo 'demo-api-1          demo-api         \"./api\"         api       10 seconds ago  Up 10 seconds             0.0.0.0:8080->8080/tcp'",
+		"  echo 'demo-worker-1       demo-worker      \"./worker\"      worker    10 seconds ago  Exited (1) 1 second ago  -'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "ps"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "docker compose ps:") {
+		t.Fatalf("expected no summary line, got %q", out)
+	}
+	if !strings.Contains(out, "[ok] demo-api-1 service=api") || !strings.Contains(out, "[!] demo-worker-1 service=worker") {
+		t.Fatalf("expected compact service rows, got %q", out)
+	}
+}
+
+func TestRunnerDockerComposePSFormatPassthrough(t *testing.T) {
+	skipWindowsDockerFixture(t)
+	r, script := newDockerFixtureRunner(t, Options{}, []string{
+		dockerShebangLine,
+		"if [ \"$1\" = \"compose\" ] && [ \"$2\" = \"ps\" ]; then",
+		"  echo '{\"Service\":\"api\",\"State\":\"running\"}'",
+		"  exit 0",
+		"fi",
+		dockerUnexpectedInvoke,
+		dockerExitThreeLine,
+	})
+
+	out, code := captureCombined(t, func() int {
+		return r.Run([]string{script, "compose", "ps", "--format", "json"})
+	})
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if strings.Contains(out, "docker compose ps:") {
+		t.Fatalf("expected passthrough output, got %q", out)
+	}
+	if !strings.Contains(out, "{\"Service\":\"api\",\"State\":\"running\"}") {
+		t.Fatalf("expected raw structured output, got %q", out)
 	}
 }
 

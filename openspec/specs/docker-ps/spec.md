@@ -44,6 +44,15 @@ The `docker ps` compactor SHALL prioritize anomalies, fold healthy duplicates, a
 - **WHEN** multiple healthy rows share image/status/ports characteristics
 - **THEN** rows are grouped with count and joined names.
 
+#### Scenario: single healthy rows omit redundant count markers
+- **WHEN** a healthy grouping contains exactly one container
+- **THEN** output omits a redundant `x1` count marker
+- **AND** emits a singular container name field instead of a plural names list.
+
+#### Scenario: no synthetic summary line
+- **WHEN** `docker ps` output is compacted
+- **THEN** the compactor emits only anomaly/group rows plus any overflow marker, not a synthetic top summary line.
+
 #### Scenario: bounded row rendering
 - **WHEN** rendered anomaly/group lines exceed budget
 - **THEN** output is truncated with `... +N more`.
