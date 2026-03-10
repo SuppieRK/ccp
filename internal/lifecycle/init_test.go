@@ -48,7 +48,6 @@ const (
 	initGeminiDir         = ".gemini"
 	initGeminiFileName    = "GEMINI.md"
 	initWindsurfDir       = ".windsurf"
-	initWindsurfRuleName  = "ccp.md"
 	initClineDir          = ".clinerules"
 	initClineHookName     = "PreToolUse"
 	initMkdirHomeErrFmt   = "mkdir home: %v"
@@ -2181,7 +2180,7 @@ func TestRunInitClaudeUsesHomeTargetsAndPreToolUseSettings(t *testing.T) {
 		t.Fatalf("expected claude hook to be executable, mode=%v", hookInfo.Mode())
 	}
 	if runtime.GOOS != "windows" {
-		cmd := exec.Command("sh", "-n", hookPath)
+		cmd := exec.Command("bash", "-n", hookPath)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("expected syntactically valid claude hook script, err=%v output=%s", err, string(out))
 		}

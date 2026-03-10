@@ -42,18 +42,32 @@ Claude PreToolUse rewrite behavior SHALL preserve CCP routing across chained and
 - **THEN** the rewrite output keeps the existing first segment
 - **AND** prefixes remaining unprefixed chain segments with `ccp`.
 
+#### Scenario: generated hook is self-contained
+- **WHEN** Claude PreToolUse executes the managed rewrite hook
+- **THEN** rewrite behavior does not depend on `jq` being installed on the user machine.
+
+#### Scenario: ordinary quoted commands are still rewritten
+- **WHEN** Claude PreToolUse receives a Bash command that uses ordinary single or double quotes without escapes, substitutions, or heredoc syntax
+- **THEN** the hook still prefixes the command or chained segments with `ccp`
+- **AND** does not classify quoting alone as a rewrite blocker.
+
+#### Scenario: command text is not rejected by heuristic complexity checks
+- **WHEN** Claude PreToolUse receives valid Bash command text including quotes, backslashes, substitutions, or heredoc tokens
+- **THEN** the hook still attempts the `ccp` prefix rewrite
+- **AND** relies on rewrite/no-op detection and shell syntax validation instead of a pre-rewrite complexity screen.
+
 ### Requirement: Claude Rewrite Safety Fallback
 Claude PreToolUse rewrite behavior SHALL fail safe to passthrough for command shapes that are not safely normalizable by the chain-prefix rewriter.
-
-#### Scenario: complex quoting or substitution bypasses rewrite
-- **WHEN** Claude PreToolUse receives a command containing complex quoting, shell substitution, escapes, or heredoc markers
-- **THEN** the hook does not emit rewritten input
-- **AND** command execution remains native passthrough.
 
 #### Scenario: rewritten command must pass shell syntax check
 - **WHEN** the hook computes a rewritten command string
 - **THEN** the hook applies the rewritten command only if it passes shell syntax validation
 - **AND** if syntax validation fails, the hook emits no rewrite and falls back to passthrough.
+
+#### Scenario: skip paths leave troubleshooting markers
+- **WHEN** the managed Claude hook exits early without rewriting
+- **THEN** it appends a deterministic reason marker to a log file under the system tmp directory
+- **AND** each early-return branch uses a distinct marker so users can identify why rewrite was skipped.
 
 ### Requirement: Automatic Settings Registration
 Claude init integration SHALL materialize required PreToolUse settings automatically.

@@ -33,7 +33,7 @@ func (a ContinueAdapter) Plan(ctx Context) []PlannedArtifact {
 		{
 			Kind:    ArtifactHook,
 			Path:    hookPath,
-			Content: claudeHookScriptContent(),
+			Content: continueHookScriptContent(),
 			Perm:    0o755,
 		},
 		{
@@ -96,4 +96,8 @@ func continueRoot(ctx Context) string {
 		base = ctx.ScopeRoot
 	}
 	return filepath.Join(base, ".continue")
+}
+
+func continueHookScriptContent() string {
+	return bashRewriteHookScriptContent("continue", "ccp-continue-hook.log")
 }

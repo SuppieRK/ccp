@@ -34,7 +34,7 @@ func (a CodeBuddyAdapter) Plan(ctx Context) []PlannedArtifact {
 		{
 			Kind:    ArtifactHook,
 			Path:    hookPath,
-			Content: claudeHookScriptContent(),
+			Content: codebuddyHookScriptContent(),
 			Perm:    0o755,
 		},
 		{
@@ -52,7 +52,7 @@ func (a CodeBuddyAdapter) Install(ctx Context, write WriterFunc) (InstallResult,
 	settingsPath := filepath.Join(root, codebuddySettingsName)
 
 	var res InstallResult
-	hookChanged, err := write(hookPath, []byte(claudeHookScriptContent()), 0o755)
+	hookChanged, err := write(hookPath, []byte(codebuddyHookScriptContent()), 0o755)
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -209,4 +209,8 @@ func codebuddyPreToolUseContains(pre []any, hookPath string) bool {
 		}
 	}
 	return false
+}
+
+func codebuddyHookScriptContent() string {
+	return bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")
 }

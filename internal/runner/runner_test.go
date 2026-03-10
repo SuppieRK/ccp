@@ -409,6 +409,9 @@ func TestRawDisablesMetricsPersistence(t *testing.T) {
 func TestRunnerPersistsPassthroughAndProxiedMarkers(t *testing.T) {
 	tmp := t.TempDir()
 	metricsPath := filepath.Join(tmp, "gain.db")
+	if _, err := exec.LookPath("ls"); err != nil {
+		t.Skip("ls not available on PATH for direct exec")
+	}
 	registry := engine.NewToolFilterRegistry()
 	if err := registry.Register(filters.NewLSCompactor()); err != nil {
 		t.Fatalf("register ls filter: %v", err)

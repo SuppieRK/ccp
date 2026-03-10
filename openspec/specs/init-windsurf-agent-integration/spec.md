@@ -20,6 +20,15 @@ Windsurf init integration SHALL install a managed user-scoped `pre_run_command` 
 - **THEN** CCP writes a managed `pre_run_command` hook contribution into `~/.codeium/windsurf/hooks.json`
 - **AND** that hook blocks unsupported shell execution that does not follow the `ccp` prefix contract
 
+#### Scenario: hook runtime uses only bash builtins and ccp
+- **WHEN** the managed Windsurf hook executes
+- **THEN** its runtime behavior does not depend on helper commands other than bash builtins and `ccp`
+
+#### Scenario: exit paths leave troubleshooting markers
+- **WHEN** the managed Windsurf hook exits with status `0`
+- **THEN** it appends a deterministic reason marker to a log file under the system tmp directory
+- **AND** each early-return branch uses a distinct marker
+
 ### Requirement: Windsurf Idempotent Reapply
 Windsurf adapter SHALL be idempotent on repeated runs.
 
