@@ -1,9 +1,11 @@
 package agents
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -916,22 +918,417 @@ func TestClaudeHookRemovalHelpers(t *testing.T) {
 	}
 }
 
-func TestClaudeHookScriptPrefixesEachChainedSegment(t *testing.T) {
+func TestClaudeHookScriptContainsExpectedRuntimeGuards(t *testing.T) {
 	script := claudeHookScriptContent()
-	if !strings.Contains(script, `grep -Eq "['\"\\\\]|\\$\\(|\\$\\{|<<"`) {
-		t.Fatalf("expected conservative complexity fallback guard in hook script, got: %s", script)
+	if strings.Contains(script, "command -v jq") {
+		t.Fatalf("did not expect jq dependency in hook script, got: %s", script)
 	}
-	if !strings.Contains(script, `gsub("(^|\\|\\||&&|\\||;)\\s*(?!ccp\\b)"; "\\1 ccp ")`) {
-		t.Fatalf("expected chained-segment rewrite rule in hook script, got: %s", script)
+	if !strings.Contains(script, `command -v ccp`) {
+		t.Fatalf("expected ccp availability guard in hook script, got: %s", script)
 	}
-	if !strings.Contains(script, `if [ "$REWRITTEN_CMD" = "$CMD" ]; then`) {
-		t.Fatalf("expected no-op guard when rewrite does not change command, got: %s", script)
+	if !strings.Contains(script, `LOG_FILE="${TMPDIR:-/tmp}/ccp-claude-hook.log"`) {
+		t.Fatalf("expected tmp-folder log target in hook script, got: %s", script)
 	}
-	if !strings.Contains(script, `if ! sh -n -c "$REWRITTEN_CMD" >/dev/null 2>&1; then`) {
-		t.Fatalf("expected shell syntax verification guard for rewritten command, got: %s", script)
+	if strings.Contains(script, `skip-complex-shape`) {
+		t.Fatalf("did not expect heuristic complexity skip marker in hook script, got: %s", script)
 	}
-	if !strings.Contains(script, `--arg cmd "$REWRITTEN_CMD"`) {
-		t.Fatalf("expected updated input payload to use rewritten command, got: %s", script)
+	for _, reason := range []string{
+		"skip-no-ccp",
+		"skip-empty-input",
+		"skip-no-command",
+		"skip-empty-rewrite",
+		"skip-no-change",
+		"skip-invalid-shell",
+	} {
+		if !strings.Contains(script, reason) {
+			t.Fatalf("expected troubleshooting marker %q in hook script, got: %s", reason, script)
+		}
+	}
+	if !strings.Contains(script, `REWRITTEN_CMD="$(rewrite_command "$CMD")"`) {
+		t.Fatalf("expected shell-native rewrite helper usage, got: %s", script)
+	}
+	if !strings.Contains(script, `ESCAPED_CMD="$(json_escape "$REWRITTEN_CMD")"`) {
+		t.Fatalf("expected shell-native json escaping path, got: %s", script)
+	}
+	if !strings.Contains(script, `updatedInput\":{\"command\":\"$ESCAPED_CMD\"}`) {
+		t.Fatalf("expected updated input payload to use escaped rewritten command, got: %s", script)
+	}
+}
+
+func TestClaudeHookScriptExecutesExpectedBranches(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		withCCP      bool
+		wantLog      string
+		wantCommand  string
+		wantNoOutput bool
+	}{
+		{
+			name:         "missing ccp dependency",
+			input:        `{"tool_input":{"command":"pwd && ls"}}`,
+			wantLog:      "skip-no-ccp",
+			wantNoOutput: true,
+		},
+		{
+			name:         "empty input",
+			input:        "",
+			withCCP:      true,
+			wantLog:      "skip-empty-input",
+			wantNoOutput: true,
+		},
+		{
+			name:         "missing command field",
+			input:        `{"tool_input":{}}`,
+			withCCP:      true,
+			wantLog:      "skip-no-command",
+			wantNoOutput: true,
+		},
+		{
+			name:         "empty rewrite from whitespace command",
+			input:        `{"tool_input":{"command":"   "}}`,
+			withCCP:      true,
+			wantLog:      "skip-empty-rewrite",
+			wantNoOutput: true,
+		},
+		{
+			name:         "already prefixed command",
+			input:        `{"tool_input":{"command":"ccp pwd"}}`,
+			withCCP:      true,
+			wantLog:      "skip-no-change",
+			wantNoOutput: true,
+		},
+		{
+			name:         "invalid rewritten shell",
+			input:        `{"tool_input":{"command":"pwd &&"}}`,
+			withCCP:      true,
+			wantLog:      "skip-invalid-shell",
+			wantNoOutput: true,
+		},
+		{
+			name:        "simple chained rewrite",
+			input:       `{"tool_input":{"command":"pwd && ls"}}`,
+			withCCP:     true,
+			wantCommand: "ccp pwd && ccp ls",
+		},
+		{
+			name:        "double quoted rewrite",
+			input:       `{"tool_input":{"command":"echo \"test\""}}`,
+			withCCP:     true,
+			wantCommand: `ccp echo "test"`,
+		},
+		{
+			name:        "single quoted rewrite",
+			input:       `{"tool_input":{"command":"echo 'test'"}}`,
+			withCCP:     true,
+			wantCommand: `ccp echo 'test'`,
+		},
+		{
+			name:        "backslash command rewrite",
+			input:       `{"tool_input":{"command":"echo foo\\ bar"}}`,
+			withCCP:     true,
+			wantCommand: `ccp echo foo\ bar`,
+		},
+		{
+			name:        "command substitution rewrite",
+			input:       `{"tool_input":{"command":"echo $(pwd)"}}`,
+			withCCP:     true,
+			wantCommand: `ccp echo $(pwd)`,
+		},
+		{
+			name:        "parameter expansion rewrite",
+			input:       `{"tool_input":{"command":"echo ${HOME}"}}`,
+			withCCP:     true,
+			wantCommand: `ccp echo ${HOME}`,
+		},
+		{
+			name:        "heredoc token rewrite",
+			input:       `{"tool_input":{"command":"cat <<EOF"}}`,
+			withCCP:     true,
+			wantCommand: `ccp cat <<EOF`,
+		},
+		{
+			name:        "quoted chained rewrite",
+			input:       `{"tool_input":{"command":"git commit -m \"msg\" && git status"}}`,
+			withCCP:     true,
+			wantCommand: `ccp git commit -m "msg" && ccp git status`,
+		},
+		{
+			name:        "mixed prefixed chain rewrite",
+			input:       `{"tool_input":{"command":"ccp pwd && ls | env ; whoami || date"}}`,
+			withCCP:     true,
+			wantCommand: "ccp pwd && ccp ls | ccp env ; ccp whoami || ccp date",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			stdout, logOutput := runClaudeHookScript(t, tc.input, tc.withCCP)
+			if !strings.Contains(logOutput, tc.wantLog) && tc.wantLog != "" {
+				t.Fatalf("expected log marker %q, got %q", tc.wantLog, logOutput)
+			}
+			if tc.wantNoOutput {
+				if strings.TrimSpace(stdout) != "" {
+					t.Fatalf("expected no hook output, got %q", stdout)
+				}
+				return
+			}
+			if strings.TrimSpace(logOutput) != "" {
+				t.Fatalf("expected no skip log for successful rewrite, got %q", logOutput)
+			}
+			got := decodeClaudeHookOutput(t, stdout)
+			if got != tc.wantCommand {
+				t.Fatalf("expected rewritten command %q, got %q", tc.wantCommand, got)
+			}
+		})
+	}
+}
+
+type hookRunResult struct {
+	stdout   string
+	stderr   string
+	log      string
+	exitCode int
+}
+
+func runClaudeHookScript(t *testing.T, input string, withCCP bool) (string, string) {
+	t.Helper()
+	result := runHookScript(t, "ccp-rewrite.sh", "ccp-claude-hook.log", claudeHookScriptContent(), input, withCCP)
+	if result.exitCode != 0 {
+		t.Fatalf("expected claude hook exit 0, got %d stderr=%q", result.exitCode, result.stderr)
+	}
+	return result.stdout, result.log
+}
+
+func runHookScript(t *testing.T, scriptName, logName, script, input string, withCCP bool) hookRunResult {
+	t.Helper()
+
+	bashPath, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash not available")
+	}
+	tmp := t.TempDir()
+	scriptPath := filepath.Join(tmp, scriptName)
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write hook script: %v", err)
+	}
+
+	pathParts := []string{filepath.Dir(bashPath)}
+	if withCCP {
+		binDir := filepath.Join(tmp, "bin")
+		if err := os.MkdirAll(binDir, 0o755); err != nil {
+			t.Fatalf("mkdir fake bin: %v", err)
+		}
+		fakeCCP := filepath.Join(binDir, "ccp")
+		if err := os.WriteFile(fakeCCP, []byte("#!/bin/bash\nexit 0\n"), 0o755); err != nil {
+			t.Fatalf("write fake ccp: %v", err)
+		}
+		pathParts = append([]string{binDir}, pathParts...)
+	}
+
+	cmd := exec.Command(bashPath, scriptPath)
+	cmd.Stdin = strings.NewReader(input)
+	cmd.Env = append(os.Environ(),
+		"TMPDIR="+tmp,
+		"PATH="+strings.Join(pathParts, string(os.PathListSeparator)),
+	)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	exitCode := 0
+	if err := cmd.Run(); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		} else {
+			t.Fatalf("run hook script: %v stderr=%s", err, stderr.String())
+		}
+	}
+
+	logPath := filepath.Join(tmp, logName)
+	logData, err := os.ReadFile(logPath)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("read hook log: %v", err)
+	}
+	return hookRunResult{
+		stdout:   stdout.String(),
+		stderr:   stderr.String(),
+		log:      string(logData),
+		exitCode: exitCode,
+	}
+}
+
+func decodeClaudeHookOutput(t *testing.T, raw string) string {
+	t.Helper()
+
+	var payload struct {
+		HookSpecificOutput struct {
+			UpdatedInput struct {
+				Command string `json:"command"`
+			} `json:"updatedInput"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("decode hook output: %v raw=%q", err, raw)
+	}
+	return payload.HookSpecificOutput.UpdatedInput.Command
+}
+
+func TestHookScriptsUseOnlyBashAndCCPRuntime(t *testing.T) {
+	scripts := map[string]string{
+		"claude":    claudeHookScriptContent(),
+		"continue":  continueHookScriptContent(),
+		"codebuddy": codebuddyHookScriptContent(),
+		"cline":     clineHookScriptContent(),
+		"windsurf":  windsurfHookScriptContent(),
+	}
+	for name, script := range scripts {
+		if !strings.HasPrefix(script, "#!/bin/bash\n") {
+			t.Fatalf("%s hook should use bash shebang, got: %s", name, script)
+		}
+		for _, forbidden := range []string{"jq", "awk", "grep", "cat", "sed", "/usr/bin/env"} {
+			if strings.Contains(script, forbidden) {
+				t.Fatalf("%s hook should not depend on %q, got: %s", name, forbidden, script)
+			}
+		}
+	}
+}
+
+func TestContinueHookScriptExecutesExpectedBranches(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		withCCP      bool
+		wantLog      string
+		wantCommand  string
+		wantNoOutput bool
+	}{
+		{name: "missing ccp", input: `{"tool_input":{"command":"pwd"}}`, wantLog: "skip-no-ccp", wantNoOutput: true},
+		{name: "empty input", input: "", withCCP: true, wantLog: "skip-empty-input", wantNoOutput: true},
+		{name: "missing command", input: `{"tool_input":{}}`, withCCP: true, wantLog: "skip-no-command", wantNoOutput: true},
+		{name: "already prefixed", input: `{"tool_input":{"command":"ccp pwd"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true},
+		{name: "rewrite", input: `{"tool_input":{"command":"pwd && ls"}}`, withCCP: true, wantCommand: "ccp pwd && ccp ls"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := runHookScript(t, continueHookScriptName, "ccp-continue-hook.log", continueHookScriptContent(), tc.input, tc.withCCP)
+			if result.exitCode != 0 {
+				t.Fatalf("expected continue hook exit 0, got %d stderr=%q", result.exitCode, result.stderr)
+			}
+			if tc.wantLog != "" && !strings.Contains(result.log, tc.wantLog) {
+				t.Fatalf("expected log marker %q, got %q", tc.wantLog, result.log)
+			}
+			if tc.wantNoOutput {
+				if strings.TrimSpace(result.stdout) != "" {
+					t.Fatalf("expected no output, got %q", result.stdout)
+				}
+				return
+			}
+			if got := decodeClaudeHookOutput(t, result.stdout); got != tc.wantCommand {
+				t.Fatalf("expected rewritten command %q, got %q", tc.wantCommand, got)
+			}
+		})
+	}
+}
+
+func TestCodeBuddyHookScriptExecutesExpectedBranches(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		withCCP      bool
+		wantLog      string
+		wantCommand  string
+		wantNoOutput bool
+	}{
+		{name: "missing ccp", input: `{"tool_input":{"command":"pwd"}}`, wantLog: "skip-no-ccp", wantNoOutput: true},
+		{name: "empty input", input: "", withCCP: true, wantLog: "skip-empty-input", wantNoOutput: true},
+		{name: "missing command", input: `{"tool_input":{}}`, withCCP: true, wantLog: "skip-no-command", wantNoOutput: true},
+		{name: "already prefixed", input: `{"tool_input":{"command":"ccp pwd"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true},
+		{name: "rewrite", input: `{"tool_input":{"command":"pwd && ls"}}`, withCCP: true, wantCommand: "ccp pwd && ccp ls"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := runHookScript(t, codebuddyHookScriptName, "ccp-codebuddy-hook.log", codebuddyHookScriptContent(), tc.input, tc.withCCP)
+			if result.exitCode != 0 {
+				t.Fatalf("expected codebuddy hook exit 0, got %d stderr=%q", result.exitCode, result.stderr)
+			}
+			if tc.wantLog != "" && !strings.Contains(result.log, tc.wantLog) {
+				t.Fatalf("expected log marker %q, got %q", tc.wantLog, result.log)
+			}
+			if tc.wantNoOutput {
+				if strings.TrimSpace(result.stdout) != "" {
+					t.Fatalf("expected no output, got %q", result.stdout)
+				}
+				return
+			}
+			if got := decodeClaudeHookOutput(t, result.stdout); got != tc.wantCommand {
+				t.Fatalf("expected rewritten command %q, got %q", tc.wantCommand, got)
+			}
+		})
+	}
+}
+
+func TestClineHookScriptExecutesExpectedBranches(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		withCCP      bool
+		wantLog      string
+		wantExitCode int
+		wantStdout   string
+	}{
+		{name: "missing ccp", input: `{"tool_name":"execute_command","tool_input":{"command":"pwd"}}`, wantLog: "skip-no-ccp"},
+		{name: "empty input", input: "", withCCP: true, wantLog: "skip-empty-input"},
+		{name: "wrong tool", input: `{"tool_name":"read_file","tool_input":{"command":"pwd"}}`, withCCP: true, wantLog: "skip-wrong-tool"},
+		{name: "missing command", input: `{"tool_name":"execute_command","tool_input":{}}`, withCCP: true, wantLog: "skip-no-command"},
+		{name: "already prefixed", input: `{"tool_name":"execute_command","tool_input":{"command":"ccp pwd"}}`, withCCP: true, wantLog: "skip-already-prefixed"},
+		{name: "block", input: `{"tool_name":"execute_command","tool_input":{"command":"pwd"}}`, withCCP: true, wantExitCode: 2, wantStdout: `"Decision":"block"`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := runHookScript(t, clineHookName, "ccp-cline-hook.log", clineHookScriptContent(), tc.input, tc.withCCP)
+			if result.exitCode != tc.wantExitCode {
+				t.Fatalf("expected cline exit code %d, got %d stdout=%q stderr=%q", tc.wantExitCode, result.exitCode, result.stdout, result.stderr)
+			}
+			if tc.wantLog != "" && !strings.Contains(result.log, tc.wantLog) {
+				t.Fatalf("expected log marker %q, got %q", tc.wantLog, result.log)
+			}
+			if tc.wantStdout != "" && !strings.Contains(result.stdout, tc.wantStdout) {
+				t.Fatalf("expected stdout to contain %q, got %q", tc.wantStdout, result.stdout)
+			}
+		})
+	}
+}
+
+func TestWindsurfHookScriptExecutesExpectedBranches(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		withCCP      bool
+		wantLog      string
+		wantExitCode int
+		wantStderr   string
+	}{
+		{name: "missing ccp", input: `{"command":"pwd"}`, wantLog: "skip-no-ccp"},
+		{name: "empty input", input: "", withCCP: true, wantLog: "skip-empty-input"},
+		{name: "missing command", input: `{"tool_input":{}}`, withCCP: true, wantLog: "skip-no-command"},
+		{name: "already prefixed", input: `{"command":"ccp pwd"}`, withCCP: true, wantLog: "skip-already-prefixed"},
+		{name: "block", input: `{"command":"pwd"}`, withCCP: true, wantExitCode: 2, wantStderr: "Retry as: ccp pwd"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := runHookScript(t, windsurfHookScriptName, "ccp-windsurf-hook.log", windsurfHookScriptContent(), tc.input, tc.withCCP)
+			if result.exitCode != tc.wantExitCode {
+				t.Fatalf("expected windsurf exit code %d, got %d stdout=%q stderr=%q", tc.wantExitCode, result.exitCode, result.stdout, result.stderr)
+			}
+			if tc.wantLog != "" && !strings.Contains(result.log, tc.wantLog) {
+				t.Fatalf("expected log marker %q, got %q", tc.wantLog, result.log)
+			}
+			if tc.wantStderr != "" && !strings.Contains(result.stderr, tc.wantStderr) {
+				t.Fatalf("expected stderr to contain %q, got %q", tc.wantStderr, result.stderr)
+			}
+		})
 	}
 }
 
@@ -1421,6 +1818,7 @@ func TestWindsurfRuleContentUsesAlwaysOnMetadata(t *testing.T) {
 		"pre_run_command hook",
 		"Use ccp as the command prefix for shell commands",
 		"exit 2",
+		`LOG_FILE="${TMPDIR:-/tmp}/ccp-windsurf-hook.log"`,
 	} {
 		if !strings.Contains(content, needle) {
 			t.Fatalf("expected canonical windsurf hook content %q, got: %s", needle, content)
@@ -1533,6 +1931,7 @@ func TestClineRuleContentUsesCanonicalGuidance(t *testing.T) {
 		"execute_command",
 		`"Decision":"block"`,
 		"Use ccp as the command prefix for shell commands",
+		`LOG_FILE="${TMPDIR:-/tmp}/ccp-cline-hook.log"`,
 	} {
 		if !strings.Contains(content, needle) {
 			t.Fatalf("expected canonical cline hook content %q, got: %s", needle, content)
@@ -1566,14 +1965,29 @@ func TestResolveClineHooksDirUsesDocumentsOverride(t *testing.T) {
 }
 
 func TestContinueRuleContentUsesCanonicalGuidance(t *testing.T) {
-	content := claudeHookScriptContent()
+	content := continueHookScriptContent()
 	for _, needle := range []string{
-		"generated by ccp init for claude",
-		"optionally rewrite Bash command",
+		"generated by ccp init for continue",
+		"rewrite shell commands to use ccp",
 		"ccp auto-rewrite",
+		`LOG_FILE="${TMPDIR:-/tmp}/ccp-continue-hook.log"`,
 	} {
 		if !strings.Contains(content, needle) {
 			t.Fatalf("expected canonical continue hook content %q, got: %s", needle, content)
+		}
+	}
+}
+
+func TestCodeBuddyRuleContentUsesCanonicalGuidance(t *testing.T) {
+	content := codebuddyHookScriptContent()
+	for _, needle := range []string{
+		"generated by ccp init for codebuddy",
+		"rewrite shell commands to use ccp",
+		"ccp auto-rewrite",
+		`LOG_FILE="${TMPDIR:-/tmp}/ccp-codebuddy-hook.log"`,
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("expected canonical codebuddy hook content %q, got: %s", needle, content)
 		}
 	}
 }

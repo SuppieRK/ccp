@@ -20,6 +20,15 @@ Continue init integration SHALL install CCP through Continue CLI's Claude-compat
 - **THEN** CCP writes a managed `PreToolUse` hook contribution into `~/.continue/settings.json`
 - **AND** that hook routes shell command execution through `ccp`
 
+#### Scenario: hook runtime uses only bash builtins and ccp
+- **WHEN** the managed Continue hook executes
+- **THEN** its runtime behavior does not depend on helper commands other than bash builtins and `ccp`
+
+#### Scenario: exit paths leave troubleshooting markers
+- **WHEN** the managed Continue hook exits with status `0`
+- **THEN** it appends a deterministic reason marker to a log file under the system tmp directory
+- **AND** each early-return branch uses a distinct marker
+
 ### Requirement: Continue Idempotent Reapply
 Continue adapter SHALL be idempotent on repeated runs.
 

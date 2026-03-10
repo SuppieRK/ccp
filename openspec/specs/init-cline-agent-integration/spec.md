@@ -21,6 +21,15 @@ Cline init integration SHALL install a managed `PreToolUse` hook that enforces t
 - **AND** the hook applies before tool execution
 - **AND** the hook blocks unsupported shell execution that does not follow the `ccp` prefix contract
 
+#### Scenario: hook runtime uses only bash builtins and ccp
+- **WHEN** the managed Cline hook executes
+- **THEN** its runtime behavior does not depend on helper commands other than bash builtins and `ccp`
+
+#### Scenario: exit paths leave troubleshooting markers
+- **WHEN** the managed Cline hook exits with status `0`
+- **THEN** it appends a deterministic reason marker to a log file under the system tmp directory
+- **AND** each early-return branch uses a distinct marker
+
 ### Requirement: Cline Home Path Discovery
 Cline init integration SHALL resolve the global hooks directory from the user's home base path rather than from a hardcoded localized folder string.
 
