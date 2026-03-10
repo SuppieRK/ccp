@@ -13,7 +13,8 @@ The system SHALL persist per-command execution metrics in a local embedded datab
 #### Scenario: Persist passthrough execution record
 - **WHEN** a wrapped execution command completes in passthrough mode within proxy execution flow
 - **THEN** the system writes one metrics record including the same core fields
-- **AND** marks the record as passthrough.
+- **AND** marks the record as passthrough
+- **AND** retains the canonical tool classification when the execution plan recognized the command through a registered tool contract.
 
 #### Scenario: Persisted command text is bounded
 - **WHEN** a command text exceeds the configured storage bound
@@ -60,6 +61,12 @@ The metrics store SHALL support query operations where dataset selection is inde
 - **WHEN** `ccp history` requests history with filters for `since`, `tool`, or `failed`
 - **THEN** the store returns only matching records in deterministic timestamp order.
 
+#### Scenario: recognized passthrough rows remain filterable by tool
+- **WHEN** `ccp history` filters records by tool
+- **AND** matching records include passthrough executions recognized by a registered tool contract
+- **THEN** those records remain queryable under their canonical tool classification
+- **AND** are not rewritten to `unknown`.
+
 #### Scenario: Recent-window summary selection is supported
 - **WHEN** `ccp gain` requests human-readable summaries for `--period day|week|month`
 - **THEN** the available query views support selecting only the last `24h`, `7d`, or `30d` of matching records
@@ -95,3 +102,14 @@ Estimated token metrics SHALL be derived from byte counts using a deterministic 
 #### Scenario: Estimated metrics are labeled
 - **WHEN** gain output includes token estimates in machine-readable or human-readable formats
 - **THEN** the output labels those values as estimated using the 4-bytes-per-token heuristic.
+
+### Requirement: Unknown Classification Is Reserved For Unrecognized Commands
+Metrics persistence and query views SHALL reserve `unknown` tool classification for commands that CCP could not classify through a registered tool contract or intentionally neutral shell-fallback plan.
+
+#### Scenario: true unknown command persists as unknown
+- **WHEN** a command executes without matching any registered tool contract
+- **THEN** the persisted metrics record uses `tool = "unknown"` or equivalent neutral classification.
+
+#### Scenario: recognized passthrough does not persist as unknown
+- **WHEN** a command executes in passthrough mode after matching a registered tool contract
+- **THEN** the persisted metrics record does not rewrite that tool classification to `unknown`.

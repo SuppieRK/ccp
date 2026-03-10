@@ -68,9 +68,11 @@ type streamStats struct {
 
 type runMetricsMeta struct {
 	command         string
-	tool            string
+	engineTool      string
+	metricsTool     string
 	engineDispatch  string
 	metricsDispatch string
+	passthrough     bool
 	code            int
 	durationMS      int64
 }
@@ -154,9 +156,11 @@ func (r *Runner) Run(args []string) int {
 	r.emitExitAndMetrics(
 		runMetricsMeta{
 			command:         plan.RawInput,
-			tool:            tool,
+			engineTool:      tool,
+			metricsTool:     plan.MetricsTool,
 			engineDispatch:  engineDispatch,
 			metricsDispatch: metricsDispatch,
+			passthrough:     plan.Passthrough,
 			code:            exitCode,
 			durationMS:      duration,
 		},
@@ -444,20 +448,20 @@ func waitExitCode(cmd *exec.Cmd) (int, error) {
 }
 
 func (r *Runner) emitExitAndMetrics(meta runMetricsMeta, stdoutStats *streamStats, stderrStats *streamStats) {
-	stdoutExitBytes, stderrExitBytes := r.emitExitEvent(meta.tool, meta.engineDispatch, meta.code)
+	stdoutExitBytes, stderrExitBytes := r.emitExitEvent(meta.engineTool, meta.engineDispatch, meta.code)
 	stdoutStats.keptBytes += stdoutExitBytes
 	stderrStats.keptBytes += stderrExitBytes
 	if !r.opts.Raw {
 		_ = metrics.Append(r.opts.MetricsPath, metrics.RunMetric{
 			Timestamp:   time.Now().UTC(),
 			Command:     meta.command,
-			Tool:        meta.tool,
+			Tool:        meta.metricsTool,
 			Dispatch:    meta.metricsDispatch,
 			RawBytes:    stdoutStats.rawBytes + stderrStats.rawBytes,
 			KeptBytes:   stdoutStats.keptBytes + stderrStats.keptBytes,
 			ExitCode:    meta.code,
 			DurationMS:  meta.durationMS,
-			Passthrough: meta.tool == "",
+			Passthrough: meta.passthrough,
 		})
 	}
 }

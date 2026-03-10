@@ -98,6 +98,9 @@ func TestBuildExecPlanGrepUnsafeRegexAmbiguous(t *testing.T) {
 	if plan.Tool != "" {
 		t.Fatalf("expected neutral passthrough for ambiguous regex, got %q", plan.Tool)
 	}
+	if plan.MetricsTool != "grep" || !plan.Passthrough {
+		t.Fatalf("expected grep metrics identity preserved for ambiguous passthrough, got %#v", plan)
+	}
 }
 
 func stubLookPath(fn func(file string) (string, error)) func() {

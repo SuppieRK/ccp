@@ -235,6 +235,46 @@ func TestRunHistoryAppliesSharedFiltersAndNewestFirstOrder(t *testing.T) {
 	}
 }
 
+func TestRunHistoryFiltersRecognizedPassthroughByCanonicalTool(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gain.db")
+	now := time.Now().UTC()
+	appendGainMetrics(t, path, []metrics.RunMetric{
+		{
+			Timestamp:   now.Add(-2 * time.Hour),
+			Tool:        "ls",
+			Command:     "ls",
+			RawBytes:    300,
+			KeptBytes:   300,
+			ExitCode:    0,
+			Passthrough: true,
+		},
+		{
+			Timestamp:   now.Add(-1 * time.Hour),
+			Tool:        "unknown",
+			Command:     "echo a && echo b",
+			RawBytes:    20,
+			KeptBytes:   20,
+			ExitCode:    0,
+			Passthrough: true,
+		},
+	})
+
+	out := captureStdout(t, func() error {
+		return RunHistory([]string{flagFormat, "json", "--tool", "ls"}, path)
+	})
+
+	var env historyEnvelope
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("unmarshal history envelope: %v", err)
+	}
+	if len(env.Rows) != 1 {
+		t.Fatalf("expected 1 filtered row, got %d (%+v)", len(env.Rows), env.Rows)
+	}
+	if env.Rows[0].Tool != "ls" || !env.Rows[0].Passthrough {
+		t.Fatalf("expected canonical ls passthrough row, got %+v", env.Rows[0])
+	}
+}
+
 func TestRunGainCSVAndPeriodFormats(t *testing.T) {
 	path := seedGainDB(t)
 	csvOut := captureStdout(t, func() error {

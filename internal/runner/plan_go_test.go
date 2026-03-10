@@ -46,4 +46,21 @@ func TestBuildExecPlanGoUnsupportedPassthrough(t *testing.T) {
 	if plan.Tool != "" {
 		t.Fatalf("expected passthrough for unsupported subcommand, got %#v", plan)
 	}
+	if plan.MetricsTool != "go" || !plan.Passthrough {
+		t.Fatalf("expected go metrics identity preserved for passthrough, got %#v", plan)
+	}
+}
+
+func TestBuildExecPlanGoToolCoverPreservesCanonicalMetricsTool(t *testing.T) {
+	reg := mustGoRegistry(t)
+	plan, err := BuildExecPlan([]string{"go", "tool", "cover", "-func=coverage.out"}, reg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if plan.Tool != "" {
+		t.Fatalf("expected passthrough engine binding, got %#v", plan)
+	}
+	if plan.MetricsTool != "go" || !plan.Passthrough {
+		t.Fatalf("expected go metrics identity for go tool cover, got %#v", plan)
+	}
 }
