@@ -1,13 +1,10 @@
-## Purpose
-Define `docker` parent filter routing, safety boundaries, and delegated runtime behavior.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Docker Parent Routing
 The `docker` phase SHALL route only supported subcommands to local compactors and keep unsupported/unsafe shapes passthrough.
 
 #### Scenario: supported subcommand dispatch
-- **WHEN** subcommand is `ps`, `images`, `logs`, `compose logs`, or `compose ps`
+- **WHEN** subcommand is `ps`, `images`, `logs`, or `compose build`
 - **THEN** parent emits dispatch keys for local subfilters.
 
 #### Scenario: structured output safety for ps/images
@@ -22,15 +19,6 @@ The `docker` phase SHALL route only supported subcommands to local compactors an
 - **WHEN** subcommand is `compose` with a nested subcommand outside supported routes
 - **THEN** parent returns passthrough for safety.
 
-#### Scenario: compose logs routed directly by docker parent
-- **WHEN** nested subcommand is `compose logs`
-- **THEN** the existing `docker` parent handles two-token dispatch directly.
-- **AND** no separate `docker compose` parent is required.
-
-#### Scenario: compose passthrough boundary
-- **WHEN** subcommand is `compose`
-- **THEN** parent returns passthrough for safety.
-
 #### Scenario: interactive or tty-heavy passthrough boundary
 - **WHEN** subcommand is `exec`, `pull`, or `build`
 - **THEN** parent returns passthrough with ambiguous/safety classification.
@@ -38,21 +26,3 @@ The `docker` phase SHALL route only supported subcommands to local compactors an
 #### Scenario: no-args passthrough
 - **WHEN** docker is invoked without args
 - **THEN** parent returns passthrough.
-
-### Requirement: Global-Flag-Aware Subcommand Detection
-The `docker` parent SHALL skip recognized leading global flags before selecting subcommand behavior.
-
-#### Scenario: leading global flags
-- **WHEN** args begin with known global docker flags (`--context`, `--host/-H`, `--config`, `--log-level`, debug/tls flags)
-- **THEN** those flags are moved aside for subcommand resolution.
-
-### Requirement: Parent Runtime Delegation
-The docker parent SHALL delegate runtime by dispatch key.
-
-#### Scenario: logs dispatch normalization
-- **WHEN** dispatch starts with `docker logs`
-- **THEN** runtime resolves via `docker logs` subfilter.
-
-#### Scenario: non-docker dispatch fallback
-- **WHEN** dispatch is empty or does not start with `docker `
-- **THEN** parent falls back to noop behavior.
