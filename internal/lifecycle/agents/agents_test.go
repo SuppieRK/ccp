@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -576,7 +577,15 @@ func TestCrushConfigHelpersUpsertAndVerify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsertCrushConfig: %v", err)
 	}
-	if !strings.Contains(updated, `"theme": "dark"`) || !strings.Contains(updated, contextPath) {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(updated), &root); err != nil {
+		t.Fatalf("unmarshal updated crush config: %v", err)
+	}
+	if root["theme"] != "dark" {
+		t.Fatalf("expected preserved theme, got: %#v", root)
+	}
+	options, _ := root["options"].(map[string]any)
+	if options == nil || !slicesContainsPath(crushContextPaths(options["context_paths"]), contextPath) {
 		t.Fatalf("expected preserved theme and managed context path, got: %s", updated)
 	}
 
@@ -679,7 +688,11 @@ func TestWindsurfHooksConfigHelpersUpsertAndVerify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsertWindsurfHooksConfig: %v", err)
 	}
-	if !strings.Contains(updated, managedHook) {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(updated), &root); err != nil {
+		t.Fatalf("unmarshal updated windsurf hooks: %v", err)
+	}
+	if !windsurfHookEntriesContain(normalizeWindsurfHookEntries(root["pre_run_command"]), managedHook) {
 		t.Fatalf("expected managed hook path in config, got: %s", updated)
 	}
 	if err := os.WriteFile(hooksPath, []byte(updated), 0o644); err != nil {
@@ -705,7 +718,12 @@ func TestWindsurfHooksConfigHelpersRemoveBranches(t *testing.T) {
 	if err != nil || !changed || removeAll {
 		t.Fatalf("unexpected removeWindsurfHooksConfig result changed=%v removeAll=%v err=%v", changed, removeAll, err)
 	}
-	if strings.Contains(removed, managedHook) || !strings.Contains(removed, otherHook) {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(removed), &root); err != nil {
+		t.Fatalf("unmarshal removed windsurf hooks: %v", err)
+	}
+	entries := normalizeWindsurfHookEntries(root["pre_run_command"])
+	if windsurfHookEntriesContain(entries, managedHook) || !windsurfHookEntriesContain(entries, otherHook) {
 		t.Fatalf("expected managed hook removed and other hook preserved, got: %s", removed)
 	}
 
