@@ -198,6 +198,12 @@ func TestRunInitPersistsStateShape(t *testing.T) {
 	if len(cfg.State) != 1 {
 		t.Fatalf("state len = %d, want 1", len(cfg.State))
 	}
+	if cfg.CCPVersion == "" {
+		t.Fatalf("expected ccpVersion to be recorded")
+	}
+	if cfg.IntegrationVersion != integrationStateVersion {
+		t.Fatalf("unexpected integration version: %d", cfg.IntegrationVersion)
+	}
 	if cfg.State[0].Tool != "cursor" || cfg.State[0].Status != "applied" {
 		t.Fatalf("unexpected state entry: %+v", cfg.State[0])
 	}
@@ -2165,27 +2171,50 @@ func TestRunInitClaudeUsesHomeTargetsAndPreToolUseSettings(t *testing.T) {
 	hookPath := filepath.Join(home, initClaudeDir, "hooks", initRewriteScriptName)
 	settingsPath := filepath.Join(home, initClaudeDir, initSettingsFileName)
 	awarenessPath := filepath.Join(home, initClaudeDir, "CCP.md")
+	guidePath := filepath.Join(home, initClaudeDir, "CLAUDE.md")
 
+	assertClaudeInitArtifactsExist(t, hookPath, settingsPath, awarenessPath, guidePath)
+	assertClaudeHookScriptValidForInit(t, hookPath)
+	assertClaudeSettingsIncludePreToolUseHook(t, settingsPath, hookPath)
+	assertClaudeGuideReferencesCCP(t, guidePath)
+}
+
+func assertClaudeInitArtifactsExist(t *testing.T, hookPath, settingsPath, awarenessPath, guidePath string) {
+	t.Helper()
 	hookInfo, err := os.Stat(hookPath)
 	if err != nil {
 		t.Fatalf("missing claude hook: %v", err)
 	}
-	if _, err := os.Stat(settingsPath); err != nil {
-		t.Fatalf("missing claude settings: %v", err)
-	}
-	if _, err := os.Stat(awarenessPath); err != nil {
-		t.Fatalf("missing claude awareness: %v", err)
+	for _, check := range []struct {
+		path string
+		name string
+	}{
+		{settingsPath, "settings"},
+		{awarenessPath, "awareness"},
+		{guidePath, "guide"},
+	} {
+		if _, err := os.Stat(check.path); err != nil {
+			t.Fatalf("missing claude %s: %v", check.name, err)
+		}
 	}
 	if runtime.GOOS != "windows" && (hookInfo.Mode()&0o111) == 0 {
 		t.Fatalf("expected claude hook to be executable, mode=%v", hookInfo.Mode())
 	}
-	if runtime.GOOS != "windows" {
-		cmd := exec.Command("bash", "-n", hookPath)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("expected syntactically valid claude hook script, err=%v output=%s", err, string(out))
-		}
-	}
+}
 
+func assertClaudeHookScriptValidForInit(t *testing.T, hookPath string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return
+	}
+	cmd := exec.Command("bash", "-n", hookPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("expected syntactically valid claude hook script, err=%v output=%s", err, string(out))
+	}
+}
+
+func assertClaudeSettingsIncludePreToolUseHook(t *testing.T, settingsPath, hookPath string) {
+	t.Helper()
 	b, err := os.ReadFile(settingsPath)
 	if err != nil {
 		t.Fatalf("read settings: %v", err)
@@ -2199,6 +2228,17 @@ func TestRunInitClaudeUsesHomeTargetsAndPreToolUseSettings(t *testing.T) {
 	}
 	if !strings.Contains(s, "\"command\": \""+strings.ReplaceAll(hookPath, "\\", "\\\\")+"\"") {
 		t.Fatalf("expected hook command in settings, got: %s", s)
+	}
+}
+
+func assertClaudeGuideReferencesCCP(t *testing.T, guidePath string) {
+	t.Helper()
+	guide, err := os.ReadFile(guidePath)
+	if err != nil {
+		t.Fatalf("read claude guide: %v", err)
+	}
+	if !strings.Contains(string(guide), "@CCP.md") {
+		t.Fatalf("expected CCP reference in claude guide, got: %s", string(guide))
 	}
 }
 
@@ -2218,7 +2258,8 @@ func TestRunInitClaudeIdempotentRerun(t *testing.T) {
 	hookPath := filepath.Join(home, initClaudeDir, "hooks", initRewriteScriptName)
 	settingsPath := filepath.Join(home, initClaudeDir, initSettingsFileName)
 	awarenessPath := filepath.Join(home, initClaudeDir, "CCP.md")
-	managedPaths := []string{hookPath, settingsPath, awarenessPath}
+	guidePath := filepath.Join(home, initClaudeDir, "CLAUDE.md")
+	managedPaths := []string{hookPath, settingsPath, awarenessPath, guidePath}
 
 	beforeInfo := map[string]os.FileInfo{}
 	beforeData := map[string][]byte{}

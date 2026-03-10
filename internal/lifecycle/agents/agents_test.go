@@ -849,14 +849,22 @@ func TestClaudeAdapterPlanInstallVerifyAndUninstall(t *testing.T) {
 	if !strings.Contains(a.DetectRoot(ctx.ScopeRoot), ".claude") {
 		t.Fatalf(errUnexpectedRootFmt, a.DetectRoot(ctx.ScopeRoot))
 	}
-	if got := len(a.Plan(ctx)); got != 3 {
-		t.Fatalf("plan len=%d want 3", got)
+	if got := len(a.Plan(ctx)); got != 4 {
+		t.Fatalf("plan len=%d want 4", got)
 	}
 	if _, err := a.Install(ctx, writeFileWriter); err != nil {
 		t.Fatalf(errInstallFmt, err)
 	}
 	if err := a.Verify(ctx); err != nil {
 		t.Fatalf(errVerifyFmt, err)
+	}
+	guidePath := filepath.Join(home, ".claude", claudeGuideName)
+	guide, err := os.ReadFile(guidePath)
+	if err != nil {
+		t.Fatalf("read claude guide: %v", err)
+	}
+	if !strings.Contains(string(guide), "@CCP.md") {
+		t.Fatalf("expected claude guide reference in %q", string(guide))
 	}
 	res, err := a.Uninstall(ctx)
 	if err != nil {
@@ -916,6 +924,107 @@ func TestClaudeHookRemovalHelpers(t *testing.T) {
 	}
 	if _, err := removeFileIfExists(filepath.Join(tmp, "missing")); err != nil {
 		t.Fatalf("removeFileIfExists missing: %v", err)
+	}
+}
+
+func TestClaudeGuideBlockHelpers(t *testing.T) {
+	tmp := t.TempDir()
+	guide := filepath.Join(tmp, claudeGuideName)
+	existing := "# Team rules\n\nBe deliberate.\n"
+
+	assertClaudeGuideUpsertIntoMissingFile(t, guide)
+	assertClaudeGuideUpsertPreservesExistingContent(t, guide, existing)
+	assertClaudeGuideRemovalPreservesUnrelatedContent(t, guide, existing)
+	assertClaudeGuideRemovalCanDeleteFullyManagedFile(t, guide)
+}
+
+func assertClaudeGuideUpsertIntoMissingFile(t *testing.T, guide string) {
+	t.Helper()
+	updated, err := upsertClaudeGuideBlock(guide)
+	if err != nil {
+		t.Fatalf("upsert missing guide: %v", err)
+	}
+	if !strings.Contains(updated, "@CCP.md") {
+		t.Fatalf("expected claude guide reference, got %q", updated)
+	}
+}
+
+func assertClaudeGuideUpsertPreservesExistingContent(t *testing.T, guide, existing string) {
+	t.Helper()
+	if err := os.WriteFile(guide, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := upsertClaudeGuideBlock(guide)
+	if err != nil {
+		t.Fatalf("upsert existing guide: %v", err)
+	}
+	if !strings.Contains(updated, existing) {
+		t.Fatalf("expected existing content preserved, got %q", updated)
+	}
+	if strings.Count(updated, ccpManagedBlockStart) != 1 {
+		t.Fatalf("expected single managed block, got %q", updated)
+	}
+}
+
+func assertClaudeGuideRemovalPreservesUnrelatedContent(t *testing.T, guide, existing string) {
+	t.Helper()
+	if err := os.WriteFile(guide, []byte(existing+claudeManagedGuideBlock()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, changed, removeAll, err := removeClaudeGuideBlock(guide)
+	if err != nil || !changed || removeAll {
+		t.Fatalf("unexpected remove result changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+	if strings.Contains(out, "@CCP.md") {
+		t.Fatalf("expected managed claude guide removed, got %q", out)
+	}
+	if !strings.Contains(out, "Be deliberate.") {
+		t.Fatalf("expected unrelated guide content preserved, got %q", out)
+	}
+}
+
+func assertClaudeGuideRemovalCanDeleteFullyManagedFile(t *testing.T, guide string) {
+	t.Helper()
+	if err := os.WriteFile(guide, []byte(claudeManagedGuideBlock()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, changed, removeAll, err := removeClaudeGuideBlock(guide)
+	if err != nil || !changed || !removeAll {
+		t.Fatalf("expected remove-all branch, changed=%v removeAll=%v err=%v", changed, removeAll, err)
+	}
+}
+
+func TestClaudeAdapterInstallPreservesExistingGuideContent(t *testing.T) {
+	tmp := t.TempDir()
+	home := filepath.Join(tmp, "home")
+	ctx := Context{ScopeRoot: filepath.Join(tmp, "repo"), HomeDir: home}
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	guidePath := filepath.Join(home, ".claude", claudeGuideName)
+	original := "# Global Claude Rules\n\nPrefer concise answers.\n"
+	if err := os.WriteFile(guidePath, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	a := NewClaudeAdapter()
+	if _, err := a.Install(ctx, writeFileWriter); err != nil {
+		t.Fatalf("install error: %v", err)
+	}
+
+	guide, err := os.ReadFile(guidePath)
+	if err != nil {
+		t.Fatalf("read guide: %v", err)
+	}
+	content := string(guide)
+	if !strings.Contains(content, original) {
+		t.Fatalf("expected original guide content preserved, got %q", content)
+	}
+	if !strings.Contains(content, "@CCP.md") {
+		t.Fatalf("expected CCP reference in guide, got %q", content)
+	}
+	if strings.Count(content, ccpManagedBlockStart) != 1 {
+		t.Fatalf("expected exactly one managed block, got %q", content)
 	}
 }
 

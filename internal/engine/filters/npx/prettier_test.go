@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"go-command-compression-proxy/internal/engine"
+	"go-command-compression-proxy/internal/engine/filters/prettiercommon"
 )
 
 func TestNpxPrettierToolName(t *testing.T) {
@@ -30,7 +31,7 @@ func TestNpxPrettierSummarizeCheckFailure(t *testing.T) {
 		"[warn] Code style issues found in the above file. Run Prettier with --write to fix.",
 		"",
 	}, "\n")
-	out, ok := summarizePrettierOutput(raw)
+	out, ok := prettiercommon.SummarizeOutput(raw)
 	if !ok {
 		t.Fatalf("expected summarized output")
 	}
@@ -44,7 +45,7 @@ func TestNpxPrettierSummarizeCheckFailure(t *testing.T) {
 
 func TestNpxPrettierSummarizeCheckSuccess(t *testing.T) {
 	raw := "Checking formatting...\nAll matched files use Prettier code style!\n"
-	out, ok := summarizePrettierOutput(raw)
+	out, ok := prettiercommon.SummarizeOutput(raw)
 	if !ok || out != "prettier check: ok\n" {
 		t.Fatalf("unexpected success summary: ok=%v out=%q", ok, out)
 	}
@@ -52,7 +53,7 @@ func TestNpxPrettierSummarizeCheckSuccess(t *testing.T) {
 
 func TestNpxPrettierSummarizeWriteMode(t *testing.T) {
 	raw := "src/bad.js 12ms\nsrc/other.ts 7ms\n"
-	out, ok := summarizePrettierOutput(raw)
+	out, ok := prettiercommon.SummarizeOutput(raw)
 	if !ok {
 		t.Fatalf("expected summarized write output")
 	}
