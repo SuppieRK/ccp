@@ -24,6 +24,9 @@ func TestPSCompactionPriorityAndPortsFolding(t *testing.T) {
 	if !strings.Contains(out, "[!] c3 api-1 api status=Exited (1) 10 seconds ago") {
 		t.Fatalf("expected non-healthy row prioritized, got:\n%s", out)
 	}
+	if strings.Contains(out, "docker ps:") {
+		t.Fatalf("expected no docker ps summary, got:\n%s", out)
+	}
 	if !strings.Contains(out, "[ok x2] nginx status=Up 1 minute") || !strings.Contains(out, "names=web-1,web-2") {
 		t.Fatalf("expected healthy row grouping, got:\n%s", out)
 	}
@@ -81,9 +84,26 @@ func TestPSProcessFlushesOnEOFAndExitWithBufferedOutput(t *testing.T) {
 			}, "\n") + "\n"
 			mem := engine.NewOrderedSetBuffer()
 			_ = mem.Add(raw, raw, 1)
-			if got := f.Process(engine.Event{Type: eventType, Stream: engine.StdoutStream}, mem); got.Action != engine.ActionFlush || !strings.Contains(got.Output, "docker ps: 1 containers") {
+			if got := f.Process(engine.Event{Type: eventType, Stream: engine.StdoutStream}, mem); got.Action != engine.ActionFlush || !strings.Contains(got.Output, "[ok] nginx status=Up 1 minute") {
 				t.Fatalf("expected %s flush with compacted output, got %#v", eventType, got)
 			}
 		})
+	}
+}
+
+func TestPSCompactionOmitsCountMarkerForSingleHealthyRow(t *testing.T) {
+	raw := strings.Join([]string{
+		"CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS       PORTS                 NAMES",
+		"a1            nginx     \"nginx\"  1m ago    Up 1 minute  0.0.0.0:80->80/tcp   web-1",
+	}, "\n") + "\n"
+	out, ok := compactPS(raw, 15)
+	if !ok {
+		t.Fatal("expected compact docker ps output")
+	}
+	if strings.Contains(out, "[ok x1]") {
+		t.Fatalf("expected x1 marker omitted, got:\n%s", out)
+	}
+	if !strings.Contains(out, "name=web-1") {
+		t.Fatalf("expected singular name field, got:\n%s", out)
 	}
 }

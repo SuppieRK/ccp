@@ -11,11 +11,28 @@ const dockerPSDispatch = "docker ps"
 
 func TestDockerParentPrepareRouting(t *testing.T) {
 	f := NewDockerToolFilter()
-
-	ps := f.Prepare([]string{"ps"})
-	if ps.ForcePassthrough || ps.DispatchKey != dockerPSDispatch {
-		t.Fatalf("expected docker ps dispatch, got %#v", ps)
+	cases := []struct {
+		name     string
+		args     []string
+		dispatch string
+	}{
+		{name: "ps", args: []string{"ps"}, dispatch: dockerPSDispatch},
+		{name: "compose ps", args: []string{"compose", "ps"}, dispatch: "docker compose ps"},
+		{name: "compose logs", args: []string{"compose", "logs", "--tail", "50", "api"}, dispatch: "docker compose logs|scope=api"},
+		{name: "compose logs with file", args: []string{"compose", "-f", "compose.yml", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
 	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			prep := f.Prepare(tc.args)
+			if prep.ForcePassthrough || prep.DispatchKey != tc.dispatch {
+				t.Fatalf("expected dispatch %q, got %#v", tc.dispatch, prep)
+			}
+		})
+	}
+}
+
+func TestDockerParentPrepareImagesNormalization(t *testing.T) {
+	f := NewDockerToolFilter()
 
 	images := f.Prepare([]string{"images"})
 	if images.ForcePassthrough || images.DispatchKey != "docker images" {
@@ -28,19 +45,14 @@ func TestDockerParentPrepareRouting(t *testing.T) {
 		t.Fatalf("expected docker images structured normalization, got %#v", images.NormalizedArgs)
 	}
 
+}
+
+func TestDockerParentPrepareLogsDispatch(t *testing.T) {
+	f := NewDockerToolFilter()
+
 	logs := f.Prepare([]string{"logs", "--tail", "50", "web-1"})
 	if logs.ForcePassthrough || !strings.HasPrefix(logs.DispatchKey, "docker logs|container=web-1") {
 		t.Fatalf("expected docker logs dispatch with container identity, got %#v", logs)
-	}
-
-	composeLogs := f.Prepare([]string{"compose", "logs", "--tail", "50", "api"})
-	if composeLogs.ForcePassthrough || composeLogs.DispatchKey != "docker compose logs|scope=api" {
-		t.Fatalf("expected docker compose logs dispatch with service scope, got %#v", composeLogs)
-	}
-
-	composeLogsWithFile := f.Prepare([]string{"compose", "-f", "compose.yml", "logs", "api"})
-	if composeLogsWithFile.ForcePassthrough || composeLogsWithFile.DispatchKey != "docker compose logs|scope=api" {
-		t.Fatalf("expected docker compose logs dispatch with compose-file flag, got %#v", composeLogsWithFile)
 	}
 }
 
@@ -51,7 +63,7 @@ func TestDockerParentPreparePassthroughCases(t *testing.T) {
 		args          []string
 		wantAmbiguous bool
 	}{
-		{name: "compose", args: []string{"compose", "ps"}, wantAmbiguous: false},
+		{name: "compose-format", args: []string{"compose", "ps", "--format", "json"}, wantAmbiguous: true},
 		{name: "exec", args: []string{"exec", "-it", "c1", "sh"}, wantAmbiguous: true},
 		{name: "pull", args: []string{"pull", "alpine:latest"}, wantAmbiguous: true},
 		{name: "build", args: []string{"build", "."}, wantAmbiguous: true},
@@ -83,6 +95,7 @@ func TestDockerParentPrepareMoveLeadingFlags(t *testing.T) {
 		"leading context eq ps":     {args: []string{"--context=bench", "ps"}, dispatch: dockerPSDispatch},
 		"leading host logs":         {args: []string{"-H", "unix:///var/run/docker.sock", "logs", "api"}, dispatch: "docker logs|container=api"},
 		"leading host compose":      {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
+		"leading host compose ps":   {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "ps"}, dispatch: "docker compose ps"},
 		"leading host compose file": {args: []string{"-H", "unix:///var/run/docker.sock", "compose", "-f", "compose.yml", "logs", "api"}, dispatch: "docker compose logs|scope=api"},
 		"leading config logs":       {args: []string{"--config", "/tmp/docker", "logs", "web"}, dispatch: "docker logs|container=web"},
 		"leading log-level ps":      {args: []string{"--log-level", "debug", "ps"}, dispatch: dockerPSDispatch},

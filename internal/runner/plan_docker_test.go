@@ -21,22 +21,31 @@ func mustDockerRegistry(t *testing.T) *engine.ToolFilterRegistry {
 
 func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 	reg := mustDockerRegistry(t)
+	cases := []struct {
+		name     string
+		args     []string
+		dispatch string
+	}{
+		{name: "docker ps", args: []string{"docker", "ps"}, dispatch: "docker ps"},
+		{name: "docker images", args: []string{"docker", "images"}, dispatch: "docker images"},
+		{name: "docker compose logs", args: []string{"docker", "compose", "logs", "--tail", "20", "api"}, dispatch: "docker compose logs|scope=api"},
+		{name: "docker compose ps", args: []string{"docker", "compose", "ps"}, dispatch: "docker compose ps"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			plan, err := BuildExecPlan(tc.args, reg)
+			if err != nil {
+				t.Fatalf(errUnexpectedPlanFmt, err)
+			}
+			if plan.Tool != "docker" || plan.DispatchKey != tc.dispatch {
+				t.Fatalf("unexpected plan: %#v", plan)
+			}
+		})
+	}
+}
 
-	psPlan, err := BuildExecPlan([]string{"docker", "ps"}, reg)
-	if err != nil {
-		t.Fatalf(errUnexpectedPlanFmt, err)
-	}
-	if psPlan.Tool != "docker" || psPlan.DispatchKey != "docker ps" {
-		t.Fatalf("unexpected docker ps plan: %#v", psPlan)
-	}
-
-	imgPlan, err := BuildExecPlan([]string{"docker", "images"}, reg)
-	if err != nil {
-		t.Fatalf(errUnexpectedPlanFmt, err)
-	}
-	if imgPlan.Tool != "docker" || imgPlan.DispatchKey != "docker images" {
-		t.Fatalf("unexpected docker images plan: %#v", imgPlan)
-	}
+func TestBuildExecPlanDockerLogsDispatchesContainerScope(t *testing.T) {
+	reg := mustDockerRegistry(t)
 
 	logPlan, err := BuildExecPlan([]string{"docker", "logs", "--tail", "20", "api"}, reg)
 	if err != nil {
@@ -45,21 +54,13 @@ func TestBuildExecPlanDockerDispatchesPSImagesLogs(t *testing.T) {
 	if logPlan.Tool != "docker" || !strings.HasPrefix(logPlan.DispatchKey, "docker logs|container=api") {
 		t.Fatalf("unexpected docker logs plan: %#v", logPlan)
 	}
-
-	composeLogPlan, err := BuildExecPlan([]string{"docker", "compose", "logs", "--tail", "20", "api"}, reg)
-	if err != nil {
-		t.Fatalf(errUnexpectedPlanFmt, err)
-	}
-	if composeLogPlan.Tool != "docker" || composeLogPlan.DispatchKey != "docker compose logs|scope=api" {
-		t.Fatalf("unexpected docker compose logs plan: %#v", composeLogPlan)
-	}
 }
 
 func TestBuildExecPlanDockerPassthroughBoundaries(t *testing.T) {
 	reg := mustDockerRegistry(t)
 
 	tests := [][]string{
-		{"docker", "compose", "ps"},
+		{"docker", "compose", "ps", "--format", "json"},
 		{"docker", "exec", "-it", "c1", "sh"},
 		{"docker", "pull", "nginx"},
 		{"docker", "build", "."},

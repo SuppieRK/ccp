@@ -62,7 +62,7 @@ func compactPS(raw string, maxRows int) (string, bool) {
 		return "", false
 	}
 	if len(rows) == 0 {
-		return "docker ps: 0 containers\n", true
+		return "0 containers\n", true
 	}
 	anomalies, groups, order := groupPSRows(rows)
 	return renderPSCompactedRows(len(rows), anomalies, groups, order, maxRows), true
@@ -108,7 +108,6 @@ func groupPSRows(rows []psRow) ([]psRow, map[string]*psGroup, []string) {
 
 func renderPSCompactedRows(total int, anomalies []psRow, groups map[string]*psGroup, order []string, maxRows int) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("docker ps: %d containers\n", total))
 	printed := 0
 	for _, row := range anomalies {
 		if reachedPSRenderLimit(&b, total, printed, maxRows) {
@@ -123,7 +122,11 @@ func renderPSCompactedRows(total int, anomalies []psRow, groups map[string]*psGr
 		}
 		g := groups[key]
 		sort.Strings(g.names)
-		b.WriteString(fmt.Sprintf("[ok x%d] %s status=%s ports=%s names=%s\n", g.count, g.image, g.status, displayPorts(g.ports), strings.Join(g.names, ",")))
+		if g.count == 1 {
+			b.WriteString(fmt.Sprintf("[ok] %s status=%s ports=%s name=%s\n", g.image, g.status, displayPorts(g.ports), g.names[0]))
+		} else {
+			b.WriteString(fmt.Sprintf("[ok x%d] %s status=%s ports=%s names=%s\n", g.count, g.image, g.status, displayPorts(g.ports), strings.Join(g.names, ",")))
+		}
 		printed++
 	}
 	return b.String()

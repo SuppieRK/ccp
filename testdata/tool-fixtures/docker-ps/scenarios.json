@@ -10,7 +10,7 @@
     ],
     "native": ["docker", "ps"],
     "expect_exit": 0,
-    "must_contain": ["docker ps:"],
+    "must_contain": ["name=ccp-bench-nginx-ps-default"],
     "must_not_contain": [],
     "ignore_lines": ["^$"],
     "required": true

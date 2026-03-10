@@ -1,0 +1,3 @@
+00000|NAME              IMAGE            COMMAND                  SERVICE   CREATED                  STATUS                  PORTS
+00001|project-cache-1   redis:7-alpine   "docker-entrypoint.s…"   cache     Less than a second ago   Up Less than a second   0.0.0.0:36379->6379/tcp, [::]:36379->6379/tcp
+00002|project-web-1     nginx:alpine     "/docker-entrypoint.…"   web       Less than a second ago   Up Less than a second   0.0.0.0:38080->80/tcp, [::]:38080->80/tcp

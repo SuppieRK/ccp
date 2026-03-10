@@ -10,6 +10,8 @@ import (
 
 const dockerImagesStructuredFormat = "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 const dockerFormatFlag = "--format"
+const dockerStructuredOutputReason = "structured output mode"
+const dockerComposePSDispatchKey = "docker compose ps"
 
 var dockerGlobalFlags = map[string]struct{}{
 	"--context":   {},
@@ -38,6 +40,7 @@ func NewDockerToolFilter() engine.ToolFilter {
 		dockerfilters.NewPSFilter(),
 		dockerfilters.NewImagesFilter(),
 		dockerfilters.NewLogsFilter(),
+		dockerfilters.NewComposePSFilter(),
 		dockerfilters.NewComposeLogsFilter(),
 	)
 	return &dockerToolFilter{subcommands: reg, initErr: initErr}
@@ -75,14 +78,14 @@ func (d *dockerToolFilter) Prepare(args []string) engine.PrepareResult {
 		subArgs := append([]string{}, reordered[1:]...)
 		subArgs = append(subArgs, moved...)
 		if filtercommon.HasOption(subArgs, dockerFormatFlag) {
-			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "structured output mode"}
+			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: dockerStructuredOutputReason}
 		}
 		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker ps"}
 	case "images":
 		subArgs := append([]string{}, reordered[1:]...)
 		subArgs = append(subArgs, moved...)
 		if filtercommon.HasOption(subArgs, dockerFormatFlag) {
-			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "structured output mode"}
+			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: dockerStructuredOutputReason}
 		}
 		if len(subArgs) == 0 {
 			return engine.PrepareResult{
@@ -128,6 +131,9 @@ func (d *dockerToolFilter) resolve(ev engine.Event) engine.ToolFilter {
 	if strings.HasPrefix(dispatch, "docker logs") {
 		return d.subcommands.Resolve("docker logs")
 	}
+	if strings.HasPrefix(dispatch, dockerComposePSDispatchKey) {
+		return d.subcommands.Resolve(dockerComposePSDispatchKey)
+	}
 	if strings.HasPrefix(dispatch, "docker compose logs") {
 		return d.subcommands.Resolve("docker compose logs")
 	}
@@ -140,17 +146,24 @@ func prepareDockerComposeRoute(args, subArgs []string, passthrough engine.Prepar
 		return passthrough
 	}
 	nested := strings.ToLower(strings.TrimSpace(reordered[0]))
-	if nested != "logs" {
+	switch nested {
+	case "logs":
+		scope, follow, ok := dockerComposeLogsScope(reordered[1:])
+		if follow {
+			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "follow-mode docker compose logs passthrough"}
+		}
+		if !ok {
+			return passthrough
+		}
+		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker compose logs|scope=" + scope}
+	case "ps":
+		if filtercommon.HasOption(reordered[1:], dockerFormatFlag) {
+			return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: dockerStructuredOutputReason}
+		}
+		return engine.PrepareResult{NormalizedArgs: args, DispatchKey: dockerComposePSDispatchKey}
+	default:
 		return passthrough
 	}
-	scope, follow, ok := dockerComposeLogsScope(reordered[1:])
-	if follow {
-		return engine.PrepareResult{NormalizedArgs: args, ForcePassthrough: true, Ambiguous: true, Reason: "follow-mode docker compose logs passthrough"}
-	}
-	if !ok {
-		return passthrough
-	}
-	return engine.PrepareResult{NormalizedArgs: args, DispatchKey: "docker compose logs|scope=" + scope}
 }
 
 func moveLeadingDockerComposeFlags(args []string) ([]string, []string) {
