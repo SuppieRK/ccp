@@ -28,6 +28,16 @@ The CLI SHALL dispatch lifecycle commands (`init`, `gain`, `history`, `upgrade`,
 - **AND** the config file is removed when no configured tools remain.
 - **AND** init-state cleanup is applied only after tool uninstall actions complete without adapter uninstall errors.
 
+#### Scenario: ordinary invocation performs reconcile guard before dispatch
+- **WHEN** a user runs any `ccp` invocation
+- **THEN** CCP performs a lightweight integration reconcile and backward-compat cleanup guard before lifecycle or wrapped-command dispatch
+- **AND** continues with the original invocation after that guard completes.
+
+#### Scenario: startup guard stays lightweight when nothing is stale
+- **WHEN** a user runs `ccp` and no integration reconcile or backward-compat cleanup is needed
+- **THEN** the startup guard performs only bounded state/path checks
+- **AND** does not run adapter installs.
+
 ### Requirement: Init Idempotency and Backup
 Initialization SHALL be idempotent and SHALL back up existing relevant configuration before modification.
 
