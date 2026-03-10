@@ -87,6 +87,7 @@ func TestResolveGitSubcommandFromArgsMoveLeadingFlags(t *testing.T) {
 	}{
 		"status plain":                     {args: []string{"status"}, wantDispatch: gitStatusDispatch},
 		"log plain":                        {args: []string{"log"}, wantDispatch: "git log"},
+		"worktree list":                    {args: []string{"worktree", "list"}, wantDispatch: "git worktree", wantSubArgs: []string{"list"}},
 		"show plain":                       {args: []string{"show", "HEAD"}, wantDispatch: "git show", wantSubArgs: []string{"HEAD"}},
 		"fetch plain":                      {args: []string{"fetch", "origin"}, wantDispatch: "git fetch", wantSubArgs: []string{"origin"}},
 		"blame plain":                      {args: []string{"blame", "x.txt"}, wantDispatch: "git blame", wantSubArgs: []string{"x.txt"}},
@@ -119,6 +120,7 @@ func TestBuildGitSubcommandRegistryContainsSupportedHandlers(t *testing.T) {
 		"git status",
 		"git diff",
 		"git log",
+		"git worktree",
 		"git show",
 		"git fetch",
 		"git commit",

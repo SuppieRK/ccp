@@ -5,7 +5,7 @@ Define Claude-specific init integration for deterministic hook/settings/awarenes
 
 ## Requirements
 ### Requirement: Claude Integration Targets
-Claude init integration SHALL manage deterministic Claude files under the user Claude home directory.
+Claude init integration SHALL manage deterministic Claude hook, settings, awareness, and guidance files under the user Claude home directory.
 
 #### Scenario: target paths are deterministic
 - **WHEN** Claude integration is initialized

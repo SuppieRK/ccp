@@ -1,0 +1,2 @@
+00000|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/git-worktree/project     0add956 [master]
+00001|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/git-worktree/wt-feature  0add956 [feature]

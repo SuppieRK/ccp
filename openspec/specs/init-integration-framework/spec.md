@@ -231,7 +231,8 @@ The framework SHALL mutate managed files using idempotent, backup-safe, atomic w
 
 #### Scenario: persisted init config shape
 - **WHEN** init succeeds
-- **THEN** it writes config JSON containing `tools` and `state`.
+- **THEN** it writes config JSON containing `tools` and `state`
+- **AND** it records reconcile metadata sufficient to detect whether configured integrations were last applied by an older CCP binary or integration-state version.
 
 #### Scenario: managed config writes under home config
 - **WHEN** init runs
@@ -240,3 +241,45 @@ The framework SHALL mutate managed files using idempotent, backup-safe, atomic w
 #### Scenario: detection root remains repository-scoped
 - **WHEN** `--tools` is omitted
 - **THEN** tool detection still uses the current working directory as the repository root.
+
+#### Scenario: legacy config without reconcile metadata remains valid
+- **WHEN** `~/.config/ccp/init.json` exists from an older CCP version and lacks reconcile metadata
+- **THEN** CCP treats the state as needing reconcile rather than failing to parse the file.
+
+### Requirement: Automatic Integration Reconcile
+Configured agent integrations SHALL be reconciled automatically during normal CCP execution when the stored integration reconcile metadata is stale.
+
+#### Scenario: configured integrations reconcile after upgrade
+- **WHEN** `~/.config/ccp/init.json` lists configured tools
+- **AND** the running CCP binary version or integration-state version differs from the stored reconcile metadata
+- **THEN** CCP reruns adapter install and verify for the configured tools before continuing
+- **AND** updates the persisted reconcile metadata after successful reconcile.
+
+#### Scenario: reconcile reuses canonical adapter install targets
+- **WHEN** automatic reconcile runs
+- **THEN** CCP uses the same adapter `Install` and `Verify` flow as `ccp init`
+- **AND** it does not invent a second installation path or alternate target selection rule.
+
+#### Scenario: current reconcile metadata is a fast no-op
+- **WHEN** configured integration state already matches the running CCP binary and integration-state version
+- **THEN** CCP skips adapter reconcile work.
+
+#### Scenario: no configured tools skips reconcile
+- **WHEN** `~/.config/ccp/init.json` does not exist or contains no configured tools
+- **THEN** CCP does not run integration reconcile.
+
+### Requirement: Project-Local Init State Cleanup
+CCP SHALL opportunistically remove obsolete project-local init-state files during normal invocation.
+
+#### Scenario: stale project-local init state is removed
+- **WHEN** the current project contains `.ccp/init.json`
+- **THEN** CCP removes that file as obsolete backward-compat state.
+
+#### Scenario: stale project-local init-state backups are removed
+- **WHEN** the current project contains files matching `.ccp/init.json.bak.*`
+- **THEN** CCP removes those files as obsolete backward-compat state.
+
+#### Scenario: cleanup is bounded to known obsolete files
+- **WHEN** CCP performs the backward-compat cleanup pass
+- **THEN** it only targets `.ccp/init.json` and `.ccp/init.json.bak.*`
+- **AND** it does not remove `gain.db` or other unrelated `.ccp` contents.
