@@ -1,0 +1,50 @@
+[
+  {
+    "name": "failure",
+    "tool": "prettier",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./node_modules/.bin/prettier", "--check", "src/bad.js"],
+    "expect_exit": 1,
+    "must_contain": ["prettier check: 1 files need formatting", "- src/bad.js"],
+    "ignore_lines": ["^$"],
+    "required": true
+  },
+  {
+    "name": "failure-multiple",
+    "tool": "prettier",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./node_modules/.bin/prettier", "--check", "src/bad.js", "src/bad2.js"],
+    "expect_exit": 1,
+    "must_contain": ["prettier check: 2 files need formatting", "- src/bad.js", "- src/bad2.js"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "success",
+    "tool": "prettier",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./node_modules/.bin/prettier", "--check", "src/good.js"],
+    "expect_exit": 0,
+    "must_contain": ["prettier check: ok"],
+    "ignore_lines": ["^$"],
+    "required": false
+  },
+  {
+    "name": "write",
+    "tool": "prettier",
+    "project": "projects/basic",
+    "before_start": [["./scripts/setup.sh"]],
+    "after_stop": [["./scripts/cleanup.sh"]],
+    "native": ["./node_modules/.bin/prettier", "--write", "src/write_bad.js"],
+    "expect_exit": 0,
+    "must_contain": ["src/write_bad.js"],
+    "ignore_lines": ["^$"],
+    "required": false
+  }
+]

@@ -13,6 +13,7 @@ Claude init integration SHALL manage deterministic Claude files under the user C
   - `~/.claude/hooks/ccp-rewrite.sh`
   - `~/.claude/settings.json`
   - `~/.claude/CCP.md`
+  - `~/.claude/CLAUDE.md`
 
 ### Requirement: Claude PreToolUse Hook Installation
 Claude init integration SHALL provision a runnable rewrite hook script and register it through Claude PreToolUse settings.
@@ -81,11 +82,17 @@ Claude init integration SHALL install awareness content with idempotent updates.
 
 #### Scenario: awareness install
 - **WHEN** Claude init executes
-- **THEN** slim awareness content is provisioned/updated alongside hook installation.
+- **THEN** slim awareness content is provisioned or updated at `~/.claude/CCP.md`
+- **AND** `~/.claude/CLAUDE.md` contains a managed CCP reference block that points Claude at `CCP.md`.
+
+#### Scenario: awareness preserves unrelated global instructions
+- **WHEN** Claude init executes and `~/.claude/CLAUDE.md` already contains user-authored content
+- **THEN** Claude integration updates or inserts only the CCP-managed block
+- **AND** preserves unrelated content outside that managed block.
 
 #### Scenario: idempotent re-run
 - **WHEN** Claude init is re-run without effective changes
-- **THEN** managed artifacts are not rewritten and duplicate backups are not created.
+- **THEN** managed artifacts are not rewritten and duplicate managed guidance blocks are not created.
 
 ### Requirement: Claude Uninstall Settings Cleanup
 Claude uninstall integration SHALL remove only the managed Claude PreToolUse Bash command hook registration while preserving unrelated settings entries.
@@ -97,6 +104,15 @@ Claude uninstall integration SHALL remove only the managed Claude PreToolUse Bas
 #### Scenario: uninstall preserves unrelated settings content
 - **WHEN** Claude uninstall runs and `~/.claude/settings.json` contains unrelated hook entries or non-hook settings
 - **THEN** unrelated settings content remains intact.
+
+#### Scenario: uninstall removes only managed Claude guidance block
+- **WHEN** Claude uninstall runs and `~/.claude/CLAUDE.md` contains both unrelated user content and the managed CCP reference block
+- **THEN** uninstall removes only the managed CCP block
+- **AND** preserves unrelated global Claude instructions.
+
+#### Scenario: uninstall cleans up fully managed Claude guidance file
+- **WHEN** Claude uninstall runs and `~/.claude/CLAUDE.md` contains only the managed CCP reference block
+- **THEN** uninstall removes the now-empty `CLAUDE.md` file.
 
 #### Scenario: uninstall tolerates malformed settings
 - **WHEN** Claude uninstall runs and `~/.claude/settings.json` is malformed JSON

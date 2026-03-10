@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/version"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,8 +15,10 @@ import (
 )
 
 type initConfig struct {
-	Tools []string    `json:"tools"`
-	State []toolState `json:"state"`
+	Tools              []string    `json:"tools"`
+	State              []toolState `json:"state"`
+	CCPVersion         string      `json:"ccpVersion,omitempty"`
+	IntegrationVersion int         `json:"integrationVersion,omitempty"`
 }
 
 type toolState struct {
@@ -75,8 +78,10 @@ func RunInit(args []string) error {
 		return err
 	}
 	cfg := initConfig{
-		Tools: tools,
-		State: states,
+		Tools:              tools,
+		State:              states,
+		CCPVersion:         version.Version,
+		IntegrationVersion: integrationStateVersion,
 	}
 	changed, err := persistInitConfig(path, cfg)
 	if err != nil {

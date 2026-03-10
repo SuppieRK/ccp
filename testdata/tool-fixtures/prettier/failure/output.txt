@@ -1,0 +1,2 @@
+prettier check: 1 files need formatting
+- src/bad.js

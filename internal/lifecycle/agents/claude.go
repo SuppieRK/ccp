@@ -14,6 +14,7 @@ const (
 	claudeHookScriptName = "ccp-rewrite.sh"
 	claudeSettingsName   = "settings.json"
 	claudeAwarenessName  = "CCP.md"
+	claudeGuideName      = "CLAUDE.md"
 )
 
 func NewClaudeAdapter() ClaudeAdapter {
@@ -32,6 +33,7 @@ func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
+	guidePath := filepath.Join(root, claudeGuideName)
 	escapedHookPath := strings.ReplaceAll(hookPath, "\\", "\\\\")
 	return []PlannedArtifact{
 		{
@@ -52,11 +54,26 @@ func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 			Content: awarenessContent(a.ID()),
 			Perm:    0o644,
 		},
+		{
+			Kind:    ArtifactAwareness,
+			Path:    guidePath,
+			Content: claudeManagedGuideBlock(),
+			Perm:    0o644,
+		},
 	}
 }
 
 func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
-	return InstallPlannedArtifacts(a.Plan(ctx), write)
+	plan := a.Plan(ctx)
+	var res InstallResult
+	for _, item := range plan {
+		changed, err := installClaudeArtifact(item, write)
+		if err != nil {
+			return res, err
+		}
+		updateInstallResult(&res, changed)
+	}
+	return res, nil
 }
 
 func (a ClaudeAdapter) Verify(ctx Context) error {
@@ -68,10 +85,14 @@ func (a ClaudeAdapter) Verify(ctx Context) error {
 		{path: filepath.Join(root, "hooks", claudeHookScriptName), msg: "missing hook script: %s"},
 		{path: filepath.Join(root, claudeSettingsName), msg: "missing settings file: %s"},
 		{path: filepath.Join(root, claudeAwarenessName), msg: "missing awareness file: %s"},
+		{path: filepath.Join(root, claudeGuideName), msg: "missing claude guide file: %s"},
 	} {
 		if _, err := os.Stat(check.path); err != nil {
 			return fmt.Errorf(check.msg, check.path)
 		}
+	}
+	if err := verifyClaudeGuideBlock(filepath.Join(root, claudeGuideName)); err != nil {
+		return err
 	}
 	return nil
 }
@@ -89,27 +110,144 @@ func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
+	guidePath := filepath.Join(root, claudeGuideName)
 
 	var res InstallResult
-	for _, p := range []string{hookPath, awarenessPath} {
+	if err := removeClaudeArtifacts(&res, hookPath, awarenessPath); err != nil {
+		return res, err
+	}
+	if err := uninstallClaudeSettings(&res, settingsPath, hookPath); err != nil {
+		return res, err
+	}
+	if err := uninstallClaudeGuide(&res, guidePath); err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+func installClaudeArtifact(item PlannedArtifact, write WriterFunc) (bool, error) {
+	data, err := claudeArtifactContent(item)
+	if err != nil {
+		return false, err
+	}
+	changed, err := write(item.Path, []byte(data), item.Perm)
+	if err != nil {
+		return false, err
+	}
+	if item.Kind == ArtifactHook {
+		if err := os.Chmod(item.Path, 0o755); err != nil {
+			return false, err
+		}
+	}
+	return changed, nil
+}
+
+func claudeArtifactContent(item PlannedArtifact) (string, error) {
+	if filepath.Base(item.Path) != claudeGuideName {
+		return item.Content, nil
+	}
+	return upsertClaudeGuideBlock(item.Path)
+}
+
+func updateInstallResult(res *InstallResult, changed bool) {
+	if changed {
+		res.Applied++
+		return
+	}
+	res.Noop++
+}
+
+func removeClaudeArtifacts(res *InstallResult, paths ...string) error {
+	for _, p := range paths {
 		removed, err := removeFileIfExists(p)
 		if err != nil {
-			return res, err
+			return err
 		}
 		if removed {
 			res.Applied++
 		}
 	}
+	return nil
+}
+
+func uninstallClaudeSettings(res *InstallResult, settingsPath, hookPath string) error {
 	changed, err := removeClaudePreToolUseHook(settingsPath, hookPath)
 	if err != nil {
-		return res, err
+		return err
 	}
-	if changed {
-		res.Applied++
-	} else {
+	updateInstallResult(res, changed)
+	return nil
+}
+
+func uninstallClaudeGuide(res *InstallResult, guidePath string) error {
+	updatedGuide, changedGuide, removeAllGuide, err := removeClaudeGuideBlock(guidePath)
+	if err != nil {
+		return err
+	}
+	if !changedGuide {
 		res.Noop++
+		return nil
 	}
-	return res, nil
+	if removeAllGuide {
+		if err := os.Remove(guidePath); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	} else if err := os.WriteFile(guidePath, []byte(updatedGuide), 0o644); err != nil {
+		return err
+	}
+	res.Applied++
+	return nil
+}
+
+func claudeManagedGuideBlock() string {
+	return ccpManagedBlockStart + "\n" +
+		"## CCP Integration (Managed)\n\n" +
+		"@CCP.md\n" +
+		ccpManagedBlockEnd + "\n"
+}
+
+func verifyClaudeGuideBlock(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("missing claude guide file: %s", path)
+	}
+	content := string(data)
+	if !strings.Contains(content, ccpManagedBlockStart) || !strings.Contains(content, ccpManagedBlockEnd) {
+		return fmt.Errorf("missing claude managed guide block markers in %s", path)
+	}
+	if !strings.Contains(content, "@CCP.md") {
+		return fmt.Errorf("missing claude CCP guide reference in %s", path)
+	}
+	return nil
+}
+
+func upsertClaudeGuideBlock(path string) (string, error) {
+	block := claudeManagedGuideBlock()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return block, nil
+		}
+		return "", err
+	}
+	existing := string(raw)
+	start := strings.Index(existing, ccpManagedBlockStart)
+	end := strings.Index(existing, ccpManagedBlockEnd)
+	if start >= 0 && end >= start {
+		end += len(ccpManagedBlockEnd)
+		tailStart := skipSingleLF(existing, end)
+		updated := existing[:start] + strings.TrimRight(block, "\n") + "\n" + existing[tailStart:]
+		return normalizeManagedFile(updated), nil
+	}
+	trimmed := strings.TrimRight(existing, "\n")
+	if trimmed == "" {
+		return block, nil
+	}
+	return normalizeManagedFile(trimmed + "\n\n" + block), nil
+}
+
+func removeClaudeGuideBlock(path string) (updated string, changed bool, removeAll bool, err error) {
+	return removeManagedInstructionBlock(path)
 }
 
 func removeFileIfExists(path string) (bool, error) {

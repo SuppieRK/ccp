@@ -13,6 +13,9 @@ import (
 	"go-command-compression-proxy/internal/version"
 )
 
+var startupMaintenance = lifecycle.RunStartupMaintenance
+var lifecycleDispatch = runLifecycleCommand
+
 func main() {
 	opts, err := cli.Parse(os.Args[1:])
 	if err != nil {
@@ -33,18 +36,30 @@ func main() {
 		exitWithMsg(2, usageText())
 	}
 
-	if handled, err := runLifecycleCommand(opts.CommandArgs); handled {
+	if handled, exitCode, err := runInvocation(opts); handled {
 		if err != nil {
-			exitWithErr(1, err)
+			exitWithErr(exitCode, err)
 		}
 		return
 	}
+}
 
+func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
+	if err := startupMaintenance(); err != nil {
+		return true, 1, err
+	}
+	if handled, err := lifecycleDispatch(opts.CommandArgs); handled {
+		if err != nil {
+			return true, 1, err
+		}
+		return true, 0, nil
+	}
 	r, err := buildRuntime(opts)
 	if err != nil {
-		exitWithErr(1, err)
+		return true, 1, err
 	}
 	os.Exit(r.Run(opts.CommandArgs))
+	return true, 0, nil
 }
 
 func runLifecycleCommand(args []string) (bool, error) {
@@ -137,6 +152,7 @@ func buildRuntime(opts cli.Options) (*runner.Runner, error) {
 		filters.NewPNPMFilter(),
 		filters.NewYarnFilter(),
 		filters.NewNPXFilter(),
+		filters.NewPrettierFilter(),
 		filters.NewGrepFilter(),
 		filters.NewFindFilter(),
 		filters.NewKubectlToolFilter(),

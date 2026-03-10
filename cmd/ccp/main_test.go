@@ -118,6 +118,39 @@ func TestMainLifecycleHelpPrintsStructuredHelpAndExitsZero(t *testing.T) {
 	}
 }
 
+func TestRunInvocationExecutesStartupMaintenanceBeforeLifecycleDispatch(t *testing.T) {
+	var order []string
+	prevStartup := startupMaintenance
+	prevLifecycle := lifecycleDispatch
+	t.Cleanup(func() {
+		startupMaintenance = prevStartup
+		lifecycleDispatch = prevLifecycle
+	})
+
+	startupMaintenance = func() error {
+		order = append(order, "startup")
+		return nil
+	}
+	lifecycleDispatch = func(args []string) (bool, error) {
+		order = append(order, "lifecycle")
+		if len(args) != 1 || args[0] != "fake-lifecycle" {
+			t.Fatalf("unexpected args: %v", args)
+		}
+		return true, nil
+	}
+
+	handled, exitCode, err := runInvocation(cli.Options{CommandArgs: []string{"fake-lifecycle"}})
+	if err != nil {
+		t.Fatalf("runInvocation error: %v", err)
+	}
+	if !handled || exitCode != 0 {
+		t.Fatalf("unexpected handled=%v exitCode=%d", handled, exitCode)
+	}
+	if got := strings.Join(order, ","); got != "startup,lifecycle" {
+		t.Fatalf("unexpected call order: %s", got)
+	}
+}
+
 func containsAll(s string, parts []string) bool {
 	for _, p := range parts {
 		if !strings.Contains(s, p) {

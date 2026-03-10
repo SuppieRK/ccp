@@ -19,6 +19,7 @@ type testAdapter struct {
 type failingInstallAdapter struct{}
 
 type failingVerifyAdapter struct{}
+type countingAdapter struct{ installed int }
 
 func (t testAdapter) ID() string {
 	return t.id
@@ -70,6 +71,19 @@ func (failingVerifyAdapter) Install(_ agents.Context, _ agents.WriterFunc) (agen
 func (failingVerifyAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return nil }
 
 func (failingVerifyAdapter) Verify(_ agents.Context) error { return errors.New("verify failed") }
+
+func (c *countingAdapter) ID() string { return "fake" }
+
+func (c *countingAdapter) DetectRoot(scopeRoot string) string { return scopeRoot }
+
+func (c *countingAdapter) Install(_ agents.Context, _ agents.WriterFunc) (agents.InstallResult, error) {
+	c.installed++
+	return agents.InstallResult{Applied: 1}, nil
+}
+
+func (c *countingAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return nil }
+
+func (c *countingAdapter) Verify(_ agents.Context) error { return nil }
 
 func assertSingleFailedStateWithReason(t *testing.T, states []toolState, reason string) {
 	t.Helper()
@@ -194,5 +208,158 @@ func TestWriteManagedFileCreateNoopAndBackup(t *testing.T) {
 	matches, err := filepath.Glob(path + ".bak.*")
 	if err != nil || len(matches) == 0 {
 		t.Fatalf("expected backup file, matches=%v err=%v", matches, err)
+	}
+}
+
+func TestRunStartupMaintenanceReconcilesStaleConfiguredTools(t *testing.T) {
+	ws := newLifecycleWorkspace(t)
+	adapter := &countingAdapter{}
+	restore := stubStartupMaintenanceDeps(
+		func() string { return "new-version" },
+		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
+	)
+	defer restore()
+
+	cfgPath, err := initPath()
+	if err != nil {
+		t.Fatalf("initPath: %v", err)
+	}
+	if _, err := persistInitConfig(cfgPath, initConfig{
+		Tools:              []string{"fake"},
+		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "old"}},
+		CCPVersion:         "old-version",
+		IntegrationVersion: 0,
+	}); err != nil {
+		t.Fatalf("persist stale config: %v", err)
+	}
+
+	chdirForTest(t, ws.work)
+	if err := RunStartupMaintenance(); err != nil {
+		t.Fatalf("RunStartupMaintenance: %v", err)
+	}
+	if adapter.installed != 1 {
+		t.Fatalf("expected one reconcile install, got %d", adapter.installed)
+	}
+
+	cfg, exists, err := readInitConfig(cfgPath)
+	if err != nil || !exists {
+		t.Fatalf("readInitConfig err=%v exists=%v", err, exists)
+	}
+	if cfg.CCPVersion != "new-version" || cfg.IntegrationVersion != integrationStateVersion {
+		t.Fatalf("unexpected reconcile metadata: %+v", cfg)
+	}
+}
+
+func TestRunStartupMaintenanceSkipsUpToDateConfig(t *testing.T) {
+	ws := newLifecycleWorkspace(t)
+	adapter := &countingAdapter{}
+	restore := stubStartupMaintenanceDeps(
+		func() string { return "current-version" },
+		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
+	)
+	defer restore()
+
+	cfgPath, err := initPath()
+	if err != nil {
+		t.Fatalf("initPath: %v", err)
+	}
+	if _, err := persistInitConfig(cfgPath, initConfig{
+		Tools:              []string{"fake"},
+		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "current"}},
+		CCPVersion:         "current-version",
+		IntegrationVersion: integrationStateVersion,
+	}); err != nil {
+		t.Fatalf("persist current config: %v", err)
+	}
+
+	chdirForTest(t, ws.work)
+	if err := RunStartupMaintenance(); err != nil {
+		t.Fatalf("RunStartupMaintenance: %v", err)
+	}
+	if adapter.installed != 0 {
+		t.Fatalf("expected no reconcile install, got %d", adapter.installed)
+	}
+}
+
+func TestRunStartupMaintenanceCleansLegacyProjectInitStateButPreservesGainDB(t *testing.T) {
+	ws := newLifecycleWorkspace(t)
+	restore := stubStartupMaintenanceDeps(
+		func() string { return "current-version" },
+		func() map[string]agents.Adapter { return map[string]agents.Adapter{} },
+	)
+	defer restore()
+
+	ccpDir := filepath.Join(ws.work, ".ccp")
+	if err := os.MkdirAll(ccpDir, 0o755); err != nil {
+		t.Fatalf("mkdir .ccp: %v", err)
+	}
+	stale := filepath.Join(ccpDir, initConfigFileName)
+	backup := stale + ".bak.123"
+	gainDB := filepath.Join(ccpDir, "gain.db")
+	for _, file := range []string{stale, backup, gainDB} {
+		if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+			t.Fatalf("write %s: %v", file, err)
+		}
+	}
+
+	chdirForTest(t, ws.work)
+	if err := RunStartupMaintenance(); err != nil {
+		t.Fatalf("RunStartupMaintenance: %v", err)
+	}
+	for _, removed := range []string{stale, backup} {
+		if _, err := os.Stat(removed); !os.IsNotExist(err) {
+			t.Fatalf("expected removed legacy file %s, err=%v", removed, err)
+		}
+	}
+	if _, err := os.Stat(gainDB); err != nil {
+		t.Fatalf("expected gain.db preserved, err=%v", err)
+	}
+}
+
+func TestRunStartupMaintenanceSkipsWhenLockAlreadyHeld(t *testing.T) {
+	ws := newLifecycleWorkspace(t)
+	adapter := &countingAdapter{}
+	restore := stubStartupMaintenanceDeps(
+		func() string { return "new-version" },
+		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
+	)
+	defer restore()
+
+	cfgPath, err := initPath()
+	if err != nil {
+		t.Fatalf("initPath: %v", err)
+	}
+	if _, err := persistInitConfig(cfgPath, initConfig{
+		Tools:              []string{"fake"},
+		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "old"}},
+		CCPVersion:         "old-version",
+		IntegrationVersion: 0,
+	}); err != nil {
+		t.Fatalf("persist stale config: %v", err)
+	}
+	if err := os.WriteFile(cfgPath+".lock", []byte("held"), 0o644); err != nil {
+		t.Fatalf("write lock: %v", err)
+	}
+
+	chdirForTest(t, ws.work)
+	if err := RunStartupMaintenance(); err != nil {
+		t.Fatalf("RunStartupMaintenance: %v", err)
+	}
+	if adapter.installed != 0 {
+		t.Fatalf("expected reconcile to skip while lock held, got %d", adapter.installed)
+	}
+}
+
+func stubStartupMaintenanceDeps(versionFn func() string, adaptersFn func() map[string]agents.Adapter) func() {
+	prevVersion := startupMaintenanceVersion
+	prevAdapters := startupMaintenanceAdapters
+	prevPrintf := startupMaintenancePrintf
+	startupMaintenanceVersion = versionFn
+	startupMaintenanceAdapters = adaptersFn
+	startupMaintenancePrintf = func(string, ...any) (int, error) { return 0, nil }
+	return func() {
+		startupMaintenanceVersion = prevVersion
+		startupMaintenanceAdapters = prevAdapters
+		startupMaintenancePrintf = prevPrintf
 	}
 }
