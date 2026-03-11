@@ -76,7 +76,7 @@ func moveLeadingGoFlags(args []string) ([]string, []string) {
 		if arg == "--" || !strings.HasPrefix(arg, "-") {
 			break
 		}
-		if !(strings.HasPrefix(arg, "-C=") || arg == "-C") {
+		if !strings.HasPrefix(arg, "-C=") && arg != "-C" {
 			break
 		}
 		leading = append(leading, args[i])

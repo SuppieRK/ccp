@@ -113,7 +113,7 @@ func renderPSCompactedRows(total int, anomalies []psRow, groups map[string]*psGr
 		if reachedPSRenderLimit(&b, total, printed, maxRows) {
 			return b.String()
 		}
-		b.WriteString(fmt.Sprintf("[!] %s %s %s status=%s ports=%s\n", row.id, row.name, row.image, row.status, displayPorts(row.ports)))
+		_, _ = fmt.Fprintf(&b, "[!] %s %s %s status=%s ports=%s\n", row.id, row.name, row.image, row.status, displayPorts(row.ports))
 		printed++
 	}
 	for _, key := range order {
@@ -123,9 +123,9 @@ func renderPSCompactedRows(total int, anomalies []psRow, groups map[string]*psGr
 		g := groups[key]
 		sort.Strings(g.names)
 		if g.count == 1 {
-			b.WriteString(fmt.Sprintf("[ok] %s status=%s ports=%s name=%s\n", g.image, g.status, displayPorts(g.ports), g.names[0]))
+			_, _ = fmt.Fprintf(&b, "[ok] %s status=%s ports=%s name=%s\n", g.image, g.status, displayPorts(g.ports), g.names[0])
 		} else {
-			b.WriteString(fmt.Sprintf("[ok x%d] %s status=%s ports=%s names=%s\n", g.count, g.image, g.status, displayPorts(g.ports), strings.Join(g.names, ",")))
+			_, _ = fmt.Fprintf(&b, "[ok x%d] %s status=%s ports=%s names=%s\n", g.count, g.image, g.status, displayPorts(g.ports), strings.Join(g.names, ","))
 		}
 		printed++
 	}
@@ -137,7 +137,7 @@ func reachedPSRenderLimit(b *strings.Builder, total, printed, maxRows int) bool 
 		return false
 	}
 	if remaining := total - printed; remaining > 0 {
-		b.WriteString(fmt.Sprintf("... +%d more\n", remaining))
+		_, _ = fmt.Fprintf(b, "... +%d more\n", remaining)
 	}
 	return true
 }

@@ -105,10 +105,10 @@ func compactBuildCheck(raw, label string) (string, bool) {
 
 	orderedDiag := prioritizeDiagnostics(diag)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("%s: %d diagnostics\n", label, len(orderedDiag)))
+	_, _ = fmt.Fprintf(&b, "%s: %d diagnostics\n", label, len(orderedDiag))
 	for i, line := range orderedDiag {
 		if i >= maxDiagnostics {
-			b.WriteString(fmt.Sprintf("... +%d more\n", len(orderedDiag)-maxDiagnostics))
+			_, _ = fmt.Fprintf(&b, "... +%d more\n", len(orderedDiag)-maxDiagnostics)
 			break
 		}
 		b.WriteString(line)
@@ -342,21 +342,21 @@ func (s *clippyCompactState) totalFindings() int {
 func (s *clippyCompactState) render(totalFindings int) string {
 	sort.Strings(s.order)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("cargo clippy: %d findings across %d lint rules\n", totalFindings, len(s.order)))
+	_, _ = fmt.Fprintf(&b, "cargo clippy: %d findings across %d lint rules\n", totalFindings, len(s.order))
 	for _, rule := range s.order {
 		grp := s.groups[rule]
 		if grp == nil {
 			continue
 		}
 		if len(grp.locs) > 0 {
-			b.WriteString(fmt.Sprintf("- %s: %d (%s)\n", rule, grp.count, grp.locs[0]))
+			_, _ = fmt.Fprintf(&b, "- %s: %d (%s)\n", rule, grp.count, grp.locs[0])
 		} else {
-			b.WriteString(fmt.Sprintf("- %s: %d\n", rule, grp.count))
+			_, _ = fmt.Fprintf(&b, "- %s: %d\n", rule, grp.count)
 		}
 		examples := prioritizeClippyExamples(grp.examples)
 		for i, line := range examples {
 			if i >= maxExamplesPerLint {
-				b.WriteString(fmt.Sprintf("  ... +%d more\n", len(examples)-maxExamplesPerLint))
+				_, _ = fmt.Fprintf(&b, "  ... +%d more\n", len(examples)-maxExamplesPerLint)
 				break
 			}
 			b.WriteString("  ")
@@ -533,16 +533,16 @@ func (s *cargoTestCompactState) render() string {
 	totalPassed, totalFailed, totalIgnored := s.totals()
 	var b strings.Builder
 	if totalFailed == 0 && len(s.failureDetails) == 0 {
-		b.WriteString(fmt.Sprintf("cargo test: ok (%d passed, %d failed, %d ignored)\n", totalPassed, totalFailed, totalIgnored))
+		_, _ = fmt.Fprintf(&b, "cargo test: ok (%d passed, %d failed, %d ignored)\n", totalPassed, totalFailed, totalIgnored)
 	} else {
-		b.WriteString(fmt.Sprintf("cargo test: failed (%d passed, %d failed, %d ignored)\n", totalPassed, totalFailed, totalIgnored))
+		_, _ = fmt.Fprintf(&b, "cargo test: failed (%d passed, %d failed, %d ignored)\n", totalPassed, totalFailed, totalIgnored)
 	}
 	for _, secName := range s.sectionOrder {
 		sec := s.sections[secName]
 		if sec == nil {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("- %s: %d passed, %d failed, %d ignored\n", sec.name, sec.passed, sec.failed, sec.ignored))
+		_, _ = fmt.Fprintf(&b, "- %s: %d passed, %d failed, %d ignored\n", sec.name, sec.passed, sec.failed, sec.ignored)
 	}
 	orderedDetails := prioritizeDiagnostics(s.failureDetails)
 	orderedDetails = collapseCargoTestFailureDetails(orderedDetails)
@@ -552,7 +552,7 @@ func (s *cargoTestCompactState) render() string {
 	b.WriteString("failure details:\n")
 	for i, line := range orderedDetails {
 		if i >= maxDiagnostics {
-			b.WriteString(fmt.Sprintf("... +%d more\n", len(orderedDetails)-maxDiagnostics))
+			_, _ = fmt.Fprintf(&b, "... +%d more\n", len(orderedDetails)-maxDiagnostics)
 			break
 		}
 		b.WriteString(line)

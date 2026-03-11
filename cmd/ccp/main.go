@@ -146,6 +146,7 @@ func buildRuntime(opts cli.Options) (*runner.Runner, error) {
 		filters.NewDenoFilter(),
 		filters.NewNodeFilter(),
 		filters.NewPythonFilter(),
+		filters.NewRuffFilter(),
 		filters.NewPytestFilter(),
 		filters.NewPIPFilter(),
 		filters.NewNPMFilter(),

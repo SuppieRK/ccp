@@ -117,17 +117,17 @@ func renderBuildVetSummary(label string, downloads, trace int, diagnostics []str
 	if diagCount == 0 {
 		b.WriteString(label + ": ok\n")
 	} else {
-		b.WriteString(fmt.Sprintf("%s: %d diagnostics\n", label, diagCount))
+		_, _ = fmt.Fprintf(&b, "%s: %d diagnostics\n", label, diagCount)
 	}
 	if downloads > 0 {
-		b.WriteString(fmt.Sprintf("[info] downloading %d dependencies...\n", downloads))
+		_, _ = fmt.Fprintf(&b, "[info] downloading %d dependencies...\n", downloads)
 	}
 	if trace > 0 {
-		b.WriteString(fmt.Sprintf("[info] go build trace lines: %d\n", trace))
+		_, _ = fmt.Fprintf(&b, "[info] go build trace lines: %d\n", trace)
 	}
 	for i, line := range diagnostics {
 		if i >= maxDiagnostics {
-			b.WriteString(fmt.Sprintf("... +%d more\n", diagCount-maxDiagnostics))
+			_, _ = fmt.Fprintf(&b, "... +%d more\n", diagCount-maxDiagnostics)
 			break
 		}
 		b.WriteString(line)

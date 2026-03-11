@@ -157,7 +157,7 @@ func renderGoTestFailureSummary(state goTestCompactionState) string {
 	var b strings.Builder
 	for i, line := range state.failureDetails {
 		if i >= maxDiagnostics {
-			b.WriteString(fmt.Sprintf("... +%d more\n", len(state.failureDetails)-maxDiagnostics))
+			_, _ = fmt.Fprintf(&b, "... +%d more\n", len(state.failureDetails)-maxDiagnostics)
 			break
 		}
 		b.WriteString(line)
@@ -165,7 +165,7 @@ func renderGoTestFailureSummary(state goTestCompactionState) string {
 	}
 	b.WriteString("\n")
 	failed := countGoTestFailures(state.failureDetails)
-	b.WriteString(fmt.Sprintf("go test: %d passed, %d failed, %d no-test-files\n", len(state.passed), failed, len(state.skipped)))
+	_, _ = fmt.Fprintf(&b, "go test: %d passed, %d failed, %d no-test-files\n", len(state.passed), failed, len(state.skipped))
 	return b.String()
 }
 

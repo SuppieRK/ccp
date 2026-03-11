@@ -181,7 +181,7 @@ func compactBlameLinePorcelain(raw string) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("git blame: %d lines\n", len(entries)))
+	_, _ = fmt.Fprintf(&b, "git blame: %d lines\n", len(entries))
 	for _, e := range entries {
 		hash := e.hash
 		if len(hash) > 8 {
@@ -189,10 +189,10 @@ func compactBlameLinePorcelain(raw string) string {
 		}
 		authorTime := normalizeBlameTime(e.authorTime, e.authorTZ)
 		committerTime := normalizeBlameTime(e.committerTime, e.committerTZ)
-		b.WriteString(fmt.Sprintf(
+		_, _ = fmt.Fprintf(&b,
 			"%s:%s author=%s @ %s committer=%s @ %s %s %s\n",
 			e.file, e.line, e.author, authorTime, e.committer, committerTime, hash, e.code,
-		))
+		)
 	}
 	return b.String()
 }

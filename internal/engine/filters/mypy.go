@@ -344,7 +344,7 @@ func writeMypyFileless(b *strings.Builder, lines []string) {
 }
 
 func writeMypyHeader(b *strings.Builder, files []mypyFileSummary) {
-	b.WriteString(fmt.Sprintf("mypy: %d errors in %d files\n", totalMypyIssues(files), len(files)))
+	_, _ = fmt.Fprintf(b, "mypy: %d errors in %d files\n", totalMypyIssues(files), len(files))
 }
 
 func totalMypyIssues(files []mypyFileSummary) int {
@@ -358,13 +358,13 @@ func totalMypyIssues(files []mypyFileSummary) int {
 func writeMypyFiles(b *strings.Builder, files []mypyFileSummary) {
 	limit := min(len(files), mypyMaxFiles)
 	for _, file := range files[:limit] {
-		b.WriteString(fmt.Sprintf("- %s (%d errors)\n", file.short, len(file.issues)))
+		_, _ = fmt.Fprintf(b, "- %s (%d errors)\n", file.short, len(file.issues))
 		for _, line := range mypyIssueLines(file.issues) {
 			b.WriteString(line)
 		}
 	}
 	if len(files) > mypyMaxFiles {
-		b.WriteString(fmt.Sprintf("+ %d more files\n", len(files)-mypyMaxFiles))
+		_, _ = fmt.Fprintf(b, "+ %d more files\n", len(files)-mypyMaxFiles)
 	}
 }
 

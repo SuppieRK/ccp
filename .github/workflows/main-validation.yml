@@ -32,6 +32,8 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           go install github.com/gordonklaus/ineffassign@latest
           go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          curl --proto "=https" -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.3
 
       - name: Run local validation helper
         shell: bash

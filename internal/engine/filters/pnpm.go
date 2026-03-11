@@ -551,7 +551,7 @@ func parsePnpmOutdatedNestedEntry(name string, child any) (pnpmOutdatedEntry, bo
 }
 
 func appendPNPMInstallLine(canonical string, seen map[string]struct{}, out *[]string) {
-	if !(isPNPMInstallFailure(canonical) || isPNPMInstallSummary(canonical)) {
+	if !isPNPMInstallFailure(canonical) && !isPNPMInstallSummary(canonical) {
 		return
 	}
 	k := strings.ToLower(canonical)

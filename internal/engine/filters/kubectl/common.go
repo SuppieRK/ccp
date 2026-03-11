@@ -184,10 +184,10 @@ func (f tableCompactorFilter) appendNamespaceSummary(out *strings.Builder, nsTot
 		healthy := nsHealthy[n]
 		unhealthy := total - healthy
 		if unhealthy <= 0 {
-			out.WriteString(fmt.Sprintf("%s: [%d %s: all Running]\n", n, total, f.cfg.resourceLabel))
+			_, _ = fmt.Fprintf(out, "%s: [%d %s: all Running]\n", n, total, f.cfg.resourceLabel)
 			continue
 		}
-		out.WriteString(fmt.Sprintf("%s: [%d %s: %d healthy, %d unhealthy]\n", n, total, f.cfg.resourceLabel, healthy, unhealthy))
+		_, _ = fmt.Fprintf(out, "%s: [%d %s: %d healthy, %d unhealthy]\n", n, total, f.cfg.resourceLabel, healthy, unhealthy)
 	}
 }
 
@@ -201,7 +201,7 @@ func (f tableCompactorFilter) appendGroupedSummary(out *strings.Builder, groups 
 	}
 	sort.Strings(sigs)
 	for _, s := range sigs {
-		out.WriteString(fmt.Sprintf("[%d] %s\n", groups[s], s))
+		_, _ = fmt.Fprintf(out, "[%d] %s\n", groups[s], s)
 	}
 }
 

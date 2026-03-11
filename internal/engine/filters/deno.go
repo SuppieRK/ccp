@@ -275,10 +275,10 @@ func compactSingleDenoFailureLine(lines []string, index int) (int, []string) {
 		return nextIdx, []string{denoLine}
 	}
 	lower := strings.ToLower(line)
-	if !(strings.HasPrefix(lower, denoErrorLabel) ||
-		strings.HasPrefix(lower, "hint:") ||
-		strings.Contains(lower, "panic:") ||
-		strings.HasPrefix(lower, "stack backtrace:")) {
+	if !strings.HasPrefix(lower, denoErrorLabel) &&
+		!strings.HasPrefix(lower, "hint:") &&
+		!strings.Contains(lower, "panic:") &&
+		!strings.HasPrefix(lower, "stack backtrace:") {
 		return index, nil
 	}
 	out := []string{line}

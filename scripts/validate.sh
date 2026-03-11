@@ -59,6 +59,26 @@ run_if_available \
   "go install honnef.co/go/tools/cmd/staticcheck@latest" \
   staticcheck ./...
 
+#run_if_available \
+#  gosec \
+#  "go install github.com/securego/gosec/v2/cmd/gosec@latest" \
+#  gosec ./...
+
+#run_if_available \
+#  deadcode \
+#  "go install golang.org/x/tools/cmd/deadcode@latest" \
+#  deadcode ./...
+
+run_if_available \
+  govulncheck \
+  "go install golang.org/x/vuln/cmd/govulncheck@latest" \
+  govulncheck ./...
+
+run_if_available \
+  golangci-lint \
+  "curl --proto \"=https\" -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.3" \
+  golangci-lint run ./...
+
 run_if_available \
   ineffassign \
   "go install github.com/gordonklaus/ineffassign@latest" \
