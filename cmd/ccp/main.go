@@ -154,6 +154,7 @@ func buildRuntime(opts cli.Options) (*runner.Runner, error) {
 		filters.NewNPXFilter(),
 		filters.NewPrettierFilter(),
 		filters.NewGolangciLintFilter(),
+		filters.NewMypyFilter(),
 		filters.NewGrepFilter(),
 		filters.NewFindFilter(),
 		filters.NewKubectlToolFilter(),

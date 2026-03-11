@@ -456,6 +456,7 @@ func newFixtureRegistry(t *testing.T) *engine.ToolFilterRegistry {
 		NewNPXFilter(),
 		NewPrettierFilter(),
 		NewGolangciLintFilter(),
+		NewMypyFilter(),
 		NewGrepFilter(),
 		NewFindFilter(),
 		NewKubectlToolFilter(),
