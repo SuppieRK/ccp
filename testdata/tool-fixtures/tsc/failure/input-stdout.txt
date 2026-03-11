@@ -1,0 +1,4 @@
+00000|src/fail.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+00001|src/fail.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.
+00002|src/fail.ts(7,7): error TS2322: Type 'string' is not assignable to type 'number'.
+00003|src/fail.ts(10,7): error TS2322: Type 'string' is not assignable to type 'number'.
