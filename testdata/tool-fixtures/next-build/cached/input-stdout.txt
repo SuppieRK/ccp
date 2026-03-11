@@ -1,0 +1,2 @@
+00000|▲ Next.js 15.2.0
+00001|Build already optimized using cache

@@ -1,0 +1,5 @@
+00000|▲ Next.js 15.2.0
+00001|Creating an optimized production build ...
+00002|Failed to compile.
+00003|./app/page.tsx
+00004|Error: Missing required export

@@ -64,11 +64,6 @@ run_if_available \
 #  "go install github.com/securego/gosec/v2/cmd/gosec@latest" \
 #  gosec ./...
 
-#run_if_available \
-#  deadcode \
-#  "go install golang.org/x/tools/cmd/deadcode@latest" \
-#  deadcode ./...
-
 run_if_available \
   govulncheck \
   "go install golang.org/x/vuln/cmd/govulncheck@latest" \

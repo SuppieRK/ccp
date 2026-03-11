@@ -152,6 +152,7 @@ func buildRuntime(opts cli.Options) (*runner.Runner, error) {
 		filters.NewNPMFilter(),
 		filters.NewPNPMFilter(),
 		filters.NewYarnFilter(),
+		filters.NewNextBuildFilter(),
 		filters.NewTscFilter(),
 		filters.NewNPXFilter(),
 		filters.NewPrettierFilter(),
