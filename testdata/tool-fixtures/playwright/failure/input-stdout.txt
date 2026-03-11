@@ -1,0 +1,6 @@
+00000|Running 3 tests using 1 worker
+00001|  ✓  1 tests/auth.spec.ts:3:1 › auth › logs in (1.1s)
+00002|  ✘  2 tests/auth.spec.ts:8:1 › auth › rejects bad password (2.0s)
+00003|    Error: expect(received).toBeTruthy()
+00004|    screenshot: test-results/auth-failure.png
+00005|  2 passed, 1 failed (3.1s)
