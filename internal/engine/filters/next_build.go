@@ -129,9 +129,7 @@ func parseNextBuildSummary(raw string) nextBuildSummary {
 		if nextBuildShouldSkipLine(rawLine) {
 			continue
 		}
-		if handled := updateNextBuildSummaryLine(&summary, strings.TrimSpace(rawLine)); handled {
-			continue
-		}
+		updateNextBuildSummaryLine(&summary, strings.TrimSpace(rawLine))
 	}
 	if summary.status == "" {
 		summary.status = nextBuildDefaultStatus(summary)
