@@ -78,7 +78,7 @@ func renderSummary(state summaryState) (string, bool) {
 
 func renderCheckFailureSummary(paths []string) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("prettier check: %d files need formatting\n", len(paths)))
+	_, _ = fmt.Fprintf(&b, "prettier check: %d files need formatting\n", len(paths))
 	for _, path := range paths {
 		b.WriteString("- ")
 		b.WriteString(path)
@@ -89,7 +89,7 @@ func renderCheckFailureSummary(paths []string) string {
 
 func renderWriteSummary(paths []string) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("prettier write: formatted %d files\n", len(paths)))
+	_, _ = fmt.Fprintf(&b, "prettier write: formatted %d files\n", len(paths))
 	for _, path := range paths {
 		b.WriteString("- ")
 		b.WriteString(path)

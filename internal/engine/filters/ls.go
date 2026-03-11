@@ -245,7 +245,7 @@ func renderLSListing(dirs []string, files []file) string {
 	totalEntries := len(files) + len(dirs)
 	if totalEntries > 2 {
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("summary: %d files, %d dirs", len(files), len(dirs)))
+		_, _ = fmt.Fprintf(&b, "summary: %d files, %d dirs", len(files), len(dirs))
 		b.WriteString("\n")
 	}
 

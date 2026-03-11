@@ -12,7 +12,6 @@ import (
 
 const (
 	golangciLintDispatchKey      = "golangci-lint"
-	golangciLintStructuredReason = "structured output mode"
 	golangciLintOutFormatFlag    = "--out-format"
 	golangciLintMaxFiles         = 5
 	golangciLintMaxIssuesPerFile = 3
@@ -316,7 +315,7 @@ func renderGolangciLintSummary(files []golangciLintFileSummary, rules []golangci
 }
 
 func writeGolangciLintHeader(b *strings.Builder, files []golangciLintFileSummary) {
-	b.WriteString(fmt.Sprintf("golangci-lint: %d issues in %d files\n", golangciLintTotalIssues(files), len(files)))
+	_, _ = fmt.Fprintf(b, "golangci-lint: %d issues in %d files\n", golangciLintTotalIssues(files), len(files))
 }
 
 func golangciLintTotalIssues(files []golangciLintFileSummary) int {
@@ -333,7 +332,7 @@ func writeGolangciLintRules(b *strings.Builder, rules []golangciLintRuleSummary)
 	}
 	b.WriteString("top linters:\n")
 	for _, rule := range limitedGolangciLintRules(rules) {
-		b.WriteString(fmt.Sprintf("- %s (%d)\n", rule.name, rule.count))
+		_, _ = fmt.Fprintf(b, "- %s (%d)\n", rule.name, rule.count)
 	}
 }
 
@@ -350,7 +349,7 @@ func writeGolangciLintFiles(b *strings.Builder, files []golangciLintFileSummary)
 		writeGolangciLintFileSummary(b, file)
 	}
 	if len(files) > golangciLintMaxFiles {
-		b.WriteString(fmt.Sprintf("+ %d more files\n", len(files)-golangciLintMaxFiles))
+		_, _ = fmt.Fprintf(b, "+ %d more files\n", len(files)-golangciLintMaxFiles)
 	}
 }
 
@@ -362,7 +361,7 @@ func limitedGolangciLintFiles(files []golangciLintFileSummary) []golangciLintFil
 }
 
 func writeGolangciLintFileSummary(b *strings.Builder, file golangciLintFileSummary) {
-	b.WriteString(fmt.Sprintf("- %s (%d issues)\n", file.short, len(file.issues)))
+	_, _ = fmt.Fprintf(b, "- %s (%d issues)\n", file.short, len(file.issues))
 	for _, line := range golangciLintIssueLines(file.issues) {
 		b.WriteString(line)
 	}
@@ -378,13 +377,6 @@ func golangciLintIssueLines(issues []golangciLintRenderedIssue) []string {
 		lines = append(lines, "  "+renderGolangciLintIssue(issue)+"\n")
 	}
 	return lines
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func renderGolangciLintIssue(issue golangciLintRenderedIssue) string {

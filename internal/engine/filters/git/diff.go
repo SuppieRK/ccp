@@ -108,14 +108,14 @@ func compactDiff(raw string) string {
 	for _, f := range files {
 		totalAdded += f.added
 		totalRemoved += f.removed
-		b.WriteString(fmt.Sprintf("%s  +%d -%d\n", f.name, f.added, f.removed))
+		_, _ = fmt.Fprintf(&b, "%s  +%d -%d\n", f.name, f.added, f.removed)
 		for _, line := range f.snippet {
 			b.WriteString("  ")
 			b.WriteString(line)
 			b.WriteString("\n")
 		}
 	}
-	b.WriteString(fmt.Sprintf("summary: %d files changed, +%d -%d\n", len(files), totalAdded, totalRemoved))
+	_, _ = fmt.Fprintf(&b, "summary: %d files changed, +%d -%d\n", len(files), totalAdded, totalRemoved)
 	return b.String()
 }
 

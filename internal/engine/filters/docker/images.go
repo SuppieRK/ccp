@@ -69,7 +69,7 @@ func compactImages(raw string, maxRows int) (string, bool) {
 		totalLabel = fmt.Sprintf("%.1fGB", totalMB/1024)
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("docker images: %d images (%s)\n", len(rows), totalLabel))
+	_, _ = fmt.Fprintf(&b, "docker images: %d images (%s)\n", len(rows), totalLabel)
 	limit := len(rows)
 	if limit > maxRows {
 		limit = maxRows
@@ -80,10 +80,10 @@ func compactImages(raw string, maxRows int) (string, bool) {
 		if len(image) > 40 {
 			image = "..." + image[len(image)-37:]
 		}
-		b.WriteString(fmt.Sprintf("%s [%s]\n", image, r.size))
+		_, _ = fmt.Fprintf(&b, "%s [%s]\n", image, r.size)
 	}
 	if len(rows) > maxRows {
-		b.WriteString(fmt.Sprintf("... +%d more\n", len(rows)-maxRows))
+		_, _ = fmt.Fprintf(&b, "... +%d more\n", len(rows)-maxRows)
 	}
 	return b.String(), true
 }

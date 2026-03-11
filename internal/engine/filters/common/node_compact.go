@@ -58,7 +58,7 @@ func renderNodeOutputEntries(entries []nodeOutEntry, warningCounts map[string]in
 			continue
 		}
 		if n := warningCounts[e.warningKey] - 1; n > 0 {
-			b.WriteString(fmt.Sprintf("[+%d similar warnings]\n", n))
+			_, _ = fmt.Fprintf(&b, "[+%d similar warnings]\n", n)
 		}
 	}
 	return b.String()

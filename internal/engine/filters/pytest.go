@@ -148,9 +148,9 @@ func renderPytestPassOnlySummary(passed, skipped int) string {
 		return "pytest: complete\n"
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("pytest: %d passed", passed))
+	_, _ = fmt.Fprintf(&b, "pytest: %d passed", passed)
 	if skipped > 0 {
-		b.WriteString(fmt.Sprintf(", %d skipped", skipped))
+		_, _ = fmt.Fprintf(&b, ", %d skipped", skipped)
 	}
 	b.WriteString("\n")
 	return b.String()
@@ -158,12 +158,12 @@ func renderPytestPassOnlySummary(passed, skipped int) string {
 
 func renderPytestFailureSummary(p pytestParse) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("pytest: %d passed, %d failed", p.passed, p.failed))
+	_, _ = fmt.Fprintf(&b, "pytest: %d passed, %d failed", p.passed, p.failed)
 	if p.errors > 0 {
-		b.WriteString(fmt.Sprintf(", %d errors", p.errors))
+		_, _ = fmt.Fprintf(&b, ", %d errors", p.errors)
 	}
 	if p.skipped > 0 {
-		b.WriteString(fmt.Sprintf(", %d skipped", p.skipped))
+		_, _ = fmt.Fprintf(&b, ", %d skipped", p.skipped)
 	}
 	b.WriteString("\n")
 

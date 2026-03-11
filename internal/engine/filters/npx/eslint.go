@@ -234,19 +234,19 @@ func renderESLintSummary(summary eslintSummaryData) string {
 		if i >= 5 {
 			break
 		}
-		b.WriteString(fmt.Sprintf("- %s (%d issues)\n", f.shortPath, f.issues))
+		_, _ = fmt.Fprintf(&b, "- %s (%d issues)\n", f.shortPath, f.issues)
 		writeTopESLintMessages(&b, f.messages)
 	}
 	return b.String()
 }
 
 func writeESLintHeader(b *strings.Builder, summary eslintSummaryData) {
-	b.WriteString(fmt.Sprintf(
+	_, _ = fmt.Fprintf(b,
 		"eslint: %d errors, %d warnings in %d files\n",
 		summary.totalErrors,
 		summary.totalWarnings,
 		summary.filesWithIssues,
-	))
+	)
 }
 
 func writeTopESLintRules(b *strings.Builder, rules []eslintRuleCount) {
@@ -258,7 +258,7 @@ func writeTopESLintRules(b *strings.Builder, rules []eslintRuleCount) {
 		if i >= 5 {
 			break
 		}
-		b.WriteString(fmt.Sprintf("- %s (%d)\n", r.rule, r.count))
+		_, _ = fmt.Fprintf(b, "- %s (%d)\n", r.rule, r.count)
 	}
 }
 
@@ -267,14 +267,14 @@ func writeTopESLintMessages(b *strings.Builder, messages []eslintMessage) {
 		if j >= 3 {
 			break
 		}
-		b.WriteString(fmt.Sprintf(
+		_, _ = fmt.Fprintf(b,
 			"  - %d:%d %s %s %s\n",
 			m.Line,
 			m.Column,
 			eslintMessageSeverityLabel(m.Severity),
 			eslintMessageRuleLabel(m.RuleID),
 			strings.TrimSpace(m.Message),
-		))
+		)
 	}
 }
 
