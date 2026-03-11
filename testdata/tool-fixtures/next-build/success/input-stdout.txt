@@ -1,0 +1,7 @@
+00000|▲ Next.js 15.2.0
+00001|Creating an optimized production build ...
+00002|✓ Compiled successfully
+00003|Route (app)                    Size     First Load JS
+00004|├ ○ /                          1.2 kB        132 kB
+00005|└ ● /dashboard                 2.5 kB        156 kB
+00006|✓ Built in 34.2s
