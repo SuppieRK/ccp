@@ -1,0 +1,37 @@
+version: 1
+filter: gradle
+about: Compact Gradle and Gradle Wrapper output.
+
+cases:
+  - id: gradle_output
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^\d{1,2}:\d{2}:\d{2}\s+[AP]M: Executing .*$'
+            - regex: '^\d{1,2}:\d{2}:\d{2}\s+[AP]M: Execution finished .*$'
+            - regex: '^Starting Gradle Daemon\.\.\.$'
+            - regex: '^Starting a Gradle Daemon, .* use --status for details$'
+            - regex: '^Gradle Daemon started in .*$'
+            - regex: '^Download https?://.*$'
+            - regex: '^Consider enabling configuration cache to speed up this build: .*$'
+            - regex: '^WARNING: A restricted method in java\.lang\.System has been called$'
+            - regex: '^WARNING: java\.lang\.System::load has been called by .*NativeLibraryLoader.*$'
+            - regex: '^WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module$'
+            - regex: '^WARNING: Restricted methods will be blocked in a future release unless native access is enabled$'
+            - regex: '^\[Incubating\] Problems report is available at: .*$'
+            - regex: '^Deprecated Gradle features were used in this build, making it incompatible with Gradle \d+\.$'
+            - regex: "^You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins\\.$"
+            - regex: '^For more on this, please refer to https://docs\.gradle\.org/.*$'
+            - regex: '^Missing required bundle .*$'
+            - regex: '^Missing required capability .*$'
+            - regex: '^Recommend setting osgi\.configuration\.area to a directory, getDataFile will return null$'
+            - regex: '^Starting Groovy-Eclipse compiler resolver\. Specified compiler level: .*$'
+            - regex: '^\s+\d+\s+org\.codehaus\.groovy_.*$'
+            - regex: '^> Run with --scan to generate a Build Scan \(powered by Develocity\)\.$'
+            - regex: '^> Check your code and dependencies to fix the compilation error\(s\)$'
+          replace:
+            - regex: '^> Task (:[^\s]+)$'
+              to: '$1: ok'
+            - regex: '^> Task (:[^\s]+) (?:NO-SOURCE|UP-TO-DATE|FROM-CACHE|SKIPPED)$'
+              to: '$1: ok'

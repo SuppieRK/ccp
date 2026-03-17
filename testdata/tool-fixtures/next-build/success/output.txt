@@ -1,6 +1,0 @@
-next build: success
-time: 34.2s
-routes: 2 total (1 static, 1 dynamic, 0 server)
-top bundles:
-- dynamic /dashboard 156.0 kB
-- static / 132.0 kB

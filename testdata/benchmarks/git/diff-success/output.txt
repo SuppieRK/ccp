@@ -1,0 +1,4 @@
+tracked.txt
+  -old
+  +new
+summary: 1 files changed, +1 -1

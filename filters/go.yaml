@@ -1,0 +1,44 @@
+version: 1
+filter: go
+about: Compact the go command family with conservative passthrough for verbose and structured modes.
+
+cases:
+  - id: build_verbose_passthrough
+    when_arguments:
+      first_is: build
+      have_any:
+        - -x
+        - -json
+    passthrough: true
+
+  - id: build
+    when_arguments:
+      first_is: build
+
+  - id: test_json_passthrough
+    when_arguments:
+      first_is: test
+      have_any:
+        - -json
+    passthrough: true
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^\s+.+context: .+$'
+          replace:
+            - regex: '^\?\s+(\S+)\s+\[no test files\]$'
+              to: '? $1'
+            - regex: '^ok\s+(\S+)\s+\(cached\)$'
+              to: 'ok $1'
+            - regex: '^ok\s+(\S+)\s+[0-9.]+s$'
+              to: 'ok $1'
+            - regex: '^--- FAIL: ([^(]+) \([^)]+\)$'
+              to: '--- FAIL: $1'
+          skip:
+            - regex: '^FAIL$'
+            - regex: '^FAIL\s+\S+.*$'

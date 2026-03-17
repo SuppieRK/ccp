@@ -1,0 +1,39 @@
+version: 1
+filter: ls
+about: Compact long ls listings conservatively while leaving other ls shapes untouched
+
+cases:
+  - id: long
+    variables:
+      - name: dirs
+        type: number
+      - name: files
+        type: number
+    when_arguments:
+      have_short_flag:
+        - -l
+    normalize_command:
+      add_short_flags:
+        - -a
+        - -h
+      append_if_missing:
+        - .
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^d\S*(?:\s+\S+){7}\s+(.+)$'
+              to: '$1/'
+              on_match:
+                - variable: dirs
+                  increment: 1
+            - regex: '^[\-l]\S*(?:\s+\S+){3}\s+(\S+)(?:\s+\S+){3}\s+(.+)$'
+              to: '$2  $1'
+              on_match:
+                - variable: files
+                  increment: 1
+          skip:
+            - regex: '^(?i)(total|insgesamt)\s+'
+            - regex: '^[^\n]*\s\.\.?$'
+    finally:
+      print: "\n{{dirs}} dirs, {{files}} files"

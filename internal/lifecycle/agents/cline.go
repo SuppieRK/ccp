@@ -11,10 +11,6 @@ const clineHookName = "PreToolUse"
 
 type ClineAdapter struct{}
 
-func NewClineAdapter() ClineAdapter {
-	return ClineAdapter{}
-}
-
 func (a ClineAdapter) ID() string { return string(AgentCline) }
 
 func (a ClineAdapter) DetectRoot(scopeRoot string) string {

@@ -3,8 +3,10 @@ package metrics
 import (
 	"path/filepath"
 	"strings"
-	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -17,74 +19,178 @@ const (
 	periodMonth    = "month"
 )
 
-func TestBootstrapCreatesSchema(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	if err := Bootstrap(path); err != nil {
-		t.Fatalf("bootstrap: %v", err)
-	}
-	db, err := bolt.Open(path, 0o600, &bolt.Options{ReadOnly: true, Timeout: 50 * time.Millisecond})
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("close db: %v", err)
-		}
-	})
-	if err := db.View(func(tx *bolt.Tx) error {
-		if tx.Bucket(runsBucket) == nil {
-			t.Fatalf("runs bucket missing")
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("view db: %v", err)
-	}
-}
+var _ = Describe("metrics queries", func() {
+	var (
+		path string
+		now  time.Time
+	)
 
-func TestAppendTimesOutWhenDatabaseIsLocked(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	if err := Bootstrap(path); err != nil {
-		t.Fatalf("bootstrap: %v", err)
-	}
-	lockDB, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: time.Second})
-	if err != nil {
-		t.Fatalf("open lock db: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := lockDB.Close(); err != nil {
-			t.Fatalf("close lock db: %v", err)
-		}
+	BeforeEach(func() {
+		path = filepath.Join(GinkgoT().TempDir(), testGainDBPath)
+		now = time.Now().UTC()
 	})
 
-	err = Append(path, RunMetric{
-		Tool:      "go",
-		Command:   goTestCommand,
-		RawBytes:  10,
-		KeptBytes: 5,
-		ExitCode:  0,
-	})
-	if err == nil {
-		t.Fatalf("expected append error while db is locked")
-	}
-	if !IsTimeoutOrBusy(err) {
-		t.Fatalf("expected timeout/busy classification, got: %v", err)
-	}
-}
+	It("bootstraps the schema", func() {
+		Expect(Bootstrap(path)).To(Succeed())
 
-func TestQueryFiltersPeriodAndMissedOpportunities(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	now := time.Now().UTC()
-	appendSeedMetrics(t, path, queryFilterSeed(now))
-	assertToolFilteredSummaryRows(t, path)
-	assertSummaryRowsByTool(t, path)
-	assertFailedHistoryRows(t, path)
-	assertSinceFilteredRows(t, path, 3*time.Hour, 2)
-	assertPeriodQueriesReturnRows(t, path, periodDay, periodWeek, periodMonth)
-	assertMissedOpportunities(t, path)
-}
+		db, err := bolt.Open(path, 0o600, &bolt.Options{ReadOnly: true, Timeout: 50 * time.Millisecond})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = db.Close() })
+		Expect(db.View(func(tx *bolt.Tx) error {
+			Expect(tx.Bucket(runsBucket)).NotTo(BeNil())
+			return nil
+		})).To(Succeed())
+	})
+
+	It("times out when the database is locked", func() {
+		Expect(Bootstrap(path)).To(Succeed())
+
+		lockDB, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: time.Second})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = lockDB.Close() })
+
+		err = Append(path, RunMetric{
+			Tool:      "go",
+			Command:   goTestCommand,
+			RawBytes:  10,
+			KeptBytes: 5,
+			ExitCode:  0,
+		})
+		Expect(err).To(HaveOccurred())
+		Expect(IsTimeoutOrBusy(err)).To(BeTrue())
+	})
+
+	Context("with seeded query data", func() {
+		BeforeEach(func() {
+			appendSeedMetrics(path, queryFilterSeed(now))
+		})
+
+		It("filters summary rows by tool", func() {
+			rows, err := QuerySummaryRows(path, QueryOptions{Tool: "go"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Command).To(Equal(goTestCommand))
+		})
+
+		It("summarizes rows by tool", func() {
+			toolRows, err := QuerySummaryRowsByTool(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(toolRows).To(HaveLen(2))
+			Expect(toolRows[0].Tool).To(Equal("go"))
+			Expect(toolRows[0].Commands).To(Equal(int64(2)))
+			Expect(toolRows[0].EstimatedInputTokens).To(Equal(int64((2000 + 3) / 4)))
+			Expect(toolRows[0].EstimatedOutputTokens).To(Equal(int64((700 + 3) / 4)))
+		})
+
+		It("filters failed history rows", func() {
+			failedRows, err := QueryHistory(path, QueryOptions{Failed: true})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(failedRows).To(HaveLen(1))
+			Expect(failedRows[0].ExitCode).NotTo(BeZero())
+		})
+
+		It("filters history rows by recent window", func() {
+			sinceRows, err := QueryHistory(path, QueryOptions{Since: 3 * time.Hour})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sinceRows).To(HaveLen(2))
+		})
+
+		DescribeTable("returns rows for supported periods",
+			func(period string) {
+				out, err := QueryPeriod(path, QueryOptions{Period: period})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(out).NotTo(BeEmpty())
+			},
+			Entry("day", periodDay),
+			Entry("week", periodWeek),
+			Entry("month", periodMonth),
+		)
+
+		It("returns missed opportunities ordered by count", func() {
+			missed, err := QueryMissedOpportunities(path, QueryOptions{}, 5)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(missed).NotTo(BeEmpty())
+			Expect(missed[0].Count >= missed[len(missed)-1].Count).To(BeTrue())
+		})
+	})
+
+	It("uses Monday-Sunday weekly buckets", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: time.Date(2026, 3, 5, 10, 0, 0, 0, time.UTC), Tool: "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40},
+			{Timestamp: time.Date(2026, 3, 8, 22, 0, 0, 0, time.UTC), Tool: "go", Command: goTestCommand, RawBytes: 200, KeptBytes: 80},
+		})
+
+		rows, err := QueryPeriod(path, QueryOptions{Period: periodWeek})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].BucketStart).To(Equal("2026-03-02"))
+		Expect(rows[0].BucketEnd).To(Equal("2026-03-08"))
+	})
+
+	It("filters period queries by recent windows", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-10 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40},
+			{Timestamp: now.Add(-6 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 200, KeptBytes: 80},
+			{Timestamp: now.Add(-2 * 24 * time.Hour), Tool: "git", Command: "git status", RawBytes: 120, KeptBytes: 120},
+		})
+
+		rows, err := QueryPeriod(path, QueryOptions{Since: 7 * 24 * time.Hour, Period: periodDay})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(2))
+		for _, row := range rows {
+			Expect(row.BucketStart).NotTo(Equal(now.Add(-10 * 24 * time.Hour).Format("2006-01-02")))
+		}
+	})
+
+	It("keeps summary totals consistent with summary rows", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-90 * time.Minute), Tool: "go", Command: "go test ./...", RawBytes: 1000, KeptBytes: 500},
+			{Timestamp: now.Add(-80 * time.Minute), Tool: "go", Command: "go build ./...", RawBytes: 400, KeptBytes: 300},
+			{Timestamp: now.Add(-70 * time.Minute), Tool: "git", Command: "git status", RawBytes: 200, KeptBytes: 200},
+		})
+
+		opts := QueryOptions{Tool: "go"}
+		rows, err := QuerySummaryRows(path, opts)
+		Expect(err).NotTo(HaveOccurred())
+		total, err := QuerySummary(path, opts)
+		Expect(err).NotTo(HaveOccurred())
+
+		var sumCommands, sumRaw, sumKept int64
+		for _, r := range rows {
+			sumCommands += r.Commands
+			sumRaw += r.RawBytes
+			sumKept += r.KeptBytes
+		}
+		Expect(sumCommands).To(Equal(total.Commands))
+		Expect(sumRaw).To(Equal(total.RawBytes))
+		Expect(sumKept).To(Equal(total.KeptBytes))
+	})
+
+	It("truncates commands as prefix plus ellipsis", func() {
+		long := strings.Repeat("x", 1500)
+		Expect(Append(path, RunMetric{Tool: "go", Command: long, RawBytes: 100, KeptBytes: 10})).To(Succeed())
+
+		history, err := QueryHistory(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(HaveLen(1))
+		got := history[0].Command
+		Expect(len([]rune(got))).To(Equal(1024))
+		Expect(got).To(Equal(strings.Repeat("x", 1021) + "..."))
+	})
+
+	It("uses ceil(bytes/4) token estimates", func() {
+		Expect(Append(path, RunMetric{
+			Tool: "go", Command: "go test ./...", RawBytes: 5, KeptBytes: 1,
+		})).To(Succeed())
+
+		rows, err := QueryHistory(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].EstimatedInputTokens).To(Equal(int64(2)))
+		Expect(rows[0].EstimatedOutputTokens).To(Equal(int64(1)))
+		Expect(rows[0].EstimatedSavedTokens).To(Equal(int64(1)))
+	})
+})
 
 func queryFilterSeed(now time.Time) []RunMetric {
 	return []RunMetric{
@@ -118,217 +224,8 @@ func queryFilterSeed(now time.Time) []RunMetric {
 	}
 }
 
-func assertToolFilteredSummaryRows(t *testing.T, path string) {
-	t.Helper()
-	rows, err := QuerySummaryRows(path, QueryOptions{Tool: "go"})
-	if err != nil {
-		t.Fatalf("summary rows by tool: %v", err)
-	}
-	if len(rows) != 1 || rows[0].Command != goTestCommand {
-		t.Fatalf("unexpected tool-filtered rows: %#v", rows)
-	}
-}
-
-func assertSummaryRowsByTool(t *testing.T, path string) {
-	t.Helper()
-	toolRows, err := QuerySummaryRowsByTool(path, QueryOptions{})
-	if err != nil {
-		t.Fatalf("summary rows by tool aggregate: %v", err)
-	}
-	if len(toolRows) != 2 {
-		t.Fatalf("tool rows = %d, want 2", len(toolRows))
-	}
-	if toolRows[0].Tool != "go" || toolRows[0].Commands != 2 {
-		t.Fatalf("unexpected first tool aggregate row: %#v", toolRows[0])
-	}
-	if toolRows[0].EstimatedInputTokens != ((2000+3)/4) || toolRows[0].EstimatedOutputTokens != ((700+3)/4) {
-		t.Fatalf("unexpected token estimates from bytes for go aggregate: %#v", toolRows[0])
-	}
-}
-
-func assertFailedHistoryRows(t *testing.T, path string) {
-	t.Helper()
-	failedRows, err := QueryHistory(path, QueryOptions{Failed: true})
-	if err != nil {
-		t.Fatalf("history failed filter: %v", err)
-	}
-	if len(failedRows) != 1 || failedRows[0].ExitCode == 0 {
-		t.Fatalf("unexpected failed-only rows: %#v", failedRows)
-	}
-}
-
-func assertSinceFilteredRows(t *testing.T, path string, since time.Duration, want int) {
-	t.Helper()
-	sinceRows, err := QueryHistory(path, QueryOptions{Since: since})
-	if err != nil {
-		t.Fatalf("history since filter: %v", err)
-	}
-	if len(sinceRows) != want {
-		t.Fatalf("since-filter rows = %d, want %d", len(sinceRows), want)
-	}
-}
-
-func assertPeriodQueriesReturnRows(t *testing.T, path string, periods ...string) {
-	t.Helper()
-	for _, p := range periods {
-		out, err := QueryPeriod(path, QueryOptions{Period: p})
-		if err != nil {
-			t.Fatalf("period query (%s): %v", p, err)
-		}
-		if len(out) == 0 {
-			t.Fatalf("period query (%s) returned no rows", p)
-		}
-	}
-}
-
-func assertMissedOpportunities(t *testing.T, path string) {
-	t.Helper()
-	missed, err := QueryMissedOpportunities(path, QueryOptions{}, 5)
-	if err != nil {
-		t.Fatalf("missed opportunities: %v", err)
-	}
-	if len(missed) == 0 {
-		t.Fatalf("expected missed opportunities rows")
-	}
-	if missed[0].Count < missed[len(missed)-1].Count {
-		t.Fatalf("expected descending sort by count: %#v", missed)
-	}
-}
-
-func TestQueryPeriodWeekUsesMondayStartAndSundayEnd(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	// Thursday and Sunday in the same ISO week (Mon-start week: 2026-03-02..2026-03-08).
-	seed := []RunMetric{
-		{
-			Timestamp: time.Date(2026, 3, 5, 10, 0, 0, 0, time.UTC),
-			Tool:      "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40,
-		},
-		{
-			Timestamp: time.Date(2026, 3, 8, 22, 0, 0, 0, time.UTC),
-			Tool:      "go", Command: goTestCommand, RawBytes: 200, KeptBytes: 80,
-		},
-	}
-	appendSeedMetrics(t, path, seed)
-
-	rows, err := QueryPeriod(path, QueryOptions{Period: periodWeek})
-	if err != nil {
-		t.Fatalf("query period week: %v", err)
-	}
-	if len(rows) != 1 {
-		t.Fatalf("weekly rows = %d, want 1", len(rows))
-	}
-	if rows[0].BucketStart != "2026-03-02" || rows[0].BucketEnd != "2026-03-08" {
-		t.Fatalf("unexpected week bounds: start=%s end=%s", rows[0].BucketStart, rows[0].BucketEnd)
-	}
-}
-
-func TestQueryPeriodSinceFiltersRecentWindowBuckets(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	now := time.Now().UTC()
-	seed := []RunMetric{
-		{Timestamp: now.Add(-10 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40},
-		{Timestamp: now.Add(-6 * 24 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 200, KeptBytes: 80},
-		{Timestamp: now.Add(-2 * 24 * time.Hour), Tool: "git", Command: "git status", RawBytes: 120, KeptBytes: 120},
-	}
-	appendSeedMetrics(t, path, seed)
-
-	rows, err := QueryPeriod(path, QueryOptions{Since: 7 * 24 * time.Hour, Period: periodDay})
-	if err != nil {
-		t.Fatalf("query period with since: %v", err)
-	}
-	if len(rows) != 2 {
-		t.Fatalf("recent daily rows = %d, want 2", len(rows))
-	}
-	for _, row := range rows {
-		if row.BucketStart == now.Add(-10*24*time.Hour).Format("2006-01-02") {
-			t.Fatalf("unexpected old bucket in recent window: %+v", row)
-		}
-	}
-}
-
-func TestQuerySummaryAndRowsUseEquivalentSelection(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	now := time.Now().UTC()
-	seed := []RunMetric{
-		{Timestamp: now.Add(-90 * time.Minute), Tool: "go", Command: "go test ./...", RawBytes: 1000, KeptBytes: 500},
-		{Timestamp: now.Add(-80 * time.Minute), Tool: "go", Command: "go build ./...", RawBytes: 400, KeptBytes: 300},
-		{Timestamp: now.Add(-70 * time.Minute), Tool: "git", Command: "git status", RawBytes: 200, KeptBytes: 200},
-	}
-	appendSeedMetrics(t, path, seed)
-
-	opts := QueryOptions{Tool: "go"}
-	rows, err := QuerySummaryRows(path, opts)
-	if err != nil {
-		t.Fatalf("query summary rows: %v", err)
-	}
-	total, err := QuerySummary(path, opts)
-	if err != nil {
-		t.Fatalf("query summary total: %v", err)
-	}
-	var sumCommands, sumRaw, sumKept int64
-	for _, r := range rows {
-		sumCommands += r.Commands
-		sumRaw += r.RawBytes
-		sumKept += r.KeptBytes
-	}
-	if sumCommands != total.Commands || sumRaw != total.RawBytes || sumKept != total.KeptBytes {
-		t.Fatalf("selection mismatch rows vs total: rows=(%d,%d,%d) total=(%d,%d,%d)",
-			sumCommands, sumRaw, sumKept, total.Commands, total.RawBytes, total.KeptBytes)
-	}
-}
-
-func TestAppendTruncatesCommandAsPrefixPlusEllipsis(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	long := strings.Repeat("x", 1500)
-	if err := Append(path, RunMetric{Tool: "go", Command: long, RawBytes: 100, KeptBytes: 10}); err != nil {
-		t.Fatalf("append long command: %v", err)
-	}
-	history, err := QueryHistory(path, QueryOptions{})
-	if err != nil {
-		t.Fatalf("query history: %v", err)
-	}
-	if len(history) != 1 {
-		t.Fatalf("history rows = %d, want 1", len(history))
-	}
-	got := history[0].Command
-	if len([]rune(got)) != 1024 {
-		t.Fatalf("command length = %d, want 1024", len([]rune(got)))
-	}
-	prefix := strings.Repeat("x", 1021)
-	if got != prefix+"..." {
-		t.Fatalf("unexpected truncation result: len=%d suffix=%q", len([]rune(got)), got[len(got)-6:])
-	}
-}
-
-func TestHistoryTokenEstimatesUseCeilBytesDiv4(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), testGainDBPath)
-	if err := Append(path, RunMetric{
-		Tool: "go", Command: "go test ./...", RawBytes: 5, KeptBytes: 1,
-	}); err != nil {
-		t.Fatalf("append metric: %v", err)
-	}
-	rows, err := QueryHistory(path, QueryOptions{})
-	if err != nil {
-		t.Fatalf("query history: %v", err)
-	}
-	if len(rows) != 1 {
-		t.Fatalf("history rows = %d, want 1", len(rows))
-	}
-	if rows[0].EstimatedInputTokens != 2 || rows[0].EstimatedOutputTokens != 1 || rows[0].EstimatedSavedTokens != 1 {
-		t.Fatalf("unexpected ceil token estimates: %+v", rows[0])
-	}
-}
-
-func appendSeedMetrics(t *testing.T, path string, seed []RunMetric) {
-	t.Helper()
+func appendSeedMetrics(path string, seed []RunMetric) {
 	for _, m := range seed {
-		if err := Append(path, m); err != nil {
-			t.Fatalf("append seed metric: %v", err)
-		}
+		Expect(Append(path, m)).To(Succeed())
 	}
 }

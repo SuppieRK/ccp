@@ -1,28 +1,25 @@
 package lifecycle
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
+	"time"
 
-	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/version"
+	shippedfilters "go-command-compression-proxy/filters"
 )
 
-const integrationStateVersion = 1
+const (
+	startupMaintenanceLockMaxAge = 10 * time.Second
+	configDirName                = ".config"
+)
 
 var (
-	startupMaintenanceVersion  = func() string { return version.Version }
-	startupMaintenanceAdapters = agents.DefaultAdapters
-	startupMaintenancePrintf   = fmt.Printf
+	startupMaintenanceNow  = time.Now
+	materializeHomeFilters = shippedfilters.MaterializeShipped
 )
 
-// RunStartupMaintenance opportunistically reconciles configured integrations and
-// removes known-obsolete project-local init state without requiring an explicit
-// lifecycle command.
 func RunStartupMaintenance() error {
 	scopeRoot, err := initDetectRoot()
 	if err != nil {
@@ -31,16 +28,12 @@ func RunStartupMaintenance() error {
 	if err := cleanupLegacyProjectInitState(scopeRoot); err != nil {
 		return err
 	}
-	cfgPath, err := initPath()
+
+	lockPath, err := startupMaintenanceLockPath()
 	if err != nil {
 		return nil
 	}
-	_, shouldReconcile, err := loadReconcileCandidate(cfgPath)
-	if err != nil || !shouldReconcile {
-		return err
-	}
-
-	release, err := acquireStartupMaintenanceLock(cfgPath)
+	release, err := acquireStartupMaintenanceLock(lockPath)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return nil
@@ -49,85 +42,66 @@ func RunStartupMaintenance() error {
 	}
 	defer release()
 
-	cfg, shouldReconcile, err := loadReconcileCandidate(cfgPath)
-	if err != nil || !shouldReconcile {
-		return err
-	}
-	return reconcileConfiguredTools(cfgPath, scopeRoot, cfg)
+	return syncCanonicalHomeLayout()
 }
 
-func readInitConfig(path string) (initConfig, bool, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return initConfig{}, false, nil
-		}
-		return initConfig{}, false, err
-	}
-	var cfg initConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return initConfig{}, false, err
-	}
-	return cfg, true, nil
-}
-
-func needsIntegrationReconcile(cfg initConfig) bool {
-	return strings.TrimSpace(cfg.CCPVersion) != startupMaintenanceVersion() ||
-		cfg.IntegrationVersion != integrationStateVersion
-}
-
-func loadReconcileCandidate(cfgPath string) (initConfig, bool, error) {
-	cfg, exists, err := readInitConfig(cfgPath)
-	if err != nil || !exists || len(cfg.Tools) == 0 {
-		return initConfig{}, false, err
-	}
-	if !needsIntegrationReconcile(cfg) {
-		return initConfig{}, false, nil
-	}
-	return cfg, true, nil
-}
-
-func reconcileConfiguredTools(cfgPath, scopeRoot string, cfg initConfig) error {
+func startupMaintenanceLockPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return err
+		return "", err
 	}
-	adapters := startupMaintenanceAdapters()
-	if err := agents.ValidateSelectedTools(cfg.Tools, adapters); err != nil {
-		return err
-	}
-	states, err := applyAdapters(
-		agents.Context{ScopeRoot: scopeRoot, HomeDir: homeDir},
-		cfg.Tools,
-		adapters,
-	)
-	if err != nil {
-		return err
-	}
-	cfg.State = states
-	cfg.CCPVersion = startupMaintenanceVersion()
-	cfg.IntegrationVersion = integrationStateVersion
-	changed, err := persistInitConfig(cfgPath, cfg)
-	if err != nil {
-		return err
-	}
-	if changed {
-		_, _ = startupMaintenancePrintf("ccp: reconciled configured agent integrations\n")
-	}
-	return nil
+	return filepath.Join(homeDir, configDirName, "ccp", "repair.lock"), nil
 }
 
-func acquireStartupMaintenanceLock(cfgPath string) (func(), error) {
-	lockPath := cfgPath + ".lock"
+func acquireStartupMaintenanceLock(lockPath string) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(lockPath), 0o755); err != nil {
 		return nil, err
 	}
+	release, err := createStartupMaintenanceLock(lockPath)
+	if errors.Is(err, os.ErrExist) {
+		removed, staleErr := removeStaleStartupMaintenanceLock(lockPath)
+		if staleErr != nil {
+			return nil, staleErr
+		}
+		if removed {
+			return createStartupMaintenanceLock(lockPath)
+		}
+	}
+	return release, err
+}
+
+func createStartupMaintenanceLock(lockPath string) (func(), error) {
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 	if err != nil {
 		return nil, err
 	}
-	_ = f.Close()
+	if _, err := f.WriteString(strconv.Itoa(os.Getpid())); err != nil {
+		_ = f.Close()
+		_ = os.Remove(lockPath)
+		return nil, err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(lockPath)
+		return nil, err
+	}
 	return func() { _ = os.Remove(lockPath) }, nil
+}
+
+func removeStaleStartupMaintenanceLock(lockPath string) (bool, error) {
+	info, err := os.Stat(lockPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	if startupMaintenanceNow().Sub(info.ModTime()) < startupMaintenanceLockMaxAge {
+		return false, nil
+	}
+	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+	return true, nil
 }
 
 func cleanupLegacyProjectInitState(scopeRoot string) error {
@@ -144,4 +118,62 @@ func cleanupLegacyProjectInitState(scopeRoot string) error {
 		}
 	}
 	return nil
+}
+
+func syncCanonicalHomeLayout() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	if err := cleanupManagedConfigDir(homeDir); err != nil {
+		return err
+	}
+	return syncPackagedFilters(homeDir)
+}
+
+func cleanupManagedConfigDir(homeDir string) error {
+	configDir := filepath.Join(homeDir, configDirName, "ccp")
+	if err := removeAllChildrenExcept(configDir, "repair.lock"); err != nil {
+		return err
+	}
+
+	ccpDir := filepath.Join(homeDir, ".ccp")
+	if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func removeAllChildrenExcept(dir string, keep ...string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	keepSet := make(map[string]struct{}, len(keep))
+	for _, name := range keep {
+		keepSet[name] = struct{}{}
+	}
+
+	for _, entry := range entries {
+		if _, ok := keepSet[entry.Name()]; ok {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func syncPackagedFilters(homeDir string) error {
+	dstDir := filepath.Join(homeDir, configDirName, "ccp", "filters")
+	if err := os.RemoveAll(dstDir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return materializeHomeFilters(dstDir)
 }

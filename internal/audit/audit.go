@@ -1,0 +1,198 @@
+package audit
+
+import (
+	"context"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"sort"
+	"sync"
+	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+const (
+	defaultMaxSizeMB  = 8
+	defaultMaxBackups = 7
+	auditTimeFormat   = "2006-01-02T15:04:05.000Z"
+)
+
+var (
+	userHomeDir = os.UserHomeDir
+	nowUTC      = func() time.Time { return time.Now().UTC() }
+
+	maxSizeMB  = defaultMaxSizeMB
+	maxBackups = defaultMaxBackups
+
+	mu             sync.Mutex
+	currentLogger  *slog.Logger
+	currentHandler slog.Handler
+	currentWriter  *lumberjack.Logger
+)
+
+func DefaultPath() (string, error) {
+	home, err := userHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "ccp", "audit", "audit.log"), nil
+}
+
+func ConfigureDefault() error {
+	path, err := DefaultPath()
+	if err != nil {
+		return err
+	}
+	return ConfigurePath(path, maxSizeMB, maxBackups)
+}
+
+func ConfigurePath(path string, sizeMB int, backups int) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	closeCurrentWriterLocked()
+
+	currentWriter = newRollingWriter(path, sizeMB, backups)
+	currentHandler = slog.NewJSONHandler(currentWriter, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+		ReplaceAttr: func(_ []string, attr slog.Attr) slog.Attr {
+			if attr.Key == slog.TimeKey {
+				attr.Value = slog.StringValue(nowUTC().Format(auditTimeFormat))
+			}
+			return attr
+		},
+	})
+	currentLogger = slog.New(currentHandler)
+	slog.SetDefault(currentLogger)
+	return nil
+}
+
+func Append(event string, fields map[string]any) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if err := ensureConfiguredLocked(); err != nil {
+		return err
+	}
+
+	record := slog.NewRecord(nowUTC(), slog.LevelInfo, event, 0)
+	for _, attr := range attrsFor(fields) {
+		record.AddAttrs(attr)
+	}
+	return currentHandler.Handle(context.Background(), record)
+}
+
+func newRollingWriter(path string, sizeMB int, backups int) *lumberjack.Logger {
+	return &lumberjack.Logger{
+		Filename:   path,
+		MaxSize:    sizeMB,
+		MaxBackups: backups,
+		LocalTime:  false,
+		Compress:   false,
+	}
+}
+
+func MustAppend(event string, fields map[string]any) {
+	_ = Append(event, fields)
+}
+
+func WithTestConfig(home string, sizeMB int, backups int) func() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	prevHome := userHomeDir
+	prevNow := nowUTC
+	prevSize := maxSizeMB
+	prevBackups := maxBackups
+	counter := 0
+
+	userHomeDir = func() (string, error) { return home, nil }
+	nowUTC = func() time.Time {
+		counter++
+		return time.Unix(int64(counter), 0).UTC()
+	}
+	maxSizeMB = sizeMB
+	maxBackups = backups
+	closeCurrentWriterLocked()
+	currentLogger = nil
+	currentHandler = nil
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		userHomeDir = prevHome
+		nowUTC = prevNow
+		maxSizeMB = prevSize
+		maxBackups = prevBackups
+		closeCurrentWriterLocked()
+		currentLogger = nil
+		currentHandler = nil
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	}
+}
+
+func Reset() {
+	mu.Lock()
+	defer mu.Unlock()
+	closeCurrentWriterLocked()
+	currentLogger = nil
+	currentHandler = nil
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+}
+
+func ensureConfiguredLocked() error {
+	if currentHandler != nil {
+		return nil
+	}
+	path, err := DefaultPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	closeCurrentWriterLocked()
+	currentWriter = newRollingWriter(path, maxSizeMB, maxBackups)
+	currentHandler = slog.NewJSONHandler(currentWriter, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+		ReplaceAttr: func(_ []string, attr slog.Attr) slog.Attr {
+			if attr.Key == slog.TimeKey {
+				attr.Value = slog.StringValue(nowUTC().Format(auditTimeFormat))
+			}
+			return attr
+		},
+	})
+	currentLogger = slog.New(currentHandler)
+	slog.SetDefault(currentLogger)
+	return nil
+}
+
+func closeCurrentWriterLocked() {
+	if currentWriter != nil {
+		_ = currentWriter.Close()
+		currentWriter = nil
+	}
+}
+
+func attrsFor(fields map[string]any) []slog.Attr {
+	if len(fields) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(fields))
+	for key := range fields {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	attrs := make([]slog.Attr, 0, len(keys))
+	for _, key := range keys {
+		attrs = append(attrs, slog.Any(key, fields[key]))
+	}
+	return attrs
+}

@@ -1,4 +1,0 @@
-stderr-line-1
-INFO retrying connection
-WARN retrying connection
-ERROR final failure

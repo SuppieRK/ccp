@@ -1,5 +1,0 @@
-needle: docs line one repeated deterministic payload for compression in benchmark output.
-needle: docs line two repeated deterministic payload for compression in benchmark output.
-needle: docs line three repeated deterministic payload for compression in benchmark output.
-needle: docs line four repeated deterministic payload for compression in benchmark output.
-needle: docs line five repeated deterministic payload for compression in benchmark output.

@@ -1,8 +1,0 @@
-{
-  "name": "@bench/root",
-  "private": true,
-  "version": "1.0.0",
-  "dependencies": {
-    "@bench/lib": "workspace:*"
-  }
-}

@@ -1,0 +1,48 @@
+version: 1
+filter: pnpm
+about: Compact pnpm install/list/outdated output.
+
+cases:
+  - id: install
+    when_arguments:
+      first_is: install
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - regex: '^Done in .+ using pnpm .+$'
+
+  - id: list
+    when_arguments:
+      first_is: list
+      lack_any:
+        - --json
+    compress_output:
+      combined:
+        groups:
+          - id: dependencies
+            matches_regex: '^(?:└── )?(?P<pkg>@[^@/\s]+/[^@\s]+@\S+|@?[^@\s]+@\S+).*$'
+            variables:
+              - name: section
+                type: string
+                initial_value: dependencies
+              - name: pkg
+                type: string
+                regex_group: pkg
+            group_by: '{{section}}'
+            initially:
+              print: 'dependencies:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{pkg}}'
+
+  - id: outdated
+    when_arguments:
+      first_is: outdated
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^.*ERR_PNPM_OUTDATED_NO_LOCKFILE.*$'
+              to: 'All packages up-to-date'

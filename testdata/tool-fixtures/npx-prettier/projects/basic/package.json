@@ -1,8 +1,0 @@
-{
-  "name": "npx-prettier-benchmark",
-  "private": true,
-  "type": "commonjs",
-  "devDependencies": {
-    "prettier": "3.4.2"
-  }
-}

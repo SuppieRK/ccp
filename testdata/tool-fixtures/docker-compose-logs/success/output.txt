@@ -1,4 +1,0 @@
-api-1  | stderr-line-1
-api-1  | INFO retrying connection
-api-1  | ERROR final failure
-web-1  | WARN retrying connection

@@ -1,0 +1,30 @@
+version: 1
+map:
+  cargo: cargo
+  deno: deno
+  docker: docker
+  find: find
+  gradle: gradle
+  gradlew: gradle
+  git: git
+  grep: grep
+  go: go
+  golangci-lint: golangci-lint
+  ls: ls
+  maven: maven
+  mypy: mypy
+  mvn: maven
+  mvnw: maven
+  next: next
+  npx: npx
+  node: node
+  npm: npm
+  playwright: playwright
+  pip: pip
+  prettier: prettier
+  pnpm: pnpm
+  pytest: pytest
+  ruff: ruff
+  tsc: tsc
+  yarn: yarn
+  yarnpkg: yarn

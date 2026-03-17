@@ -1,0 +1,7 @@
+- tests::failing_case
+failure details:
+cargo test: failed (1 passed, 1 failed, 0 ignored)
+thread 'tests::failing_case' (145626) panicked at src/lib.rs:16:9:
+assertion `left == right` failed
+  left: 6
+ right: 7

@@ -2,25 +2,23 @@ package agents
 
 import (
 	"strings"
-	"testing"
+
+	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestHookScriptsUseOnlyBashAndCCPRuntime(t *testing.T) {
-	scripts := map[string]string{
-		"claude":    claudeHookScriptContent(),
-		"continue":  continueHookScriptContent(),
-		"codebuddy": codebuddyHookScriptContent(),
-		"cline":     clineHookScriptContent(),
-		"windsurf":  windsurfHookScriptContent(),
-	}
-	for name, script := range scripts {
-		if !strings.HasPrefix(script, "#!/bin/bash\n") {
-			t.Fatalf("%s hook should use bash shebang, got: %s", name, script)
-		}
-		for _, forbidden := range []string{"jq", "awk", "grep", "cat", "sed", "/usr/bin/env"} {
-			if strings.Contains(script, forbidden) {
-				t.Fatalf("%s hook should not depend on %q, got: %s", name, forbidden, script)
+var _ = ginkgo.Describe("bash hook templates", func() {
+	ginkgo.DescribeTable("rendering managed hook scripts",
+		func(name string, script string) {
+			Expect(strings.HasPrefix(script, "#!/bin/bash\n")).To(BeTrue(), name)
+			for _, forbidden := range []string{"jq", "awk", "grep", "cat", "sed", "/usr/bin/env"} {
+				Expect(script).NotTo(ContainSubstring(forbidden), name)
 			}
-		}
-	}
-}
+		},
+		ginkgo.Entry("claude", "claude", claudeHookScriptContent()),
+		ginkgo.Entry("continue", "continue", continueHookScriptContent()),
+		ginkgo.Entry("codebuddy", "codebuddy", codebuddyHookScriptContent()),
+		ginkgo.Entry("cline", "cline", clineHookScriptContent()),
+		ginkgo.Entry("windsurf", "windsurf", windsurfHookScriptContent()),
+	)
+})

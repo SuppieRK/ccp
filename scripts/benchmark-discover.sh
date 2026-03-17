@@ -46,9 +46,11 @@ if [[ -z "$mode" || -z "$output_file" ]]; then
   exit 1
 fi
 
-mapfile -t all_tools < <(find testdata/tool-fixtures -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+mapfile -t all_tools < <(
+  find testdata/benchmarks -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -u
+)
 if [[ ${#all_tools[@]} -eq 0 ]]; then
-  echo "No benchmark tools found under testdata/tool-fixtures" >&2
+  echo "No benchmark tools found under benchmark roots" >&2
   exit 1
 fi
 
@@ -70,13 +72,13 @@ tool_matrix_entry() {
     gradle|maven)
       needs_java=true
       ;;
-    cargo-*)
+    cargo)
       needs_rust=true
       ;;
     deno)
       needs_deno=true
       ;;
-    node|npm|pnpm|yarn|npx-*)
+    node|npm|pnpm|yarn|npx)
       needs_node=true
       ;;
     *)
@@ -87,11 +89,7 @@ tool_matrix_entry() {
     needs_pnpm=true
   fi
 
-  if [[ "$tool" == kubectl-* ]]; then
-    needs_kind=true
-  fi
-
-  if [[ "$tool" == docker-* ]]; then
+  if [[ "$tool" == "docker" ]]; then
     needs_docker_images=true
   fi
 
@@ -181,9 +179,14 @@ fi
 for path in "${changed[@]}"; do
   [[ -z "$path" ]] && continue
   case "$path" in
-    testdata/tool-fixtures/*)
-      tool="${path#testdata/tool-fixtures/}"
+    testdata/benchmarks/*)
+      tool="${path#testdata/benchmarks/}"
       tool="${tool%%/*}"
+      add_exact_if_exists "$tool"
+      ;;
+    filters/*)
+      tool="${path#filters/}"
+      tool="${tool%%.*}"
       add_exact_if_exists "$tool"
       ;;
     openspec/specs/*/spec.md)
@@ -191,20 +194,7 @@ for path in "${changed[@]}"; do
       cap="${cap%%/*}"
       add_exact_if_exists "$cap"
       ;;
-    internal/engine/filters/*)
-      rel="${path#internal/engine/filters/}"
-      first="${rel%%/*}"
-      first="${first%%.*}"
-      case "$first" in
-        cargo|docker|git|go|kubectl|npx)
-          add_prefix "$first"
-          ;;
-        *)
-          add_exact_if_exists "$first"
-          ;;
-      esac
-      ;;
-    cmd/ccp/*|internal/runner/*|internal/engine/*|internal/metrics/*|tools/benchmark/*|go.mod|go.sum)
+    cmd/ccp/*|cmd/ccp-ci/*|internal/*|go.mod|go.sum)
       run_all=1
       ;;
     *)

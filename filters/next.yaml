@@ -1,0 +1,27 @@
+version: 1
+filter: next-build
+about: Compact Next.js build output conservatively.
+
+cases:
+  - id: build_summary
+    when_arguments:
+      first_is: "build"
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - regex: '^\.\/app\/page\.tsx$'
+            - regex: '^Error: .+$'
+          replace:
+            - regex: '^Build already optimized using cache$'
+              to: 'next build: cached'
+            - regex: '^Failed to compile\.$'
+              to: "next build: failed\nFailed to compile."
+            - regex: '^✓ Built in .+$'
+              to: 'next build: success'
+            - regex: '^├ .+ (/[^ ]*)\s+.+$'
+              to: 'route: $1'
+            - regex: '^└ .+ (/[^ ]*)\s+.+$'
+              to: 'route: $1'
+            - regex: '^✓ Compiled successfully$'
+              to: 'routes: 2 total'

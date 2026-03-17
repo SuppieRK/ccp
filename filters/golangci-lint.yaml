@@ -1,0 +1,34 @@
+version: 1
+filter: golangci-lint
+about: Compact golangci-lint diagnostics conservatively.
+
+cases:
+  - id: diagnostics
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '\{"FromLinter":"(?P<linter>[^"]+)","Text":"(?P<text>[^"]+)","Pos":\{"Filename":"(?P<filename>[^"]+)","Line":(?P<line>\d+),"Column":(?P<column>\d+)\}\}'
+            variables:
+              - name: linter
+                type: string
+                regex_group: linter
+              - name: text
+                type: string
+                regex_group: text
+              - name: filename
+                type: string
+                regex_group: filename
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+            group_by: '{{filename}}'
+            initially:
+              print: '{{filename}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}:{{column}} {{linter}} {{text}}'

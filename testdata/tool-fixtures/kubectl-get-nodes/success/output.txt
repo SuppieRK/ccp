@@ -1,3 +1,0 @@
-NAME STATUS ROLES AGE VERSION
-node-c NotReady worker 2m v1.29.0
-[2] nodes: Ready worker v1.29.0

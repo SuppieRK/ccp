@@ -1,0 +1,215 @@
+version: 1
+filter: git
+about: Compact common git subcommands through one family filter.
+
+cases:
+  - id: status
+    when_arguments:
+      first_is: status
+    normalize_command:
+      append_if_missing:
+        - --porcelain
+        - -b
+
+  - id: diff
+    variables:
+      - name: files
+        type: number
+        initial_value: '0'
+      - name: adds
+        type: number
+        initial_value: '0'
+      - name: deletes
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: diff
+    compress_output:
+      stdout:
+        lines:
+          skip:
+            - starts_with: 'index '
+            - starts_with: '--- '
+            - starts_with: '+++ '
+            - starts_with: '@@ '
+          replace:
+            - regex: '^diff --git a/(.+) b/.+$'
+              to: '$1'
+              on_match:
+                - variable: files
+                  increment: 1
+            - regex: '^-(?:([^-].*))?$'
+              to: '  -$1'
+              on_match:
+                - variable: deletes
+                  increment: 1
+            - regex: '^\+(?:([^\+].*))?$'
+              to: '  +$1'
+              on_match:
+                - variable: adds
+                  increment: 1
+    finally:
+      print: "summary: {{files}} files changed, +{{adds}} -{{deletes}}"
+
+  - id: log
+    when_arguments:
+      first_is: log
+    normalize_command:
+      append_if_missing:
+        - '--pretty=format:%h %aI %an <%ae> | %s'
+
+  - id: show
+    variables:
+      - name: files
+        type: number
+        initial_value: '0'
+      - name: adds
+        type: number
+        initial_value: '0'
+      - name: deletes
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: show
+    compress_output:
+      stdout:
+        lines:
+          skip:
+            - starts_with: 'index '
+            - starts_with: '--- '
+            - starts_with: '+++ '
+            - starts_with: '@@ '
+            - regex: '^$'
+          replace:
+            - regex: '^commit ([0-9a-f]{12})[0-9a-f]+$'
+              to: 'commit $1'
+            - regex: '^Author: (.+)$'
+              to: 'author: $1'
+            - regex: '^Date:\s+(.+)$'
+              to: 'date: $1'
+            - regex: '^    (.+)$'
+              to: 'subject: $1'
+            - regex: '^diff --git a/(.+) b/.+$'
+              to: '$1'
+              on_match:
+                - variable: files
+                  increment: 1
+            - regex: '^-(?:([^-].*))?$'
+              to: '  -$1'
+              on_match:
+                - variable: deletes
+                  increment: 1
+            - regex: '^\+(?:([^\+].*))?$'
+              to: '  +$1'
+              on_match:
+                - variable: adds
+                  increment: 1
+    finally:
+      print: "summary: {{files}} files changed, +{{adds}} -{{deletes}}"
+
+  - id: worktree-list
+    when_arguments:
+      have_sequence:
+        - worktree
+        - list
+
+  - id: blame-line-porcelain
+    when_arguments:
+      have_sequence:
+        - blame
+        - --line-porcelain
+
+  - id: blame
+    when_arguments:
+      first_is: blame
+
+  - id: commit
+    when_arguments:
+      first_is: commit
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^\[[^ ]+(?: \(root-commit\))? ([0-9a-f]+)\] .+$'
+              to: 'git commit: ok $1'
+
+  - id: fetch
+    variables:
+      - name: branches
+        type: number
+        initial_value: '0'
+      - name: tags
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: fetch
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - starts_with: 'fatal:'
+          replace:
+            - regex: '^ \* \[new branch\].+$'
+              to: '$0'
+              on_match:
+                - variable: branches
+                  increment: 1
+            - regex: '^ \* \[new tag\].+$'
+              to: '$0'
+              on_match:
+                - variable: tags
+                  increment: 1
+    finally:
+      print: "git fetch: ok ({{branches}} new branches, {{tags}} new tags)"
+
+  - id: push
+    when_arguments:
+      first_is: push
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - starts_with: 'fatal:'
+          replace:
+            - regex: '^Everything up-to-date$'
+              to: 'Up-to-date'
+            - regex: '^[[:space:]]*[0-9a-f]+\.\.[0-9a-f]+[[:space:]]+.+$'
+              to: 'OK'
+
+  - id: pull
+    when_arguments:
+      first_is: pull
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^Already up to date\.$'
+              to: 'Up-to-date'
+
+  - id: merge
+    when_arguments:
+      first_is: merge
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - starts_with: 'fatal:'
+          skip:
+            - starts_with: 'Fast-forward'
+            - regex: '^\s.+\|\s.+$'
+            - regex: '^[0-9]+ file changed, .+$'
+          replace:
+            - regex: '^Updating .+$'
+              to: 'git merge: ok'
+
+  - id: rebase
+    when_arguments:
+      first_is: rebase
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - starts_with: 'fatal:'
+          replace:
+            - contains: 'Successfully rebased and updated refs/heads/'
+              to: 'ok rebase'

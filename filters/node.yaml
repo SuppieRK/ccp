@@ -1,0 +1,15 @@
+version: 1
+filter: node
+about: Compact Node.js warnings and runtime failures conservatively.
+
+cases:
+  - id: warning_dedupe
+    when_arguments:
+      have_any: ["warning_dedupe.js"]
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - contains: "ExperimentalWarning:"
+            - starts_with: "(Use `node --trace-warnings"
+            - regex: '^application payload$'

@@ -1,5 +1,0 @@
-cargo clippy: 1 findings across 1 lint rules
-- clippy::len_zero: 1 (src/main.rs:7:8)
-  error: length comparison to zero
-  = note: `-D clippy::len-zero` implied by `-D warnings`
-  = help: to override `-D warnings` add `#[allow(clippy::len_zero)]`

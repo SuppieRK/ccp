@@ -1,0 +1,7 @@
+00000|src/app.py:12: error: Incompatible return value type (got "str", expected "int")  [return-value]
+00001|src/app.py:13: note: Consider using Optional[str]
+00002|src/app.py:18: error: Argument 1 has incompatible type "int"; expected "str"  [arg-type]
+00003|src/app.py:22: error: Unsupported operand types for + ("int" and "str")  [operator]
+00004|src/models.py:8: error: Name "foo" is not defined  [name-defined]
+00005|src/models.py:10: error: Missing return statement  [return]
+00006|Found 5 errors in 2 files (checked 4 source files)

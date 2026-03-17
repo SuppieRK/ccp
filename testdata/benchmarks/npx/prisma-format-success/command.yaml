@@ -1,0 +1,1 @@
+argv: ["npx", "prisma", "format", "--schema", "prisma/format.prisma"]

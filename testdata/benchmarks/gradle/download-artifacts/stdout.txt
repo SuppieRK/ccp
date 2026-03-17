@@ -1,0 +1,77 @@
+00000|11:58:18 AM: Executing 'clean spotlessApply :plugin:build build --stacktrace'…
+00001|
+00002|Starting Gradle Daemon...
+00003|Gradle Daemon started in 996 ms
+00004|Download https://plugins.gradle.org/m2/org/nosphere/gradle/github/gradle-github-actions-plugin/1.4.0/gradle-github-actions-plugin-1.4.0.jar, took 334 ms
+00005|> Task :plugin:compileJava UP-TO-DATE
+00006|> Task :plugin:compileGroovy NO-SOURCE
+00007|> Task :plugin:pluginDescriptors UP-TO-DATE
+00008|> Task :plugin:processResources UP-TO-DATE
+00009|> Task :plugin:classes UP-TO-DATE
+00010|> Task :plugin:jar UP-TO-DATE
+00011|Download https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.5/checker-qual-3.49.5.jar, took 61 ms
+00012|Download https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.8/postgresql-42.7.8.jar, took 79 ms
+00013|> Task :clean
+00014|> Task :example-project:clean
+00015|> Task :spotlessInternalRegisterDependencies
+00016|> Task :plugin:javadoc
+00017|> Task :plugin:javadocJar
+00018|> Task :plugin:sourcesJar
+00019|> Task :plugin:assemble
+00020|> Task :plugin:compileFunctionalTestJava NO-SOURCE
+00021|> Task :plugin:compileFunctionalTestGroovy UP-TO-DATE
+00022|> Task :plugin:processFunctionalTestResources NO-SOURCE
+00023|> Task :plugin:functionalTestClasses UP-TO-DATE
+00024|> Task :plugin:pluginUnderTestMetadata
+00025|
+00026|> Task :spotlessGroovy
+00027|Missing required bundle org.eclipse.jdt.debug needed by [org.eclipse.jdt.launching, org.eclipse.jdt.launching.macosx]
+00028|Missing required capability osgi.extender:osgi.extender=osgi.serviceloader.processor needed by org.apache.commons.commons-logging
+00029|Missing required capability osgi.serviceloader:osgi.serviceloader=org.apache.commons.logging.LogFactory needed by org.apache.commons.commons-logging
+00030|Recommend setting osgi.configuration.area to a directory, getDataFile will return null
+00031|Starting Groovy-Eclipse compiler resolver. Specified compiler level: unspecified
+00032| 20 org.codehaus.groovy_5.0.0.v202503311943-e2503 RESOLVED
+00033|
+00034|> Task :spotlessGroovyApply
+00035|> Task :plugin:functionalTest
+00036|> Task :spotlessGroovyGradle
+00037|> Task :spotlessGroovyGradleApply
+00038|> Task :spotlessJava
+00039|> Task :spotlessJavaApply
+00040|> Task :spotlessApply
+00041|> Task :assemble UP-TO-DATE
+00042|> Task :spotlessGroovyCheck
+00043|> Task :spotlessGroovyGradleCheck
+00044|> Task :spotlessJavaCheck
+00045|> Task :spotlessCheck
+00046|> Task :check
+00047|> Task :build
+00048|> Task :example-project:generateJooq SKIPPED
+00049|> Task :example-project:processResources
+00050|> Task :example-project:verifyJooqCodegenConfiguration SKIPPED
+00051|> Task :example-project:generateMainDatabaseClasses
+00052|> Task :example-project:compileJava
+00053|> Task :example-project:classes
+00054|> Task :example-project:jar
+00055|> Task :example-project:javadoc
+00056|> Task :example-project:javadocJar
+00057|> Task :example-project:sourcesJar
+00058|> Task :example-project:assemble
+00059|> Task :example-project:compileTestJava NO-SOURCE
+00060|> Task :example-project:processTestResources NO-SOURCE
+00061|> Task :example-project:testClasses UP-TO-DATE
+00062|> Task :example-project:test NO-SOURCE
+00063|> Task :example-project:check UP-TO-DATE
+00064|> Task :example-project:build
+00065|> Task :plugin:compileTestJava UP-TO-DATE
+00066|> Task :plugin:compileTestGroovy NO-SOURCE
+00067|> Task :plugin:processTestResources NO-SOURCE
+00068|> Task :plugin:testClasses UP-TO-DATE
+00069|> Task :plugin:test
+00070|> Task :plugin:validatePlugins
+00071|> Task :plugin:check
+00072|> Task :plugin:build
+00073|
+00074|BUILD SUCCESSFUL in 6m 45s
+00075|32 actionable tasks: 26 executed, 6 up-to-date
+00076|12:05:04 PM: Execution finished 'clean spotlessApply :plugin:build build --stacktrace'.

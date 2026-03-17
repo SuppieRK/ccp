@@ -1,83 +1,50 @@
 package engine
 
 import (
-	"fmt"
 	"strings"
+
+	"go-command-compression-proxy/internal/audit"
+	"go-command-compression-proxy/internal/contracts"
+	v2filters "go-command-compression-proxy/internal/filters"
 )
 
-// ToolFilterRegistry stores tool filters by canonical name and alias.
-type ToolFilterRegistry struct {
-	byTool  map[string]ToolFilter
-	byAlias map[string]string
+type Registry struct {
+	filters map[string]contracts.Filter
 }
 
-// NewToolFilterRegistry creates an empty filter registry.
-func NewToolFilterRegistry() *ToolFilterRegistry {
-	return &ToolFilterRegistry{
-		byTool:  map[string]ToolFilter{},
-		byAlias: map[string]string{},
+func NewRegistry() *Registry {
+	return &Registry{
+		filters: map[string]contracts.Filter{},
 	}
 }
 
-// Register adds one filter and validates unique tool/alias ownership.
-func (r *ToolFilterRegistry) Register(f ToolFilter) error {
+func (r *Registry) Register(tool string, filter contracts.Filter) {
+	if strings.TrimSpace(tool) == "" || filter == nil {
+		return
+	}
+	r.filters[strings.TrimSpace(tool)] = filter
+}
+
+func (r *Registry) RegisterAll(filters map[string]contracts.Filter) {
+	for tool, filter := range filters {
+		r.Register(tool, filter)
+	}
+}
+
+func (r *Registry) Resolve(command contracts.Command) contracts.Filter {
 	if r == nil {
-		return fmt.Errorf("nil registry")
+		audit.MustAppend("filter_fallback", map[string]any{
+			"tool":   command.Tool,
+			"reason": "registry unavailable",
+		})
+		return v2filters.Passthrough{}
 	}
-	if f == nil {
-		return fmt.Errorf("nil filter")
+	if filter, ok := r.filters[strings.TrimSpace(command.Tool)]; ok && filter != nil {
+		return filter
 	}
-
-	tool := normalizeLookupKey(f.Tool())
-	if tool == "" {
-		return fmt.Errorf("filter with empty tool")
-	}
-	if _, exists := r.byTool[tool]; exists {
-		return fmt.Errorf("duplicate tool registration: %s", tool)
-	}
-	r.byTool[tool] = f
-
-	for _, alias := range f.Aliases() {
-		key := normalizeLookupKey(alias)
-		if key == "" {
-			continue
-		}
-		if existingTool, exists := r.byAlias[key]; exists {
-			return fmt.Errorf("duplicate alias registration: %s (tools: %s, %s)", key, existingTool, tool)
-		}
-		r.byAlias[key] = tool
-	}
-	return nil
-}
-
-// Resolve returns a filter by canonical tool name or alias.
-func (r *ToolFilterRegistry) Resolve(name string) ToolFilter {
-	if r == nil {
-		return nil
-	}
-	key := name
-	if key == "" || !isNormalizedLookupKey(key) {
-		key = normalizeLookupKey(key)
-	}
-	if key == "" {
-		return nil
-	}
-	if f, ok := r.byTool[key]; ok {
-		return f
-	}
-	tool, ok := r.byAlias[key]
-	if !ok {
-		return nil
-	}
-	return r.byTool[tool]
-}
-
-func normalizeLookupKey(name string) string {
-	return strings.TrimSpace(strings.ToLower(name))
-}
-
-func isNormalizedLookupKey(name string) bool {
-	return name != "" &&
-		strings.TrimSpace(name) == name &&
-		strings.ToLower(name) == name
+	audit.MustAppend("filter_fallback", map[string]any{
+		"tool":   command.Tool,
+		"reason": "no matching filter",
+	})
+	return v2filters.Passthrough{}
 }

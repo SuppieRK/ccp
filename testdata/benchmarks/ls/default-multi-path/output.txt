@@ -1,0 +1,6 @@
+docs:
+design.md
+00002|
+src:
+main.go
+util

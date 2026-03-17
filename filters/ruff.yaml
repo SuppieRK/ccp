@@ -1,0 +1,38 @@
+version: 1
+filter: ruff
+about: Compact Ruff diagnostics conservatively.
+
+cases:
+  - id: diagnostics
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^\[$'
+            - regex: '^\]$'
+        groups:
+          - id: file
+            matches_regex: '^\{"code":"(?P<code>[^"]+)","message":"(?P<message>.+?)","location":\{"row":(?P<line>\d+),"column":(?P<column>\d+)\},"filename":"(?P<filename>[^"]+)".*$'
+            variables:
+              - name: code
+                type: string
+                regex_group: code
+              - name: message
+                type: string
+                regex_group: message
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+              - name: filename
+                type: string
+                regex_group: filename
+            group_by: '{{filename}}'
+            initially:
+              print: '{{filename}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}:{{column}} {{code}} {{message}}'

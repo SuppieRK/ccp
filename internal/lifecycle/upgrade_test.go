@@ -10,329 +10,287 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 const (
 	newBinaryContent = "new-binary"
 	testDownloadURL  = "https://example/a.zip"
-	errWriteDestFmt  = "write dest: %v"
 	flagVersion      = "--version"
 )
 
-func TestReplaceBinary(t *testing.T) {
-	tmp := t.TempDir()
-	src := filepath.Join(tmp, "src")
-	dst := filepath.Join(tmp, "dst")
-	if err := os.WriteFile(src, []byte(newBinaryContent), 0o755); err != nil {
-		t.Fatalf("write src: %v", err)
-	}
-	if err := os.WriteFile(dst, []byte("old-binary"), 0o755); err != nil {
-		t.Fatalf("write dst: %v", err)
-	}
-	if err := replaceBinary(dst, src); err != nil {
-		t.Fatalf("replace binary: %v", err)
-	}
-	b, err := os.ReadFile(dst)
-	if err != nil {
-		t.Fatalf("read dst: %v", err)
-	}
-	if string(b) != newBinaryContent {
-		t.Fatalf("unexpected dst content: %q", string(b))
-	}
-}
+var _ = Describe("replaceBinary", func() {
+	var (
+		tmpDir string
+		src    string
+		dst    string
+	)
 
-func TestReplaceBinaryErrorsForMissingSource(t *testing.T) {
-	tmp := t.TempDir()
-	dst := filepath.Join(tmp, "dst")
-	if err := os.WriteFile(dst, []byte("old-binary"), 0o755); err != nil {
-		t.Fatalf("write dst: %v", err)
-	}
-	err := replaceBinary(dst, filepath.Join(tmp, "missing-src"))
-	if err == nil {
-		t.Fatal("expected replaceBinary error for missing source")
-	}
-}
+	BeforeEach(func() {
+		tmpDir = GinkgoT().TempDir()
+		src = filepath.Join(tmpDir, "src")
+		dst = filepath.Join(tmpDir, "dst")
+	})
 
-func TestReplaceBinaryErrorsWhenDestinationDirMissing(t *testing.T) {
-	tmp := t.TempDir()
-	src := filepath.Join(tmp, "src")
-	if err := os.WriteFile(src, []byte(newBinaryContent), 0o755); err != nil {
-		t.Fatalf("write src: %v", err)
-	}
-	err := replaceBinary(filepath.Join(tmp, "missing", "dst"), src)
-	if err == nil {
-		t.Fatal("expected replaceBinary error for missing destination directory")
-	}
-}
-
-func TestReleaseAssetNameSupportedTargets(t *testing.T) {
-	cases := []struct {
-		name      string
-		goos      string
-		goarch    string
-		wantAsset string
-		wantBin   string
-	}{
-		{
-			name:      "linux-amd64",
-			goos:      "linux",
-			goarch:    "amd64",
-			wantAsset: "ccp_1.2.3_linux_amd64.zip",
-			wantBin:   "ccp",
-		},
-		{
-			name:      "windows-arm64",
-			goos:      "windows",
-			goarch:    "arm64",
-			wantAsset: "ccp_1.2.3_windows_arm64.zip",
-			wantBin:   "ccp.exe",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			asset, bin, err := releaseAssetName("1.2.3", tc.goos, tc.goarch)
-			if err != nil {
-				t.Fatalf("releaseAssetName error: %v", err)
-			}
-			if asset != tc.wantAsset {
-				t.Fatalf("asset=%q", asset)
-			}
-			if bin != tc.wantBin {
-				t.Fatalf("bin=%q", bin)
-			}
+	Context("when the source and destination are valid", func() {
+		BeforeEach(func() {
+			Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+			Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
 		})
-	}
-}
 
-func TestReleaseAssetNameUnsupportedOS(t *testing.T) {
-	_, _, err := releaseAssetName("1.2.3", "plan9", "amd64")
-	if err == nil || !strings.Contains(err.Error(), "unsupported os") {
-		t.Fatalf("expected unsupported os error, got %v", err)
-	}
-}
+		It("replaces the destination binary", func() {
+			Expect(replaceBinary(dst, src)).To(Succeed())
 
-func TestReleaseAssetNameUnsupportedArch(t *testing.T) {
-	_, _, err := releaseAssetName("1.2.3", "linux", "386")
-	if err == nil || !strings.Contains(err.Error(), "unsupported arch") {
-		t.Fatalf("expected unsupported arch error, got %v", err)
-	}
-}
+			b, err := os.ReadFile(dst)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(b)).To(Equal(newBinaryContent))
+		})
+	})
 
-func TestSelectAssetURL(t *testing.T) {
-	rel := githubRelease{Assets: []githubAssetInfo{{Name: "a.zip", BrowserDownloadURL: testDownloadURL}}}
-	got, err := selectAssetURL(rel, "a.zip")
-	if err != nil {
-		t.Fatalf("selectAssetURL error: %v", err)
-	}
-	if got != testDownloadURL {
-		t.Fatalf("got=%q", got)
-	}
-}
+	Context("when the source is missing", func() {
+		BeforeEach(func() {
+			Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+		})
 
-func TestSelectAssetURLMissing(t *testing.T) {
-	rel := githubRelease{Assets: []githubAssetInfo{{Name: "a.zip", BrowserDownloadURL: testDownloadURL}}}
-	_, err := selectAssetURL(rel, "b.zip")
-	if err == nil {
-		t.Fatal("expected missing asset error")
-	}
-}
+		It("returns an error", func() {
+			err := replaceBinary(dst, filepath.Join(tmpDir, "missing-src"))
+			Expect(err).To(HaveOccurred())
+		})
+	})
 
-func TestRunUpgradeLatestSuccess(t *testing.T) {
-	tmp := t.TempDir()
-	dest := filepath.Join(tmp, "ccp")
-	if err := os.WriteFile(dest, []byte("old"), 0o755); err != nil {
-		t.Fatalf(errWriteDestFmt, err)
-	}
-	client := mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
+	Context("when the destination directory is missing", func() {
+		BeforeEach(func() {
+			Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+		})
 
-	restore := stubUpgradeRuntimeDeps(
-		func() (string, error) { return dest, nil },
-		func() string { return "linux" },
-		func() string { return "amd64" },
-		client,
+		It("returns an error", func() {
+			err := replaceBinary(filepath.Join(tmpDir, "missing", "dst"), src)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})
+
+var _ = Describe("releaseAssetName", func() {
+	DescribeTable("resolving supported release asset names",
+		func(goos string, goarch string, wantAsset string, wantBin string) {
+			asset, bin, err := releaseAssetName("1.2.3", goos, goarch)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(asset).To(Equal(wantAsset))
+			Expect(bin).To(Equal(wantBin))
+		},
+		Entry("linux amd64", "linux", "amd64", "ccp_1.2.3_linux_amd64.zip", "ccp"),
+		Entry("windows arm64", "windows", "arm64", "ccp_1.2.3_windows_arm64.zip", "ccp.exe"),
 	)
-	defer restore()
 
-	muteUpgradePrint(t)
+	It("rejects unsupported operating systems", func() {
+		_, _, err := releaseAssetName("1.2.3", "plan9", "amd64")
+		Expect(err).To(MatchError(ContainSubstring("unsupported os")))
+	})
 
-	if err := RunUpgrade([]string{}); err != nil {
-		t.Fatalf("RunUpgrade error: %v", err)
-	}
-	b, err := os.ReadFile(dest)
-	if err != nil {
-		t.Fatalf("read dest: %v", err)
-	}
-	if string(b) != newBinaryContent {
-		t.Fatalf("dest content=%q", string(b))
-	}
-}
+	It("rejects unsupported architectures", func() {
+		_, _, err := releaseAssetName("1.2.3", "linux", "386")
+		Expect(err).To(MatchError(ContainSubstring("unsupported arch")))
+	})
+})
 
-func TestRunUpgradeSpecificVersion(t *testing.T) {
-	tmp := t.TempDir()
-	dest := filepath.Join(tmp, "ccp")
-	if err := os.WriteFile(dest, []byte("old"), 0o755); err != nil {
-		t.Fatalf(errWriteDestFmt, err)
-	}
-	client := mockUpgradeClient(defaultUpgradeRepo, "2.0.0", "linux", "amd64", []byte(newBinaryContent), false)
+var _ = Describe("selectAssetURL", func() {
+	It("selects the expected asset url", func() {
+		rel := githubRelease{Assets: []githubAssetInfo{{Name: "a.zip", BrowserDownloadURL: testDownloadURL}}}
 
-	restore := stubUpgradeRuntimeDeps(
-		func() (string, error) { return dest, nil },
-		func() string { return "linux" },
-		func() string { return "amd64" },
-		client,
+		got, err := selectAssetURL(rel, "a.zip")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal(testDownloadURL))
+	})
+
+	It("fails when the asset is missing", func() {
+		rel := githubRelease{Assets: []githubAssetInfo{{Name: "a.zip", BrowserDownloadURL: testDownloadURL}}}
+
+		_, err := selectAssetURL(rel, "b.zip")
+
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("RunUpgrade", func() {
+	var (
+		tmpDir string
+		dest   string
+		args   []string
+		client *http.Client
 	)
-	defer restore()
 
-	muteUpgradePrint(t)
+	BeforeEach(func() {
+		tmpDir = GinkgoT().TempDir()
+		dest = filepath.Join(tmpDir, "ccp")
+		Expect(os.WriteFile(dest, []byte("old"), 0o755)).To(Succeed())
+		args = nil
+		client = mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
 
-	if err := RunUpgrade([]string{flagVersion, "2.0.0"}); err != nil {
-		t.Fatalf("RunUpgrade error: %v", err)
-	}
-}
+		restore := stubUpgradeRuntimeDeps(
+			func() (string, error) { return dest, nil },
+			func() string { return "linux" },
+			func() string { return "amd64" },
+			client,
+			func(string) error { return nil },
+		)
+		DeferCleanup(restore)
 
-func TestRunUpgradeKeepsBinaryOnAPIAndDownloadError(t *testing.T) {
-	cases := []struct {
-		name         string
-		failAPI      bool
-		failDownload bool
-	}{
-		{name: "api-error", failAPI: true},
-		{name: "download-error", failDownload: true},
-	}
+		origPrint := upgradePrintf
+		upgradePrintf = func(format string, args ...any) (int, error) { return 0, nil }
+		DeferCleanup(func() { upgradePrintf = origPrint })
+	})
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			tmp := t.TempDir()
-			dest := filepath.Join(tmp, "ccp")
-			if err := os.WriteFile(dest, []byte("old"), 0o755); err != nil {
-				t.Fatalf(errWriteDestFmt, err)
-			}
-			client := mockUpgradeClientWithFailures(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), tc.failAPI, tc.failDownload)
+	Context("when upgrading to the latest release", func() {
+		It("replaces the existing binary", func() {
+			Expect(RunUpgrade(args)).To(Succeed())
+
+			b, err := os.ReadFile(dest)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(b)).To(Equal(newBinaryContent))
+		})
+	})
+
+	Context("when upgrading to a specific version", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "2.0.0"}
+			client = mockUpgradeClient(defaultUpgradeRepo, "2.0.0", "linux", "amd64", []byte(newBinaryContent), false)
 
 			restore := stubUpgradeRuntimeDeps(
 				func() (string, error) { return dest, nil },
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
+				func(string) error { return nil },
 			)
-			defer restore()
-
-			err := RunUpgrade([]string{})
-			if err == nil {
-				t.Fatal("expected error")
-			}
-			if !strings.Contains(err.Error(), "manual download") {
-				t.Fatalf("expected manual download hint, got %v", err)
-			}
-			b, readErr := os.ReadFile(dest)
-			if readErr != nil {
-				t.Fatalf("read dest: %v", readErr)
-			}
-			if string(b) != "old" {
-				t.Fatalf("dest changed to %q", string(b))
-			}
+			DeferCleanup(restore)
 		})
-	}
-}
 
-func TestRunUpgradeSetsExecutablePermissionOnUnix(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("unix executable permission bits are not supported on Windows filesystems")
-	}
+		It("downloads and installs that version", func() {
+			Expect(RunUpgrade(args)).To(Succeed())
+		})
+	})
 
-	tmp := t.TempDir()
-	dest := filepath.Join(tmp, "ccp")
-	if err := os.WriteFile(dest, []byte("old"), 0o644); err != nil {
-		t.Fatalf(errWriteDestFmt, err)
-	}
-	client := mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
+	Context("when fetching the release fails", func() {
+		DescribeTable("keeping the existing binary",
+			func(failAPI bool, failDownload bool) {
+				restore := stubUpgradeRuntimeDeps(
+					func() (string, error) { return dest, nil },
+					func() string { return "linux" },
+					func() string { return "amd64" },
+					mockUpgradeClientWithFailures(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), failAPI, failDownload),
+					func(string) error { return nil },
+				)
+				DeferCleanup(restore)
 
-	restore := stubUpgradeRuntimeDeps(
-		func() (string, error) { return dest, nil },
-		func() string { return "linux" },
-		func() string { return "amd64" },
-		client,
-	)
-	defer restore()
+				err := RunUpgrade(args)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("manual download")))
 
-	muteUpgradePrint(t)
+				b, readErr := os.ReadFile(dest)
+				Expect(readErr).NotTo(HaveOccurred())
+				Expect(string(b)).To(Equal("old"))
+			},
+			Entry("because the API request fails", true, false),
+			Entry("because the asset download fails", false, true),
+		)
+	})
 
-	if err := RunUpgrade([]string{flagVersion, "1.2.3"}); err != nil {
-		t.Fatalf("RunUpgrade error: %v", err)
-	}
+	Context("when running on unix", func() {
+		BeforeEach(func() {
+			if runtime.GOOS == "windows" {
+				Skip("unix executable permission bits are not supported on Windows filesystems")
+			}
 
-	info, err := os.Stat(dest)
-	if err != nil {
-		t.Fatalf("stat dest: %v", err)
-	}
-	if info.Mode()&0o111 == 0 {
-		t.Fatalf("expected executable mode, got %v", info.Mode().Perm())
-	}
-}
+			Expect(os.WriteFile(dest, []byte("old"), 0o644)).To(Succeed())
+			args = []string{flagVersion, "1.2.3"}
+		})
 
-func TestRunUpgradeReturnsExecutableError(t *testing.T) {
-	restore := stubUpgradeRuntimeDeps(
-		func() (string, error) { return "", errors.New("no executable") },
-		func() string { return "linux" },
-		func() string { return "amd64" },
-		mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false),
-	)
-	defer restore()
+		It("sets executable permission bits on the installed binary", func() {
+			Expect(RunUpgrade(args)).To(Succeed())
 
-	err := RunUpgrade([]string{flagVersion, "1.2.3"})
-	if err == nil || !strings.Contains(err.Error(), "no executable") {
-		t.Fatalf("expected executable error, got %v", err)
-	}
-}
+			info, err := os.Stat(dest)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Mode() & 0o111).NotTo(BeZero())
+		})
+	})
 
-func TestRunUpgradeReturnsPrintError(t *testing.T) {
-	tmp := t.TempDir()
-	dest := filepath.Join(tmp, "ccp")
-	if err := os.WriteFile(dest, []byte("old"), 0o755); err != nil {
-		t.Fatalf(errWriteDestFmt, err)
-	}
-	client := mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
+	Context("when determining the executable path fails", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "1.2.3"}
+			restore := stubUpgradeRuntimeDeps(
+				func() (string, error) { return "", errors.New("no executable") },
+				func() string { return "linux" },
+				func() string { return "amd64" },
+				client,
+				func(string) error { return nil },
+			)
+			DeferCleanup(restore)
+		})
 
-	restore := stubUpgradeRuntimeDeps(
-		func() (string, error) { return dest, nil },
-		func() string { return "linux" },
-		func() string { return "amd64" },
-		client,
-	)
-	defer restore()
+		It("returns the path error", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(MatchError(ContainSubstring("no executable")))
+		})
+	})
 
-	origPrint := upgradePrintf
-	upgradePrintf = func(format string, args ...any) (int, error) { return 0, errors.New("print failed") }
-	defer func() { upgradePrintf = origPrint }()
+	Context("when printing progress fails", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "1.2.3"}
+			origPrint := upgradePrintf
+			upgradePrintf = func(format string, args ...any) (int, error) { return 0, errors.New("print failed") }
+			DeferCleanup(func() { upgradePrintf = origPrint })
+		})
 
-	err := RunUpgrade([]string{flagVersion, "1.2.3"})
-	if err == nil || !strings.Contains(err.Error(), "print failed") {
-		t.Fatalf("expected print error, got %v", err)
-	}
-}
+		It("returns the print error", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(MatchError(ContainSubstring("print failed")))
+		})
+	})
 
-func muteUpgradePrint(t *testing.T) {
-	t.Helper()
-	origPrint := upgradePrintf
-	upgradePrintf = func(format string, args ...any) (int, error) { return 0, nil }
-	t.Cleanup(func() { upgradePrintf = origPrint })
-}
+	Context("when repair fails after installing the new binary", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "1.2.3"}
+			restore := stubUpgradeRuntimeDeps(
+				func() (string, error) { return dest, nil },
+				func() string { return "linux" },
+				func() string { return "amd64" },
+				client,
+				func(string) error { return errors.New("repair failed") },
+			)
+			DeferCleanup(restore)
+		})
 
-func TestRunUpgradeRejectsRepoFlag(t *testing.T) {
-	err := RunUpgrade([]string{"--repo", "acme/ccp"})
-	if err == nil {
-		t.Fatal("expected error for unsupported --repo flag")
-	}
-}
+		It("restores the previous binary and returns an error", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(MatchError(ContainSubstring("repair failed")))
+			Expect(err).To(MatchError(ContainSubstring("restored previous binary")))
 
-func mockUpgradeClient(repo, tag, goos, goarch string, binary []byte, failAPI bool) *http.Client {
+			b, readErr := os.ReadFile(dest)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(b)).To(Equal("old"))
+		})
+	})
+
+	Context("when the removed repo flag is provided", func() {
+		BeforeEach(func() {
+			args = []string{"--repo", "acme/ccp"}
+		})
+
+		It("rejects the flag", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})
+
+func mockUpgradeClient(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool) *http.Client {
 	return mockUpgradeClientWithFailures(repo, tag, goos, goarch, binary, failAPI, false)
 }
 
-func mockUpgradeClientWithFailures(repo, tag, goos, goarch string, binary []byte, failAPI, failDownload bool) *http.Client {
+func mockUpgradeClientWithFailures(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool, failDownload bool) *http.Client {
 	asset := fmt.Sprintf("ccp_%s_%s_%s.zip", tag, goos, goarch)
 	zipBody := makeZipArchive("ccp", binary)
 
@@ -393,19 +351,23 @@ func stubUpgradeRuntimeDeps(
 	osFn func() string,
 	archFn func() string,
 	httpClient *http.Client,
+	repairFn func(string) error,
 ) func() {
 	prevExec := upgradeExecutablePath
 	prevOS := upgradeRuntimeOS
 	prevArch := upgradeRuntimeArch
 	prevHTTP := upgradeHTTPClient
+	prevRepair := upgradeRunRepair
 	upgradeExecutablePath = execFn
 	upgradeRuntimeOS = osFn
 	upgradeRuntimeArch = archFn
 	upgradeHTTPClient = httpClient
+	upgradeRunRepair = repairFn
 	return func() {
 		upgradeExecutablePath = prevExec
 		upgradeRuntimeOS = prevOS
 		upgradeRuntimeArch = prevArch
 		upgradeHTTPClient = prevHTTP
+		upgradeRunRepair = prevRepair
 	}
 }

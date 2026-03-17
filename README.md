@@ -152,6 +152,7 @@ Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build
 Primary documentation:
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [FILTERS.md](./docs/agent-rules/FILTERS.md)
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [SECURITY.md](./SECURITY.md)
 
@@ -163,25 +164,19 @@ For issues:
 - One way to collect that information is:
 
 ```bash
-# version
 ccp --version
-
-# native stdout/stderr in timestamped capture files
 mkdir -p .artifacts/issue
-ccp --capture-raw --capture-raw-dir .artifacts/issue <command>
-
-# CCP output shown on the terminal
-ccp <command> > .artifacts/issue/ccp.stdout 2> .artifacts/issue/ccp.stderr
+ccp capture --dir .artifacts/issue -- <command>
+ccp verify --dir .artifacts/issue
 ```
 
-If the command output contains internal package names or other sensitive strings, add `--confidential value1,value2,...` to redact those substrings from `ccp` output before sharing it. When combined with `--capture-raw`, the same redactions are also applied to the capture files.
+If the command output contains internal package names or other sensitive strings, redact them before sharing the artifacts.
 
 Attach or paste:
 - the exact command you ran
-- `.artifacts/issue/ccp-capture-*-input-stdout.txt`
-- `.artifacts/issue/ccp-capture-*-input-stderr.txt`
-- `.artifacts/issue/ccp.stdout`
-- `.artifacts/issue/ccp.stderr` if relevant
+- `stdout.txt`
+- `stderr.txt`
+- `output.txt`
 
 ---
 

@@ -1,0 +1,44 @@
+version: 1
+filter: pytest
+about: Placeholder pytest filter scaffold for YAML migration.
+cases:
+  - id: default
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^(\d+) passed in .*$'
+              to: 'pytest: $1 passed'
+            - regex: '^no tests ran in .*$'
+              to: 'pytest: no tests collected'
+            - regex: '^(\d+) failed in .*$'
+              to: 'pytest: $1 failed'
+        groups:
+          - id: failures
+            starts_with: '=================================== FAILURES'
+            initially:
+              print: 'failure details:'
+            lines:
+              keep:
+                - contains: 'AssertionError:'
+                - starts_with: 'tests/'
+                - contains: 'Captured stdout call'
+              replace:
+                - regex: '^_+\s+(.*?)\s+_+$'
+                  to: '- $1'
+                - regex: '^E\s+AssertionError:\s+(.+)$'
+                  to: '  AssertionError: $1'
+                - regex: '^(tests/.+)$'
+                  to: '  $1'
+                - regex: '^captured stdout call$'
+                  to: '  captured stdout call'
+          - id: short_summary
+            starts_with: '=========================== short test summary info'
+            initially:
+              print: 'failed tests:'
+            lines:
+              keep:
+                - starts_with: 'FAILED '
+              replace:
+                - regex: '^FAILED\s+(.+)$'
+                  to: '- $1'

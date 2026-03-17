@@ -1,0 +1,22 @@
+version: 1
+filter: maven
+about: Compact Maven and Maven Wrapper output.
+
+cases:
+  - id: maven_output
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^WARNING: A terminally deprecated method in sun\.misc\.Unsafe has been called$'
+            - regex: '^WARNING: sun\.misc\.Unsafe::staticFieldBase has been called by .*HiddenClassDefiner.*$'
+            - regex: '^WARNING: Please consider reporting this to the maintainers of class com\.google\.inject\.internal\.aop\.HiddenClassDefiner$'
+            - regex: '^WARNING: sun\.misc\.Unsafe::staticFieldBase will be removed in a future release$'
+            - starts_with: '[INFO]'
+          replace:
+            - regex: '^\[INFO\] --- .+:([A-Za-z0-9_-]+) \([^)]+\) @ ([^ ]+) ---$'
+              to: '$2 : $1'
+            - regex: '^\[INFO\] BUILD SUCCESS$'
+              to: 'BUILD SUCCESS'
+            - regex: '^\[INFO\] BUILD FAILURE$'
+              to: 'BUILD FAILURE'

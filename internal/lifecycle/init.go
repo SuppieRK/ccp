@@ -2,11 +2,9 @@ package lifecycle
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/version"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,20 +12,12 @@ import (
 	"time"
 )
 
-type initConfig struct {
-	Tools              []string    `json:"tools"`
-	State              []toolState `json:"state"`
-	CCPVersion         string      `json:"ccpVersion,omitempty"`
-	IntegrationVersion int         `json:"integrationVersion,omitempty"`
-}
-
 type toolState struct {
 	Tool   string `json:"tool"`
 	Status string `json:"status"`
 	Reason string `json:"reason,omitempty"`
 }
 
-// RunInit persists tool-selection configuration into ccp managed state.
 func RunInit(args []string) error {
 	fs := newLifecycleFlagSet("init")
 	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: auto-detect when omitted)")
@@ -36,7 +26,7 @@ func RunInit(args []string) error {
 		"install or update supported agent integrations",
 		[]string{"ccp init [--tools <tool,tool,...>]"},
 		"When --tools is omitted, ccp auto-detects supported tools from the current repository.",
-		"ccp stores init state at ~/.config/ccp/init.json.",
+		"ccp refreshes the fully managed ~/.config/ccp directory, including ~/.config/ccp/filters, from shipped resources embedded in the binary.",
 		"Repository markers drive detection only; each integration manages its own canonical install target.",
 		"Agent adapters may install into home-scoped locations when that is the supported integration surface.",
 	)
@@ -48,17 +38,15 @@ func RunInit(args []string) error {
 		return nil
 	}
 
-	adapters := agents.DefaultAdapters()
+	adapters, err := agents.NewBuiltInAdapters()
+	if err != nil {
+		return err
+	}
 	tools, err := resolveInitTools(*toolsArg, adapters)
 	if err != nil {
 		return err
 	}
 	if err := agents.ValidateSelectedTools(tools, adapters); err != nil {
-		return err
-	}
-
-	path, err := initPath()
-	if err != nil {
 		return err
 	}
 	scopeRoot, err := initDetectRoot()
@@ -77,21 +65,11 @@ func RunInit(args []string) error {
 	if err != nil {
 		return err
 	}
-	cfg := initConfig{
-		Tools:              tools,
-		State:              states,
-		CCPVersion:         version.Version,
-		IntegrationVersion: integrationStateVersion,
-	}
-	changed, err := persistInitConfig(path, cfg)
-	if err != nil {
-		return err
-	}
-	if !changed {
-		fmt.Printf("ccp init: already configured (%s)\n", path)
+	if allToolStatesNoop(states) {
+		fmt.Printf("ccp init: already configured\n")
 		return nil
 	}
-	fmt.Printf("ccp init: configured integrations at %s\n", path)
+	fmt.Printf("ccp init: configured integrations\n")
 	return nil
 }
 
@@ -112,35 +90,6 @@ func resolveInitTools(toolsArg string, adapters map[string]agents.Adapter) ([]st
 	return tools, nil
 }
 
-func persistInitConfig(path string, cfg initConfig) (bool, error) {
-	newBytes, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return false, err
-	}
-	newBytes = append(newBytes, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, err
-	}
-	oldBytes, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-	if bytes.Equal(oldBytes, newBytes) {
-		return false, nil
-	}
-	if len(oldBytes) > 0 {
-		backupPath := fmt.Sprintf("%s.bak.%d", path, time.Now().Unix())
-		if err := os.WriteFile(backupPath, oldBytes, 0o644); err != nil {
-			return false, err
-		}
-		fmt.Printf("ccp init: backup created at %s\n", backupPath)
-	}
-	if err := os.WriteFile(path, newBytes, 0o644); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func parseTools(input string) []string {
 	parts := strings.Split(input, ",")
 	seen := map[string]bool{}
@@ -159,14 +108,6 @@ func parseTools(input string) []string {
 
 func initDetectRoot() (string, error) {
 	return os.Getwd()
-}
-
-func initPath() (string, error) {
-	base, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(base, ".config", "ccp", "init.json"), nil
 }
 
 func applyAdapters(scope agents.Context, tools []string, adapters map[string]agents.Adapter) ([]toolState, error) {
@@ -200,7 +141,23 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 	return states, nil
 }
 
+func allToolStatesNoop(states []toolState) bool {
+	if len(states) == 0 {
+		return true
+	}
+	for _, state := range states {
+		if state.Status != "noop" {
+			return false
+		}
+	}
+	return true
+}
+
 func writeManagedFile(path string, data []byte, perm os.FileMode) (changed bool, err error) {
+	return writeManagedBytes(path, data, perm)
+}
+
+func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool, err error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return false, err
 	}
@@ -210,12 +167,6 @@ func writeManagedFile(path string, data []byte, perm os.FileMode) (changed bool,
 	}
 	if bytes.Equal(old, data) {
 		return false, nil
-	}
-	if len(old) > 0 {
-		backupPath := fmt.Sprintf("%s.bak.%d", path, time.Now().Unix())
-		if err := os.WriteFile(backupPath, old, 0o644); err != nil {
-			return false, err
-		}
 	}
 	tmp := fmt.Sprintf("%s.tmp.%d", path, time.Now().UnixNano())
 	if err := os.WriteFile(tmp, data, perm); err != nil {

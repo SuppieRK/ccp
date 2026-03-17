@@ -1,6 +1,0 @@
-src:
-main.go
-util
-
-src/util:
-util.go

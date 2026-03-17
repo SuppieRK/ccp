@@ -1,7 +1,0 @@
-services:
-  web:
-    build:
-      context: ./web
-  api:
-    build:
-      context: ./api

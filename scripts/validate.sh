@@ -28,6 +28,40 @@ run_if_available() {
   warn_missing_tool "$tool" "$install"
 }
 
+declare -a PARALLEL_PIDS=()
+declare -a PARALLEL_NAMES=()
+
+run_in_background() {
+  local name="$1"
+  shift
+  echo "[validate] $*"
+  "$@" &
+  PARALLEL_PIDS+=("$!")
+  PARALLEL_NAMES+=("$name")
+  return 0
+}
+
+wait_for_background_jobs() {
+  local failed=0
+  local index
+  for index in "${!PARALLEL_PIDS[@]}"; do
+    local pid="${PARALLEL_PIDS[$index]}"
+    local name="${PARALLEL_NAMES[$index]}"
+    if ! wait "$pid"; then
+      echo "[validate] ${name} failed" >&2
+      failed=1
+    fi
+  done
+
+  PARALLEL_PIDS=()
+  PARALLEL_NAMES=()
+
+  if [[ "$failed" -ne 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
 collect_go_files() {
   find cmd internal -name '*.go' | sort
   return 0
@@ -45,44 +79,55 @@ $GO_FILES
 EOF
 fi
 
-echo "[validate] go vet ./..."
-go vet ./...
-
 echo "[validate] go mod tidy"
 go mod tidy
 
-echo "[validate] go test -count=1 -race ./..."
-go test -count=1 -race ./...
+run_in_background "go vet ./..." go vet ./...
+run_in_background "go test -count=1 -race ./..." go test -count=1 -race ./...
 
-run_if_available \
+run_in_background \
+  "staticcheck ./..." \
+  run_if_available \
   staticcheck \
   "go install honnef.co/go/tools/cmd/staticcheck@latest" \
   staticcheck ./...
 
-#run_if_available \
+#run_in_background \
+#  "gosec ./..." \
+#  run_if_available \
 #  gosec \
 #  "go install github.com/securego/gosec/v2/cmd/gosec@latest" \
 #  gosec ./...
 
-run_if_available \
+run_in_background \
+  "govulncheck ./..." \
+  run_if_available \
   govulncheck \
   "go install golang.org/x/vuln/cmd/govulncheck@latest" \
   govulncheck ./...
 
-run_if_available \
+run_in_background \
+  "golangci-lint run ./..." \
+  run_if_available \
   golangci-lint \
   "curl --proto \"=https\" -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.3" \
   golangci-lint run ./...
 
-run_if_available \
+run_in_background \
+  "ineffassign ./..." \
+  run_if_available \
   ineffassign \
   "go install github.com/gordonklaus/ineffassign@latest" \
   ineffassign ./...
 
-run_if_available \
+run_in_background \
+  "gocyclo -over 15 ." \
+  run_if_available \
   gocyclo \
   "go install github.com/fzipp/gocyclo/cmd/gocyclo@latest" \
   gocyclo -over 15 .
+
+wait_for_background_jobs
 
 mkdir -p .artifacts/coverage
 echo "[validate] go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./..."

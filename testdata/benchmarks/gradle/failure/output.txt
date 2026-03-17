@@ -1,0 +1,17 @@
+:compileJava: ok
+:processResources: ok
+:classes: ok
+:compileTestJava: ok
+:processTestResources: ok
+:testClasses: ok
+1 test completed, 1 failed
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/gradle/project/example/build/reports/tests/test/index.html
+* Try:
+BUILD FAILED in 1s
+> Task :test FAILED
+FailureTest > test() FAILED
+    org.opentest4j.AssertionFailedError at FailureTest.java:9
+2 actionable tasks: 1 executed, 1 up-to-date

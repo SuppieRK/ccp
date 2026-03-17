@@ -2,46 +2,38 @@ package lifecycle
 
 import (
 	"slices"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestParseToolsNormalizesSortsAndDedupes(t *testing.T) {
-	t.Parallel()
+var _ = Describe("init argument parsing", func() {
+	DescribeTable("normalizes tool lists",
+		func(input string, expected []string) {
+			Expect(parseTools(input)).To(Equal(expected))
+		},
+		Entry("sorting and deduplicating mixed-case input", " Git , go ,git,  ,DOCKER,go ", []string{"docker", "git", "go"}),
+		Entry("normalizing aliases", " costrict , roocode ", []string{"roocode"}),
+	)
 
-	got := parseTools(" Git , go ,git,  ,DOCKER,go ")
-	want := []string{"docker", "git", "go"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("parseTools() = %v, want %v", got, want)
-	}
-}
+	It("keeps parseTools output stable", func() {
+		got := parseTools("git,go,docker")
+		Expect(slices.IsSorted(got)).To(BeTrue())
+	})
 
-func TestParseToolsNormalizesAliases(t *testing.T) {
-	t.Parallel()
+	Context("when init arguments are invalid", func() {
+		BeforeEach(func() {
+			newLifecycleWorkspaceSpec()
+		})
 
-	got := parseTools(" costrict , roocode ")
-	want := []string{"roocode"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("parseTools() = %v, want %v", got, want)
-	}
-}
+		It("requires tools when none are provided or detected", func() {
+			err := RunInit(nil)
+			Expect(err).To(MatchError(ContainSubstring("no tools detected")))
+		})
 
-func TestRunInitRequiresTools(t *testing.T) {
-	newLifecycleWorkspace(t)
-
-	if err := RunInit([]string{}); err == nil {
-		t.Fatal("expected error when no tools are provided or detected")
-	} else if !strings.Contains(err.Error(), "no tools detected") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestRunInitRejectsUnsupportedTool(t *testing.T) {
-	newLifecycleWorkspace(t)
-
-	if err := RunInit([]string{"--tools", "unknown"}); err == nil {
-		t.Fatal("expected unsupported-tool error")
-	} else if !strings.Contains(err.Error(), "unsupported tool") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
+		It("rejects unsupported tools", func() {
+			err := RunInit([]string{"--tools", "unknown"})
+			Expect(err).To(MatchError(ContainSubstring("unsupported tool")))
+		})
+	})
+})

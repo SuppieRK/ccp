@@ -3,73 +3,85 @@ package agents
 import (
 	"os"
 	"path/filepath"
-	"slices"
-	"testing"
+
+	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestSupportedToolsSorted(t *testing.T) {
-	adapters := map[string]Adapter{
-		"zeta":  stubAdapter{id: "zeta"},
-		"alpha": stubAdapter{id: "alpha"},
-		"beta":  stubAdapter{id: "beta"},
-	}
-	got := SupportedTools(adapters)
-	want := []string{"alpha", "beta", "zeta"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("unexpected tool order: got=%v want=%v", got, want)
-	}
-}
+var _ = ginkgo.Describe("agent type helpers", func() {
+	ginkgo.Describe("SupportedTools", func() {
+		ginkgo.It("returns tool ids in sorted order", func() {
+			adapters := map[string]Adapter{
+				"zeta":  stubAdapter{id: "zeta"},
+				"alpha": stubAdapter{id: "alpha"},
+				"beta":  stubAdapter{id: "beta"},
+			}
 
-func TestValidateSelectedTools(t *testing.T) {
-	adapters := map[string]Adapter{"alpha": stubAdapter{id: "alpha"}}
-	if err := ValidateSelectedTools([]string{"alpha"}, adapters); err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	if ValidateSelectedTools([]string{"beta"}, adapters) == nil {
-		t.Fatal("expected error for unsupported tool")
-	}
-}
+			Expect(SupportedTools(adapters)).To(Equal([]string{"alpha", "beta", "zeta"}))
+		})
+	})
 
-func TestDetectTools(t *testing.T) {
-	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, "alpha-root"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	adapters := map[string]Adapter{
-		"alpha": stubAdapter{id: "alpha", detectDir: "alpha-root"},
-		"beta":  stubAdapter{id: "beta"},
-	}
-	detected := DetectTools(root, adapters)
-	if len(detected) != 1 || detected[0] != "alpha" {
-		t.Fatalf("unexpected detect list: %v", detected)
-	}
-}
+	ginkgo.Describe("ValidateSelectedTools", func() {
+		var adapters map[string]Adapter
 
-func TestDetectToolsIgnoresNonDirectoryCollisions(t *testing.T) {
-	root := t.TempDir()
-	filePath := filepath.Join(root, "alpha-root")
-	if err := os.WriteFile(filePath, []byte("not-a-dir"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(filepath.Join(root, "beta-root"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+		ginkgo.BeforeEach(func() {
+			adapters = map[string]Adapter{"alpha": stubAdapter{id: "alpha"}}
+		})
 
-	adapters := map[string]Adapter{
-		"alpha": stubAdapter{id: "alpha", detectDir: "alpha-root"},
-		"beta":  stubAdapter{id: "beta", detectDir: "beta-root"},
-	}
-	detected := DetectTools(root, adapters)
-	if len(detected) != 1 || detected[0] != "beta" {
-		t.Fatalf("unexpected detect list: %v", detected)
-	}
-}
+		ginkgo.It("accepts supported tools", func() {
+			Expect(ValidateSelectedTools([]string{"alpha"}, adapters)).To(Succeed())
+		})
 
-func TestDefaultAdaptersContainsExpectedTools(t *testing.T) {
-	adapters := DefaultAdapters()
-	for _, id := range []string{"aider", "auggie", "antigravity", "amazon-q", "codebuddy", "cline", "claude", "codex", "continue", "crush", "cursor", "factory", "gemini", "github-copilot", "iflow", "kiro", "kilocode", "opencode", "pi", "qoder", "qwen", "roocode", "trae", "windsurf"} {
-		if _, ok := adapters[id]; !ok {
-			t.Fatalf("expected adapter %q", id)
-		}
-	}
-}
+		ginkgo.It("rejects unsupported tools", func() {
+			Expect(ValidateSelectedTools([]string{"beta"}, adapters)).To(HaveOccurred())
+		})
+	})
+
+	ginkgo.Describe("DetectTools", func() {
+		var (
+			root string
+		)
+
+		ginkgo.BeforeEach(func() {
+			root = ginkgo.GinkgoT().TempDir()
+		})
+
+		ginkgo.It("returns only detected adapter roots", func() {
+			Expect(os.Mkdir(filepath.Join(root, "alpha-root"), 0o755)).To(Succeed())
+
+			adapters := map[string]Adapter{
+				"alpha": stubAdapter{id: "alpha", detectDir: "alpha-root"},
+				"beta":  stubAdapter{id: "beta"},
+			}
+
+			Expect(DetectTools(root, adapters)).To(Equal([]string{"alpha"}))
+		})
+
+		ginkgo.It("ignores non-directory collisions", func() {
+			filePath := filepath.Join(root, "alpha-root")
+			Expect(os.WriteFile(filePath, []byte("not-a-dir"), 0o644)).To(Succeed())
+			Expect(os.Mkdir(filepath.Join(root, "beta-root"), 0o755)).To(Succeed())
+
+			adapters := map[string]Adapter{
+				"alpha": stubAdapter{id: "alpha", detectDir: "alpha-root"},
+				"beta":  stubAdapter{id: "beta", detectDir: "beta-root"},
+			}
+
+			Expect(DetectTools(root, adapters)).To(Equal([]string{"beta"}))
+		})
+	})
+
+	ginkgo.Describe("NewBuiltInAdapters", func() {
+		ginkgo.It("contains every built-in catalog id with a matching adapter id", func() {
+			adapters, err := NewBuiltInAdapters()
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, spec := range BuiltInAdapterCatalog() {
+				id := string(spec.ID)
+				adapter, ok := adapters[id]
+				Expect(ok).To(BeTrue(), "expected adapter %q", id)
+				Expect(adapter.ID()).To(Equal(id))
+			}
+		})
+	})
+})

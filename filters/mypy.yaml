@@ -1,0 +1,38 @@
+version: 1
+filter: mypy
+about: Compact mypy diagnostics conservatively.
+
+cases:
+  - id: diagnostics
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'Found '
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+)(?::\d+)?:\s+(?P<kind>error|warning|note):\s+(?P<message>.+?)(?:\s+\[(?P<code>[^\]]+)\])?$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: kind
+                type: string
+                regex_group: kind
+              - name: code
+                type: string
+                regex_group: code
+                default_value: note
+              - name: message
+                type: string
+                regex_group: message
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  L{{line}} [{{code}}] {{message}}'

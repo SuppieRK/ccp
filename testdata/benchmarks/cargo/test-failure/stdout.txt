@@ -1,0 +1,21 @@
+00000|
+00001|running 2 tests
+00002|test tests::failing_case ... FAILED
+00003|test tests::subtracts_positive_numbers ... ok
+00004|
+00005|failures:
+00006|
+00007|---- tests::failing_case stdout ----
+00008|
+00009|thread 'tests::failing_case' (145626) panicked at src/lib.rs:16:9:
+00010|assertion `left == right` failed
+00011|  left: 6
+00012| right: 7
+00013|note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+00014|
+00015|
+00016|failures:
+00017|    tests::failing_case
+00018|
+00019|test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+00020|

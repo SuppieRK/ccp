@@ -1,121 +1,199 @@
 package engine
 
-import "testing"
+import (
+	"strings"
 
-const (
-	testLineA = "line-a\n"
+	"go-command-compression-proxy/internal/contracts"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestUnknownToolPassthrough(t *testing.T) {
-	e := NewEngine(Config{NeverDropPatterns: DefaultNeverDropPatterns()})
-	out := e.Process("stdout", "unknown", Input{Line: testLineA})
-	if !out.Ready || out.Output != testLineA {
-		t.Fatalf("unexpected passthrough output: %#v", out)
+type recordingFilter struct{}
+
+func (f *recordingFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
+	return command, nil
+}
+
+func (f *recordingFilter) Dispatch(command contracts.Command) string {
+	return command.Tool
+}
+
+func (f *recordingFilter) OnStdout(line string, context contracts.Context) contracts.Action {
+	_ = line
+	_ = context
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+func (f *recordingFilter) OnStderr(_ string, _ contracts.Context) contracts.Action {
+	return contracts.Action{Kind: contracts.ActionReplace, Output: "ERR:warn\n"}
+}
+
+func (f *recordingFilter) OnStdoutExit(context contracts.Context) contracts.Action {
+	return contracts.Action{
+		Kind:   contracts.ActionReplace,
+		Output: "summary: " + strings.Join(context.BufferedLines(contracts.StreamStdout), ""),
 	}
 }
 
-func TestDedupeForRegisteredTool(t *testing.T) {
-	e := NewEngine(Config{
-		NeverDropPatterns: nil,
-		Filters: []ToolFilter{collectingFilter{
-			engineTestFilterBase: engineTestFilterBase{tool: "sh", sharedContext: true},
-		}},
+type exitNoopFilter struct{}
+
+func (f *exitNoopFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
+	return command, nil
+}
+
+func (f *exitNoopFilter) Dispatch(command contracts.Command) string {
+	return command.Tool
+}
+
+func (f *exitNoopFilter) OnStdout(line string, _ contracts.Context) contracts.Action {
+	_ = line
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+func (f *exitNoopFilter) OnStderr(line string, _ contracts.Context) contracts.Action {
+	_ = line
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+func (f *exitNoopFilter) OnStdoutExit(_ contracts.Context) contracts.Action {
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+var _ = Describe("Engine integration", func() {
+	Context("when a matching filter is registered", func() {
+		var (
+			registry *Registry
+			runtime  *Engine
+			state    *State
+		)
+
+		BeforeEach(func() {
+			registry = NewRegistry()
+			registry.Register("demo", &recordingFilter{})
+			runtime = NewEngine(registry)
+			state = runtime.Start(contracts.Command{
+				CommandID: "cmd-1",
+				RawInput:  "demo --flag",
+				Args:      []string{"demo", "--flag"},
+				Tool:      "demo",
+				Dispatch:  "recording",
+			})
+		})
+
+		It("keeps command metadata on the execution state", func() {
+			command := state.command
+			Expect(command.CommandID).To(Equal("cmd-1"))
+			Expect(command.RawInput).To(Equal("demo --flag"))
+			Expect(command.Tool).To(Equal("demo"))
+			Expect(command.Dispatch).To(Equal("recording"))
+		})
+
+		It("uses filter actions for stdout, stderr, and exit handling", func() {
+			Expect(state.Stdout("one\n")).To(BeEmpty())
+			Expect(state.Stderr("warn\n")).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStderr,
+				Line:   "ERR:warn\n",
+			}}))
+			Expect(state.Exit()).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "summary: one\n",
+			}}))
+		})
 	})
-	if out := e.Process("stdout", "sh", Input{Line: "same\n"}); out.Ready {
-		t.Fatalf("expected collect, got %#v", out)
-	}
-	if out := e.Process("stdout", "sh", Input{Line: "same\n"}); out.Ready {
-		t.Fatalf("expected duplicate collect, got %#v", out)
-	}
-	if out := e.Process("stdout", "sh", Input{EOF: true}); out.Ready {
-		t.Fatalf("expected shared context to wait for both EOFs, got %#v", out)
-	}
-	out := e.Process("stderr", "sh", Input{EOF: true})
-	if !out.Ready || out.Output != "same\n" {
-		t.Fatalf("unexpected flush output: %#v", out)
-	}
-}
 
-func TestContextCleanupOnCompleteEOF(t *testing.T) {
-	e := NewEngine(Config{
-		NeverDropPatterns: nil,
-		Filters: []ToolFilter{collectingFilter{
-			engineTestFilterBase: engineTestFilterBase{tool: "sh", sharedContext: true},
-		}},
+	Context("when no filter matches", func() {
+		var state *State
+
+		BeforeEach(func() {
+			runtime := NewEngine(NewRegistry())
+			state = runtime.Start(contracts.Command{
+				CommandID: "cmd-2",
+				RawInput:  "unknown",
+				Args:      []string{"unknown"},
+			})
+		})
+
+		It("falls back to passthrough", func() {
+			Expect(state.command.CommandID).To(Equal("cmd-2"))
+			Expect(state.Stdout("hello\n")).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "hello\n",
+			}}))
+			Expect(state.Stderr("warn\n")).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStderr,
+				Line:   "warn\n",
+			}}))
+			Expect(state.Exit()).To(BeEmpty())
+		})
 	})
-	_ = e.Process("stdout", "sh", Input{Line: "a\n"})
-	_ = e.Process("stderr", "sh", Input{Line: "b\n"})
-	_ = e.Process("stdout", "sh", Input{EOF: true})
-	if got := len(e.contexts); got != 1 {
-		t.Fatalf("expected context to remain until all streams EOF, got %d", got)
-	}
-	_ = e.Process("stderr", "sh", Input{EOF: true})
-	if got := len(e.contexts); got != 0 {
-		t.Fatalf("expected context cleanup after complete EOF, got %d", got)
-	}
-}
 
-func TestNoopFilterExists(t *testing.T) {
-	f := NewNoopFilter("x")
-	if f.Tool() != "x" {
-		t.Fatalf("unexpected tool: %s", f.Tool())
-	}
-}
+	Context("when retained lines remain buffered at exit", func() {
+		var state *State
 
-func TestExitEventDeliveredToFilter(t *testing.T) {
-	seen := false
-	code := 0
-	f := decisionFilter{
-		engineTestFilterBase: engineTestFilterBase{tool: "sh"},
-		decide: func(ev Event) Decision {
-			if ev.Type == EventExit {
-				seen = true
-				code = ev.ExitCode
-				return Decision{Action: ActionIgnore}
-			}
-			if ev.Type == EventEOF {
-				return Decision{Action: ActionFlush}
-			}
-			return Decision{Action: ActionCollect}
-		},
-	}
-	e := NewEngine(Config{
-		NeverDropPatterns: nil,
-		Filters:           []ToolFilter{f},
+		BeforeEach(func() {
+			registry := NewRegistry()
+			registry.Register("buffered", &exitNoopFilter{})
+			runtime := NewEngine(registry)
+			state = runtime.Start(contracts.Command{
+				CommandID: "cmd-3",
+				RawInput:  "buffered",
+				Args:      []string{"buffered"},
+				Tool:      "buffered",
+			})
+		})
+
+		It("flushes them in original sequence order", func() {
+			Expect(state.Stdout("out-1\n")).To(BeEmpty())
+			Expect(state.Stderr("err-1\n")).To(BeEmpty())
+			Expect(state.Stdout("out-2\n")).To(BeEmpty())
+
+			Expect(state.Exit()).To(Equal([]BufferEntry{
+				{Stream: contracts.StreamStdout, Line: "out-1\n"},
+				{Stream: contracts.StreamStderr, Line: "err-1\n"},
+				{Stream: contracts.StreamStdout, Line: "out-2\n"},
+			}))
+		})
 	})
-	_ = e.Process("stdout", "sh", Input{Exit: true, Code: 7})
-	if !seen {
-		t.Fatal("expected filter to receive exit event")
-	}
-	if code != 7 {
-		t.Fatalf("expected exit code 7, got %d", code)
-	}
-}
 
-func TestDisableAuditSkipsVerboseAuditFields(t *testing.T) {
-	e := NewEngine(Config{
-		NeverDropPatterns: DefaultNeverDropPatterns(),
-		DisableAudit:      true,
+	Context("when ignored stderr lines arrive after retained stderr", func() {
+		var state *State
+
+		BeforeEach(func() {
+			registry := NewRegistry()
+			registry.Register("buffered", &exitNoopFilter{})
+			runtime := NewEngine(registry)
+			state = runtime.Start(contracts.Command{
+				CommandID: "cmd-4",
+				RawInput:  "buffered",
+				Args:      []string{"buffered"},
+				Tool:      "buffered",
+			})
+			Expect(state.Stderr("err-1\n")).To(BeEmpty())
+		})
+
+		Context("when the ignored line is blank", func() {
+			It("keeps the previously retained line", func() {
+				Expect(state.Stderr("\n")).To(BeEmpty())
+				Expect(state.Exit()).To(Equal([]BufferEntry{
+					{Stream: contracts.StreamStderr, Line: "err-1\n"},
+				}))
+			})
+		})
+
+		Context("when the ignored line is a duplicate", func() {
+			It("keeps the previously retained line", func() {
+				Expect(state.Stderr("err-1\n")).To(BeEmpty())
+				Expect(state.Exit()).To(Equal([]BufferEntry{
+					{Stream: contracts.StreamStderr, Line: "err-1\n"},
+				}))
+			})
+		})
 	})
-	out := e.Process("stdout", "unknown", Input{Line: testLineA})
-	if out.Audit.Action != ActionImmediate {
-		t.Fatalf("unexpected action: %q", out.Audit.Action)
-	}
-	if out.Audit.Raw != "" {
-		t.Fatalf("expected raw audit field omitted, got %q", out.Audit.Raw)
-	}
-	if out.Audit.DerivedKey != "" || out.Audit.Mask != "" || out.Audit.Collision {
-		t.Fatalf("expected verbose audit fields omitted, got %#v", out.Audit)
-	}
-}
 
-type collectingFilter struct {
-	engineTestFilterBase
-}
-
-func (c collectingFilter) Process(ev Event, _ *OrderedSetBuffer) Decision {
-	if ev.Type == EventEOF {
-		return Decision{Action: ActionFlush}
-	}
-	return Decision{Action: ActionCollect}
-}
+	It("panics when constructed with a nil registry", func() {
+		Expect(func() {
+			NewEngine(nil)
+		}).To(Panic())
+	})
+})

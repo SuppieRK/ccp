@@ -1,6 +1,0 @@
---- FAIL: TestByteCompare (0.00s)
-    main_test.go:65: context: byte compare baseline=ccp expected=cxp
---- FAIL: TestStructField (0.00s)
-    main_test.go:78: context: struct field expected=fixture-bad actual=fixture
-
-go test: 1 passed, 2 failed, 1 no-test-files

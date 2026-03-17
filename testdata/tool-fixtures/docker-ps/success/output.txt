@@ -1,2 +1,0 @@
-[ok] nginx:alpine status=Up Less than a second ports=0.0.0.0:8080->80/tcp, [::]:8080->80/tcp name=ccp-bench-nginx-ps-default
-[ok] kindest/node:v1.35.0 status=Up 3 hours ports=127.0.0.1:45797->6443/tcp name=ccp-benchmark-control-plane

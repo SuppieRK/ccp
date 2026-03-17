@@ -1,0 +1,22 @@
+version: 1
+filter: prettier
+about: Compact Prettier check and write output.
+
+cases:
+  - id: check
+    when_arguments:
+      have_any: ["--check"]
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: "Checking formatting..."
+          replace:
+            - regex: '^\[warn\] Code style issues found in the above file\. Run Prettier with --write to fix\.$'
+              to: 'prettier check: 1 files need formatting'
+            - regex: '^\[warn\] Code style issues found in (\d+) files\. Run Prettier with --write to fix\.$'
+              to: 'prettier check: $1 files need formatting'
+            - regex: '^All matched files use Prettier code style!$'
+              to: 'prettier check: ok'
+            - regex: '^\[warn\] (.+)$'
+              to: '- $1'

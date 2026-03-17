@@ -84,12 +84,10 @@ type Adapter interface {
 	Verify(ctx Context) error
 }
 
-// Detector allows adapters to override the default directory-based detection check.
 type Detector interface {
 	Detect(scopeRoot string) bool
 }
 
-// Uninstaller is an optional adapter capability for removing installed artifacts.
 type Uninstaller interface {
 	Uninstall(ctx Context) (InstallResult, error)
 }
@@ -136,35 +134,6 @@ func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 		}
 	}
 	return detected
-}
-
-func DefaultAdapters() map[string]Adapter {
-	return map[string]Adapter{
-		string(AgentAider):         NewAiderAdapter(),
-		string(AgentAuggie):        NewAuggieAdapter(),
-		string(AgentAntigravity):   NewAntigravityAdapter(),
-		string(AgentAmazonQ):       NewAmazonQAdapter(),
-		string(AgentCodeBuddy):     NewCodeBuddyAdapter(),
-		string(AgentCline):         NewClineAdapter(),
-		string(AgentClaude):        NewClaudeAdapter(),
-		string(AgentContinue):      NewContinueAdapter(),
-		string(AgentCodex):         NewCodexAdapter(),
-		string(AgentCrush):         NewCrushAdapter(),
-		string(AgentCursor):        NewCursorAdapter(),
-		string(AgentFactory):       NewFactoryAdapter(),
-		string(AgentGemini):        NewGeminiAdapter(),
-		string(AgentGitHubCopilot): NewGitHubCopilotAdapter(),
-		string(AgentIFlow):         NewIFlowAdapter(),
-		string(AgentKiro):          NewKiroAdapter(),
-		string(AgentKilocode):      NewKilocodeAdapter(),
-		string(AgentOpenCode):      NewOpenCodeAdapter(),
-		string(AgentPi):            NewPiAdapter(),
-		string(AgentQoder):         NewQoderAdapter(),
-		string(AgentQwen):          NewQwenAdapter(),
-		string(AgentRooCode):       NewRooCodeAdapter(),
-		string(AgentTrae):          NewTraeAdapter(),
-		string(AgentWindsurf):      NewWindsurfAdapter(),
-	}
 }
 
 func InstallPlannedArtifacts(plan []PlannedArtifact, write WriterFunc) (InstallResult, error) {

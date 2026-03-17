@@ -1,0 +1,19 @@
+version: 1
+filter: deno
+about: Compact Deno output conservatively.
+
+cases:
+  - id: structured_passthrough
+    when_arguments:
+      have_any: ["--json"]
+    passthrough: true
+
+  - id: test_failure
+    when_arguments:
+      have_any: ["test"]
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - contains: 'TS'
+            - contains: 'error:'
