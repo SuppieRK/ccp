@@ -135,7 +135,7 @@ var _ = Describe("ProjectRootFromSource", func() {
 		info, err := os.Stat(filepath.Join(root, "go.mod"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(info.IsDir()).To(BeFalse())
-		entries := []string{"filters", "internal", "openspec"}
+		entries := []string{"filters", "internal", "cmd"}
 		for _, entry := range entries {
 			stat, err := os.Stat(filepath.Join(root, entry))
 			Expect(err).NotTo(HaveOccurred())
