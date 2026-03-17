@@ -1,7 +1,9 @@
 package benchmark
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -280,6 +282,80 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(estimateTokens("")).To(BeZero())
 			Expect(estimateTokens("abcd")).To(Equal(1))
 			Expect(estimateTokens("abcde")).To(Equal(2))
+		})
+
+		It("writes markdown summary to GITHUB_STEP_SUMMARY when set", func() {
+			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
+			prev := os.Getenv("GITHUB_STEP_SUMMARY")
+			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
+			DeferCleanup(func() {
+				if prev == "" {
+					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
+					return
+				}
+				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
+			})
+
+			report := RunReport{
+				Generated: time.Date(2026, time.March, 17, 12, 0, 0, 0, time.UTC),
+				Results: []CaseResult{{
+					Tool:         "grep",
+					Case:         "recursive-match",
+					Command:      "grep -r needle ./internal",
+					NativeTokens: 10,
+					ProxyTokens:  4,
+					Success:      true,
+				}},
+			}
+
+			Expect(writeSummary(report)).To(Succeed())
+
+			body, err := os.ReadFile(summaryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring("Generated: `2026-03-17T12:00:00Z`"))
+			Expect(string(body)).To(ContainSubstring("| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |"))
+			Expect(string(body)).To(ContainSubstring("| 🟢 | grep/recursive-match | `grep -r needle ./internal` | 10 | 4 | 60.00 |  |"))
+		})
+
+		It("prints markdown summary to stdout when GITHUB_STEP_SUMMARY is unset", func() {
+			prevEnv := os.Getenv("GITHUB_STEP_SUMMARY")
+			Expect(os.Unsetenv("GITHUB_STEP_SUMMARY")).To(Succeed())
+			DeferCleanup(func() {
+				if prevEnv == "" {
+					return
+				}
+				_ = os.Setenv("GITHUB_STEP_SUMMARY", prevEnv)
+			})
+
+			stdoutReader, stdoutWriter, err := os.Pipe()
+			Expect(err).NotTo(HaveOccurred())
+			prevStdout := os.Stdout
+			os.Stdout = stdoutWriter
+			DeferCleanup(func() { os.Stdout = prevStdout })
+
+			output := make(chan string, 1)
+			go func() {
+				var buf bytes.Buffer
+				_, _ = io.Copy(&buf, stdoutReader)
+				output <- buf.String()
+			}()
+
+			report := RunReport{
+				Generated: time.Date(2026, time.March, 17, 12, 0, 0, 0, time.UTC),
+				Results: []CaseResult{{
+					Tool:         "grep",
+					Case:         "no-match",
+					Command:      "grep needle missing",
+					NativeTokens: 0,
+					ProxyTokens:  0,
+					Success:      false,
+					Warnings:     []string{"output mismatch"},
+				}},
+			}
+
+			Expect(writeSummary(report)).To(Succeed())
+			Expect(stdoutWriter.Close()).To(Succeed())
+			Expect(<-output).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 0 | 0 | 0.00 | output mismatch |"))
 		})
 
 		DescribeTable("loads previous results",

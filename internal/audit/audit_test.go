@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,6 +17,7 @@ var _ = Describe("audit logging", func() {
 		restore := WithTestConfig(home, 8, 7)
 		DeferCleanup(restore)
 		DeferCleanup(Reset)
+		DeferCleanup(cleanupAuditHome, home)
 
 		path, err := DefaultPath()
 		Expect(err).NotTo(HaveOccurred())
@@ -27,6 +29,7 @@ var _ = Describe("audit logging", func() {
 		restore := WithTestConfig(home, 1, 3)
 		DeferCleanup(restore)
 		DeferCleanup(Reset)
+		DeferCleanup(cleanupAuditHome, home)
 
 		payload := strings.Repeat("abcdefghijklmnopqrstuvwxyz", 8000)
 		for i := 0; i < 6; i++ {
@@ -55,6 +58,7 @@ var _ = Describe("audit logging", func() {
 		restore := WithTestConfig(home, 1, 2)
 		DeferCleanup(restore)
 		DeferCleanup(Reset)
+		DeferCleanup(cleanupAuditHome, home)
 
 		payload := strings.Repeat("abcdefghijklmnopqrstuvwxyz", 8000)
 		for i := 0; i < 18; i++ {
@@ -81,3 +85,18 @@ var _ = Describe("audit logging", func() {
 		Expect(rotated).To(BeNumerically("<=", 3))
 	})
 })
+
+func cleanupAuditHome(home string) error {
+	Reset()
+	auditDir := filepath.Join(home, ".config", "ccp", "audit")
+	var lastErr error
+	for range 10 {
+		if err := os.RemoveAll(auditDir); err == nil || os.IsNotExist(err) {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return lastErr
+}

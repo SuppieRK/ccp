@@ -90,6 +90,9 @@ func Run(opts RunOptions) (RunReport, error) {
 		}
 		return report.Results[i].Tool < report.Results[j].Tool
 	})
+	if err := writeSummary(report); err != nil {
+		return report, err
+	}
 	if err := writeReportJSON(opts.ArtifactsDir, report); err != nil {
 		return report, err
 	}
@@ -291,6 +294,76 @@ func FailureSummary(report RunReport) []string {
 		lines = append(lines, fmt.Sprintf("%s/%s: %s", result.Tool, result.Case, strings.Join(result.Warnings, "; ")))
 	}
 	return lines
+}
+
+func writeSummary(report RunReport) error {
+	var b strings.Builder
+	_, _ = fmt.Fprintf(&b, "Generated: `%s`\n\n", report.Generated.Format(time.RFC3339))
+	b.WriteString("| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |\n")
+	b.WriteString("|---|---|---|---:|---:|---:|---|\n")
+	rows := append([]CaseResult(nil), report.Results...)
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].Tool == rows[j].Tool {
+			return rows[i].Case < rows[j].Case
+		}
+		return rows[i].Tool < rows[j].Tool
+	})
+	for _, r := range rows {
+		_, _ = fmt.Fprintf(
+			&b,
+			"| %s | %s | `%s` | %d | %d | %.2f | %s |\n",
+			summaryStatusCell(r),
+			sanitizeSummaryCell(r.Tool+"/"+r.Case),
+			sanitizeSummaryCell(r.Command),
+			r.NativeTokens,
+			r.ProxyTokens,
+			tokenSavingsPct(r),
+			sanitizeSummaryCell(strings.Join(r.Warnings, "; ")),
+		)
+	}
+	summaryPath := os.Getenv("GITHUB_STEP_SUMMARY")
+	if summaryPath != "" {
+		f, err := os.OpenFile(summaryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			return err
+		}
+		if _, err := f.WriteString(b.String()); err != nil {
+			_ = f.Close()
+			return err
+		}
+		return f.Close()
+	}
+	_, err := fmt.Print(b.String())
+	return err
+}
+
+func summaryStatusCell(result CaseResult) string {
+	if !result.Success {
+		return "🔴"
+	}
+	for _, warning := range result.Warnings {
+		if strings.Contains(warning, "token compaction ratio dropped") {
+			return "🟡"
+		}
+	}
+	return "🟢"
+}
+
+func tokenSavingsPct(result CaseResult) float64 {
+	if result.NativeTokens <= 0 {
+		return 0
+	}
+	pct := (1 - float64(result.ProxyTokens)/float64(result.NativeTokens)) * 100
+	if pct > -5 && pct < 5 {
+		return 0
+	}
+	return pct
+}
+
+func sanitizeSummaryCell(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "|", "/")
+	return strings.TrimSpace(s)
 }
 
 func loadPreviousResults(path string) (map[string]CaseResult, error) {
