@@ -1,0 +1,11 @@
+README.md  59
+docs/
+emptydir/
+file-0.bin  21
+file-1.bin  26
+file-2.bin  35
+link-to-main.txt  29
+node_modules/
+src/
+
+4 dirs, 5 files

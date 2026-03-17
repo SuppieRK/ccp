@@ -1,0 +1,1 @@
+TS2367 [ERROR]: This comparison appears to be unintentional because the types '1' and '2' have no overlap.

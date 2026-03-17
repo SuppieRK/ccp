@@ -5,18 +5,24 @@ import (
 	"os"
 	"path/filepath"
 
+	core "go-command-compression-proxy/internal"
+	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/engine"
-	"go-command-compression-proxy/internal/engine/filters"
 	"go-command-compression-proxy/internal/lifecycle"
-	"go-command-compression-proxy/internal/runner"
 	"go-command-compression-proxy/internal/version"
 )
 
-var startupMaintenance = lifecycle.RunStartupMaintenance
 var lifecycleDispatch = runLifecycleCommand
 
+type executionRuntime interface {
+	Run(args []string) int
+}
+
 func main() {
+	if err := audit.ConfigureDefault(); err != nil {
+		exitWithErr(1, err)
+	}
+
 	opts, err := cli.Parse(os.Args[1:])
 	if err != nil {
 		exitWithErr(2, err)
@@ -45,9 +51,6 @@ func main() {
 }
 
 func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
-	if err := startupMaintenance(); err != nil {
-		return true, 1, err
-	}
 	if handled, err := lifecycleDispatch(opts.CommandArgs); handled {
 		if err != nil {
 			return true, 1, err
@@ -62,22 +65,34 @@ func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
 	return true, 0, nil
 }
 
+func isLifecycleCommand(args []string) bool {
+	return cli.IsManagedArgs(args)
+}
+
 func runLifecycleCommand(args []string) (bool, error) {
-	if len(args) == 0 {
+	if !isLifecycleCommand(args) {
 		return false, nil
 	}
 	tail := args[1:]
 	switch args[0] {
 	case "init":
 		return true, lifecycle.RunInit(tail)
+	case "capture":
+		return true, lifecycle.RunCapture(tail)
 	case "gain":
 		return true, lifecycle.RunGain(tail, defaultMetricsPath())
 	case "history":
 		return true, lifecycle.RunHistory(tail, defaultMetricsPath())
+	case "verify":
+		return true, lifecycle.RunVerify(tail)
 	case "upgrade":
 		return true, lifecycle.RunUpgrade(tail)
 	case "uninstall":
 		return true, lifecycle.RunUninstall(tail)
+	case "repair":
+		return true, lifecycle.RunRepair(tail)
+	case "filter":
+		return true, lifecycle.RunFilter(tail)
 	default:
 		return false, nil
 	}
@@ -115,77 +130,48 @@ Usage:
 
 Execution flags:
   --raw                 Bypass semantic compaction and pass through native output
-  --capture-raw         Save raw stdout/stderr capture files while executing
-  --capture-raw-dir     Directory for capture files (requires --capture-raw)
   --confidential        Redact comma-separated substrings from emitted output
-  --debug-filter        Emit filter metadata on stderr
   --help, -h            Show help
   --version             Show version
 
 Lifecycle commands:
+  capture               Write command.yaml, sequenced streams, and replay output artifacts
   init                  Install or update supported agent integrations
   gain                  Show token savings summary and recent proof output
+  filter                YAML filter authoring helpers
   history               Show recorded command history
+  repair                Rewrite managed CCP home state to canonical shipped content
+  verify                Replay one fixture directory through the current filter
   upgrade               Upgrade ccp
   uninstall             Remove ccp integrations
 
 Notes:
   - Run ccp gain after install or init to verify savings on real work.
   - Structured or precision-sensitive output may pass through unchanged.
-  - --raw preserves native output unless --confidential is also used.
-  - --capture-raw preserves execution semantics while writing capture artifacts.`
+  - --raw preserves native output unless --confidential is also used.`
 }
 
-func buildRuntime(opts cli.Options) (*runner.Runner, error) {
-	registry := engine.NewToolFilterRegistry()
-	toolFilters := []engine.ToolFilter{
-		filters.NewLSCompactor(),
-		filters.NewGitToolFilter(),
-		filters.NewGradleFilter(),
-		filters.NewMavenFilter(),
-		filters.NewDenoFilter(),
-		filters.NewNodeFilter(),
-		filters.NewPythonFilter(),
-		filters.NewRuffFilter(),
-		filters.NewPlaywrightFilter(),
-		filters.NewPytestFilter(),
-		filters.NewPIPFilter(),
-		filters.NewNPMFilter(),
-		filters.NewPNPMFilter(),
-		filters.NewYarnFilter(),
-		filters.NewNextBuildFilter(),
-		filters.NewTscFilter(),
-		filters.NewNPXFilter(),
-		filters.NewPrettierFilter(),
-		filters.NewGolangciLintFilter(),
-		filters.NewMypyFilter(),
-		filters.NewGrepFilter(),
-		filters.NewFindFilter(),
-		filters.NewKubectlToolFilter(),
-		filters.NewDockerToolFilter(),
-		filters.NewGoToolFilter(),
-		filters.NewCargoToolFilter(),
-	}
-	for _, f := range toolFilters {
-		if err := registry.Register(f); err != nil {
-			return nil, err
-		}
-	}
+func buildRuntime(opts cli.Options) (executionRuntime, error) {
+	return &coreExecutionRuntime{
+		runner: core.NewRunnerWithOptions(core.Options{
+			Raw:          opts.Raw,
+			Confidential: opts.ConfidentialRedactions,
+			MetricsPath:  defaultMetricsPath(),
+		}),
+	}, nil
+}
 
-	var eng *engine.Engine
-	if !opts.Raw {
-		eng = engine.NewEngine(engine.Config{
-			NeverDropPatterns: engine.DefaultNeverDropPatterns(),
-			Registry:          registry,
-			DisableAudit:      !opts.DebugFilter,
-		})
+type coreExecutionRuntime struct {
+	runner *core.Runner
+}
+
+func (r *coreExecutionRuntime) Run(args []string) int {
+	if len(args) == 0 {
+		return 2
 	}
-	return runner.New(runner.Options{
-		Raw:           opts.Raw,
-		CaptureRaw:    opts.CaptureRaw,
-		CaptureRawDir: opts.CaptureRawDir,
-		Confidential:  opts.ConfidentialRedactions,
-		DebugFilter:   opts.DebugFilter,
-		MetricsPath:   defaultMetricsPath(),
-	}, eng, registry), nil
+	code, err := r.runner.Run(args)
+	if err != nil {
+		exitWithErr(code, err)
+	}
+	return code
 }

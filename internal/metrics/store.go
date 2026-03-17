@@ -1,8 +1,10 @@
 package metrics
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,7 +27,6 @@ var (
 	runsBucket = []byte("runs")
 )
 
-// RunMetric is one per-command execution metric entry.
 type RunMetric struct {
 	Timestamp   time.Time
 	Command     string
@@ -38,7 +39,6 @@ type RunMetric struct {
 	Passthrough bool
 }
 
-// Summary is a legacy aggregate kept for compatibility with existing tests/callers.
 type Summary struct {
 	Runs      int     `json:"runs"`
 	RawLines  int     `json:"raw_lines"`
@@ -47,7 +47,6 @@ type Summary struct {
 	DropRatio float64 `json:"drop_ratio"`
 }
 
-// QueryOptions define gain/history dataset selection.
 type QueryOptions struct {
 	Since  time.Duration
 	Tool   string
@@ -55,7 +54,6 @@ type QueryOptions struct {
 	Period string
 }
 
-// SummaryRow is one grouped summary row.
 type SummaryRow struct {
 	Command               string  `json:"command"`
 	Commands              int64   `json:"commands"`
@@ -69,7 +67,6 @@ type SummaryRow struct {
 	EstimatedSavingsPct   float64 `json:"estimated_savings_pct"`
 }
 
-// SummaryToolRow is one grouped summary row aggregated by tool.
 type SummaryToolRow struct {
 	Tool                  string  `json:"tool"`
 	Commands              int64   `json:"commands"`
@@ -83,7 +80,6 @@ type SummaryToolRow struct {
 	EstimatedSavingsPct   float64 `json:"estimated_savings_pct"`
 }
 
-// SummaryTotal is the grand total over selected summary rows.
 type SummaryTotal struct {
 	Commands              int64   `json:"commands"`
 	RawBytes              int64   `json:"raw_bytes"`
@@ -96,13 +92,11 @@ type SummaryTotal struct {
 	EstimatedSavingsPct   float64 `json:"estimated_savings_pct"`
 }
 
-// MissedOpportunity groups passthrough commands by invocations.
 type MissedOpportunity struct {
 	Command string `json:"command"`
 	Count   int64  `json:"count"`
 }
 
-// HistoryRow is one execution entry for history mode.
 type HistoryRow struct {
 	Timestamp             time.Time `json:"timestamp"`
 	Command               string    `json:"command"`
@@ -122,7 +116,6 @@ type HistoryRow struct {
 	EstimatedSavingsPct   float64   `json:"estimated_savings_pct"`
 }
 
-// PeriodRow is one time bucket row for gain period aggregation.
 type PeriodRow struct {
 	Bucket                string  `json:"bucket"`
 	BucketStart           string  `json:"bucket_start"`
@@ -159,7 +152,6 @@ type periodAcc struct {
 	count  int64
 }
 
-// Append stores one run metric. It is best-effort and bounded by a short timeout.
 func Append(path string, metric RunMetric) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
@@ -224,7 +216,6 @@ func writeRunRecord(db *bolt.DB, rec runRecord) error {
 	})
 }
 
-// LoadSummary returns legacy aggregate totals derived from bytes (for compatibility).
 func LoadSummary(path string) (Summary, error) {
 	total, err := QuerySummary(path, QueryOptions{})
 	if err != nil {
@@ -239,7 +230,6 @@ func LoadSummary(path string) (Summary, error) {
 	}, nil
 }
 
-// QuerySummaryRows returns grouped summary rows (grouped by command).
 func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return nil, nil
@@ -289,7 +279,6 @@ func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err er
 	return out, nil
 }
 
-// QuerySummaryRowsByTool returns grouped summary rows (grouped by tool).
 func QuerySummaryRowsByTool(path string, opts QueryOptions) (rows []SummaryToolRow, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return nil, nil
@@ -343,7 +332,6 @@ func QuerySummaryRowsByTool(path string, opts QueryOptions) (rows []SummaryToolR
 	return out, nil
 }
 
-// QuerySummary returns grand totals for selected dataset.
 func QuerySummary(path string, opts QueryOptions) (total SummaryTotal, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return SummaryTotal{}, nil
@@ -378,7 +366,6 @@ func QuerySummary(path string, opts QueryOptions) (total SummaryTotal, err error
 	return total, nil
 }
 
-// QueryMissedOpportunities returns top passthrough commands by count.
 func QueryMissedOpportunities(path string, opts QueryOptions, limit int) (opps []MissedOpportunity, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return nil, nil
@@ -428,7 +415,6 @@ func QueryMissedOpportunities(path string, opts QueryOptions, limit int) (opps [
 	return out, nil
 }
 
-// QueryHistory returns history rows sorted by timestamp DESC.
 func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return nil, nil
@@ -463,7 +449,6 @@ func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err err
 	return out, nil
 }
 
-// QueryPeriod returns day/week/month buckets for selected dataset.
 func QueryPeriod(path string, opts QueryOptions) (periodRows []PeriodRow, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
 		return nil, nil
@@ -530,7 +515,7 @@ func historyRowFromRecord(rec runRecord) HistoryRow {
 }
 
 func reverseHistoryRows(rows []HistoryRow) {
-	// Stored in ascending key order; history should be newest first.
+
 	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
@@ -585,7 +570,7 @@ func openDB(path string, readOnly bool) (*bolt.DB, error) {
 		return nil, err
 	}
 	if !readOnly {
-		// Metrics are best-effort and non-critical; avoid fsync on each command run.
+
 		db.NoSync = true
 	}
 	return db, nil
@@ -593,33 +578,17 @@ func openDB(path string, readOnly bool) (*bolt.DB, error) {
 
 func encodeRunKey(tsUnix int64, seq uint64) []byte {
 	key := make([]byte, 16)
-	putU64(key[0:8], uint64(tsUnix))
+	putNonNegativeInt64AsU64(key[0:8], tsUnix)
 	putU64(key[8:16], seq)
 	return key
 }
 
 func putU64(dst []byte, v uint64) {
-	_ = dst[7]
-	dst[0] = byte(v >> 56)
-	dst[1] = byte(v >> 48)
-	dst[2] = byte(v >> 40)
-	dst[3] = byte(v >> 32)
-	dst[4] = byte(v >> 24)
-	dst[5] = byte(v >> 16)
-	dst[6] = byte(v >> 8)
-	dst[7] = byte(v)
+	binary.BigEndian.PutUint64(dst, v)
 }
 
 func getU64(src []byte) uint64 {
-	_ = src[7]
-	return uint64(src[0])<<56 |
-		uint64(src[1])<<48 |
-		uint64(src[2])<<40 |
-		uint64(src[3])<<32 |
-		uint64(src[4])<<24 |
-		uint64(src[5])<<16 |
-		uint64(src[6])<<8 |
-		uint64(src[7])
+	return binary.BigEndian.Uint64(src)
 }
 
 func encodeRunRecord(rec runRecord) []byte {
@@ -629,27 +598,27 @@ func encodeRunRecord(rec runRecord) []byte {
 	sz := 8 + 4 + len(cmd) + 4 + len(tool) + 4 + len(dispatch) + 8 + 8 + 8 + 8 + 1
 	out := make([]byte, sz)
 	i := 0
-	putU64(out[i:i+8], uint64(rec.TimestampUnix))
+	putNonNegativeInt64AsU64(out[i:i+8], rec.TimestampUnix)
 	i += 8
-	putU32(out[i:i+4], uint32(len(cmd)))
+	putLengthU32(out[i:i+4], len(cmd))
 	i += 4
 	copy(out[i:i+len(cmd)], cmd)
 	i += len(cmd)
-	putU32(out[i:i+4], uint32(len(tool)))
+	putLengthU32(out[i:i+4], len(tool))
 	i += 4
 	copy(out[i:i+len(tool)], tool)
 	i += len(tool)
-	putU32(out[i:i+4], uint32(len(dispatch)))
+	putLengthU32(out[i:i+4], len(dispatch))
 	i += 4
 	copy(out[i:i+len(dispatch)], dispatch)
 	i += len(dispatch)
-	putU64(out[i:i+8], uint64(rec.RawBytes))
+	putNonNegativeInt64AsU64(out[i:i+8], rec.RawBytes)
 	i += 8
-	putU64(out[i:i+8], uint64(rec.KeptBytes))
+	putNonNegativeInt64AsU64(out[i:i+8], rec.KeptBytes)
 	i += 8
-	putU64(out[i:i+8], uint64(int64(rec.ExitCode)))
+	putNonNegativeIntAsU64(out[i:i+8], rec.ExitCode)
 	i += 8
-	putU64(out[i:i+8], uint64(rec.DurationMS))
+	putNonNegativeInt64AsU64(out[i:i+8], rec.DurationMS)
 	i += 8
 	if rec.Passthrough {
 		out[i] = 1
@@ -658,29 +627,29 @@ func encodeRunRecord(rec runRecord) []byte {
 }
 
 func decodeRunRecord(b []byte) runRecord {
-	// Defensive decoding for old/corrupt entries: return zero record on malformed bytes.
+
 	if len(b) < 8+4+4+4+8+8+8+8+1 {
 		return runRecord{}
 	}
 	i := 0
 	rec := runRecord{}
-	rec.TimestampUnix = int64(getU64(b[i : i+8]))
+	rec.TimestampUnix = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
-	cmdLen := int(getU32(b[i : i+4]))
+	cmdLen := getBoundedIntFromU32(b[i : i+4])
 	i += 4
 	if i+cmdLen > len(b) {
 		return runRecord{}
 	}
 	rec.Command = string(b[i : i+cmdLen])
 	i += cmdLen
-	toolLen := int(getU32(b[i : i+4]))
+	toolLen := getBoundedIntFromU32(b[i : i+4])
 	i += 4
 	if i+toolLen > len(b) {
 		return runRecord{}
 	}
 	rec.Tool = string(b[i : i+toolLen])
 	i += toolLen
-	dispatchLen := int(getU32(b[i : i+4]))
+	dispatchLen := getBoundedIntFromU32(b[i : i+4])
 	i += 4
 	if i+dispatchLen > len(b) {
 		return runRecord{}
@@ -690,13 +659,13 @@ func decodeRunRecord(b []byte) runRecord {
 	if i+8*4+1 > len(b) {
 		return runRecord{}
 	}
-	rec.RawBytes = int64(getU64(b[i : i+8]))
+	rec.RawBytes = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
-	rec.KeptBytes = int64(getU64(b[i : i+8]))
+	rec.KeptBytes = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
-	rec.ExitCode = int(int64(getU64(b[i : i+8])))
+	rec.ExitCode = getBoundedIntFromU64(b[i : i+8])
 	i += 8
-	rec.DurationMS = int64(getU64(b[i : i+8]))
+	rec.DurationMS = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
 	rec.Passthrough = b[i] == 1
 	if rec.Tool == "" {
@@ -706,19 +675,60 @@ func decodeRunRecord(b []byte) runRecord {
 }
 
 func putU32(dst []byte, v uint32) {
-	_ = dst[3]
-	dst[0] = byte(v >> 24)
-	dst[1] = byte(v >> 16)
-	dst[2] = byte(v >> 8)
-	dst[3] = byte(v)
+	binary.BigEndian.PutUint32(dst, v)
 }
 
 func getU32(src []byte) uint32 {
-	_ = src[3]
-	return uint32(src[0])<<24 |
-		uint32(src[1])<<16 |
-		uint32(src[2])<<8 |
-		uint32(src[3])
+	return binary.BigEndian.Uint32(src)
+}
+
+func putNonNegativeInt64AsU64(dst []byte, v int64) {
+	if v < 0 {
+		v = 0
+	}
+	putU64(dst, uint64(v))
+}
+
+func putNonNegativeIntAsU64(dst []byte, v int) {
+	if v < 0 {
+		v = 0
+	}
+	putU64(dst, uint64(v))
+}
+
+func putLengthU32(dst []byte, n int) {
+	switch {
+	case n < 0:
+		putU32(dst, 0)
+	case n > math.MaxUint32:
+		putU32(dst, math.MaxUint32)
+	default:
+		putU32(dst, uint32(n))
+	}
+}
+
+func getBoundedInt64FromU64(src []byte) int64 {
+	v := getU64(src)
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
+
+func getBoundedIntFromU64(src []byte) int {
+	v := getU64(src)
+	if v > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+	return int(v)
+}
+
+func getBoundedIntFromU32(src []byte) int {
+	v := getU32(src)
+	if uint64(v) > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+	return int(v)
 }
 
 func fileExists(path string) bool {
@@ -891,12 +901,10 @@ func ensureLocalCCPGitignore(path string) error {
 	return projectfiles.EnsureGitignoreEntry(projectRoot, ".ccp")
 }
 
-// Bootstrap ensures DB file parent directory and schema exist.
 func Bootstrap(path string) error {
 	return ensureSchema(path)
 }
 
-// IsTimeoutOrBusy classifies retryable write failures.
 func IsTimeoutOrBusy(err error) bool {
 	if err == nil {
 		return false

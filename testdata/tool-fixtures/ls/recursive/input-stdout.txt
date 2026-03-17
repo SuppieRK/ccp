@@ -1,6 +1,0 @@
-00000|src:
-00001|main.go
-00002|util
-00003|
-00004|src/util:
-00005|util.go

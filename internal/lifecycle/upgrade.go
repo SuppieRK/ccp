@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -26,6 +27,7 @@ var (
 	upgradeHTTPClient     = &http.Client{Timeout: 30 * time.Second}
 	upgradeRuntimeOS      = func() string { return runtime.GOOS }
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
+	upgradeRunRepair      = runInstalledRepair
 )
 
 type githubRelease struct {
@@ -38,8 +40,6 @@ type githubAssetInfo struct {
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-// RunUpgrade downloads a compatible release from GitHub Releases and replaces
-// the running binary in place.
 func RunUpgrade(args []string) error {
 	fs := newLifecycleFlagSet("upgrade")
 	version := fs.String("version", "", "specific release tag (for example 1.2.3)")
@@ -98,12 +98,31 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err != nil {
 		return err
 	}
+	backupPath, err := backupBinaryPath(exePath)
+	if err != nil {
+		return err
+	}
+	if err := upgradeReplaceBinary(backupPath, exePath); err != nil {
+		return fmt.Errorf("backup existing binary: %w", err)
+	}
+	restoreBackup := true
+	defer func() {
+		if restoreBackup {
+			_ = upgradeReplaceBinary(exePath, backupPath)
+		}
+		_ = os.Remove(backupPath)
+	}()
+
 	if err := upgradeReplaceBinary(exePath, srcPath); err != nil {
 		return err
 	}
 	if err := ensureUpgradeExecutablePermissions(exePath); err != nil {
 		return err
 	}
+	if err := upgradeRunRepair(exePath); err != nil {
+		return fmt.Errorf("run repair after upgrade: %w; restored previous binary; recommend running ccp restore", err)
+	}
+	restoreBackup = false
 	return printUpgradeSuccess(exePath, assetName, tag)
 }
 
@@ -320,4 +339,18 @@ func ensureExecutableIfNeeded(path string) error {
 		return nil
 	}
 	return os.Chmod(path, 0o755)
+}
+
+func backupBinaryPath(exePath string) (string, error) {
+	dir := filepath.Dir(exePath)
+	base := filepath.Base(exePath)
+	return filepath.Join(dir, fmt.Sprintf("%s.backup.%d", base, time.Now().UnixNano())), nil
+}
+
+func runInstalledRepair(exePath string) error {
+	cmd := exec.Command(exePath, "repair", "--yes")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
 }

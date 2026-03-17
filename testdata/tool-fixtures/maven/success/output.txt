@@ -1,6 +1,0 @@
-[ok] example : resources
-[ok] example : compile
-[ok] example : testResources
-[ok] example : testCompile
-[ok] example : test
-[INFO] BUILD SUCCESS

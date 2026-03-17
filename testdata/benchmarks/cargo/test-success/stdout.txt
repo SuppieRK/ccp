@@ -1,0 +1,13 @@
+00000|
+00001|running 3 tests
+00002|test tests::adds_negative_numbers ... ok
+00003|test tests::adds_mixed_numbers ... ok
+00004|test tests::adds_positive_numbers ... ok
+00005|
+00006|test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+00007|
+00008|
+00009|running 0 tests
+00010|
+00011|test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+00012|

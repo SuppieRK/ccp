@@ -1,0 +1,6 @@
+00000|## main
+00001| M modified.txt
+00002|M  staged.txt
+00003|?? .ccp/
+00004|?? scripts/
+00005|?? untracked.txt

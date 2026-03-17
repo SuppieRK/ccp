@@ -1,2 +1,0 @@
-. 7e22361 [master]
-../wt-feature 7e22361 [feature]

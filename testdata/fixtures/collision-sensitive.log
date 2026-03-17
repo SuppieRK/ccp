@@ -1,3 +1,0 @@
-service:8080 status:200 request:1234567890
-service:8081 status:500 request:2234567890
-service:8080 status:404 request:3234567890

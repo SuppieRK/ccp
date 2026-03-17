@@ -1,3 +1,0 @@
-00000|    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
-00001|     Running unittests src/lib.rs (target/debug/deps/fixture_cargo_test_success-24fa794eedc70336)
-00010|   Doc-tests fixture_cargo_test_success

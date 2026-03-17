@@ -1,2 +1,0 @@
-[ok] project-cache-1 service=cache image=redis:7-alpine status=Up Less than a second ports=0.0.0.0:36379->6379/tcp, [::]:36379->6379/tcp
-[ok] project-web-1 service=web image=nginx:alpine status=Up Less than a second ports=0.0.0.0:38080->80/tcp, [::]:38080->80/tcp

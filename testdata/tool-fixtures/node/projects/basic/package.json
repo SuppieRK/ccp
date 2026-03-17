@@ -1,7 +1,0 @@
-{
-  "name": "ccp-node-benchmark-basic",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Minimal real node runtime cases for ccp benchmark fixtures",
-  "type": "commonjs"
-}

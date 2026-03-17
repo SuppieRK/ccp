@@ -1,3 +1,0 @@
-dependencies: 2
-  @bench/lib@link:packages/lib
-  @bench/root@1.0.0

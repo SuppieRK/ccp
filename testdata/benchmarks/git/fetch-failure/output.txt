@@ -1,0 +1,2 @@
+fatal: not a git repository: '.git'
+git fetch: ok (0 new branches, 0 new tags)

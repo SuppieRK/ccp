@@ -1,0 +1,5 @@
+error: length comparison to zero
+ --> src/main.rs:7:8
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#len_zero
+  = note: `-D clippy::len-zero` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::len_zero)]`

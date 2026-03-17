@@ -2,13 +2,19 @@ package lifecycle
 
 import (
 	"errors"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"slices"
+	"runtime"
+	"strconv"
 	"strings"
-	"testing"
+	"time"
 
 	"go-command-compression-proxy/internal/lifecycle/agents"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 type testAdapter struct {
@@ -19,16 +25,9 @@ type testAdapter struct {
 type failingInstallAdapter struct{}
 
 type failingVerifyAdapter struct{}
-type countingAdapter struct{ installed int }
 
-func (t testAdapter) ID() string {
-	return t.id
-}
-
-func (t testAdapter) DetectRoot(scopeRoot string) string {
-	return scopeRoot
-}
-
+func (t testAdapter) ID() string                         { return t.id }
+func (t testAdapter) DetectRoot(scopeRoot string) string { return scopeRoot }
 func (t testAdapter) Install(_ agents.Context, write agents.WriterFunc) (agents.InstallResult, error) {
 	if len(t.plan) == 0 {
 		return agents.InstallResult{}, nil
@@ -39,327 +38,404 @@ func (t testAdapter) Install(_ agents.Context, write agents.WriterFunc) (agents.
 	}
 	return agents.InstallResult{Applied: 1}, nil
 }
+func (t testAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return t.plan }
+func (t testAdapter) Verify(_ agents.Context) error                  { return nil }
 
-func (t testAdapter) Plan(_ agents.Context) []agents.PlannedArtifact {
-	return t.plan
-}
-
-func (t testAdapter) Verify(_ agents.Context) error {
-	return nil
-}
-
-func (failingInstallAdapter) ID() string { return "broken-install" }
-
+func (failingInstallAdapter) ID() string                         { return "broken-install" }
 func (failingInstallAdapter) DetectRoot(scopeRoot string) string { return scopeRoot }
-
 func (failingInstallAdapter) Install(_ agents.Context, _ agents.WriterFunc) (agents.InstallResult, error) {
 	return agents.InstallResult{}, errors.New("install failed")
 }
-
 func (failingInstallAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return nil }
+func (failingInstallAdapter) Verify(_ agents.Context) error                  { return nil }
 
-func (failingInstallAdapter) Verify(_ agents.Context) error { return nil }
-
-func (failingVerifyAdapter) ID() string { return "broken-verify" }
-
+func (failingVerifyAdapter) ID() string                         { return "broken-verify" }
 func (failingVerifyAdapter) DetectRoot(scopeRoot string) string { return scopeRoot }
-
 func (failingVerifyAdapter) Install(_ agents.Context, _ agents.WriterFunc) (agents.InstallResult, error) {
 	return agents.InstallResult{Applied: 1}, nil
 }
-
 func (failingVerifyAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return nil }
+func (failingVerifyAdapter) Verify(_ agents.Context) error                  { return errors.New("verify failed") }
 
-func (failingVerifyAdapter) Verify(_ agents.Context) error { return errors.New("verify failed") }
+var _ = Describe("Lifecycle helpers", func() {
+	It("sorts and deduplicates parsed tools", func() {
+		Expect(parseTools("Zeta,alpha, Alpha , zeta,,")).To(Equal([]string{"alpha", "zeta"}))
+	})
 
-func (c *countingAdapter) ID() string { return "fake" }
+	It("uses the working directory as the init detection root", func() {
+		tmp, err := os.MkdirTemp("", "lifecycle-root-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
 
-func (c *countingAdapter) DetectRoot(scopeRoot string) string { return scopeRoot }
+		withWorkingDir(tmp)
 
-func (c *countingAdapter) Install(_ agents.Context, _ agents.WriterFunc) (agents.InstallResult, error) {
-	c.installed++
-	return agents.InstallResult{Applied: 1}, nil
+		root, err := initDetectRoot()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resolvedPath(root)).To(Equal(resolvedPath(tmp)))
+	})
+
+	It("creates managed files without backup artifacts", func() {
+		tmp, err := os.MkdirTemp("", "lifecycle-managed-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
+
+		path := filepath.Join(tmp, "cfg", "managed.txt")
+		changed, err := writeManagedFile(path, []byte("v1\n"), 0o644)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(BeTrue())
+
+		changed, err = writeManagedFile(path, []byte("v1\n"), 0o644)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(BeFalse())
+
+		changed, err = writeManagedFile(path, []byte("v2\n"), 0o644)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(BeTrue())
+
+		matches, err := filepath.Glob(path + ".bak.*")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(matches).To(BeEmpty())
+	})
+})
+
+var _ = Describe("Adapter application", func() {
+	It("applies a successful adapter and records state", func() {
+		tmp, err := os.MkdirTemp("", "lifecycle-adapter-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
+
+		adapter := testAdapter{
+			id: "alpha",
+			plan: []agents.PlannedArtifact{
+				{Kind: agents.ArtifactHook, Path: filepath.Join(tmp, "hook.sh"), Content: "echo", Perm: 0o644},
+			},
+		}
+		states, err := applyAdapters(agents.Context{ScopeRoot: tmp, HomeDir: tmp}, []string{"alpha"}, map[string]agents.Adapter{
+			"alpha": adapter,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(states).To(HaveLen(1))
+		Expect(states[0].Tool).To(Equal("alpha"))
+	})
+
+	It("returns failed state for install errors", func() {
+		states, err := applyAdapters(
+			agents.Context{ScopeRoot: GinkgoT().TempDir(), HomeDir: GinkgoT().TempDir()},
+			[]string{"broken-install"},
+			map[string]agents.Adapter{"broken-install": failingInstallAdapter{}},
+		)
+		Expect(err).To(MatchError(ContainSubstring("install failed")))
+		expectSingleFailedStateWithReason(states, "install failed")
+	})
+
+	It("returns failed state for verify errors", func() {
+		states, err := applyAdapters(
+			agents.Context{ScopeRoot: GinkgoT().TempDir(), HomeDir: GinkgoT().TempDir()},
+			[]string{"broken-verify"},
+			map[string]agents.Adapter{"broken-verify": failingVerifyAdapter{}},
+		)
+		Expect(err).To(MatchError(ContainSubstring("verify failed")))
+		expectSingleFailedStateWithReason(states, "verify failed")
+	})
+})
+
+var _ = Describe("Startup maintenance", func() {
+	var ws lifecycleWorkspace
+
+	BeforeEach(func() {
+		ws = newLifecycleWorkspaceSpec()
+	})
+
+	Context("when refreshing the managed home layout", func() {
+		BeforeEach(func() {
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "fake: fake\n",
+				"fake.yaml":      "version: 1\nfilter: fake\nabout: test\n",
+			})
+			Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "stale.txt"), []byte("stale"), 0o644)).To(Succeed())
+		})
+
+		It("replaces stale home files with the materialized filter set", func() {
+			Expect(RunStartupMaintenance()).To(Succeed())
+
+			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = os.Stat(filepath.Join(ws.home, ".ccp", "stale.txt"))
+			Expect(err).To(MatchError(os.ErrNotExist))
+		})
+
+		Context("and the maintenance lock is already held", func() {
+			BeforeEach(func() {
+				lockPath, err := startupMaintenanceLockPath()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
+				Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
+			})
+
+			It("skips the refresh", func() {
+				Expect(RunStartupMaintenance()).To(Succeed())
+
+				_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+				Expect(err).To(MatchError(os.ErrNotExist))
+			})
+		})
+
+		Context("and the maintenance lock is stale", func() {
+			BeforeEach(func() {
+				lockPath, err := startupMaintenanceLockPath()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
+				Expect(os.WriteFile(lockPath, []byte(strconv.Itoa(os.Getpid())), 0o644)).To(Succeed())
+
+				staleTime := time.Now().Add(-startupMaintenanceLockMaxAge - time.Second)
+				Expect(os.Chtimes(lockPath, staleTime, staleTime)).To(Succeed())
+			})
+
+			It("reclaims the stale lock and refreshes filters", func() {
+				lockPath, err := startupMaintenanceLockPath()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(RunStartupMaintenance()).To(Succeed())
+
+				_, err = os.Stat(lockPath)
+				Expect(err).To(MatchError(os.ErrNotExist))
+				_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Context("when cleaning filesystem state outside init reconciliation", func() {
+		It("cleans legacy project init state but preserves gain db", func() {
+			ccpDir := filepath.Join(ws.work, ".ccp")
+			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+
+			stale := filepath.Join(ccpDir, initConfigFileName)
+			backup := stale + ".bak.123"
+			gainDB := filepath.Join(ccpDir, "gain.db")
+			for _, file := range []string{stale, backup, gainDB} {
+				Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
+			}
+
+			Expect(RunStartupMaintenance()).To(Succeed())
+
+			_, err := os.Stat(stale)
+			Expect(err).To(MatchError(os.ErrNotExist))
+
+			_, err = os.Stat(backup)
+			Expect(err).To(MatchError(os.ErrNotExist))
+
+			_, err = os.Stat(gainDB)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("replaces managed config contents and refreshes home filters", func() {
+			configDir := filepath.Join(ws.home, ".config", "ccp")
+			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+
+			Expect(os.WriteFile(filepath.Join(configDir, "state.json"), []byte("stale"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
+
+			oldHomeFilters := filepath.Join(ws.home, ".ccp", "filters")
+			Expect(os.MkdirAll(oldHomeFilters, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(oldHomeFilters, ".mappings.yaml"), []byte("old: old\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(oldHomeFilters, "old.yaml"), []byte("old"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "backup.txt"), []byte("stale"), 0o644)).To(Succeed())
+
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "npm: npm\n",
+				"npm.yaml":       "version: 1\nfilter: npm\nabout: test\n",
+			})
+
+			Expect(syncCanonicalHomeLayout()).To(Succeed())
+
+			for _, removed := range []string{
+				filepath.Join(configDir, "state.json"),
+				filepath.Join(configDir, "old.txt"),
+				filepath.Join(ws.home, ".ccp", "backup.txt"),
+				filepath.Join(ws.home, ".ccp", "filters", "old.yaml"),
+			} {
+				_, err := os.Stat(removed)
+				Expect(err).To(MatchError(os.ErrNotExist))
+			}
+
+			for _, copied := range []string{
+				filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml"),
+				filepath.Join(ws.home, ".config", "ccp", "filters", "npm.yaml"),
+			} {
+				_, err := os.Stat(copied)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+	})
+
+	It("builds the real binary and materializes embedded filters on repair", func() {
+		ws := newLifecycleWorkspaceSpec()
+		repoRoot := lifecycleRepoRootFromSpec()
+		binDir := filepath.Join(ws.root, "bin")
+		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
+
+		binPath := filepath.Join(binDir, "ccp")
+		if runtime.GOOS == "windows" {
+			binPath += ".exe"
+		}
+
+		build := exec.Command("go", "build", "-o", binPath, "./cmd/ccp")
+		build.Dir = repoRoot
+		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(ws.root, ".gocache"))
+		out, err := build.CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), string(out))
+
+		cmd := exec.Command(binPath, "repair", "--yes")
+		cmd.Dir = ws.work
+		cmd.Env = lifecycleCommandEnv(os.Environ(), ws.home)
+		out, err = cmd.CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), string(out))
+
+		_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
+		Expect(err).To(MatchError(os.ErrNotExist))
+		for _, path := range []string{
+			filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml"),
+			filepath.Join(ws.home, ".config", "ccp", "filters", "git.yaml"),
+			filepath.Join(ws.home, ".config", "ccp", "filters", "npm.yaml"),
+		} {
+			_, err := os.Stat(path)
+			Expect(err).NotTo(HaveOccurred(), path)
+		}
+	})
+})
+
+var _ = Describe("repair", func() {
+	var ws lifecycleWorkspace
+
+	BeforeEach(func() {
+		ws = newLifecycleWorkspaceSpec()
+	})
+
+	It("rewrites managed home state with --yes", func() {
+		configDir := filepath.Join(ws.home, ".config", "ccp")
+		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "git: git\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+		})
+
+		Expect(RunRepair([]string{"--yes"})).To(Succeed())
+
+		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
+		Expect(err).To(MatchError(os.ErrNotExist))
+		_, err = os.Stat(filepath.Join(configDir, "filters", "git.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("aborts when the interactive prompt is declined", func() {
+		prevIn := repairStdin
+		prevOut := repairStdout
+		repairStdin = strings.NewReader("n\n")
+		repairStdout = io.Discard
+		DeferCleanup(func() {
+			repairStdin = prevIn
+			repairStdout = prevOut
+		})
+
+		err := RunRepair(nil)
+		Expect(err).To(MatchError("repair aborted"))
+	})
+})
+
+func stubMaterializeHomeFiltersForSpec(files map[string]string) {
+	prevMaterialize := materializeHomeFilters
+	materializeHomeFilters = func(dst string) error {
+		if err := os.MkdirAll(dst, 0o755); err != nil {
+			return err
+		}
+		for name, content := range files {
+			if err := os.WriteFile(filepath.Join(dst, name), []byte(content), 0o644); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	DeferCleanup(func() { materializeHomeFilters = prevMaterialize })
 }
 
-func (c *countingAdapter) Plan(_ agents.Context) []agents.PlannedArtifact { return nil }
+func expectSingleFailedStateWithReason(states []toolState, reason string) {
+	Expect(states).To(HaveLen(1))
+	Expect(states[0].Status).To(Equal("failed"))
+	Expect(states[0].Reason).To(ContainSubstring(reason))
+}
 
-func (c *countingAdapter) Verify(_ agents.Context) error { return nil }
+func newLifecycleWorkspaceSpec() lifecycleWorkspace {
+	root, err := os.MkdirTemp("", "lifecycle-workspace-*")
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(func() { _ = os.RemoveAll(root) })
 
-func assertSingleFailedStateWithReason(t *testing.T, states []toolState, reason string) {
-	t.Helper()
-	if len(states) != 1 || states[0].Status != "failed" {
-		t.Fatalf("unexpected states %+v", states)
+	home := filepath.Join(root, "home")
+	work := filepath.Join(root, "work")
+	Expect(os.MkdirAll(home, 0o755)).To(Succeed())
+	Expect(os.MkdirAll(work, 0o755)).To(Succeed())
+	setHomeDirForSpec(home)
+	withWorkingDir(work)
+	return lifecycleWorkspace{root: root, home: home, work: work}
+}
+
+func setHomeDirForSpec(home string) {
+	restoreEnv("HOME", home)
+	if runtime.GOOS != "windows" {
+		return
 	}
-	if !strings.Contains(states[0].Reason, reason) {
-		t.Fatalf("expected failure reason in state, got %+v", states[0])
+
+	restoreEnv("USERPROFILE", home)
+	if vol := filepath.VolumeName(home); vol != "" {
+		restoreEnv("HOMEDRIVE", vol)
+		restoreEnv("HOMEPATH", strings.TrimPrefix(home, vol))
 	}
 }
 
-func TestParseToolsSortsAndDedups(t *testing.T) {
-	got := parseTools("Zeta,alpha, Alpha , zeta,,")
-	if !slices.Equal(got, []string{"alpha", "zeta"}) {
-		t.Fatalf("unexpected order %v", got)
-	}
-}
-
-func TestInitDetectRootUsesWorkingDirectory(t *testing.T) {
-	tmp := t.TempDir()
-	chdirForTest(t, tmp)
-	root, err := initDetectRoot()
-	if err != nil {
-		t.Fatalf("initDetectRoot: %v", err)
-	}
-	rootResolved, rootErr := filepath.EvalSymlinks(root)
-	if rootErr != nil {
-		rootResolved = root
-	}
-	tmpResolved, tmpErr := filepath.EvalSymlinks(tmp)
-	if tmpErr != nil {
-		tmpResolved = tmp
-	}
-	if rootResolved != tmpResolved {
-		t.Fatalf("unexpected local root %s (resolved %s), want %s (resolved %s)", root, rootResolved, tmp, tmpResolved)
-	}
-}
-
-func TestInitPathUsesHomeConfig(t *testing.T) {
-	home := t.TempDir()
-	setHomeDirForTest(t, home)
-	path, err := initPath()
-	if err != nil {
-		t.Fatalf("initPath: %v", err)
-	}
-	if path == "" {
-		t.Fatalf("unexpected empty path")
-	}
-	assertPathUnderBase(t, home, path)
-}
-
-func TestApplyAdapters(t *testing.T) {
-	tmp := t.TempDir()
-	adapter := testAdapter{
-		id: "alpha",
-		plan: []agents.PlannedArtifact{
-			{Kind: agents.ArtifactHook, Path: filepath.Join(tmp, "hook.sh"), Content: "echo", Perm: 0o644},
-		},
-	}
-	adapters := map[string]agents.Adapter{
-		"alpha": adapter,
-	}
-	ctx := agents.Context{ScopeRoot: tmp, HomeDir: tmp}
-	states, err := applyAdapters(ctx, []string{"alpha"}, adapters)
-	if err != nil {
-		t.Fatalf("applyAdapters: %v", err)
-	}
-	if len(states) != 1 || states[0].Tool != "alpha" {
-		t.Fatalf("unexpected states %+v", states)
-	}
-}
-
-func TestApplyAdaptersInstallFailureReturnsFailedState(t *testing.T) {
-	ctx := agents.Context{ScopeRoot: t.TempDir(), HomeDir: t.TempDir()}
-	adapters := map[string]agents.Adapter{
-		"broken-install": failingInstallAdapter{},
-	}
-	states, err := applyAdapters(ctx, []string{"broken-install"}, adapters)
-	if err == nil || !strings.Contains(err.Error(), "install failed") {
-		t.Fatalf("expected install failure, got err=%v", err)
-	}
-	assertSingleFailedStateWithReason(t, states, "install failed")
-}
-
-func TestApplyAdaptersVerifyFailureReturnsFailedState(t *testing.T) {
-	ctx := agents.Context{ScopeRoot: t.TempDir(), HomeDir: t.TempDir()}
-	adapters := map[string]agents.Adapter{
-		"broken-verify": failingVerifyAdapter{},
-	}
-	states, err := applyAdapters(ctx, []string{"broken-verify"}, adapters)
-	if err == nil || !strings.Contains(err.Error(), "verify failed") {
-		t.Fatalf("expected verify failure, got err=%v", err)
-	}
-	assertSingleFailedStateWithReason(t, states, "verify failed")
-}
-
-func TestInitPathWithoutHomeFails(t *testing.T) {
-	for _, key := range []string{"HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"} {
+func restoreEnv(key, value string) {
+	old, had := os.LookupEnv(key)
+	Expect(os.Setenv(key, value)).To(Succeed())
+	DeferCleanup(func() {
+		if had {
+			_ = os.Setenv(key, old)
+			return
+		}
 		_ = os.Unsetenv(key)
-	}
-	if _, err := initPath(); err == nil {
-		t.Fatal("expected initPath to fail without a home directory")
-	}
+	})
 }
 
-func TestWriteManagedFileCreateNoopAndBackup(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "cfg", "managed.txt")
-
-	changed, err := writeManagedFile(path, []byte("v1\n"), 0o644)
-	if err != nil || !changed {
-		t.Fatalf("first write changed=%v err=%v", changed, err)
-	}
-	changed, err = writeManagedFile(path, []byte("v1\n"), 0o644)
-	if err != nil || changed {
-		t.Fatalf("second write changed=%v err=%v", changed, err)
-	}
-	changed, err = writeManagedFile(path, []byte("v2\n"), 0o644)
-	if err != nil || !changed {
-		t.Fatalf("third write changed=%v err=%v", changed, err)
-	}
-	matches, err := filepath.Glob(path + ".bak.*")
-	if err != nil || len(matches) == 0 {
-		t.Fatalf("expected backup file, matches=%v err=%v", matches, err)
-	}
+func withWorkingDir(dir string) {
+	oldWd, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(os.Chdir(dir)).To(Succeed())
+	DeferCleanup(func() { _ = os.Chdir(oldWd) })
 }
 
-func TestRunStartupMaintenanceReconcilesStaleConfiguredTools(t *testing.T) {
-	ws := newLifecycleWorkspace(t)
-	adapter := &countingAdapter{}
-	restore := stubStartupMaintenanceDeps(
-		func() string { return "new-version" },
-		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
-	)
-	defer restore()
-
-	cfgPath, err := initPath()
+func resolvedPath(path string) string {
+	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		t.Fatalf("initPath: %v", err)
+		return path
 	}
-	if _, err := persistInitConfig(cfgPath, initConfig{
-		Tools:              []string{"fake"},
-		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "old"}},
-		CCPVersion:         "old-version",
-		IntegrationVersion: 0,
-	}); err != nil {
-		t.Fatalf("persist stale config: %v", err)
-	}
-
-	chdirForTest(t, ws.work)
-	if err := RunStartupMaintenance(); err != nil {
-		t.Fatalf("RunStartupMaintenance: %v", err)
-	}
-	if adapter.installed != 1 {
-		t.Fatalf("expected one reconcile install, got %d", adapter.installed)
-	}
-
-	cfg, exists, err := readInitConfig(cfgPath)
-	if err != nil || !exists {
-		t.Fatalf("readInitConfig err=%v exists=%v", err, exists)
-	}
-	if cfg.CCPVersion != "new-version" || cfg.IntegrationVersion != integrationStateVersion {
-		t.Fatalf("unexpected reconcile metadata: %+v", cfg)
-	}
+	return resolved
 }
 
-func TestRunStartupMaintenanceSkipsUpToDateConfig(t *testing.T) {
-	ws := newLifecycleWorkspace(t)
-	adapter := &countingAdapter{}
-	restore := stubStartupMaintenanceDeps(
-		func() string { return "current-version" },
-		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
-	)
-	defer restore()
-
-	cfgPath, err := initPath()
-	if err != nil {
-		t.Fatalf("initPath: %v", err)
-	}
-	if _, err := persistInitConfig(cfgPath, initConfig{
-		Tools:              []string{"fake"},
-		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "current"}},
-		CCPVersion:         "current-version",
-		IntegrationVersion: integrationStateVersion,
-	}); err != nil {
-		t.Fatalf("persist current config: %v", err)
-	}
-
-	chdirForTest(t, ws.work)
-	if err := RunStartupMaintenance(); err != nil {
-		t.Fatalf("RunStartupMaintenance: %v", err)
-	}
-	if adapter.installed != 0 {
-		t.Fatalf("expected no reconcile install, got %d", adapter.installed)
-	}
+func lifecycleRepoRootFromSpec() string {
+	_, file, _, ok := runtime.Caller(0)
+	Expect(ok).To(BeTrue())
+	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
 }
 
-func TestRunStartupMaintenanceCleansLegacyProjectInitStateButPreservesGainDB(t *testing.T) {
-	ws := newLifecycleWorkspace(t)
-	restore := stubStartupMaintenanceDeps(
-		func() string { return "current-version" },
-		func() map[string]agents.Adapter { return map[string]agents.Adapter{} },
-	)
-	defer restore()
-
-	ccpDir := filepath.Join(ws.work, ".ccp")
-	if err := os.MkdirAll(ccpDir, 0o755); err != nil {
-		t.Fatalf("mkdir .ccp: %v", err)
-	}
-	stale := filepath.Join(ccpDir, initConfigFileName)
-	backup := stale + ".bak.123"
-	gainDB := filepath.Join(ccpDir, "gain.db")
-	for _, file := range []string{stale, backup, gainDB} {
-		if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
-			t.Fatalf("write %s: %v", file, err)
+func lifecycleCommandEnv(base []string, home string) []string {
+	env := append([]string{}, base...)
+	env = append(env, "HOME="+home)
+	if runtime.GOOS == "windows" {
+		env = append(env, "USERPROFILE="+home)
+		if vol := filepath.VolumeName(home); vol != "" {
+			env = append(env, "HOMEDRIVE="+vol)
+			env = append(env, "HOMEPATH="+strings.TrimPrefix(home, vol))
 		}
 	}
-
-	chdirForTest(t, ws.work)
-	if err := RunStartupMaintenance(); err != nil {
-		t.Fatalf("RunStartupMaintenance: %v", err)
-	}
-	for _, removed := range []string{stale, backup} {
-		if _, err := os.Stat(removed); !os.IsNotExist(err) {
-			t.Fatalf("expected removed legacy file %s, err=%v", removed, err)
-		}
-	}
-	if _, err := os.Stat(gainDB); err != nil {
-		t.Fatalf("expected gain.db preserved, err=%v", err)
-	}
-}
-
-func TestRunStartupMaintenanceSkipsWhenLockAlreadyHeld(t *testing.T) {
-	ws := newLifecycleWorkspace(t)
-	adapter := &countingAdapter{}
-	restore := stubStartupMaintenanceDeps(
-		func() string { return "new-version" },
-		func() map[string]agents.Adapter { return map[string]agents.Adapter{"fake": adapter} },
-	)
-	defer restore()
-
-	cfgPath, err := initPath()
-	if err != nil {
-		t.Fatalf("initPath: %v", err)
-	}
-	if _, err := persistInitConfig(cfgPath, initConfig{
-		Tools:              []string{"fake"},
-		State:              []toolState{{Tool: "fake", Status: "applied", Reason: "old"}},
-		CCPVersion:         "old-version",
-		IntegrationVersion: 0,
-	}); err != nil {
-		t.Fatalf("persist stale config: %v", err)
-	}
-	if err := os.WriteFile(cfgPath+".lock", []byte("held"), 0o644); err != nil {
-		t.Fatalf("write lock: %v", err)
-	}
-
-	chdirForTest(t, ws.work)
-	if err := RunStartupMaintenance(); err != nil {
-		t.Fatalf("RunStartupMaintenance: %v", err)
-	}
-	if adapter.installed != 0 {
-		t.Fatalf("expected reconcile to skip while lock held, got %d", adapter.installed)
-	}
-}
-
-func stubStartupMaintenanceDeps(versionFn func() string, adaptersFn func() map[string]agents.Adapter) func() {
-	prevVersion := startupMaintenanceVersion
-	prevAdapters := startupMaintenanceAdapters
-	prevPrintf := startupMaintenancePrintf
-	startupMaintenanceVersion = versionFn
-	startupMaintenanceAdapters = adaptersFn
-	startupMaintenancePrintf = func(string, ...any) (int, error) { return 0, nil }
-	return func() {
-		startupMaintenanceVersion = prevVersion
-		startupMaintenanceAdapters = prevAdapters
-		startupMaintenancePrintf = prevPrintf
-	}
+	return env
 }

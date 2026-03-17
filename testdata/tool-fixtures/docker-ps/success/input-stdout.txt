@@ -1,3 +1,0 @@
-00000|CONTAINER ID   IMAGE                  COMMAND                  CREATED                  STATUS                  PORTS                                     NAMES
-00001|7a7a288f0f1f   nginx:alpine           "/docker-entrypoint.…"   Less than a second ago   Up Less than a second   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   ccp-bench-nginx-ps-default
-00002|ae07b213b50e   kindest/node:v1.35.0   "/usr/local/bin/entr…"   3 hours ago              Up 3 hours              127.0.0.1:45797->6443/tcp                 ccp-benchmark-control-plane

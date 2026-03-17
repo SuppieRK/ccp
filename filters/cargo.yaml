@@ -1,0 +1,81 @@
+version: 1
+filter: cargo
+about: Compact cargo build, check, test, and clippy through one family filter.
+
+cases:
+  - id: build
+    when_arguments:
+      first_is: build
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - regex: '^error\[[A-Z0-9]+\]: .+$'
+            - regex: '^ --> .+$'
+          replace:
+            - regex: '^\s*Finished .+$'
+              to: 'cargo build: ok'
+          skip:
+            - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
+            - regex: '^For more information about this error, try `rustc --explain .+$'
+            - regex: '^error: could not compile .+$'
+
+  - id: check
+    when_arguments:
+      first_is: check
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - regex: '^error\[[A-Z0-9]+\]: .+$'
+            - regex: '^ --> .+$'
+          replace:
+            - regex: '^\s*Finished .+$'
+              to: 'cargo check: ok'
+          skip:
+            - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
+            - regex: '^For more information about this error, try `rustc --explain .+$'
+            - regex: '^error: could not compile .+$'
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^thread .+ panicked at .+$'
+            - regex: '^assertion `left == right` failed$'
+            - regex: '^\s+(left|right): .+$'
+          replace:
+            - regex: '^test result: ok\. ([0-9]+) passed; ([0-9]+) failed; ([0-9]+) ignored; .+$'
+              to: 'cargo test: ok ($1 passed, $2 failed, $3 ignored)'
+            - regex: '^test result: FAILED\. ([0-9]+) passed; ([0-9]+) failed; ([0-9]+) ignored; .+$'
+              to: 'cargo test: failed ($1 passed, $2 failed, $3 ignored)'
+            - regex: '^test ([^ ]+) \.\.\. FAILED$'
+              to: '- $1'
+            - regex: '^---- .+ stdout ----$'
+              to: 'failure details:'
+          skip:
+            - regex: '^test .+ \.\.\. ok$'
+            - regex: '^failures:$'
+            - regex: '^note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace$'
+            - regex: '^running [0-9]+ tests$'
+
+  - id: clippy
+    when_arguments:
+      first_is: clippy
+    compress_output:
+      stderr:
+        lines:
+          keep:
+            - regex: '^error: [^`]+$'
+            - regex: '^ --> .+$'
+            - regex: '^  = note: .+$'
+            - regex: '^  = help: .+$'
+          replace:
+            - regex: '^\s*Finished .+$'
+              to: 'cargo clippy: ok'
+          skip:
+            - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
+            - regex: '^error: could not compile .+$'

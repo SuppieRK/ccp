@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://go-command-compression-proxy.dev/schemas/ccp-filter.schema.json",
+  "title": "CCP YAML Filter",
+  "description": "Structural authoring schema for CCP YAML filters. Runtime validation in Go remains authoritative for semantic constraints such as regex named captures, template variable references, and some mode-specific rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "filter", "cases"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "filter": {
+      "type": "string",
+      "minLength": 1
+    },
+    "about": {
+      "type": "string"
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/variable"
+          }
+        },
+        "when_arguments": {
+          "$ref": "#/$defs/when_arguments"
+        },
+        "normalize_command": {
+          "$ref": "#/$defs/command_mutation"
+        },
+        "passthrough": {
+          "type": "boolean"
+        },
+        "compress_output": {
+          "$ref": "#/$defs/output_shape"
+        },
+        "finally": {
+          "$ref": "#/$defs/on_exit"
+        }
+      }
+    },
+    "variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["number", "string"]
+        },
+        "initial_value": {
+          "type": "string"
+        },
+        "regex_group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "default_value": {
+          "type": "string"
+        }
+      }
+    },
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "when_arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "first_is": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_in": {
+          "$ref": "#/$defs/string_array"
+        },
+        "have_any": {
+          "$ref": "#/$defs/string_array"
+        },
+        "lack_any": {
+          "$ref": "#/$defs/string_array"
+        },
+        "have_sequence": {
+          "$ref": "#/$defs/string_array"
+        },
+        "have_short_flag": {
+          "$ref": "#/$defs/string_array"
+        },
+        "positionals_lack_any": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "command_mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "append_if_missing": {
+          "$ref": "#/$defs/string_array"
+        },
+        "add_short_flags": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "output_shape": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["combined"],
+          "properties": {
+            "combined": {
+              "$ref": "#/$defs/output_scope"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stdout"],
+          "properties": {
+            "stdout": {
+              "$ref": "#/$defs/output_scope"
+            },
+            "stderr": {
+              "$ref": "#/$defs/output_scope"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stderr"],
+          "properties": {
+            "stdout": {
+              "$ref": "#/$defs/output_scope"
+            },
+            "stderr": {
+              "$ref": "#/$defs/output_scope"
+            }
+          }
+        }
+      ]
+    },
+    "output_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "$ref": "#/$defs/output_lines"
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/output_group"
+          }
+        }
+      }
+    },
+    "output_lines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replace": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/replace_rule"
+          }
+        },
+        "skip": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skip_keep_rule"
+          }
+        },
+        "keep": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skip_keep_rule"
+          }
+        },
+        "max": {
+          "$ref": "#/$defs/max_rule"
+        },
+        "tail": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "truncate": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "max_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count"],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "print": {
+          "type": "string"
+        }
+      }
+    },
+    "replace_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to"],
+      "properties": {
+        "regex": {
+          "type": "string",
+          "minLength": 1
+        },
+        "starts_with": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contains": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ends_with": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string"
+        },
+        "on_match": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/match_action"
+          }
+        }
+      }
+    },
+    "skip_keep_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "regex": {
+          "type": "string",
+          "minLength": 1
+        },
+        "starts_with": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contains": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ends_with": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "match_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variable", "increment"],
+      "properties": {
+        "variable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "increment": {
+          "type": "integer"
+        }
+      }
+    },
+    "on_exit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["print"],
+      "properties": {
+        "print": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "output_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "starts_with": {
+          "type": "string",
+          "minLength": 1
+        },
+        "starts_with_regex": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matches_regex": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/variable"
+          }
+        },
+        "group_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "initially": {
+          "$ref": "#/$defs/on_exit"
+        },
+        "lines": {
+          "$ref": "#/$defs/output_lines"
+        },
+        "finally": {
+          "$ref": "#/$defs/on_exit"
+        }
+      }
+    }
+  }
+}

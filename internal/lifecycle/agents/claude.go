@@ -1,7 +1,6 @@
 package agents
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,50 +16,33 @@ const (
 	claudeGuideName      = "CLAUDE.md"
 )
 
-func NewClaudeAdapter() ClaudeAdapter {
-	return ClaudeAdapter{}
-}
-
 func (a ClaudeAdapter) ID() string { return "claude" }
 
 func (a ClaudeAdapter) DetectRoot(scopeRoot string) string {
-	// Detection remains project-root based for framework auto-selection.
+
 	return filepath.Join(scopeRoot, ".claude")
 }
 
 func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 	root := claudeRoot(ctx)
-	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
-	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
 	guidePath := filepath.Join(root, claudeGuideName)
-	escapedHookPath := strings.ReplaceAll(hookPath, "\\", "\\\\")
-	return []PlannedArtifact{
-		{
-			Kind:    ArtifactHook,
-			Path:    hookPath,
-			Content: claudeHookScriptContent(),
-			Perm:    0o755,
-		},
-		{
-			Kind:    ArtifactSettings,
-			Path:    settingsPath,
-			Content: fmt.Sprintf("{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"%s\"\n          }\n        ]\n      }\n    ]\n  }\n}\n", escapedHookPath),
-			Perm:    0o644,
-		},
-		{
+	plan := bashHookAndSettingsArtifacts(root, claudeHookScriptName, claudeSettingsName, claudeHookScriptContent())
+	plan = append(plan,
+		PlannedArtifact{
 			Kind:    ArtifactAwareness,
 			Path:    awarenessPath,
 			Content: awarenessContent(a.ID()),
 			Perm:    0o644,
 		},
-		{
+		PlannedArtifact{
 			Kind:    ArtifactAwareness,
 			Path:    guidePath,
 			Content: claudeManagedGuideBlock(),
 			Perm:    0o644,
 		},
-	}
+	)
+	return plan
 }
 
 func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
@@ -78,18 +60,13 @@ func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, er
 
 func (a ClaudeAdapter) Verify(ctx Context) error {
 	root := claudeRoot(ctx)
-	for _, check := range []struct {
-		path string
-		msg  string
-	}{
-		{path: filepath.Join(root, "hooks", claudeHookScriptName), msg: "missing hook script: %s"},
-		{path: filepath.Join(root, claudeSettingsName), msg: "missing settings file: %s"},
-		{path: filepath.Join(root, claudeAwarenessName), msg: "missing awareness file: %s"},
-		{path: filepath.Join(root, claudeGuideName), msg: "missing claude guide file: %s"},
-	} {
-		if _, err := os.Stat(check.path); err != nil {
-			return fmt.Errorf(check.msg, check.path)
-		}
+	if err := verifyArtifactFiles(
+		artifactCheck{path: filepath.Join(root, "hooks", claudeHookScriptName), msg: "missing hook script: %s"},
+		artifactCheck{path: filepath.Join(root, claudeSettingsName), msg: "missing settings file: %s"},
+		artifactCheck{path: filepath.Join(root, claudeAwarenessName), msg: "missing awareness file: %s"},
+		artifactCheck{path: filepath.Join(root, claudeGuideName), msg: "missing claude guide file: %s"},
+	); err != nil {
+		return err
 	}
 	if err := verifyClaudeGuideBlock(filepath.Join(root, claudeGuideName)); err != nil {
 		return err
@@ -98,11 +75,7 @@ func (a ClaudeAdapter) Verify(ctx Context) error {
 }
 
 func claudeRoot(ctx Context) string {
-	base := ctx.HomeDir
-	if strings.TrimSpace(base) == "" {
-		base = ctx.ScopeRoot
-	}
-	return filepath.Join(base, ".claude")
+	return homeOrScopePath(ctx, ".claude")
 }
 
 func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
@@ -149,14 +122,6 @@ func claudeArtifactContent(item PlannedArtifact) (string, error) {
 	return upsertClaudeGuideBlock(item.Path)
 }
 
-func updateInstallResult(res *InstallResult, changed bool) {
-	if changed {
-		res.Applied++
-		return
-	}
-	res.Noop++
-}
-
 func removeClaudeArtifacts(res *InstallResult, paths ...string) error {
 	for _, p := range paths {
 		removed, err := removeFileIfExists(p)
@@ -171,7 +136,7 @@ func removeClaudeArtifacts(res *InstallResult, paths ...string) error {
 }
 
 func uninstallClaudeSettings(res *InstallResult, settingsPath, hookPath string) error {
-	changed, err := removeClaudePreToolUseHook(settingsPath, hookPath)
+	changed, err := removePreToolUseCommandHook(settingsPath, hookPath)
 	if err != nil {
 		return err
 	}
@@ -188,14 +153,12 @@ func uninstallClaudeGuide(res *InstallResult, guidePath string) error {
 		res.Noop++
 		return nil
 	}
-	if removeAllGuide {
-		if err := os.Remove(guidePath); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	} else if err := os.WriteFile(guidePath, []byte(updatedGuide), 0o644); err != nil {
+	guideRes, err := applyManagedFileChange(guidePath, updatedGuide, changedGuide, removeAllGuide)
+	if err != nil {
 		return err
 	}
-	res.Applied++
+	res.Applied += guideRes.Applied
+	res.Noop += guideRes.Noop
 	return nil
 }
 
@@ -247,7 +210,7 @@ func upsertClaudeGuideBlock(path string) (string, error) {
 }
 
 func removeClaudeGuideBlock(path string) (updated string, changed bool, removeAll bool, err error) {
-	return removeManagedInstructionBlock(path)
+	return removeManagedContextBlock(path)
 }
 
 func removeFileIfExists(path string) (bool, error) {
@@ -260,123 +223,10 @@ func removeFileIfExists(path string) (bool, error) {
 	return true, nil
 }
 
-func removeClaudePreToolUseHook(settingsPath, hookPath string) (bool, error) {
-	raw, err := os.ReadFile(settingsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-
-	root, ok := decodeClaudeSettings(raw)
-	if !ok {
-		return removeFileIfExists(settingsPath)
-	}
-
-	hooks, pre, ok := claudePreToolUse(root)
-	if !ok {
-		return false, nil
-	}
-
-	normalizedHook := filepath.Clean(strings.TrimSpace(hookPath))
-	filtered, changed := filterClaudePreToolUseEntries(pre, normalizedHook)
-	if !changed {
-		return false, nil
-	}
-	pruneClaudeHooks(root, hooks, filtered)
-	return persistClaudeSettings(settingsPath, root)
-}
-
-func decodeClaudeSettings(raw []byte) (map[string]any, bool) {
-	var root map[string]any
-	if json.Unmarshal(raw, &root) != nil {
-		return nil, false
-	}
-	return root, true
-}
-
-func claudePreToolUse(root map[string]any) (map[string]any, []any, bool) {
-	hooks, ok := root["hooks"].(map[string]any)
-	if !ok {
-		return nil, nil, false
-	}
-	pre, ok := hooks["PreToolUse"].([]any)
-	if !ok || len(pre) == 0 {
-		return nil, nil, false
-	}
-	return hooks, pre, true
-}
-
-func filterClaudePreToolUseEntries(pre []any, normalizedHook string) ([]any, bool) {
-	filtered := make([]any, 0, len(pre))
-	changed := false
-	for _, entry := range pre {
-		if shouldRemoveClaudePreToolUseEntry(entry, normalizedHook) {
-			changed = true
-			continue
-		}
-		filtered = append(filtered, entry)
-	}
-	return filtered, changed
-}
-
-func shouldRemoveClaudePreToolUseEntry(entry any, normalizedHook string) bool {
-	m, ok := entry.(map[string]any)
-	if !ok {
-		return false
-	}
-	if !isClaudeBashMatcher(m) {
-		return false
-	}
-	hookItems, _ := m["hooks"].([]any)
-	return hasMatchingClaudeCommandHook(hookItems, normalizedHook)
-}
-
-func isClaudeBashMatcher(entry map[string]any) bool {
-	matcher, _ := entry["matcher"].(string)
-	return strings.EqualFold(strings.TrimSpace(matcher), "bash")
-}
-
-func hasMatchingClaudeCommandHook(hookItems []any, normalizedHook string) bool {
-	for _, h := range hookItems {
-		hm, ok := h.(map[string]any)
-		if !ok {
-			continue
-		}
-		typ, _ := hm["type"].(string)
-		cmd, _ := hm["command"].(string)
-		if strings.EqualFold(strings.TrimSpace(typ), "command") &&
-			filepath.Clean(strings.TrimSpace(cmd)) == normalizedHook {
-			return true
-		}
-	}
-	return false
-}
-
-func pruneClaudeHooks(root, hooks map[string]any, filtered []any) {
-	if len(filtered) == 0 {
-		delete(hooks, "PreToolUse")
-	} else {
-		hooks["PreToolUse"] = filtered
-	}
-	if len(hooks) == 0 {
-		delete(root, "hooks")
-	}
-}
-
-func persistClaudeSettings(settingsPath string, root map[string]any) (bool, error) {
-	if len(root) == 0 {
-		return removeFileIfExists(settingsPath)
-	}
-	out, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return false, err
-	}
-	out = append(out, '\n')
-	return true, os.WriteFile(settingsPath, out, 0o644)
-}
-
 func claudeHookScriptContent() string {
 	return bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")
+}
+
+func awarenessContent(toolID string) string {
+	return fmt.Sprintf("# CCP Proxy Integration\n\nTool: %s\n\nCommands are routed through `ccp` via hook wiring installed by `ccp init`.\n", toolID)
 }

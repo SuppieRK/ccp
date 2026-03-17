@@ -59,7 +59,6 @@ const (
 	summaryRowFormat = "%-*s  %*s  %*s  %*s  %*s\n"
 )
 
-// RunGain prints summary/period savings in text/json/csv form.
 func RunGain(args []string, metricsPath string) error {
 	flags, err := parseReportFlags("gain", args)
 	if err != nil {
@@ -88,7 +87,6 @@ func RunGain(args []string, metricsPath string) error {
 	return renderSummaryDataset(metricsPath, flags, opts, summaryOpts, filters, total)
 }
 
-// RunHistory prints execution history in text/json/csv form.
 func RunHistory(args []string, metricsPath string) error {
 	flags, err := parseReportFlags("history", args)
 	if err != nil {

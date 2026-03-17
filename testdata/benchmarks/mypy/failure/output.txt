@@ -1,0 +1,8 @@
+src/app.py:
+  L12 [return-value] Incompatible return value type (got "str", expected "int")
+  L13 [note] Consider using Optional[str]
+  L18 [arg-type] Argument 1 has incompatible type "int"; expected "str"
+  L22 [operator] Unsupported operand types for + ("int" and "str")
+src/models.py:
+  L8 [name-defined] Name "foo" is not defined
+  L10 [return] Missing return statement

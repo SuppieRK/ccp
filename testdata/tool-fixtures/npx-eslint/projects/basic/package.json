@@ -1,9 +1,0 @@
-{
-  "name": "ccp-npx-eslint-benchmark-basic",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Real npx eslint benchmark fixture project",
-  "devDependencies": {
-    "eslint": "9.20.0"
-  }
-}

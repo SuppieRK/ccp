@@ -1,0 +1,1 @@
+argv: ["./.venv/bin/pip", "list", "--verbose"]

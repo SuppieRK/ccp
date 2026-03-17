@@ -1,0 +1,1 @@
+argv: ["git", "commit", "-m", "bench commit"]

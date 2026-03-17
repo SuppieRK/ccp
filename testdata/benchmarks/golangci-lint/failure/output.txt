@@ -1,0 +1,2 @@
+internal/api/server.go:
+  14:2 errcheck ignored error

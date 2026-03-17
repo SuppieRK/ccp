@@ -1,8 +1,0 @@
-{
-  "name": "npx-prisma-benchmark",
-  "private": true,
-  "type": "commonjs",
-  "devDependencies": {
-    "prisma": "6.5.0"
-  }
-}

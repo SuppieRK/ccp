@@ -173,7 +173,7 @@ jobs:
           if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
             {
               echo "### Attestation action version review"
-              echo "- Current pin: \`actions/attest@v2\`"
+              echo "- Current pin: \`actions/attest@v4\`"
               echo "- Review cadence: quarterly"
               echo "- Scope reminder: binary archives only (\`release/*.zip\`)."
             } >> "${GITHUB_STEP_SUMMARY}"

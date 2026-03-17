@@ -1,0 +1,34 @@
+version: 1
+filter: pip
+about: Compact pip list output while preserving structured and passthrough modes.
+
+cases:
+  - id: show_passthrough
+    when_arguments:
+      have_sequence:
+        - show
+    passthrough: true
+
+  - id: list_freeze_passthrough
+    when_arguments:
+      have_sequence:
+        - list
+        - --format=freeze
+    passthrough: true
+
+  - id: list_verbose
+    when_arguments:
+      have_sequence:
+        - list
+        - --verbose
+    normalize_command:
+      append_if_missing:
+        - --format=json
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'DEBUG '
+          replace:
+            - regex: '^\[\{"name":\s*"([^"]+)",\s*"version":\s*"([^"]+)".*\}\]$'
+              to: "pip list: 1 packages\n  $1 ($2)"

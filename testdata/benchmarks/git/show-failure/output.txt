@@ -1,0 +1,2 @@
+fatal: not a git repository: '.git'
+summary: 0 files changed, +0 -0

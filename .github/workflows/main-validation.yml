@@ -29,6 +29,7 @@ jobs:
       - name: Install validation tools
         shell: bash
         run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@latest
           go install honnef.co/go/tools/cmd/staticcheck@latest
           go install github.com/gordonklaus/ineffassign@latest
           go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
@@ -174,15 +175,11 @@ jobs:
           prev_report="${history_dir}/report.json"
           mkdir -p "$out_dir" "$history_dir"
 
-          (
-            cd tools/benchmark
-            go run ./cmd/ccp-ci \
-              -fixtures-root "${GITHUB_WORKSPACE}/testdata/tool-fixtures" \
-              -artifacts-dir "$out_dir" \
-              -previous-report "$prev_report" \
-              -tool "$tool" \
-              -max-artifact-bytes 5242880
-          )
+          go run ./cmd/ccp-ci \
+            -artifacts-dir "$out_dir" \
+            -previous-report "$prev_report" \
+            -tool "$tool" \
+            -max-artifact-bytes 5242880
 
           if [[ -f "${out_dir}/report.json" ]]; then
             cp "${out_dir}/report.json" "${history_dir}/report.json"

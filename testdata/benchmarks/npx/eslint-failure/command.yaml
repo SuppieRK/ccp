@@ -1,0 +1,1 @@
+argv: ["npx", "eslint", "src/lint_fail.js"]

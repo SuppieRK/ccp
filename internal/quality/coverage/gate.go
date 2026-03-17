@@ -96,8 +96,7 @@ func aggregateByPackage(profiles []*cover.Profile, modulePath string) map[string
 }
 
 func mergeProfileBlocks(byBlock map[blockKey]blockStat, prof *cover.Profile, pkgIdx int) {
-	// go test -coverpkg can emit the same block many times (once per test binary).
-	// Aggregate by unique block and OR execution counts so statement totals are not multiplied.
+
 	for _, block := range prof.Blocks {
 		key := blockKey{
 			file:      prof.FileName,

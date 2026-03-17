@@ -1,7 +1,0 @@
-> Task :app:compileJava
-at com.example.Main.run(Main.java:42)
-at com.example.Main.run(Main.java:43)
-at com.example.Main.run(Main.java:44)
-at com.example.Main.run(Main.java:45)
-Execution failed for task ':app:compileJava'
-BUILD FAILED in 2s

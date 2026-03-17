@@ -1,0 +1,27 @@
+version: 1
+filter: playwright
+about: Compact Playwright output conservatively.
+
+cases:
+  - id: reporter_passthrough
+    when_arguments:
+      have_any: ["--reporter", "--reporter=json"]
+    passthrough: true
+
+  - id: test_summary
+    when_arguments:
+      first_is: "test"
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - regex: '^\s*[×✗✘]\s+.+$'
+            - regex: '^\s+Error: .+$'
+            - regex: '^\s+screenshot: .+$'
+          replace:
+            - regex: '^\s*(\d+) passed \(([^)]+)\)$'
+              to: 'playwright: $1 passed, 0 failed ($2)'
+            - regex: '^\s*(\d+) passed, (\d+) failed \(([^)]+)\)$'
+              to: 'playwright: $1 passed, $2 failed ($3)'
+            - regex: '^\s*[×✗✘]\s+(.+)$'
+              to: '- $1'

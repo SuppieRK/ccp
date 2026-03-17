@@ -1,0 +1,557 @@
+package agents
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+type BuiltInAdapterSpec struct {
+	ID  ID
+	New func() Adapter
+}
+
+const (
+	codexAgentsPath               = ".codex/AGENTS.md"
+	geminiInstructionsPath        = ".gemini/GEMINI.md"
+	githubCopilotInstructionsPath = ".copilot/copilot-instructions.md"
+	qoderAgentsPath               = ".qoder/AGENTS.md"
+	iflowMemoryPath               = ".iflow/IFLOW.md"
+	kiroSteeringPath              = ".kiro/steering/AGENTS.md"
+	factoryAgentsPath             = ".factory/AGENTS.md"
+	piAgentsPath                  = "AGENTS.md"
+	auggieAgentsPath              = "AGENTS.md"
+)
+
+type managedRuleFileAdapterSpec struct {
+	ID             ID
+	DetectRootPath string
+	TargetRelPath  string
+	MissingFmt     string
+	GuidanceFmt    string
+	Render         func() string
+	VerifyRequired []string
+	TargetScope    managedRuleFileTargetScope
+}
+
+type managedRuleFileTargetScope string
+
+const (
+	managedRuleFileTargetRepo managedRuleFileTargetScope = "repo"
+	managedRuleFileTargetHome managedRuleFileTargetScope = "home"
+)
+
+var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
+	{
+		ID:             AgentAmazonQ,
+		DetectRootPath: ".amazonq",
+		TargetRelPath:  ".amazonq/rules/ccp.md",
+		MissingFmt:     "missing amazon q rule file: %s",
+		GuidanceFmt:    "missing amazon q managed guidance in %s",
+		Render:         amazonQRuleContent,
+		VerifyRequired: canonicalRuleVerificationSnippets(),
+		TargetScope:    managedRuleFileTargetRepo,
+	},
+	{
+		ID:             AgentCursor,
+		DetectRootPath: ".cursor",
+		TargetRelPath:  ".cursor/rules/ccp.mdc",
+		MissingFmt:     "missing cursor rule file: %s",
+		GuidanceFmt:    "missing cursor managed guidance in %s",
+		Render:         cursorRuleContent,
+		VerifyRequired: []string{
+			"alwaysApply: true",
+			"Use `ccp` as the command prefix for every executable in shell commands",
+			"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
+			ccpRawEscapeHatch,
+		},
+		TargetScope: managedRuleFileTargetRepo,
+	},
+	{
+		ID:             AgentRooCode,
+		DetectRootPath: ".roo",
+		TargetRelPath:  ".roo/rules/ccp.md",
+		MissingFmt:     "missing roocode rule file: %s",
+		GuidanceFmt:    "missing roocode managed guidance in %s",
+		Render:         roocodeRuleContent,
+		VerifyRequired: canonicalRuleVerificationSnippets(),
+		TargetScope:    managedRuleFileTargetHome,
+	},
+	{
+		ID:             AgentTrae,
+		DetectRootPath: ".trae",
+		TargetRelPath:  ".trae/rules/ccp.md",
+		MissingFmt:     "missing trae rule file: %s",
+		GuidanceFmt:    "missing trae managed guidance in %s",
+		Render:         traeRuleContent,
+		VerifyRequired: canonicalRuleVerificationSnippets(),
+		TargetScope:    managedRuleFileTargetRepo,
+	},
+}
+
+var (
+	antigravityContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentAntigravity,
+		DetectRootPath: ".agent",
+		TargetRelPath:  geminiInstructionsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing antigravity gemini-family instructions file: %s",
+		MarkersFmt:     "missing antigravity managed block markers in %s",
+	}
+	auggieContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentAuggie,
+		DetectRootPath: ".augment",
+		TargetRelPath:  auggieAgentsPath,
+		TargetScope:    managedContextTargetRepo,
+		MissingFmt:     "missing auggie agents file: %s",
+		MarkersFmt:     "missing auggie managed block markers in %s",
+	}
+	codexContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentCodex,
+		DetectRootPath: ".codex",
+		TargetRelPath:  codexAgentsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing codex agents file: %s",
+		MarkersFmt:     "missing codex managed block markers in %s",
+	}
+	factoryContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentFactory,
+		DetectRootPath: ".factory",
+		TargetRelPath:  factoryAgentsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing factory agents file: %s",
+		MarkersFmt:     "missing factory managed block markers in %s",
+	}
+	geminiContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentGemini,
+		DetectRootPath: ".gemini",
+		TargetRelPath:  geminiInstructionsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing gemini instructions file: %s",
+		MarkersFmt:     "missing gemini managed block markers in %s",
+	}
+	githubCopilotContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentGitHubCopilot,
+		DetectRootPath: ".github",
+		TargetRelPath:  githubCopilotInstructionsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing github copilot instructions file: %s",
+		MarkersFmt:     "missing github copilot managed block markers in %s",
+	}
+	iflowContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentIFlow,
+		DetectRootPath: ".iflow",
+		TargetRelPath:  iflowMemoryPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing iflow memory file: %s",
+		MarkersFmt:     "missing iflow managed block markers in %s",
+	}
+	kiroContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentKiro,
+		DetectRootPath: ".kiro",
+		TargetRelPath:  kiroSteeringPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing kiro steering file: %s",
+		MarkersFmt:     "missing kiro managed block markers in %s",
+	}
+	piContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentPi,
+		DetectRootPath: ".pi",
+		TargetRelPath:  piAgentsPath,
+		TargetScope:    managedContextTargetRepo,
+		MissingFmt:     "missing pi agents file: %s",
+		MarkersFmt:     "missing pi managed block markers in %s",
+	}
+	qoderContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentQoder,
+		DetectRootPath: ".qoder",
+		TargetRelPath:  qoderAgentsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing qoder agents file: %s",
+		MarkersFmt:     "missing qoder managed block markers in %s",
+	}
+)
+
+var simpleContextAdapterSpecs = []ManagedContextFileAdapterSpec{
+	antigravityContextSpec,
+	auggieContextSpec,
+	codexContextSpec,
+	factoryContextSpec,
+	geminiContextSpec,
+	githubCopilotContextSpec,
+	iflowContextSpec,
+	kiroContextSpec,
+	piContextSpec,
+	qoderContextSpec,
+}
+
+var managedJSPluginAdapterSpecs = []ManagedJSPluginAdapterSpec{
+	openCodeJSPluginSpec,
+	kilocodeJSPluginSpec,
+}
+
+var managedContextLinkAdapterSpecs = []ManagedContextLinkAdapterSpec{
+	aiderContextLinkSpec,
+	crushContextLinkSpec,
+	qwenContextLinkSpec,
+}
+
+var managedHookSettingsAdapterSpecs = []ManagedHookSettingsAdapterSpec{
+	codebuddyHookSettingsSpec,
+	continueHookSettingsSpec,
+}
+
+var kilocodeJSPluginSpec = ManagedJSPluginAdapterSpec{
+	ID:             AgentKilocode,
+	DetectRootPath: ".kilocode",
+	ConfigDirName:  "kilocode",
+	MissingFileFmt: "missing kilocode plugin file: %s",
+	VerifyRequirements: []jsPluginVerifyRequirement{
+		{Snippet: `"tool.execute.before"`, Msg: "kilocode plugin missing tool.execute.before hook: %s"},
+		{Snippet: `input.tool !== "bash"`, Msg: "kilocode plugin missing bash-only guard: %s"},
+	},
+}
+
+var aiderContextLinkSpec = ManagedContextLinkAdapterSpec{
+	ID:             AgentAider,
+	DetectRootPath: aiderConfigPath,
+	Detect: func(scopeRoot string) bool {
+		st, err := os.Stat(filepath.Join(scopeRoot, aiderConfigPath))
+		return err == nil && !st.IsDir()
+	},
+	ContextSpec: ManagedContextFileAdapterSpec{
+		ID:             AgentAider,
+		DetectRootPath: aiderConfigPath,
+		TargetRelPath:  aiderRulesPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing aider rules file: %s",
+		MarkersFmt:     "missing aider managed block markers in %s",
+	},
+	ConfigPath: func(ctx Context) string {
+		return ResolveHomeScopedPath(ctx.HomeDir, aiderConfigPath)
+	},
+	ConfigPlanContent: func(ctx Context) string {
+		return fmt.Sprintf("read:\n  - %s\n", ResolveHomeScopedPath(ctx.HomeDir, aiderRulesPath))
+	},
+	UpsertConfig: func(configPath string, ctx Context) (string, error) {
+		return upsertAiderReadConfig(configPath, ResolveHomeScopedPath(ctx.HomeDir, aiderRulesPath))
+	},
+	VerifyConfig: func(configPath string, ctx Context) error {
+		ok, err := aiderConfigHasRead(configPath, ResolveHomeScopedPath(ctx.HomeDir, aiderRulesPath))
+		if err != nil {
+			return fmt.Errorf("missing aider config file: %s", configPath)
+		}
+		if !ok {
+			return fmt.Errorf("missing aider managed read guidance in %s", configPath)
+		}
+		return nil
+	},
+	RemoveConfig: func(configPath string, ctx Context) (string, bool, bool, error) {
+		return removeAiderReadConfig(configPath, ResolveHomeScopedPath(ctx.HomeDir, aiderRulesPath))
+	},
+}
+
+var crushContextLinkSpec = ManagedContextLinkAdapterSpec{
+	ID:             AgentCrush,
+	DetectRootPath: ".crush",
+	ContextSpec: ManagedContextFileAdapterSpec{
+		ID:             AgentCrush,
+		DetectRootPath: ".crush",
+		TargetRelPath:  crushContextRelPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing crush context file: %s",
+		MarkersFmt:     "missing crush managed block markers in %s",
+	},
+	ConfigPath: func(ctx Context) string {
+		return ResolveHomeScopedPath(ctx.HomeDir, crushConfigRelPath)
+	},
+	ConfigPlanContent: func(ctx Context) string {
+		return "{\n  \"options\": {\n    \"context_paths\": [\n      \"" + ResolveHomeScopedPath(ctx.HomeDir, crushContextRelPath) + "\"\n    ]\n  }\n}\n"
+	},
+	UpsertConfig: func(configPath string, ctx Context) (string, error) {
+		return upsertCrushConfig(configPath, ResolveHomeScopedPath(ctx.HomeDir, crushContextRelPath))
+	},
+	VerifyConfig: func(configPath string, ctx Context) error {
+		ok, err := crushConfigUsesContext(configPath, ResolveHomeScopedPath(ctx.HomeDir, crushContextRelPath))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("missing crush managed context path in %s", configPath)
+		}
+		return nil
+	},
+	RemoveConfig: func(configPath string, ctx Context) (string, bool, bool, error) {
+		return removeCrushContextPath(configPath, ResolveHomeScopedPath(ctx.HomeDir, crushContextRelPath))
+	},
+}
+
+var qwenContextLinkSpec = ManagedContextLinkAdapterSpec{
+	ID:             AgentQwen,
+	DetectRootPath: ".qwen",
+	ContextSpec: ManagedContextFileAdapterSpec{
+		ID:             AgentQwen,
+		DetectRootPath: ".qwen",
+		TargetRelPath:  qwenAgentsPath,
+		TargetScope:    managedContextTargetHome,
+		MissingFmt:     "missing qwen agents file: %s",
+		MarkersFmt:     "missing qwen managed block markers in %s",
+	},
+	ConfigPath: func(ctx Context) string {
+		return ResolveHomeScopedPath(ctx.HomeDir, qwenSettingsPath)
+	},
+	ConfigPlanContent: func(Context) string { return qwenContextSettingsPlanContent() },
+	UpsertConfig: func(configPath string, _ Context) (string, error) {
+		return upsertQwenSettings(configPath)
+	},
+	VerifyConfig: func(configPath string, _ Context) error {
+		ok, err := qwenSettingsUseAgents(configPath)
+		if err != nil {
+			return fmt.Errorf("missing qwen settings file: %s", configPath)
+		}
+		if !ok {
+			return fmt.Errorf("missing qwen managed context filename in %s", configPath)
+		}
+		return nil
+	},
+	RemoveConfig: func(configPath string, _ Context) (string, bool, bool, error) {
+		return removeQwenSettings(configPath)
+	},
+}
+
+var continueHookSettingsSpec = ManagedHookSettingsAdapterSpec{
+	ID:                  AgentContinue,
+	DetectRootPath:      ".continue",
+	Root:                continueRoot,
+	HookScriptName:      continueHookScriptName,
+	SettingsName:        continueSettingsName,
+	HookContent:         continueHookScriptContent,
+	PlanSettingsContent: preToolUseCommandSettingsContent,
+	UpsertSettings: func(_ string, hookPath string) (string, error) {
+		return preToolUseCommandSettingsContent(hookPath), nil
+	},
+	UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
+		changed, err := removePreToolUseCommandHook(settingsPath, hookPath)
+		if err != nil {
+			return InstallResult{}, err
+		}
+		if changed {
+			return InstallResult{Applied: 1}, nil
+		}
+		return InstallResult{Noop: 1}, nil
+	},
+	MissingHookFmt:     "missing continue hook script: %s",
+	MissingSettingsFmt: "missing continue settings file: %s",
+}
+
+var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
+	ID:                  AgentCodeBuddy,
+	DetectRootPath:      ".codebuddy",
+	Root:                codebuddyRoot,
+	HookScriptName:      codebuddyHookScriptName,
+	SettingsName:        codebuddySettingsName,
+	HookContent:         codebuddyHookScriptContent,
+	PlanSettingsContent: preToolUseCommandSettingsContent,
+	UpsertSettings:      upsertCodeBuddySettings,
+	VerifySettings: func(settingsPath, hookPath string) error {
+		ok, err := codebuddySettingsUseHook(settingsPath, hookPath)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("missing codebuddy managed hook contribution in %s", settingsPath)
+		}
+		return nil
+	},
+	UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
+		changed, err := removePreToolUseCommandHook(settingsPath, hookPath)
+		if err != nil {
+			return InstallResult{}, err
+		}
+		if changed {
+			return InstallResult{Applied: 1}, nil
+		}
+		return InstallResult{Noop: 1}, nil
+	},
+	MissingHookFmt:     "missing codebuddy hook script: %s",
+	MissingSettingsFmt: "missing codebuddy settings file: %s",
+}
+
+func canonicalRuleVerificationSnippets() []string {
+	return []string{
+		"## CCP Integration (Managed)",
+		"Use `ccp` as the command prefix for every executable in shell commands",
+		"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
+		ccpRawEscapeHatch,
+	}
+}
+
+func builtInRuleFileAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(managedRuleFileAdapterSpecs))
+	for _, spec := range managedRuleFileAdapterSpecs {
+		spec := spec
+		catalog = append(catalog, BuiltInAdapterSpec{
+			ID: spec.ID,
+			New: func() Adapter {
+				return newManagedRuleFileAdapterFromSpec(spec)
+			},
+		})
+	}
+	return catalog
+}
+
+func builtInJSPluginAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(managedJSPluginAdapterSpecs))
+	for _, spec := range managedJSPluginAdapterSpecs {
+		spec := spec
+		catalog = append(catalog, BuiltInAdapterSpec{
+			ID: spec.ID,
+			New: func() Adapter {
+				return NewManagedJSPluginAdapter(spec)
+			},
+		})
+	}
+	return catalog
+}
+
+func builtInContextAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(simpleContextAdapterSpecs))
+	for _, spec := range simpleContextAdapterSpecs {
+		spec := spec
+		catalog = append(catalog, BuiltInAdapterSpec{
+			ID: spec.ID,
+			New: func() Adapter {
+				return NewManagedContextAdapter(spec)
+			},
+		})
+	}
+	return catalog
+}
+
+func builtInContextLinkAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(managedContextLinkAdapterSpecs))
+	for _, spec := range managedContextLinkAdapterSpecs {
+		spec := spec
+		catalog = append(catalog, BuiltInAdapterSpec{
+			ID: spec.ID,
+			New: func() Adapter {
+				return NewManagedContextLinkAdapter(spec)
+			},
+		})
+	}
+	return catalog
+}
+
+func builtInHookSettingsAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(managedHookSettingsAdapterSpecs))
+	for _, spec := range managedHookSettingsAdapterSpecs {
+		spec := spec
+		catalog = append(catalog, BuiltInAdapterSpec{
+			ID: spec.ID,
+			New: func() Adapter {
+				return NewManagedHookSettingsAdapter(spec)
+			},
+		})
+	}
+	return catalog
+}
+
+func newManagedRuleFileAdapterFromSpec(spec managedRuleFileAdapterSpec) Adapter {
+	switch spec.TargetScope {
+	case managedRuleFileTargetHome:
+		return NewManagedHomeRuleFileAdapter(
+			string(spec.ID),
+			spec.DetectRootPath,
+			spec.TargetRelPath,
+			spec.MissingFmt,
+			spec.GuidanceFmt,
+			spec.Render,
+			spec.VerifyRequired,
+		)
+	default:
+		return NewManagedRepoRuleFileAdapter(
+			string(spec.ID),
+			spec.DetectRootPath,
+			spec.TargetRelPath,
+			spec.MissingFmt,
+			spec.GuidanceFmt,
+			spec.Render,
+			spec.VerifyRequired,
+		)
+	}
+}
+
+func amazonQRuleContent() string {
+	return ccpManagedGuidanceMarkdown()
+}
+
+func cursorRuleContent() string {
+	return "---\n" +
+		"description: Route shell commands through ccp\n" +
+		"alwaysApply: true\n" +
+		"---\n\n" +
+		ccpManagedGuidanceMarkdown()
+}
+
+func roocodeRuleContent() string {
+	return ccpManagedGuidanceMarkdown()
+}
+
+func traeRuleContent() string {
+	return ccpManagedGuidanceMarkdown()
+}
+
+func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {
+	switch spec.TargetScope {
+	case managedRuleFileTargetHome:
+		return ResolveHomeScopedPath(ctx.HomeDir, spec.TargetRelPath)
+	default:
+		return ResolveRepoScopedPath(ctx.ScopeRoot, spec.TargetRelPath)
+	}
+}
+
+func expectedRuleDetectRoot(scopeRoot string, spec managedRuleFileAdapterSpec) string {
+	return filepath.Join(scopeRoot, spec.DetectRootPath)
+}
+
+var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
+	catalog := []BuiltInAdapterSpec{
+		{ID: AgentCline, New: func() Adapter { return ClineAdapter{} }},
+		{ID: AgentClaude, New: func() Adapter { return ClaudeAdapter{} }},
+		{ID: AgentWindsurf, New: func() Adapter { return WindsurfAdapter{} }},
+	}
+	catalog = append(catalog, builtInRuleFileAdapterCatalog()...)
+	catalog = append(catalog, builtInHookSettingsAdapterCatalog()...)
+	catalog = append(catalog, builtInContextLinkAdapterCatalog()...)
+	catalog = append(catalog, builtInJSPluginAdapterCatalog()...)
+	return append(catalog, builtInContextAdapterCatalog()...)
+}()
+
+func BuiltInAdapterCatalog() []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, len(builtInAdapterCatalog))
+	copy(catalog, builtInAdapterCatalog)
+	return catalog
+}
+
+func NewBuiltInAdapters() (map[string]Adapter, error) {
+	return adaptersFromCatalog(builtInAdapterCatalog)
+}
+
+func adaptersFromCatalog(catalog []BuiltInAdapterSpec) (map[string]Adapter, error) {
+	adapters := make(map[string]Adapter, len(catalog))
+	for _, spec := range catalog {
+		id := string(spec.ID)
+		if _, exists := adapters[id]; exists {
+			return nil, fmt.Errorf("duplicate adapter registration: %s", id)
+		}
+		adapter := spec.New()
+		if adapter == nil {
+			return nil, fmt.Errorf("nil adapter for %s", id)
+		}
+		if got := adapter.ID(); got != id {
+			return nil, fmt.Errorf("adapter id mismatch: catalog=%s adapter=%s", id, got)
+		}
+		adapters[id] = adapter
+	}
+	return adapters, nil
+}

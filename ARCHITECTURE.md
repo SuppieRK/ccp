@@ -4,25 +4,28 @@
 
 `ccp` is an agent-first command proxy:
 
-- Runs native commands.
-- Compacts output to reduce bytes/tokens sent to coding agents.
-- Preserves execution correctness (exit code, actionable diagnostics).
+- runs native commands
+- compacts output to reduce bytes/tokens sent to coding agents
+- preserves execution correctness, especially exit code and actionable diagnostics
 
-This document explains the runtime architecture, benchmark architecture, and test boundaries.
+The steady-state architecture is now one canonical runtime under `internal/`
+plus authored YAML filters under `filters/`.
 
 ## High-Level Components
 
-- `cmd/ccp`: CLI entrypoint and runtime wiring.
-- `cmd/coverage-gate`: coverage gate CLI for enforcing internal package thresholds in CI.
-- `internal/runner`: command planning + process execution + stream routing.
-- `internal/engine`: stream processing engine and dispatch.
-- `internal/engine/filters`: tool-specific and subcommand-specific compaction logic.
-- `internal/quality/coverage`: coverage profile parsing and internal-scope aggregation logic.
-- `internal/metrics`: [bbolt](https://github.com/etcd-io/bbolt)-backed runtime metric persistence and summary aggregation.
-- `internal/lifecycle`: CLI lifecycle hooks and coding agent integration entrypoints.
-- `internal/lifecycle/agents`: Coding agent specific integrators.
-- `tools/benchmark`: separate benchmark module (`ccp-ci`) for scenario execution/reporting.
-- `testdata/tool-fixtures`: benchmark scenarios, projects, and expected outputs.
+- `cmd/ccp`: CLI entrypoint and runtime wiring
+- `cmd/coverage-gate`: coverage gate CLI for enforcing internal package thresholds
+- `internal/`: canonical runtime packages
+- `internal/contracts`: stable runtime command/filter contracts
+- `internal/engine`: streaming engine and ordered retained-output buffer
+- `internal/filters`: filter sources, registry helpers, and compiled runtime filter implementations
+- `internal/filters/yaml`: authored YAML schema, validation, loading, and compilation
+- `internal/metrics`: runtime metric persistence and gain/history reporting
+- `internal/lifecycle`: lifecycle subcommands and coding-agent integration entrypoints
+- `internal/lifecycle/agents`: coding-agent specific adapters
+- `filters/`: repository-authored YAML filter definitions and `.mappings.yaml`
+- `cmd/ccp-ci` + `internal/benchmark`: replay benchmark runner for fixture-driven verification and reporting
+- `testdata/benchmarks`: benchmark scenarios, replay fixtures, and optional copied projects
 
 ## End-to-End Runtime Flow
 
@@ -31,180 +34,116 @@ flowchart LR
     U[User command] --> C[ccp]
     IN[Parent stdin] --> C
     C --> O[Parse CLI options]
-    O -->|--raw| R0[Runner raw mode]
-    O -->|default| R1[Runner semantic mode]
-
-    R1 --> P[BuildExecPlan]
-    P --> X[Exec native command or fallback]
-    IN --> X
-    X --> S1[stdout stream]
-    X --> S2[stderr stream]
-    S1 --> E[Engine.Process]
+    O -->|lifecycle command| L[internal/lifecycle]
+    O -->|execution command| P[Parse command args]
+    P --> D[Load discovered YAML filters + mappings]
+    D --> R[Resolve filter in registry]
+    R -->|--raw| X0[Raw subprocess execution]
+    R -->|default| X1[Filtered subprocess execution]
+    IN --> X0
+    IN --> X1
+    X1 --> S1[stdout stream]
+    X1 --> S2[stderr stream]
+    S1 --> E[Engine state]
     S2 --> E
-    E --> F[Tool filter Process]
+    E --> F[Resolved filter]
     F --> OUT[Compacted output]
     OUT --> T[Terminal / agent]
-
-    R0 --> XR[Direct exec passthrough]
-    IN --> XR
-    XR --> TR[Unmodified output]
+    X0 --> TR[Passthrough output]
 ```
 
-## Planning Layer (`internal/runner/plan.go`)
+## Runtime Structure (`internal/`)
 
-Planner responsibilities:
+The canonical runtime path is:
 
-- Identify command/tool and resolve filter from registry.
-- Call filter `Prepare(args)` to get:
-  - normalized args,
-  - dispatch key,
-  - passthrough/ambiguity markers,
-  - optional preferred substitution with fallback.
-- Build `ExecPlan` used by runner.
+1. `cmd/ccp` parses CLI flags through `internal/cli`.
+2. Execution commands build `internal/contracts.Command` through `internal/parser.go`.
+3. `internal/runner.go` loads discovered filters and mappings from configured sources.
+4. `internal/engine` creates command state and streams stdout/stderr through the resolved filter.
+5. `internal/metrics` records one metrics entry for each non-raw execution command.
 
-Key point:
+There is no second legacy runtime path and no built-in Go filter catalog fallback.
 
-- Planning is where **command** shape rewrites happen (for example normalized args, preferred backend substitution).
-- Filters can force neutral passthrough for unsafe/ambiguous shapes.
+## Filter Discovery and Registry
 
-## Execution Layer (`internal/runner/runner.go`)
+Authored filter behavior comes from YAML definitions, not Go-authored per-tool
+filters.
 
-Runner responsibilities:
+Discovery rules:
 
-- Execute planned command (`exec.Command`).
-- Forward parent stdin to wrapped command execution for semantic and raw paths.
-- Read `stdout` and `stderr` concurrently.
-- Send line events + EOF/tick/exit events into the engine.
-- Emit final exit code from the wrapped process.
-- Record execution diagnostics in metrics, including dispatch metadata tags such as stdin mode (`stdin=pipe|tty|none`).
+- dev builds may use the repository `filters/` directory as an explicit source
+- non-dev builds default to project-level `.ccp/filters` first and home-level `~/.config/ccp/filters` second
+- `.mappings.yaml` participates in resolution in each scope
+- project-level definitions and mappings override home-level ones
+- invalid or ambiguous definitions are excluded safely and fall back to passthrough
 
-Important modes:
+The registry always resolves to a filter, defaulting to passthrough when no
+valid filter matches.
 
-- `--raw`: bypass semantic engine; direct passthrough.
-- `--capture-raw` / `--capture-raw-dir`: capture sequenced raw stdout/stderr files while preserving normal execution.
-- ambiguous shell or low-confidence planner shapes: use safe permissive fallback with neutral filtering.
+## Command and Stream Model
 
-## Engine + Filter Layer (`internal/engine`)
+The parsed command carries:
 
-The engine dispatches stream events to the active filter context.
+- raw input text
+- argv
+- canonical tool name
+- dispatch key once resolved
 
-Event types include:
+The engine handles only `stdout` and `stderr` as filterable streams. `stdin`
+remains attached directly to the subprocess.
 
-- line,
-- EOF,
-- tick (stale flush cadence),
-- exit.
+The ordered buffer:
 
-Filters implement:
+- retains `keep` output in stream-tagged insertion order
+- skips blank lines
+- flushes retained output on exit in engine-owned order
 
-- `Prepare(args)` for planning-time decisions.
-- `ContextKey(ev)` for state isolation.
-- `Process(ev, mem)` for runtime compaction decisions.
+## Execution Modes
 
-Decision actions include immediate output, collect, ignore, and flush.
+Supported execution flags:
 
-## Filter Structure
+- `--raw`: bypass semantic compaction and pass through native output
+- `--capture-raw`: write timestamped raw stdout/stderr capture files while preserving execution semantics
+- `--capture-raw-dir`: choose the capture directory
+- `--confidential`: redact configured substrings from emitted output and capture artifacts
 
-- Single-command filters: one file + one test.
-- Parent tools (for example `git`, `go`, `docker`, `kubectl`, `npx`, `cargo`):
-  - parent filter routes subcommands through `ToolFilterRegistry`,
-  - subcommand filters live in `internal/engine/filters/<parent>/`,
-  - one subcommand per file + test.
+Lifecycle commands such as `init`, `gain`, `history`, `verify`, `upgrade`, and
+`uninstall` are handled by `internal/lifecycle`.
 
-## Data Flow: Streams and Shared Context
-
-```mermaid
-sequenceDiagram
-    participant In as Parent stdin
-    participant Proc as Native Process
-    participant Run as Runner
-    participant Eng as Engine
-    participant Fil as Active Filter
-
-    In->>Run: stdin bytes / pipe / tty
-    Run->>Proc: forward stdin unchanged
-
-    Proc->>Run: stdout line
-    Run->>Eng: EventLine(stdout, line)
-    Eng->>Fil: Process(line)
-    Fil-->>Eng: Decision
-    Eng-->>Run: maybe output
-
-    Proc->>Run: stderr line
-    Run->>Eng: EventLine(stderr, line)
-    Eng->>Fil: Process(line)
-
-    Run->>Eng: EventEOF(stdout/stderr)
-    Eng->>Fil: Process(EOF)
-    Run->>Eng: EventExit(code)
-    Eng->>Fil: Process(Exit)
-```
-
-## Benchmark Architecture (`tools/benchmark`)
+## Benchmark Architecture (`cmd/ccp-ci` + `internal/benchmark`)
 
 The benchmark harness is a separate module and binary path:
 
-- Entrypoint: `tools/benchmark/cmd/ccp-ci`.
-- Scenarios loaded from `testdata/tool-fixtures/<tool>/scenarios.json`.
+- entrypoint: `cmd/ccp-ci`
+- replay fixtures loaded from `testdata/benchmarks/<tool>/<case>-<invariant>/command.yaml`
 
-For each scenario, harness executes:
+For each replay fixture, the harness runs `ccp verify`, compares authored
+expectations when present, records token counts, and writes per-fixture
+artifacts.
 
-1. First pass (warmup):
-   - avoids accidental overhead caused by cold starts.
-1. Second pass (measured):
-   - native command,
-   - proxied command (`ccp ...`),
-   - compares safety invariants and token compaction.
-2. Third pass (artifact capture):
-   - `ccp --capture-raw ...` to write `input-stdout.txt`/`input-stderr.txt`,
-   - `ccp ...` output capture to `output.txt`.
+Artifact contracts:
 
-Hooks:
+- optional sequenced `stdout.txt` / `stderr.txt` replay inputs
+- optional authored `output.txt` / `decisions.txt` expectations
+- generated `verify-output.txt` / `verify-decisions.txt`
 
-- `before_start` and `after_stop` run for each pass.
-
-Outputs:
-
-- per-scenario artifacts in benchmark artifacts dir,
-- `report.json`,
-- CI summary tables grouped by tool.
-
-## Tool Fixtures and Integration Tests
-
-`testdata/tool-fixtures` is the shared source for:
-
-- benchmark scenarios/projects,
-- filter replay validation.
-
-`internal/engine/filters/tool_fixtures_integration_test.go`:
-
-- Replays fixture input streams through engine/filter logic.
-- Uses scenario metadata (`must_contain`/`must_not_contain`, etc.).
-- Validates compaction behavior deterministically at filter-engine layer.
-
-Boundary note:
-
-- This integration test validates filter-engine behavior from fixture streams.
-- Planner/exec correctness is validated in runner plan/integration tests and benchmark harness.
+The harness is replay-driven and validates the live runtime without copied
+projects by default.
 
 ## Testing Layers
 
-- Unit tests: per-filter logic and helpers.
-- Planner tests: `internal/runner/plan_<tool>_test.go`.
-- Runner integration tests: `internal/runner/runner_<tool>_integration_test.go`.
-- Fixture replay integration: `internal/engine/filters/tool_fixtures_integration_test.go`.
-- Benchmark CI: `tools/benchmark` with scenario-driven command execution.
-- Quality gates: `go test -count=1 -race ./...` and `cmd/coverage-gate` coverage threshold checks for `internal/...`.
-
-## Performance Baselines
-
-- Performance baseline metrics are tracked in implementation artifacts (for example OpenSpec implementation notes and benchmark outputs) rather than hardcoded in this architecture document.
-- Any tuning in runner, engine, or filter hot paths should refresh benchmark artifacts and compare against the latest recorded baselines.
+- unit tests in the narrowest owning package under `internal/`
+- runtime tests in `internal/runner_test.go`, `internal/engine/*_test.go`, and `internal/filters/*_test.go`
+- lifecycle and adapter tests under `internal/lifecycle` and `internal/lifecycle/agents`
+- benchmark harness tests under `internal/benchmark`
+- benchmark fixtures under `testdata/benchmarks`
+- validation and race/coverage gates through `./scripts/validate.sh`
 
 ## Design Invariants
 
-- Exit code parity with native command.
-- Preserve critical diagnostics.
-- Aggressive compaction of repetitive low-signal output.
-- Fallback/passthrough for ambiguous or unsafe command shapes.
-- Deterministic benchmark and fixture-driven validation.
+- exit code parity with the native command
+- preserve critical diagnostics
+- exact `--raw` behavior unless explicit confidential redaction is enabled
+- fallback/passthrough on ambiguity, unsafe structured modes, or invalid filter definitions
+- deterministic output and deterministic benchmark evaluation
+- authored YAML is the source of truth for filter behavior, while Go owns the bounded runtime semantics

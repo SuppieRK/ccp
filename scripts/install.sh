@@ -193,3 +193,18 @@ fi
 install -m 0755 "$SRC" "$DST"
 update_path_if_needed "$INSTALL_DIR"
 echo "Installed $BIN_NAME $VERSION to $DST"
+
+if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
+  printf '%s\n' "$REPAIR_OUTPUT"
+else
+  case "$REPAIR_OUTPUT" in
+    *"executable file not found"*|*"not found"*|*"Usage:"*)
+      echo "Installed binary does not support 'ccp repair'; skipping managed state rewrite"
+      ;;
+    *)
+      printf '%s\n' "$REPAIR_OUTPUT" >&2
+      echo "ccp repair failed after install" >&2
+      exit 1
+      ;;
+  esac
+fi

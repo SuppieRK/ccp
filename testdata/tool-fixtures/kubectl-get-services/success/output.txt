@@ -1,2 +1,0 @@
-NAME    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-[2] services: ClusterIP 80/TCP

@@ -1,0 +1,51 @@
+00000|11:57:29 AM: Executing 'clean spotlessApply build'…
+00001|
+00002|> Task :clean
+00003|> Task :examples:basic-demo:clean UP-TO-DATE
+00004|> Task :spotlessInternalRegisterDependencies
+00005|
+00006|> Task :spotlessGroovyGradle
+00007|Missing required bundle org.eclipse.jdt.debug needed by [org.eclipse.jdt.launching, org.eclipse.jdt.launching.macosx]
+00008|Missing required capability osgi.extender:osgi.extender=osgi.serviceloader.processor needed by org.apache.commons.commons-logging
+00009|Missing required capability osgi.serviceloader:osgi.serviceloader=org.apache.commons.logging.LogFactory needed by org.apache.commons.commons-logging
+00010|Recommend setting osgi.configuration.area to a directory, getDataFile will return null
+00011|Starting Groovy-Eclipse compiler resolver. Specified compiler level: unspecified
+00012| 20 org.codehaus.groovy_5.0.0.v202503311943-e2503 RESOLVED
+00013|
+00014|> Task :spotlessGroovyGradleApply
+00015|> Task :spotlessJava
+00016|> Task :spotlessJavaApply
+00017|> Task :spotlessApply
+00018|> Task :spotlessJavaCheck
+00019|
+00020|> Task :compileJava FAILED
+00021|
+00022|[Incubating] Problems report is available at: file:///C:/Users/suppi/IdeaProjects/spring-boot-multilevel-cache-starter/build/reports/problems/problems-report.html
+00023|
+00024|Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+00025|
+00026|You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+00027|
+00028|For more on this, please refer to https://docs.gradle.org/9.3.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+00029|9 actionable tasks: 8 executed, 1 up-to-date
+00030|C:\Users\suppi\IdeaProjects\spring-boot-multilevel-cache-starter\src\main\java\io\github\suppie\spring\cache\MultiLevelCacheManager.java:160: error: incompatible types: Duration cannot be converted to boolean
+00031|      if (timeToLive) {
+00032|          ^
+00033|1 error
+00034|
+00035|FAILURE: Build failed with an exception.
+00036|
+00037|* What went wrong:
+00038|Execution failed for task ':compileJava'.
+00039|> Compilation failed; see the compiler output below.
+00040|  C:\Users\suppi\IdeaProjects\spring-boot-multilevel-cache-starter\src\main\java\io\github\suppie\spring\cache\MultiLevelCacheManager.java:160: error: incompatible types: Duration cannot be converted to boolean
+00041|        if (timeToLive) {
+00042|            ^
+00043|  1 error
+00044|
+00045|* Try:
+00046|> Check your code and dependencies to fix the compilation error(s)
+00047|> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+00048|
+00049|BUILD FAILED in 2s
+00050|11:57:32 AM: Execution finished 'clean spotlessApply build'.

@@ -22,10 +22,10 @@ CI is the canonical definition of release build mechanics.
 # Benchmarks
 
 - MUST NOT commit runtime benchmark artifacts.
-- SHOULD run `./scripts/benchmark-local.sh -t <tool>` before changing an existing tool filter to establish a local baseline when feasible.
-- MUST run `./scripts/benchmark-local.sh -t <tool>` after changing a tool filter or benchmarked execution behavior.
-- MUST treat any non-zero benchmark exit as a failure.
-- MUST use the script's `ccp gain` output, not just the harness summary, to evaluate compression results for the changed tool.
+- SHOULD run `go build -o .bin/ccp ./cmd/ccp && PATH="$PWD/.bin:$PATH" go run ./cmd/ccp-ci -tool <tool> -artifacts-dir .artifacts/benchmark-<tool>` before changing an existing tool filter to establish a local baseline when feasible.
+- MUST run `go build -o .bin/ccp ./cmd/ccp && PATH="$PWD/.bin:$PATH" go run ./cmd/ccp-ci -tool <tool> -artifacts-dir .artifacts/benchmark-<tool>` after changing a tool filter or benchmarked execution behavior.
+- SHOULD investigate any non-zero benchmark exit and make the cause explicit in the final report.
+- MUST use the generated `ccp gain` output, not just the harness summary, to evaluate compression results for the changed tool.
 - MUST investigate regressions when a before-change baseline exists, and MUST highlight runs with no `gain.db` or no meaningful compression result for the changed tool.
 
 ---
@@ -34,6 +34,16 @@ CI is the canonical definition of release build mechanics.
 
 - ANY code modification requires matching OpenSpec updates.
 - MUST keep specs, fixtures, tests, and implementation aligned.
+
+## Canonical Extension Path
+
+- New built-in filters MUST be authored in `filters/<tool>.yaml` and routed through `filters/.mappings.yaml` when wrapper or alias spellings need the same canonical filter.
+- New built-in lifecycle agent adapters MUST register through `internal/lifecycle/agents/agent_specs.go` and the matching family or bespoke adapter implementation.
+- Filter work MUST prefer extending the existing YAML DSL or shared runtime/helper layer before adding new bespoke Go behavior.
+- Direct-tool and wrapper-tool variants SHOULD use separate YAML files when they own materially different behavior; use `.mappings.yaml` reuse only for true aliases or wrapper spellings that intentionally share one filter.
+- Agent adapter work MUST prefer the existing managed context/rule/plugin/hook recipe surfaces for simple integrations; keep bespoke adapter implementations only when behavior is materially different.
+- Helper placement MUST follow scope: shared engine behavior in `internal/contracts`, `internal/engine`, or `internal/filters`; lifecycle-agent helper behavior in `internal/lifecycle/agents`; broadly reusable low-level helpers only when the scope is clearly cross-cutting.
+- Tests SHOULD follow source ownership: shared helpers in common test helper files, source-oriented suites near the owning code, and explicit cross-cutting exceptions only for fixture/integration/soak coverage.
 
 ---
 
@@ -47,7 +57,7 @@ CI is the canonical definition of release build mechanics.
 - MUST execute command shape exactly as typed unless filter contract defines normalization.
 - MUST preserve native output affordances when possible, especially line-oriented forms that coding agents can reuse in follow-up shell expressions.
 - MUST treat structured/precision modes as byte-preserving passthrough when required.
-- `--capture-raw` MUST preserve execution semantics.
+- `ccp capture` MUST preserve native command execution semantics while recording sequenced replay fixtures.
 
 ---
 
@@ -68,7 +78,16 @@ Agents MUST NOT:
 
 - Load [TESTING](./docs/agent-rules/TESTING.md) when adding or changing tests, or when a change affects planner, runner, or cross-tool test coverage.
 - Load [BENCHMARKS](./docs/agent-rules/BENCHMARKS.md) when changing benchmark fixtures, benchmark harness behavior, or tool benchmark expectations.
-- Load [FILTERS](./docs/agent-rules/FILTERS.md) when adding or changing command filters, filter fixtures, or filter-specific runner/benchmark coverage.
 - Load [RELEASE](./docs/agent-rules/RELEASE.md) when modifying release, installer, or distribution logic.
+- Load `use-modern-go` when adding, editing, or reviewing Go code and Go tests.
+- Load `bdd` when adding or changing Ginkgo/Gomega coverage.
+- If a referenced skill is unavailable, continue with the repository conventions in this file and the linked docs instead of blocking on the missing skill.
 
 Cold-path governance rules are intentionally separated to reduce working-memory load.
+
+## Skills
+
+### Available skills
+
+- `bdd`: Use for writing tests in Ginkgo/Gomega BDD-style (including table-driven tests).
+- `use-modern-go`: Apply modern Go syntax and standard-library guidance based on the repository's detected Go version. Use for Go implementation work, Go test changes, and Go code review passes focused on outdated idioms. (files: `./.codex/skills/use-modern-go/SKILL.md`, `./.opencode/skills/use-modern-go/SKILL.md`)

@@ -1,0 +1,143 @@
+version: 1
+filter: npx
+about: Compact supported npx wrapper subcommands through one family filter.
+
+cases:
+  - id: eslint
+    when_arguments:
+      first_is: eslint
+    compress_output:
+      stdout:
+        lines:
+          skip:
+            - regex: '^$'
+            - regex: '^✖ .+$'
+            - regex: '^\s+\d+ errors? and \d+ warnings? potentially fixable .+$'
+          replace:
+            - regex: '^.+/(src/.+)$'
+              to: '$1'
+            - regex: '^\s*(\d+):(\d+)\s+(error|warning)\s+(.+?)\s{2,}(\S+)$'
+              to: '$1:$2 $3 $5 $4'
+
+  - id: prisma_validate
+    when_arguments:
+      have_sequence:
+        - prisma
+        - validate
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'Prisma schema loaded from '
+          replace:
+            - regex: '^The schema at .+ is valid .+$'
+              to: 'prisma validate: ok'
+
+  - id: prisma_format
+    when_arguments:
+      have_sequence:
+        - prisma
+        - format
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'Prisma schema loaded from '
+          replace:
+            - regex: '^Formatted (.+) in \d+(?:\.\d+)?ms .+$'
+              to: 'prisma format: ok $1'
+
+  - id: prettier_check
+    when_arguments:
+      first_is: prettier
+      have_any:
+        - --check
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: "Checking formatting..."
+          replace:
+            - regex: '^\[warn\] Code style issues found in the above file\. Run Prettier with --write to fix\.$'
+              to: 'prettier check: 1 files need formatting'
+            - regex: '^\[warn\] Code style issues found in (\d+) files\. Run Prettier with --write to fix\.$'
+              to: 'prettier check: $1 files need formatting'
+            - regex: '^All matched files use Prettier code style!$'
+              to: 'prettier check: ok'
+            - regex: '^\[warn\] (.+)$'
+              to: '- $1'
+
+  - id: node_warning_dedupe
+    when_arguments:
+      first_is: node
+      have_any:
+        - warning_dedupe.js
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - contains: "ExperimentalWarning:"
+            - starts_with: "(Use `node --trace-warnings"
+            - regex: '^application payload$'
+
+  - id: tsc_passthrough_unsupported
+    when_arguments:
+      first_is: tsc
+      have_any:
+        - -w
+        - --watch
+        - --preserveWatchOutput
+        - -b
+        - --build
+        - -v
+        - --version
+        - -h
+        - --help
+        - --init
+        - --showConfig
+        - --listFiles
+        - --listEmittedFiles
+        - --explainFiles
+        - --diagnostics
+        - --extendedDiagnostics
+        - --traceResolution
+    passthrough: true
+
+  - id: tsc_diagnostics
+    when_arguments:
+      first_is: tsc
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '^(?P<path>.+?)\((?P<line>\d+),(?P<column>\d+)\):\s+error\s+(?P<code>TS\d+):\s+(?P<message>.+)$'
+            variables:
+              - name: path
+                type: string
+                regex_group: path
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+              - name: code
+                type: string
+                regex_group: code
+              - name: message
+                type: string
+                regex_group: message
+            group_by: '{{path}}'
+            initially:
+              print: '{{path}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '- {{line}}:{{column}} error {{code}} {{message}}'
+              max:
+                count: 6
+                print: "\n{{value}} lines"
+        lines:
+          max:
+            count: 40
+            print: "\n{{value}} lines"

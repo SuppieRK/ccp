@@ -1,156 +1,158 @@
 package cli
 
-import "testing"
-
-const (
-	errParseFailedPrefix = "parse failed: %v"
-	flagCaptureRaw       = "--capture-raw"
-	rawArtifactsDir      = ".artifacts/raw"
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestParseRawModesExecution(t *testing.T) {
-	cases := []struct {
-		name       string
-		args       []string
-		captureRaw bool
-	}{
-		{name: "raw", args: []string{"--raw", "ls", "-la"}},
-		{name: "capture-raw", args: []string{flagCaptureRaw, "ls", "-la"}, captureRaw: true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			opts := mustParse(t, tc.args)
-			if !opts.Raw {
-				t.Fatalf("expected raw mode for args=%#v", tc.args)
-			}
-			if opts.CaptureRaw != tc.captureRaw {
-				t.Fatalf("unexpected capture-raw for args=%#v: got %v want %v", tc.args, opts.CaptureRaw, tc.captureRaw)
-			}
-			if len(opts.CommandArgs) == 0 || opts.CommandArgs[0] != "ls" {
-				t.Fatalf("unexpected command args: %#v", opts.CommandArgs)
-			}
+var _ = Describe("Parse", func() {
+	DescribeTable("parsing raw execution modes",
+		func(args []string) {
+			opts := mustParse(args)
+
+			Expect(opts.Raw).To(BeTrue())
+			Expect(opts.CommandArgs).To(HaveLen(2))
+			Expect(opts.CommandArgs[0]).To(Equal("ls"))
+		},
+		Entry("raw", []string{"--raw", "ls", "-la"}),
+	)
+
+	It("allows confidential without capture raw", func() {
+		opts := mustParse([]string{"--confidential", "com.foo", "ls"})
+
+		Expect(opts.ConfidentialRedactions).To(Equal([]string{"com.foo"}))
+	})
+
+	DescribeTable("rejecting execution flags for lifecycle commands",
+		func(flag string, cmd string) {
+			expectParseFailure([]string{flag, cmd})
+		},
+		Entry("raw for init", "--raw", "init"),
+		Entry("raw for gain", "--raw", "gain"),
+		Entry("raw for history", "--raw", "history"),
+		Entry("raw for upgrade", "--raw", "upgrade"),
+		Entry("raw for uninstall", "--raw", "uninstall"),
+		Entry("raw for capture", "--raw", "capture"),
+		Entry("raw for verify", "--raw", "verify"),
+		Entry("raw for repair", "--raw", "repair"),
+		Entry("raw for filter", "--raw", "filter"),
+	)
+
+	DescribeTable("rejecting confidential for lifecycle commands",
+		func(cmd string) {
+			expectParseFailure([]string{"--confidential", "com.foo", cmd})
+		},
+		Entry("init", "init"),
+		Entry("capture", "capture"),
+		Entry("gain", "gain"),
+		Entry("history", "history"),
+		Entry("upgrade", "upgrade"),
+		Entry("uninstall", "uninstall"),
+		Entry("verify", "verify"),
+		Entry("repair", "repair"),
+		Entry("filter", "filter"),
+	)
+
+	DescribeTable("allowing execution flags",
+		func(args []string) {
+			_, err := Parse(args)
+			Expect(err).NotTo(HaveOccurred())
+		},
+		Entry("raw", []string{"--raw", "ls"}),
+		Entry("confidential", []string{"--confidential", "secret", "ls"}),
+	)
+
+	DescribeTable("rejecting verbosity flags",
+		func(flag string) {
+			expectParseFailure([]string{flag, "ls"})
+		},
+		Entry("v", "-v"),
+		Entry("vv", "-vv"),
+		Entry("vvv", "-vvv"),
+	)
+
+	DescribeTable("parsing help flags",
+		func(args []string) {
+			opts := mustParse(args)
+
+			Expect(opts.ShowHelp).To(BeTrue())
+			Expect(opts.CommandArgs).To(BeEmpty())
+		},
+		Entry("long", []string{"--help"}),
+		Entry("short", []string{"-h"}),
+	)
+
+	It("lets help bypass execution flag validation", func() {
+		opts := mustParse([]string{"--help", "--raw", "init"})
+
+		Expect(opts.ShowHelp).To(BeTrue())
+		Expect(opts.Raw).To(BeTrue())
+	})
+
+	Describe("CCP command classification", func() {
+		DescribeTable("managed top-level commands",
+			func(token string) {
+				Expect(IsManagedCommand(token)).To(BeTrue())
+			},
+			Entry("capture", "capture"),
+			Entry("init", "init"),
+			Entry("gain", "gain"),
+			Entry("history", "history"),
+			Entry("verify", "verify"),
+			Entry("upgrade", "upgrade"),
+			Entry("uninstall", "uninstall"),
+			Entry("repair", "repair"),
+			Entry("filter", "filter"),
+		)
+
+		DescribeTable("non-managed top-level commands",
+			func(token string) {
+				Expect(IsManagedCommand(token)).To(BeFalse())
+			},
+			Entry("empty", ""),
+			Entry("pwd", "pwd"),
+			Entry("bash", "bash"),
+		)
+
+		It("skips metrics only for managed wrapped ccp commands", func() {
+			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "history"})).To(BeTrue())
+			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "repair"})).To(BeTrue())
+			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "filter", "new", "demo"})).To(BeTrue())
+			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "capture", "--", "echo", "hi"})).To(BeTrue())
+			Expect(ShouldSkipMetrics("grep", []string{"grep", "-n", "foo"})).To(BeFalse())
 		})
-	}
+
+		DescribeTable("describing execution shape",
+			func(args []string, expected ExecutionShape) {
+				Expect(DescribeExecutionShape(args)).To(Equal(expected))
+			},
+			Entry("simple command", []string{"echo", "hi"}, ExecutionShape{}),
+			Entry("find exec nested ccp", []string{"find", ".", "-type", "f", "-exec", "ccp", "grep", "-nH", "--", "v2", "{}", "+"}, ExecutionShape{
+				HasFindExec: true,
+				NestedCCP:   true,
+			}),
+			Entry("shell pipeline with xargs and nested ccp", []string{"bash", "-lc", "find . -print0 | ccp xargs -0 -r ccp grep -nH -- v2"}, ExecutionShape{
+				UsesShell:   true,
+				HasPipeline: true,
+				HasXargs:    true,
+				NestedCCP:   true,
+			}),
+			Entry("shell chain", []string{"sh", "-c", "ccp echo hi && ccp echo bye"}, ExecutionShape{
+				UsesShell: true,
+				HasChain:  true,
+				NestedCCP: true,
+			}),
+		)
+	})
+})
+
+func expectParseFailure(args []string) {
+	_, err := Parse(args)
+	Expect(err).To(HaveOccurred())
 }
 
-func TestParseCaptureRawDirExecution(t *testing.T) {
-	opts := mustParse(t, []string{flagCaptureRaw, "--capture-raw-dir", rawArtifactsDir, "ls", "-la"})
-	if !opts.CaptureRaw {
-		t.Fatal("expected capture-raw mode to be enabled")
-	}
-	if opts.CaptureRawDir != rawArtifactsDir {
-		t.Fatalf("unexpected capture-raw-dir: %q", opts.CaptureRawDir)
-	}
-}
-
-func TestParseRejectsCaptureRawDirWithoutCapture(t *testing.T) {
-	assertParseFails(t, []string{"--capture-raw-dir", rawArtifactsDir, "ls"})
-}
-
-func TestParseCaptureRawWithConfidential(t *testing.T) {
-	opts := mustParse(t, []string{flagCaptureRaw, "--confidential", "com.foo, org.acme ,com.foo", "ls"})
-	if len(opts.ConfidentialRedactions) != 2 {
-		t.Fatalf("unexpected confidential redactions: %#v", opts.ConfidentialRedactions)
-	}
-	if opts.ConfidentialRedactions[0] != "com.foo" || opts.ConfidentialRedactions[1] != "org.acme" {
-		t.Fatalf("unexpected confidential values: %#v", opts.ConfidentialRedactions)
-	}
-}
-
-func TestParseAllowsConfidentialWithoutCaptureRaw(t *testing.T) {
-	opts := mustParse(t, []string{"--confidential", "com.foo", "ls"})
-	if len(opts.ConfidentialRedactions) != 1 || opts.ConfidentialRedactions[0] != "com.foo" {
-		t.Fatalf("unexpected confidential values: %#v", opts.ConfidentialRedactions)
-	}
-	if opts.CaptureRaw {
-		t.Fatal("did not expect capture-raw mode to be enabled")
-	}
-}
-
-func TestParseRejectsRawForLifecycleCommands(t *testing.T) {
-	assertLifecycleCommandsRejectFlag(t, "--raw")
-}
-
-func TestParseRejectsCaptureRawForLifecycleCommands(t *testing.T) {
-	assertLifecycleCommandsRejectFlag(t, flagCaptureRaw)
-}
-
-func TestParseRejectsConfidentialForLifecycleCommands(t *testing.T) {
-	t.Helper()
-	cases := []string{"init", "gain", "history", "upgrade", "uninstall"}
-	for _, cmd := range cases {
-		t.Run(cmd, func(t *testing.T) {
-			assertParseFails(t, []string{"--confidential", "com.foo", cmd})
-		})
-	}
-}
-
-func assertLifecycleCommandsRejectFlag(t *testing.T, flag string) {
-	t.Helper()
-	cases := []string{"init", "gain", "history", "upgrade", "uninstall"}
-	for _, cmd := range cases {
-		t.Run(cmd, func(t *testing.T) {
-			assertParseFails(t, []string{flag, cmd})
-		})
-	}
-}
-
-func TestParseRejectsVerbosityFlags(t *testing.T) {
-	cases := []string{"-v", "-vv", "-vvv"}
-	for _, flag := range cases {
-		t.Run(flag, func(t *testing.T) {
-			assertParseFails(t, []string{flag, "ls"})
-		})
-	}
-}
-
-func TestParseDebugFlag(t *testing.T) {
-	opts := mustParse(t, []string{"--debug-filter", "ls"})
-	if !opts.DebugFilter {
-		t.Fatal("expected debug-filter mode to be enabled")
-	}
-}
-
-func TestParseHelpFlags(t *testing.T) {
-	cases := []struct {
-		name string
-		args []string
-	}{
-		{name: "long", args: []string{"--help"}},
-		{name: "short", args: []string{"-h"}},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			opts := mustParse(t, tc.args)
-			if !opts.ShowHelp {
-				t.Fatalf("expected help mode to be enabled for args=%#v", tc.args)
-			}
-			if len(opts.CommandArgs) != 0 {
-				t.Fatalf("expected no command args for help, got %#v", opts.CommandArgs)
-			}
-		})
-	}
-}
-
-func TestParseHelpBypassesRawLifecycleValidation(t *testing.T) {
-	opts := mustParse(t, []string{"--help", "--raw", "init"})
-	if !opts.ShowHelp || !opts.Raw {
-		t.Fatalf("unexpected parsed options: %#v", opts)
-	}
-}
-
-func assertParseFails(t *testing.T, args []string) {
-	t.Helper()
-	if _, err := Parse(args); err == nil {
-		t.Fatalf("expected parse error for args=%#v", args)
-	}
-}
-
-func mustParse(t *testing.T, args []string) Options {
-	t.Helper()
+func mustParse(args []string) Options {
 	opts, err := Parse(args)
-	if err != nil {
-		t.Fatalf(errParseFailedPrefix, err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	return opts
 }

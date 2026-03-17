@@ -15,10 +15,6 @@ const (
 
 type WindsurfAdapter struct{}
 
-func NewWindsurfAdapter() WindsurfAdapter {
-	return WindsurfAdapter{}
-}
-
 func (a WindsurfAdapter) ID() string { return string(AgentWindsurf) }
 
 func (a WindsurfAdapter) DetectRoot(scopeRoot string) string {
@@ -142,11 +138,7 @@ func (a WindsurfAdapter) Uninstall(ctx Context) (InstallResult, error) {
 }
 
 func windsurfRoot(ctx Context) string {
-	base := ctx.HomeDir
-	if strings.TrimSpace(base) == "" {
-		base = ctx.ScopeRoot
-	}
-	return filepath.Join(base, ".codeium", "windsurf")
+	return homeOrScopePath(ctx, ".codeium", "windsurf")
 }
 
 func windsurfHookScriptContent() string {

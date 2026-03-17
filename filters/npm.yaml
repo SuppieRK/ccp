@@ -1,0 +1,16 @@
+version: 1
+filter: npm
+about: Placeholder npm filter scaffold for YAML migration.
+cases:
+  - id: run
+    when_arguments:
+      first_is: run
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: "> "
+            - regex: "^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*$"
+            - starts_with: "npm notice"
+            - starts_with: "Done in "
+            - starts_with: "info Visit https://yarnpkg.com"

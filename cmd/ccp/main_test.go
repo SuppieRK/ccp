@@ -5,157 +5,101 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/engine"
-	"go-command-compression-proxy/internal/runner"
 )
 
-func TestBuildRegistryStartsEmpty(t *testing.T) {
-	registry := engine.NewToolFilterRegistry()
-	if got := registry.Resolve("ls"); got != nil {
-		t.Fatalf("expected empty registry before runtime wiring, got %q", got.Tool())
-	}
-}
+var _ = Describe("ccp main", func() {
+	Describe("buildRuntime", func() {
+		It("builds the YAML-backed runtime by default", func() {
+			r, err := buildRuntime(cli.Options{CommandArgs: []string{"ls"}})
 
-func TestBuildRuntimeUsesSharedRegistryForPlannerAndEngine(t *testing.T) {
-	opts := cli.Options{CommandArgs: []string{"ls"}}
-	r, err := buildRuntime(opts)
-	if err != nil {
-		t.Fatalf("build runtime: %v", err)
-	}
-	registry := r.Registry()
-	if registry == nil {
-		t.Fatal("expected runner registry")
-	}
-	if registry.Resolve("ls") == nil {
-		t.Fatal("expected ls filter in shared registry")
-	}
-	if registry.Resolve("gradlew") == nil {
-		t.Fatal("expected gradle filter aliases in shared registry")
-	}
-	plan, err := runner.BuildExecPlan([]string{"ls"}, registry)
-	if err != nil {
-		t.Fatalf("build plan with shared registry: %v", err)
-	}
-	if plan.Tool != "" {
-		t.Fatalf("expected default ls passthrough tool binding, got %q", plan.Tool)
-	}
-	longPlan, err := runner.BuildExecPlan([]string{"ls", "-l"}, registry)
-	if err != nil {
-		t.Fatalf("build long ls plan with shared registry: %v", err)
-	}
-	if longPlan.Tool != "ls" {
-		t.Fatalf("expected ls tool for long listing shape, got %q", longPlan.Tool)
-	}
-}
-
-func TestUsageTextIncludesHelpFlag(t *testing.T) {
-	got := usageText()
-	if got == "" {
-		t.Fatal("expected non-empty usage text")
-	}
-	if !containsAll(got, []string{
-		"ccp - command compression proxy for coding-agent workflows",
-		"Usage:",
-		"Execution flags:",
-		"Lifecycle commands:",
-		"Notes:",
-		"--confidential",
-		"init",
-		"gain                  Show token savings summary and recent proof output",
-		"Run ccp gain after install or init to verify savings on real work.",
-		"--raw preserves native output unless --confidential is also used.",
-	}) {
-		t.Fatalf("usage text missing expected sections: %q", got)
-	}
-}
-
-func TestMainWithoutExecutionCommandPrintsUsageAndExitsNonZero(t *testing.T) {
-	if os.Getenv("CCP_MAIN_TEST_HELPER") == "1" {
-		os.Args = []string{"ccp"}
-		main()
-		return
-	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestMainWithoutExecutionCommandPrintsUsageAndExitsNonZero")
-	cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER=1")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	var exitErr *exec.ExitError
-	if !errors.As(err, &exitErr) {
-		t.Fatalf("expected non-zero exit, got err=%v", err)
-	}
-	if exitErr.ExitCode() == 0 {
-		t.Fatalf("expected non-zero exit code, got %d", exitErr.ExitCode())
-	}
-	if !containsAll(stderr.String(), []string{"Usage:", "Execution flags:", "Lifecycle commands:"}) {
-		t.Fatalf("expected usage on stderr, got %q", stderr.String())
-	}
-}
-
-func TestMainLifecycleHelpPrintsStructuredHelpAndExitsZero(t *testing.T) {
-	if os.Getenv("CCP_MAIN_LIFECYCLE_HELPER") == "1" {
-		os.Args = []string{"ccp", "history", "--help"}
-		main()
-		return
-	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestMainLifecycleHelpPrintsStructuredHelpAndExitsZero")
-	cmd.Env = append(os.Environ(), "CCP_MAIN_LIFECYCLE_HELPER=1")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("expected zero exit for lifecycle help, got %v", err)
-	}
-	if !containsAll(stderr.String(), []string{"ccp history - show recorded command history", "Usage:", "Flags:", "Notes:"}) {
-		t.Fatalf("expected structured lifecycle help on stderr, got %q", stderr.String())
-	}
-}
-
-func TestRunInvocationExecutesStartupMaintenanceBeforeLifecycleDispatch(t *testing.T) {
-	var order []string
-	prevStartup := startupMaintenance
-	prevLifecycle := lifecycleDispatch
-	t.Cleanup(func() {
-		startupMaintenance = prevStartup
-		lifecycleDispatch = prevLifecycle
+			Expect(err).NotTo(HaveOccurred())
+			coreRuntime, ok := r.(*coreExecutionRuntime)
+			Expect(ok).To(BeTrue())
+			Expect(coreRuntime.runner).NotTo(BeNil())
+		})
 	})
 
-	startupMaintenance = func() error {
-		order = append(order, "startup")
-		return nil
-	}
-	lifecycleDispatch = func(args []string) (bool, error) {
-		order = append(order, "lifecycle")
-		if len(args) != 1 || args[0] != "fake-lifecycle" {
-			t.Fatalf("unexpected args: %v", args)
-		}
-		return true, nil
+	Describe("usageText", func() {
+		It("includes the expected usage sections", func() {
+			got := usageText()
+
+			Expect(got).NotTo(BeEmpty())
+			Expect(got).To(ContainSubstring("ccp - command compression proxy for coding-agent workflows"))
+			Expect(got).To(ContainSubstring("Usage:"))
+			Expect(got).To(ContainSubstring("Execution flags:"))
+			Expect(got).To(ContainSubstring("Lifecycle commands:"))
+			Expect(got).To(ContainSubstring("Notes:"))
+			Expect(got).To(ContainSubstring("--confidential"))
+			Expect(got).To(ContainSubstring("capture               Write command.yaml, sequenced streams, and replay output artifacts"))
+			Expect(got).To(ContainSubstring("init"))
+			Expect(got).To(ContainSubstring("filter                YAML filter authoring helpers"))
+			Expect(got).To(ContainSubstring("verify                Replay one fixture directory through the current filter"))
+			Expect(got).To(ContainSubstring("gain                  Show token savings summary and recent proof output"))
+			Expect(got).To(ContainSubstring("Run ccp gain after install or init to verify savings on real work."))
+			Expect(got).To(ContainSubstring("--raw preserves native output unless --confidential is also used."))
+		})
+	})
+
+	Describe("main", func() {
+		var (
+			cmd    *exec.Cmd
+			stderr bytes.Buffer
+		)
+
+		BeforeEach(func() {
+			cmd = nil
+			stderr.Reset()
+		})
+
+		Context("when invoked without an execution command", func() {
+			It("prints usage and exits non-zero", func() {
+				runMainUsageHelperIfRequested()
+				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper")
+				cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER=1")
+				cmd.Stderr = &stderr
+
+				err := cmd.Run()
+				var exitErr *exec.ExitError
+				Expect(errors.As(err, &exitErr)).To(BeTrue())
+				Expect(exitErr.ExitCode()).NotTo(Equal(0))
+				Expect(stderr.String()).To(ContainSubstring("Usage:"))
+				Expect(stderr.String()).To(ContainSubstring("Execution flags:"))
+				Expect(stderr.String()).To(ContainSubstring("Lifecycle commands:"))
+			})
+		})
+
+		Context("when invoked with lifecycle help", func() {
+			It("routes history help through lifecycle dispatch", func() {
+				handled, err := runLifecycleCommand([]string{"history", "--help"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(handled).To(BeTrue())
+			})
+		})
+	})
+
+	It("classifies lifecycle commands separately from wrapped execution", func() {
+		Expect(isLifecycleCommand([]string{"capture", "--", "echo", "hi"})).To(BeTrue())
+		Expect(isLifecycleCommand([]string{"init"})).To(BeTrue())
+		Expect(isLifecycleCommand([]string{"repair"})).To(BeTrue())
+		Expect(isLifecycleCommand([]string{"filter", "new", "demo"})).To(BeTrue())
+		Expect(isLifecycleCommand([]string{"uninstall"})).To(BeTrue())
+		Expect(isLifecycleCommand([]string{"pwd"})).To(BeFalse())
+		Expect(isLifecycleCommand([]string{"echo", "hi"})).To(BeFalse())
+		Expect(isLifecycleCommand(nil)).To(BeFalse())
+	})
+})
+
+func runMainUsageHelperIfRequested() {
+	if os.Getenv("CCP_MAIN_TEST_HELPER") != "1" {
+		return
 	}
 
-	handled, exitCode, err := runInvocation(cli.Options{CommandArgs: []string{"fake-lifecycle"}})
-	if err != nil {
-		t.Fatalf("runInvocation error: %v", err)
-	}
-	if !handled || exitCode != 0 {
-		t.Fatalf("unexpected handled=%v exitCode=%d", handled, exitCode)
-	}
-	if got := strings.Join(order, ","); got != "startup,lifecycle" {
-		t.Fatalf("unexpected call order: %s", got)
-	}
-}
-
-func containsAll(s string, parts []string) bool {
-	for _, p := range parts {
-		if !strings.Contains(s, p) {
-			return false
-		}
-	}
-	return true
+	os.Args = []string{"ccp"}
+	main()
 }

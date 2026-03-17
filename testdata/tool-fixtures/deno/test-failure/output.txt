@@ -1,3 +1,0 @@
-TS2367 [ERROR] at file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/deno/projects/failure/main_test.ts:4:7: This comparison appears to be unintentional because the types '1' and '2' have no overlap.
-error: Type checking failed.
-hint: Re-run with --no-check to skip type-checking.

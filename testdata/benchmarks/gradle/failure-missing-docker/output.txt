@@ -1,0 +1,49 @@
+:clean: ok
+:examples:basic-demo:clean: ok
+:spotlessInternalRegisterDependencies: ok
+:spotlessGroovyGradle: ok
+:spotlessGroovyGradleApply: ok
+:spotlessJava: ok
+:spotlessJavaApply: ok
+:spotlessApply: ok
+:spotlessJavaCheck: ok
+:compileJava: ok
+:processResources: ok
+:classes: ok
+:resolveMainClassName: ok
+:bootJar: ok
+:jar: ok
+:javadoc: ok
+:javadocJar: ok
+:sourceJar: ok
+:sourcesJar: ok
+:assemble: ok
+:spotlessGroovyGradleCheck: ok
+:spotlessCheck: ok
+:compileTestJava: ok
+:processTestResources: ok
+:testClasses: ok
+:test: ok
+MultiLevelCacheAutoConfigurationTest > instantiationTestWithCacheNames() FAILED
+    java.lang.ExceptionInInitializerError at Constructor.java:500
+        Caused by: java.lang.IllegalStateException at DockerClientProviderStrategy.java:274
+MultiLevelCacheAutoConfigurationTest > instantiationTest() FAILED
+    java.lang.NoClassDefFoundError at Constructor.java:500
+        Caused by: java.lang.ExceptionInInitializerError at Constructor.java:500
+MultiLevelCacheAutoConfigurationTest > useKeyPrefixWithoutPrefixFailsFast() FAILED
+MultiLevelCacheAutoConfigurationTest > redisTemplateUsesJsonValueSerializerByDefault() FAILED
+MultiLevelCacheAutoConfigurationTest > instantiationTestWithDifferentCacheTypes(CacheType) > initializationError FAILED
+    java.lang.NoClassDefFoundError at Method.java:569
+MultiLevelCacheAutoConfigurationTest > circuitBreakerWarnsWhenWaitDurationTooHigh(CapturedOutput) FAILED
+MultiLevelCacheAutoConfigurationTest > instantiationTestWithDifferentLocalExpirationModes(String, LocalExpirationMode) > initializationError FAILED
+MultiLevelCacheAutoConfigurationTest > redisTemplateUsesCustomValueSerializerWhenProvided() FAILED
+MultiLevelCacheManagerTest > cacheNamesTest() FAILED
+        Caused by: java.lang.ExceptionInInitializerError at DockerClientProviderStrategy.java:274
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > zeroLocalTimeToLive() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeExpiryJitter() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > tooBigExpiryJitter() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > expirationWithinConfiguredJitterRange() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeLocalTimeToLive() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > negativeTimeToLive() FAILED
+MultiLevelCacheManagerTest > RandomizedLocalExpiryTest > zeroTimeToLive() FAILED
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended

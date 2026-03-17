@@ -1,0 +1,4 @@
+playwright: 2 passed, 1 failed (3.1s)
+  ✘  2 tests/auth.spec.ts:8:1 › auth › rejects bad password (2.0s)
+    Error: expect(received).toBeTruthy()
+    screenshot: test-results/auth-failure.png

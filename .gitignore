@@ -64,8 +64,20 @@ yarn.lock
 .vscode/
 .history/
 *.iml
-.codex
-.opencode
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/bdd/
+!.codex/skills/bdd/**
+!.codex/skills/use-modern-go/
+!.codex/skills/use-modern-go/**
+.opencode/*
+!.opencode/skills/
+.opencode/skills/*
+!.opencode/skills/bdd/
+!.opencode/skills/bdd/**
+!.opencode/skills/use-modern-go/
+!.opencode/skills/use-modern-go/**
 .claude
 
 # --- OS junk ---
@@ -73,6 +85,7 @@ yarn.lock
 Thumbs.db
 
 # AI
-openspec/changes
+openspec
 TODO.md
 .ccp
+research

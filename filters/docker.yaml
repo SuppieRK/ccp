@@ -1,0 +1,18 @@
+version: 1
+filter: docker
+about: Compact Docker and Docker Compose family output through one family filter.
+
+cases:
+  - id: compose_build
+    when_arguments:
+      have_sequence:
+        - compose
+        - build
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^.*$'
+          replace:
+            - regex: '^\s*project-(\S+)\s+Built$'
+              to: '[ok] $1 built'

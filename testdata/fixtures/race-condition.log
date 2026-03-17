@@ -1,6 +1,0 @@
-[stdout] step-1 start
-[stderr] warning-1
-[stdout] step-2 start
-[stderr] warning-2
-[stdout] step-3 done
-[stderr] failed=1

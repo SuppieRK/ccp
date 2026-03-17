@@ -1,5 +1,0 @@
-next build: failed
-details:
-- Failed to compile.
-- ./app/page.tsx
-- Error: Missing required export

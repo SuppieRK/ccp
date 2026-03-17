@@ -1,0 +1,26 @@
+:clean: ok
+:examples:basic-demo:clean: ok
+:spotlessInternalRegisterDependencies: ok
+:spotlessGroovyGradle: ok
+:spotlessGroovyGradleApply: ok
+:spotlessJava: ok
+:spotlessJavaApply: ok
+:spotlessApply: ok
+:spotlessJavaCheck: ok
+> Task :compileJava FAILED
+9 actionable tasks: 8 executed, 1 up-to-date
+C:\Users\suppi\IdeaProjects\spring-boot-multilevel-cache-starter\src\main\java\io\github\suppie\spring\cache\MultiLevelCacheManager.java:160: error: incompatible types: Duration cannot be converted to boolean
+      if (timeToLive) {
+          ^
+1 error
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  C:\Users\suppi\IdeaProjects\spring-boot-multilevel-cache-starter\src\main\java\io\github\suppie\spring\cache\MultiLevelCacheManager.java:160: error: incompatible types: Duration cannot be converted to boolean
+        if (timeToLive) {
+            ^
+  1 error
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+BUILD FAILED in 2s

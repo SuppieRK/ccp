@@ -5,27 +5,33 @@ import (
 	"strings"
 )
 
-// Options is the parsed command-line configuration for ccp.
+var lifecycleCommands = map[string]struct{}{
+	"capture":   {},
+	"init":      {},
+	"gain":      {},
+	"history":   {},
+	"verify":    {},
+	"upgrade":   {},
+	"uninstall": {},
+	"repair":    {},
+}
+
+var filterCommands = map[string]struct{}{
+	"filter": {},
+}
+
 type Options struct {
-	// ShowHelp prints usage/help and exits without running a command.
 	ShowHelp bool
-	// ShowVersion prints version and exits without running a command.
+
 	ShowVersion bool
-	// Raw bypasses semantic compaction for wrapped execution commands.
+
 	Raw bool
-	// CaptureRaw runs in raw mode and writes timestamped stdout/stderr capture files.
-	CaptureRaw bool
-	// CaptureRawDir sets output directory for --capture-raw files.
-	CaptureRawDir string
-	// ConfidentialRedactions are comma-separated substrings replaced with "***" in capture files.
+
 	ConfidentialRedactions []string
-	// DebugFilter emits filter metadata while writing compacted output.
-	DebugFilter bool
-	// CommandArgs are the command and arguments forwarded to runner/lifecycle logic.
+
 	CommandArgs []string
 }
 
-// Parse reads CLI flags and returns normalized options.
 func Parse(args []string) (Options, error) {
 	opts := Options{}
 
@@ -58,17 +64,6 @@ func parseFlagArg(args []string, index int, opts *Options) (bool, int, error) {
 	case "--raw":
 		opts.Raw = true
 		return true, index, nil
-	case "--capture-raw":
-		opts.Raw = true
-		opts.CaptureRaw = true
-		return true, index, nil
-	case "--capture-raw-dir":
-		value, next, err := requireFlagValue(args, index, "--capture-raw-dir")
-		if err != nil {
-			return true, index, err
-		}
-		opts.CaptureRawDir = value
-		return true, next, nil
 	case "--confidential":
 		value, next, err := requireFlagValue(args, index, "--confidential")
 		if err != nil {
@@ -76,9 +71,6 @@ func parseFlagArg(args []string, index int, opts *Options) (bool, int, error) {
 		}
 		opts.ConfidentialRedactions = parseConfidentialRedactions(value)
 		return true, next, nil
-	case "--debug-filter":
-		opts.DebugFilter = true
-		return true, index, nil
 	default:
 		return false, index, nil
 	}
@@ -102,13 +94,10 @@ func requireFlagValue(args []string, index int, flag string) (string, int, error
 }
 
 func validateExecutionFlagScope(opts Options) error {
-	if opts.CaptureRawDir != "" && !opts.CaptureRaw {
-		return fmt.Errorf("--capture-raw-dir requires --capture-raw")
-	}
 	if len(opts.CommandArgs) == 0 {
 		return nil
 	}
-	if !isLifecycleCommand(opts.CommandArgs[0]) {
+	if !IsManagedCommand(opts.CommandArgs[0]) {
 		return nil
 	}
 	if opts.Raw {
@@ -118,15 +107,6 @@ func validateExecutionFlagScope(opts Options) error {
 		return fmt.Errorf("--confidential is only valid for execution commands")
 	}
 	return nil
-}
-
-func isLifecycleCommand(arg string) bool {
-	switch strings.TrimSpace(strings.ToLower(arg)) {
-	case "init", "gain", "history", "upgrade", "uninstall":
-		return true
-	default:
-		return false
-	}
 }
 
 func parseConfidentialRedactions(raw string) []string {
@@ -148,4 +128,98 @@ func parseConfidentialRedactions(raw string) []string {
 		out = append(out, token)
 	}
 	return out
+}
+
+func IsLifecycleCommand(token string) bool {
+	_, ok := lifecycleCommands[normalizeToken(token)]
+	return ok
+}
+
+func IsFilterCommand(token string) bool {
+	_, ok := filterCommands[normalizeToken(token)]
+	return ok
+}
+
+func IsManagedCommand(token string) bool {
+	return IsLifecycleCommand(token) || IsFilterCommand(token)
+}
+
+func IsManagedArgs(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	return IsManagedCommand(args[0])
+}
+
+func ShouldSkipMetrics(tool string, args []string) bool {
+	if strings.TrimSpace(tool) != "ccp" {
+		return false
+	}
+	if len(args) < 2 {
+		return false
+	}
+	return IsManagedCommand(args[1])
+}
+
+type ExecutionShape struct {
+	UsesShell   bool
+	HasPipeline bool
+	HasChain    bool
+	HasFindExec bool
+	HasXargs    bool
+	NestedCCP   bool
+}
+
+func DescribeExecutionShape(args []string) ExecutionShape {
+	shape := ExecutionShape{}
+	if len(args) == 0 {
+		return shape
+	}
+
+	shape.UsesShell = isShellCommand(args)
+	if shape.UsesShell {
+		script := strings.Join(args[2:], " ")
+		shape.HasPipeline = strings.Contains(script, "|")
+		shape.HasChain = strings.Contains(script, "&&") || strings.Contains(script, "||") || strings.Contains(script, ";")
+		shape.HasFindExec = strings.Contains(script, "find ") && strings.Contains(script, "-exec")
+		shape.HasXargs = strings.Contains(script, "xargs")
+		shape.NestedCCP = strings.Contains(script, "ccp ")
+		return shape
+	}
+
+	for idx, arg := range args[1:] {
+		switch arg {
+		case "|":
+			shape.HasPipeline = true
+		case "&&", "||", ";":
+			shape.HasChain = true
+		case "-exec":
+			shape.HasFindExec = true
+		case "xargs":
+			shape.HasXargs = true
+		case "ccp":
+			shape.NestedCCP = true
+		}
+		if args[idx] == "find" && arg == "-exec" {
+			shape.HasFindExec = true
+		}
+	}
+
+	return shape
+}
+
+func normalizeToken(token string) string {
+	return strings.TrimSpace(strings.ToLower(token))
+}
+
+func isShellCommand(args []string) bool {
+	if len(args) < 2 {
+		return false
+	}
+	switch normalizeToken(args[0]) {
+	case "sh", "bash", "zsh":
+		return strings.Contains(args[1], "c")
+	default:
+		return false
+	}
 }

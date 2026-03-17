@@ -1,0 +1,9 @@
+:compileJava: ok
+:processResources: ok
+:classes: ok
+:compileTestJava: ok
+:processTestResources: ok
+:testClasses: ok
+:test: ok
+BUILD SUCCESSFUL in 641ms
+2 actionable tasks: 2 up-to-date

@@ -1,0 +1,35 @@
+version: 1
+filter: grep
+about: Compact grep output by grouping matches per file.
+cases:
+  - id: grouped_matches
+    when_arguments:
+      have_any:
+        - -r
+        - -R
+        - --recursive
+        - --dereference-recursive
+      have_short_flag:
+        - -n
+    compress_output:
+      stdout:
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+):(?P<text>.+)$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: text
+                type: string
+                regex_group: text
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}: {{text}}'

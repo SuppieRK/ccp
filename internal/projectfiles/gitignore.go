@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-// EnsureGitignoreEntry appends an entry to <projectRoot>/.gitignore when missing.
-// If .gitignore does not exist, it is treated as no-op.
 func EnsureGitignoreEntry(projectRoot, entry string) error {
 	projectRoot = strings.TrimSpace(projectRoot)
 	entry = strings.TrimSpace(entry)
