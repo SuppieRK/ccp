@@ -281,6 +281,51 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(estimateTokens("abcd")).To(Equal(1))
 			Expect(estimateTokens("abcde")).To(Equal(2))
 		})
+
+		DescribeTable("loads previous results",
+			func(contents string, useMissingPath bool, expectKey bool, matcher OmegaMatcher) {
+				path := ""
+				if useMissingPath {
+					path = filepath.Join(GinkgoT().TempDir(), "missing", "report.json")
+				} else if contents != "" {
+					path = filepath.Join(GinkgoT().TempDir(), "report.json")
+					Expect(os.WriteFile(path, []byte(contents), 0o644)).To(Succeed())
+				}
+				results, err := loadPreviousResults(path)
+
+				Expect(err).To(matcher)
+				if err == nil {
+					if expectKey {
+						Expect(results).To(HaveKey(comparisonKey("grep", "recursive-match")))
+					} else {
+						Expect(results).To(BeEmpty())
+					}
+				}
+			},
+			Entry("ignores blank path", "", false, false, Succeed()),
+			Entry("ignores missing file", "", true, false, Succeed()),
+			Entry("loads prior case results", `{"results":[{"tool":"grep","case":"recursive-match","token_compaction_ratio":2.5}]}`, false, true, Succeed()),
+			Entry("reports invalid JSON", "{", false, false, MatchError(ContainSubstring("read previous report: parse report json:"))),
+		)
+
+		DescribeTable("handles compaction-ratio comparisons",
+			func(current *CaseResult, previous CaseResult, expectedWarnings []string, expectedSuccess bool) {
+				maybeWarnCompactionDrop(current, previous)
+				Expect(current.Warnings).To(Equal(expectedWarnings))
+				Expect(current.Success).To(Equal(expectedSuccess))
+			},
+			Entry("ignores missing previous ratio", &CaseResult{Success: true}, CaseResult{}, nil, true),
+			Entry("ignores stable ratios", &CaseResult{TokenCompactionRatio: 1.9, Success: true}, CaseResult{TokenCompactionRatio: 2}, nil, true),
+			Entry("warns on material drop", &CaseResult{TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, false),
+		)
+
+		DescribeTable("computes token compaction ratio",
+			func(nativeTokens, proxyTokens int, expected float64) {
+				Expect(tokenCompactionRatio(nativeTokens, proxyTokens)).To(Equal(expected))
+			},
+			Entry("uses native to proxy ratio", 10, 4, 2.5),
+			Entry("falls back to one for zero proxy tokens", 10, 0, 1.0),
+		)
 	})
 
 	Describe("file helpers", func() {
