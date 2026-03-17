@@ -18,10 +18,11 @@ import (
 )
 
 type RunOptions struct {
-	FixturesRoot string
-	ArtifactsDir string
-	ProxyBinary  string
-	Timeout      time.Duration
+	FixturesRoot   string
+	ArtifactsDir   string
+	ProxyBinary    string
+	Timeout        time.Duration
+	PreviousReport string
 }
 
 type RunReport struct {
@@ -31,13 +32,14 @@ type RunReport struct {
 }
 
 type CaseResult struct {
-	Tool         string   `json:"tool"`
-	Case         string   `json:"case"`
-	Command      string   `json:"command"`
-	NativeTokens int      `json:"native_tokens"`
-	ProxyTokens  int      `json:"proxy_tokens"`
-	Success      bool     `json:"success"`
-	Warnings     []string `json:"warnings,omitempty"`
+	Tool                 string   `json:"tool"`
+	Case                 string   `json:"case"`
+	Command              string   `json:"command"`
+	NativeTokens         int      `json:"native_tokens"`
+	ProxyTokens          int      `json:"proxy_tokens"`
+	TokenCompactionRatio float64  `json:"token_compaction_ratio"`
+	Success              bool     `json:"success"`
+	Warnings             []string `json:"warnings,omitempty"`
 }
 
 type fixtureCase struct {
@@ -64,12 +66,19 @@ func Run(opts RunOptions) (RunReport, error) {
 	if err != nil {
 		return RunReport{}, err
 	}
+	prevByCase, err := loadPreviousResults(opts.PreviousReport)
+	if err != nil {
+		return RunReport{}, err
+	}
 	report := RunReport{
 		Generated: time.Now().UTC(),
 		Results:   make([]CaseResult, 0, len(cases)),
 	}
 	for _, fixtureCase := range cases {
 		result := runCase(opts, fixtureCase)
+		if prev, ok := prevByCase[comparisonKey(result.Tool, result.Case)]; ok {
+			maybeWarnCompactionDrop(&result, prev)
+		}
 		report.Results = append(report.Results, result)
 		if !result.Success {
 			report.Failed = true
@@ -183,6 +192,7 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 		return result
 	}
 	result.ProxyTokens = estimateTokens(string(verifyOutput))
+	result.TokenCompactionRatio = tokenCompactionRatio(result.NativeTokens, result.ProxyTokens)
 
 	if warning := compareIfPresent(fixture.OutputPath, verifyOutputPath, "output"); warning != "" {
 		result.Warnings = append(result.Warnings, warning)
@@ -281,6 +291,61 @@ func FailureSummary(report RunReport) []string {
 		lines = append(lines, fmt.Sprintf("%s/%s: %s", result.Tool, result.Case, strings.Join(result.Warnings, "; ")))
 	}
 	return lines
+}
+
+func loadPreviousResults(path string) (map[string]CaseResult, error) {
+	out := map[string]CaseResult{}
+	if strings.TrimSpace(path) == "" {
+		return out, nil
+	}
+	previous, err := readRunReport(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return out, nil
+		}
+		return nil, fmt.Errorf("read previous report: %w", err)
+	}
+	for _, result := range previous.Results {
+		out[comparisonKey(result.Tool, result.Case)] = result
+	}
+	return out, nil
+}
+
+func maybeWarnCompactionDrop(curr *CaseResult, prev CaseResult) {
+	if prev.TokenCompactionRatio <= 0 {
+		return
+	}
+	if curr.TokenCompactionRatio < prev.TokenCompactionRatio*0.95 {
+		curr.Warnings = append(curr.Warnings, fmt.Sprintf(
+			"token compaction ratio dropped from %.2f to %.2f",
+			prev.TokenCompactionRatio,
+			curr.TokenCompactionRatio,
+		))
+		curr.Success = false
+	}
+}
+
+func readRunReport(path string) (RunReport, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return RunReport{}, err
+	}
+	var report RunReport
+	if err := json.Unmarshal(body, &report); err != nil {
+		return RunReport{}, fmt.Errorf("parse report json: %w", err)
+	}
+	return report, nil
+}
+
+func comparisonKey(tool, name string) string {
+	return tool + "\x00" + name
+}
+
+func tokenCompactionRatio(nativeTokens, proxyTokens int) float64 {
+	if proxyTokens > 0 {
+		return float64(nativeTokens) / float64(proxyTokens)
+	}
+	return 1
 }
 
 func HashInput(events []replay.Event) string {

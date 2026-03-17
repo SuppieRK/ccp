@@ -226,6 +226,44 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(report.Failed).To(BeTrue())
 			Expect(filepath.Join(artifacts, "report.json")).To(BeAnExistingFile())
 		})
+
+		It("warns when token compaction ratio drops from the previous report", func() {
+			fixtureDir := filepath.Join(root, "grep", "recursive-match")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|match one\n00001|match two\n")
+			writeFixtureFile(fixtureDir, "output.txt", "grouped output\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("grouped output\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, "verify-decisions.txt"), []byte("<keep>    | match one\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			previousReportPath := filepath.Join(GinkgoT().TempDir(), "report.json")
+			Expect(writeReportJSON(filepath.Dir(previousReportPath), RunReport{
+				Results: []CaseResult{{
+					Tool:                 "grep",
+					Case:                 "recursive-match",
+					TokenCompactionRatio: 10,
+				}},
+			})).To(Succeed())
+
+			report, err := Run(RunOptions{
+				FixturesRoot:   root,
+				ArtifactsDir:   artifacts,
+				ProxyBinary:    "ccp",
+				Timeout:        time.Second,
+				PreviousReport: previousReportPath,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Results).To(HaveLen(1))
+			Expect(report.Results[0].Warnings).To(ContainElement("token compaction ratio dropped from 10.00 to 1.25"))
+			Expect(report.Results[0].Success).To(BeFalse())
+			Expect(report.Failed).To(BeTrue())
+		})
 	})
 
 	Describe("report helpers", func() {

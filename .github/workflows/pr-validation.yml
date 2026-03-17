@@ -184,8 +184,7 @@ jobs:
           go run ./cmd/ccp-ci \
             -artifacts-dir "$out_dir" \
             -previous-report "$prev_report" \
-            -tool "$tool" \
-            -max-artifact-bytes 5242880
+            -tool "$tool"
 
       - name: Upload benchmark artifacts
         if: always()
