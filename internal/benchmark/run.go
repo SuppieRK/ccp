@@ -207,7 +207,7 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 }
 
 func copyFixtureInputs(fixture replay.Fixture, artifactDir string) error {
-	for _, path := range []string{fixture.CommandPath, fixture.StdoutPath, fixture.StderrPath} {
+	for _, path := range []string{fixture.CommandPath, fixture.StdoutPath, fixture.StderrPath, fixture.OutputPath} {
 		if err := copyIfPresent(path, filepath.Join(artifactDir, filepath.Base(path))); err != nil {
 			return err
 		}

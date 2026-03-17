@@ -338,6 +338,21 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(filepath.Join(dstDir, "command.yaml")).To(BeAnExistingFile())
 			Expect(filepath.Join(dstDir, "stdout.txt")).To(BeAnExistingFile())
 			Expect(filepath.Join(dstDir, "stderr.txt")).To(BeAnExistingFile())
+			Expect(filepath.Join(dstDir, "output.txt")).To(BeAnExistingFile())
+		})
+
+		It("copies output-only fixtures for verify replay", func() {
+			srcDir := GinkgoT().TempDir()
+			dstDir := GinkgoT().TempDir()
+			writeFixtureFile(srcDir, "command.yaml", "argv: [\"grep\"]\n")
+			writeFixtureFile(srcDir, "output.txt", "")
+
+			fixture, err := replay.LoadFixture(srcDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(copyFixtureInputs(fixture, dstDir)).To(Succeed())
+			Expect(filepath.Join(dstDir, "command.yaml")).To(BeAnExistingFile())
+			Expect(filepath.Join(dstDir, "output.txt")).To(BeAnExistingFile())
 		})
 
 		It("treats missing and directory sources as no-ops", func() {
@@ -363,9 +378,11 @@ func replayFixture(dir string) replay.Fixture {
 	writeFixtureFile(dir, "command.yaml", "argv: [\"grep\"]\n")
 	writeFixtureFile(dir, "stdout.txt", "00000|line\n")
 	writeFixtureFile(dir, "stderr.txt", "00001|err\n")
+	writeFixtureFile(dir, "output.txt", "out\n")
 	return replay.Fixture{
 		CommandPath: filepath.Join(dir, "command.yaml"),
 		StdoutPath:  filepath.Join(dir, "stdout.txt"),
 		StderrPath:  filepath.Join(dir, "stderr.txt"),
+		OutputPath:  filepath.Join(dir, "output.txt"),
 	}
 }
