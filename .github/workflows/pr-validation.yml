@@ -23,6 +23,17 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: '1.26.x'
+          cache: true
+
+      - name: Cache validation tools and lint state
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/go/bin
+            ~/.cache/golangci-lint
+          key: validation-tools-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum', './scripts/validate.sh', '.github/workflows/main-validation.yml', '.github/workflows/pr-validation.yml') }}
+          restore-keys: |
+            validation-tools-${{ runner.os }}-
 
       - name: Install validation tools
         shell: bash

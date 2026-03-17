@@ -114,7 +114,7 @@ var _ = Describe("capture", func() {
 
 func captureSuccessCommand() ([]string, string, string) {
 	if runtime.GOOS == "windows" {
-		return []string{"cmd", "/c", "(echo native stdout) & (echo native stderr 1>&2)"}, "native stdout\n", "native stderr\n"
+		return []string{"cmd", "/c", "echo native stdout & echo native stderr 1>&2"}, "native stdout\n", "native stderr\n"
 	}
 	return []string{"sh", "-c", "printf 'native stdout\\n'; printf 'native stderr\\n' >&2"}, "native stdout\n", "native stderr\n"
 }
