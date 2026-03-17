@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -308,13 +309,53 @@ var _ = Describe("benchmark replay runner", func() {
 				}},
 			}
 
-			Expect(writeSummary(report)).To(Succeed())
+			Expect(WriteSummary(report)).To(Succeed())
 
 			body, err := os.ReadFile(summaryPath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(body)).To(ContainSubstring("Generated: `2026-03-17T12:00:00Z`"))
 			Expect(string(body)).To(ContainSubstring("| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |"))
 			Expect(string(body)).To(ContainSubstring("| 🟢 | grep/recursive-match | `grep -r needle ./internal` | 10 | 4 | 60.00 |  |"))
+		})
+
+		It("appends multiple invocations into a single benchmark table", func() {
+			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
+			prev := os.Getenv("GITHUB_STEP_SUMMARY")
+			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
+			DeferCleanup(func() {
+				if prev == "" {
+					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
+					return
+				}
+				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
+			})
+
+			Expect(WriteSummary(RunReport{
+				Results: []CaseResult{{
+					Tool:         "grep",
+					Case:         "recursive-match",
+					Command:      "grep -r needle ./internal",
+					NativeTokens: 10,
+					ProxyTokens:  4,
+					Success:      true,
+				}},
+			})).To(Succeed())
+			Expect(WriteSummary(RunReport{
+				Results: []CaseResult{{
+					Tool:         "grep",
+					Case:         "no-match",
+					Command:      "grep needle missing",
+					NativeTokens: 3,
+					ProxyTokens:  0,
+					Success:      false,
+					Warnings:     []string{"output mismatch"},
+				}},
+			})).To(Succeed())
+
+			body, err := os.ReadFile(summaryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(strings.Count(string(body), "| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |")).To(Equal(1))
+			Expect(string(body)).To(ContainSubstring("| 🟢 | grep/recursive-match | `grep -r needle ./internal` | 10 | 4 | 60.00 |  |"))
+			Expect(string(body)).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 3 | 0 | 100.00 | output mismatch |"))
 		})
 
 		It("prints markdown summary to stdout when GITHUB_STEP_SUMMARY is unset", func() {
@@ -353,7 +394,7 @@ var _ = Describe("benchmark replay runner", func() {
 				}},
 			}
 
-			Expect(writeSummary(report)).To(Succeed())
+			Expect(WriteSummary(report)).To(Succeed())
 			Expect(stdoutWriter.Close()).To(Succeed())
 			Expect(<-output).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 0 | 0 | 0.00 | output mismatch |"))
 		})

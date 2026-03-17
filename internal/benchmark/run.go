@@ -90,9 +90,6 @@ func Run(opts RunOptions) (RunReport, error) {
 		}
 		return report.Results[i].Tool < report.Results[j].Tool
 	})
-	if err := writeSummary(report); err != nil {
-		return report, err
-	}
 	if err := writeReportJSON(opts.ArtifactsDir, report); err != nil {
 		return report, err
 	}
@@ -296,11 +293,8 @@ func FailureSummary(report RunReport) []string {
 	return lines
 }
 
-func writeSummary(report RunReport) error {
+func WriteSummary(report RunReport) error {
 	var b strings.Builder
-	_, _ = fmt.Fprintf(&b, "Generated: `%s`\n\n", report.Generated.Format(time.RFC3339))
-	b.WriteString("| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |\n")
-	b.WriteString("|---|---|---|---:|---:|---:|---|\n")
 	rows := append([]CaseResult(nil), report.Results...)
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Tool == rows[j].Tool {
@@ -323,18 +317,42 @@ func writeSummary(report RunReport) error {
 	}
 	summaryPath := os.Getenv("GITHUB_STEP_SUMMARY")
 	if summaryPath != "" {
-		f, err := os.OpenFile(summaryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			return err
-		}
-		if _, err := f.WriteString(b.String()); err != nil {
-			_ = f.Close()
-			return err
-		}
-		return f.Close()
+		return appendSummaryToFile(summaryPath, b.String())
 	}
-	_, err := fmt.Print(b.String())
+	_, err := fmt.Print(summaryTableHeader() + b.String())
 	return err
+}
+
+func appendSummaryToFile(path, rows string) error {
+	prefix := ""
+	if !summaryTableExists(path) {
+		prefix = summaryTableHeader()
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := f.WriteString(prefix + rows); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func summaryTableExists(path string) bool {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(body), summaryTableHeaderRow())
+}
+
+func summaryTableHeader() string {
+	return summaryTableHeaderRow() + "\n" + "|---|---|---|---:|---:|---:|---|\n"
+}
+
+func summaryTableHeaderRow() string {
+	return "| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |"
 }
 
 func summaryStatusCell(result CaseResult) string {

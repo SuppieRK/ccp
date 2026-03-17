@@ -34,7 +34,11 @@ func main() {
 	})
 	if err != nil {
 		fatal(err.Error())
-	} else if report.Failed {
+	}
+	if err := benchmark.WriteSummary(report); err != nil {
+		fatal(err.Error())
+	}
+	if report.Failed {
 		for _, line := range benchmark.FailureSummary(report) {
 			_, _ = fmt.Fprintln(os.Stderr, line)
 		}
