@@ -129,6 +129,17 @@ filter: broken
 
 var _ = Describe("ProjectRootFromSource", func() {
 	It("resolves to the repository root", func() {
-		Expect(filepath.Base(ProjectRootFromSource())).To(Equal("go-exec-compress-proxy"))
+		root := ProjectRootFromSource()
+		Expect(root).NotTo(BeEmpty())
+		Expect(filepath.IsAbs(root)).To(BeTrue())
+		info, err := os.Stat(filepath.Join(root, "go.mod"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.IsDir()).To(BeFalse())
+		entries := []string{"filters", "internal", "openspec"}
+		for _, entry := range entries {
+			stat, err := os.Stat(filepath.Join(root, entry))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+		}
 	})
 })

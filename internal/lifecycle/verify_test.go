@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -127,7 +128,7 @@ var _ = Describe("verify", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"verify_invocation_start"`))
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"verify_invocation_finish"`))
 		Expect(string(auditData)).To(ContainSubstring(`"success":true`))
-		Expect(string(auditData)).To(ContainSubstring(`"verify_output":"` + filepath.Join(tmp, replay.VerifyOutputFileName) + `"`))
+		Expect(string(auditData)).To(ContainSubstring(`"verify_output":` + strconv.Quote(filepath.Join(tmp, replay.VerifyOutputFileName))))
 	})
 
 	It("records verify invocation failures in the audit log", func() {

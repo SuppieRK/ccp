@@ -270,7 +270,7 @@ var _ = Describe("Runner", func() {
 
 		runner := &Runner{sources: []corefilters.FilterSource{}}
 
-		code, err := runner.Run([]string{"echo", "audit-ok"})
+		code, err := runner.Run(auditCommand())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(code).To(Equal(0))
@@ -876,4 +876,11 @@ func metricsCommand() ([]string, string) {
 		return []string{"cmd", "/c", "echo metrics-win"}, "cmd"
 	}
 	return []string{"sh", "-c", "printf 'metrics\\n'"}, "sh"
+}
+
+func auditCommand() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd", "/c", "echo audit-ok"}
+	}
+	return []string{"sh", "-c", "printf 'audit-ok\\n'"}
 }

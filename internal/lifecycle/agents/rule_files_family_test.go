@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -81,7 +82,7 @@ var _ = ginkgo.Describe("rule files family", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Applied).To(Equal(1))
 			_, statErr := os.Stat(target)
-			Expect(statErr).To(MatchError(ContainSubstring("no such file or directory")))
+			Expect(errors.Is(statErr, os.ErrNotExist)).To(BeTrue())
 
 			got, err := os.ReadFile(sibling)
 			Expect(err).NotTo(HaveOccurred())
