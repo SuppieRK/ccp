@@ -30,11 +30,6 @@ CI is the canonical definition of release build mechanics.
 
 ---
 
-# OpenSpec Synchronization
-
-- ANY code modification requires matching OpenSpec updates.
-- MUST keep specs, fixtures, tests, and implementation aligned.
-
 ## Canonical Extension Path
 
 - New built-in filters MUST be authored in `filters/<tool>.yaml` and routed through `filters/.mappings.yaml` when wrapper or alias spellings need the same canonical filter.
@@ -65,7 +60,6 @@ CI is the canonical definition of release build mechanics.
 
 Agents MUST NOT:
 
-- Introduce new code without OpenSpec update.
 - Modify generated benchmark artifacts manually.
 - Bypass benchmark gate logic.
 - Remove fallback safety behavior.

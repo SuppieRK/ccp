@@ -1,0 +1,23 @@
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/
+  internal/
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/
+  .ccp/
+  audit/
+  benchmark/
+  cli/
+  contracts/
+  engine/
+  filters/
+  lifecycle/
+  metrics/
+  projectfiles/
+  quality/
+  replay/
+  version/
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/filters/
+  operations/
+  yaml/
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/lifecycle/
+  agents/
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/quality/
+  coverage/

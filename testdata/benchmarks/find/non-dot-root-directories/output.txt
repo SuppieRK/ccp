@@ -1,0 +1,21 @@
+internal/
+  .ccp/
+  audit/
+  benchmark/
+  cli/
+  contracts/
+  engine/
+  filters/
+  lifecycle/
+  metrics/
+  projectfiles/
+  quality/
+  replay/
+  version/
+internal/filters/
+  operations/
+  yaml/
+internal/lifecycle/
+  agents/
+internal/quality/
+  coverage/

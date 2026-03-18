@@ -1,0 +1,1 @@
+argv: ["find", "internal", "cmd", "-name", "*.go", "-type", "f"]

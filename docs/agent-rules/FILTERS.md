@@ -164,7 +164,6 @@ It does not touch project-local `./.ccp/filters`.
 ## Spec Alignment
 
 - Family tools require one spec that covers the shared entity behavior.
-- Specs under: `openspec/specs/`
 - Spec-fixture directory names MUST match spec IDs.
 - When specs change, update the matching YAML benchmark coverage under `testdata/benchmarks/`.
 
@@ -180,4 +179,4 @@ It does not touch project-local `./.ccp/filters`.
 
 - Follow `docs/agent-rules/TESTING.md` for test-layer selection and generic placement rules.
 - New runtime/filter features MUST add command-specific or runtime-specific coverage in the narrowest relevant package, and shared planner/runtime helpers should live in shared test helper files instead of one helper per tool.
-- Existing filters with planning or runtime behavior changes MUST update those tests alongside YAML fixtures and OpenSpec.
+- Existing filters with planning or runtime behavior changes MUST update those tests alongside YAML fixtures.

@@ -262,6 +262,82 @@ var _ = Describe("YamlFilter", func() {
 		}))
 	})
 
+	It("summarizes omitted grouped items at scope max from YAML", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "find",
+			Cases: []CaseClause{{
+				ID: "files",
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{
+						Lines: &OutputLines{
+							Max: &MaxRule{
+								Count: 5,
+								Print: "\n+{{value}} more {{groups_summary}}",
+								GroupsSummary: &MaxGroupsSummary{
+									Show:      2,
+									Print:     "{{key}}/({{count}})",
+									Delimiter: ", ",
+									Prefix:    "across ",
+									Suffix:    " and {{remaining}} other dirs",
+								},
+							},
+						},
+						Groups: []OutputGroup{{
+							ID:           "by_parent_dir",
+							MatchesRegex: `^\./(?P<dir>.+)/(?P<name>[^/]+)$`,
+							Variables: []Variable{
+								{Name: "dir", Type: "string", RegexGroup: "dir"},
+								{Name: "name", Type: "string", RegexGroup: "name"},
+							},
+							GroupBy: "{{dir}}",
+							Initially: &OnExit{
+								Print: "{{dir}}/",
+							},
+							Lines: &OutputLines{
+								Replace: []ReplaceRule{{
+									Regex: `^.*$`,
+									To:    stringPtr("  {{name}}"),
+								}},
+							},
+						}},
+					},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		args := []string{"find", ".", "-type", "f"}
+		for _, line := range []string{
+			"./a/1.go\n",
+			"./a/2.go\n",
+			"./b/1.go\n",
+			"./b/2.go\n",
+			"./c/1.go\n",
+			"./c/2.go\n",
+		} {
+			Expect(filter.OnStdout(line, yamlFilterContext{args: args}).Kind).To(Equal(contracts.ActionIgnore))
+		}
+
+		exit := filter.OnStdoutExit(yamlFilterContext{args: args})
+		Expect(exit).To(Equal(contracts.Action{
+			Kind: contracts.ActionReplace,
+			Output: strings.Join([]string{
+				"a/",
+				"  1.go",
+				"  2.go",
+				"b/",
+				"  1.go",
+				"+4 more across c/(2), b/(1)",
+				"",
+			}, "\n"),
+		}))
+	})
+
+	It("trims empty groups summary placeholders from max print", func() {
+		Expect(renderMaxPrint("\n+{{value}} more {{groups_summary}}", 5, "")).To(Equal("\n+5 more"))
+	})
+
 	It("rewrites matching lines with replace rules", func() {
 		filter, err := NewFilter(&FilterDefinition{
 			Version: 1,

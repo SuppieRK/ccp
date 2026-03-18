@@ -232,6 +232,32 @@
         },
         "print": {
           "type": "string"
+        },
+        "groups_summary": {
+          "$ref": "#/$defs/max_groups_summary"
+        }
+      }
+    },
+    "max_groups_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["show", "print"],
+      "properties": {
+        "show": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "print": {
+          "type": "string"
+        },
+        "delimiter": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
         }
       }
     },
