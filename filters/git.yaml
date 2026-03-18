@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: git
-about: Compact common git subcommands while preserving native failure semantics and line-oriented follow-up affordances.
+about: Compact common read-only and success-path git flows while preserving native failure semantics, 0-byte command behavior, and line-oriented output that remains usable in follow-up shell work.
 
 cases:
   - id: status
