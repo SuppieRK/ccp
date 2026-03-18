@@ -27,7 +27,8 @@ const (
 )
 
 type CommandSpec struct {
-	Argv []string `yaml:"argv"`
+	Argv     []string `yaml:"argv"`
+	ExitCode int      `yaml:"exit_code,omitempty"`
 }
 
 type Event struct {
@@ -61,6 +62,10 @@ func FixturePaths(dir string) map[string]string {
 }
 
 func WriteCommand(path string, args []string) error {
+	return WriteCommandWithExitCode(path, args, 0)
+}
+
+func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
 	root := yaml.Node{
 		Kind: yaml.MappingNode,
 		Content: []*yaml.Node{
@@ -79,6 +84,12 @@ func WriteCommand(path string, args []string) error {
 			Value: arg,
 		})
 	}
+	if exitCode != 0 {
+		root.Content = append(root.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: "exit_code"},
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: strconv.Itoa(exitCode)},
+		)
+	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
@@ -89,10 +100,6 @@ func WriteCommand(path string, args []string) error {
 		return fmt.Errorf("close command yaml encoder: %w", err)
 	}
 	return os.WriteFile(path, buf.Bytes(), 0o644)
-}
-
-func WriteCommandFile(path string, args []string) error {
-	return WriteCommand(path, args)
 }
 
 func ReadCommand(path string) (CommandSpec, error) {

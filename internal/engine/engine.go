@@ -18,10 +18,11 @@ func NewEngine(registry *Registry) *Engine {
 }
 
 type State struct {
-	filter  contracts.Filter
-	command contracts.Command
-	buffer  *OrderedBuffer
-	mu      sync.Mutex
+	filter   contracts.Filter
+	command  contracts.Command
+	buffer   *OrderedBuffer
+	exitCode int
+	mu       sync.Mutex
 }
 
 func newState(command contracts.Command, filter contracts.Filter) *State {
@@ -50,9 +51,10 @@ func (s *State) Stderr(line string) []BufferEntry {
 	return entries
 }
 
-func (s *State) Exit() []BufferEntry {
+func (s *State) Exit(exitCode int) []BufferEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.exitCode = exitCode
 	s.applyExit(s.filter.OnStdoutExit(s))
 	return s.buffer.Entries()
 }
@@ -69,9 +71,10 @@ func (s *State) StderrAction(line string) (contracts.Action, []BufferEntry) {
 	return s.applyAction(contracts.StreamStderr, line, s.filter.OnStderr(line, s))
 }
 
-func (s *State) ExitAction() (contracts.Action, []BufferEntry) {
+func (s *State) ExitAction(exitCode int) (contracts.Action, []BufferEntry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.exitCode = exitCode
 	action := s.filter.OnStdoutExit(s)
 	s.applyExit(action)
 	return action, s.buffer.Entries()
@@ -141,4 +144,8 @@ func (s *State) Args() []string {
 
 func (s *State) BufferedLines(stream contracts.Stream) []string {
 	return s.buffer.Lines(stream)
+}
+
+func (s *State) ExitCode() int {
+	return s.exitCode
 }

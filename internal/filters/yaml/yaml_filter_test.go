@@ -10,9 +10,10 @@ import (
 )
 
 type yamlFilterContext struct {
-	args   []string
-	stdout []string
-	stderr []string
+	args     []string
+	stdout   []string
+	stderr   []string
+	exitCode int
 }
 
 func (c yamlFilterContext) Args() []string {
@@ -28,6 +29,10 @@ func (c yamlFilterContext) BufferedLines(stream contracts.Stream) []string {
 	default:
 		return nil
 	}
+}
+
+func (c yamlFilterContext) ExitCode() int {
+	return c.exitCode
 }
 
 var _ = Describe("YamlFilter", func() {
@@ -743,6 +748,59 @@ var _ = Describe("YamlFilter", func() {
 		}))
 	})
 
+	It("suppresses finally output on non-zero exit codes", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "git",
+			Cases: []CaseClause{{
+				ID: "show",
+				Variables: []Variable{
+					{Name: "files", Type: "number", InitialValue: stringPtr("0")},
+				},
+				CompressOutput: &OutputShape{
+					Stdout: &OutputScope{
+						Lines: &OutputLines{
+							Replace: []ReplaceRule{{
+								Regex: `^diff --git a/(.+) b/.+$`,
+								To:    stringPtr("$1"),
+								OnMatch: []MatchAction{{
+									Variable:  "files",
+									Increment: intPtr(1),
+								}},
+							}},
+						},
+					},
+				},
+				Finally: &OnExit{Print: "summary: {{files}} files changed"},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.OnStdout("diff --git a/tracked.txt b/tracked.txt\n", yamlFilterContext{
+			args: []string{"git", "show"},
+		}).Output).To(Equal("tracked.txt\n"))
+
+		successExit := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"git", "show"},
+			stdout:   []string{"tracked.txt\n"},
+			exitCode: 0,
+		})
+		Expect(successExit).To(Equal(contracts.Action{
+			Kind:   contracts.ActionReplace,
+			Output: "tracked.txt\nsummary: 1 files changed\n",
+		}))
+
+		failureExit := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"git", "show"},
+			stdout:   []string{"fatal: not a git repository: '.git'\n"},
+			exitCode: 128,
+		})
+		Expect(failureExit).To(Equal(contracts.Action{
+			Kind:   contracts.ActionReplace,
+			Output: "fatal: not a git repository: '.git'\n",
+		}))
+	})
+
 	DescribeTable("applies grouped lines.* precedence deterministically",
 		func(keep, replace, skip bool, expected contracts.Action) {
 			lines := &OutputLines{}
@@ -883,5 +941,45 @@ var _ = Describe("YamlFilter", func() {
 			Tool: "ls",
 			Args: []string{"ls"},
 		})).To(Equal("ls"))
+	})
+
+	It("matches no_positionals cases only when no explicit positionals are present", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "git",
+			Cases: []CaseClause{
+				{
+					ID: "branch-list",
+					WhenArguments: &WhenArguments{
+						FirstIs:       "branch",
+						NoPositionals: true,
+					},
+					CompressOutput: &OutputShape{
+						Combined: &OutputScope{
+							Lines: &OutputLines{
+								Replace: []ReplaceRule{{
+									Regex: `^  (.+)$`,
+									To:    stringPtr("$1"),
+								}},
+							},
+						},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.Dispatch(contracts.Command{
+			Tool: "git",
+			Args: []string{"git", "branch"},
+		})).To(Equal("git|branch-list"))
+		Expect(filter.Dispatch(contracts.Command{
+			Tool: "git",
+			Args: []string{"git", "branch", "--all"},
+		})).To(Equal("git|branch-list"))
+		Expect(filter.Dispatch(contracts.Command{
+			Tool: "git",
+			Args: []string{"git", "branch", "feature"},
+		})).To(Equal("git"))
 	})
 })

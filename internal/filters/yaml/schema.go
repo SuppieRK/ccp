@@ -56,6 +56,7 @@ type WhenArguments struct {
 	HaveAllShortFlags    []string `yaml:"have_all_short_flags"`
 	NotHaveAllShortFlags []string `yaml:"not_have_all_short_flags"`
 	PositionalsLackAny   []string `yaml:"positionals_lack_any"`
+	NoPositionals        bool     `yaml:"no_positionals"`
 }
 
 type CommandMutation struct {
@@ -314,7 +315,7 @@ func validateWhenArguments(wa *WhenArguments, path validationPath) error {
 		len(wa.LackAny) == 0 && len(wa.HaveSequence) == 0 && len(wa.HaveShortFlag) == 0 &&
 		len(wa.NotHaveShortFlag) == 0 && len(wa.HaveAllShortFlags) == 0 &&
 		len(wa.NotHaveAllShortFlags) == 0 &&
-		len(wa.PositionalsLackAny) == 0 {
+		len(wa.PositionalsLackAny) == 0 && !wa.NoPositionals {
 		return ValidationError{Path: string(path), Message: "when_arguments must set at least one predicate"}
 	}
 	return nil

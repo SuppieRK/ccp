@@ -124,6 +124,9 @@
         },
         "positionals_lack_any": {
           "$ref": "#/$defs/string_array"
+        },
+        "no_positionals": {
+          "type": "boolean"
         }
       }
     },

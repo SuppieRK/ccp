@@ -130,6 +130,15 @@ cases:
       not_have_all_short_flags: ['-H', '-o']
     passthrough: true
 `, ""),
+		Entry("valid no_positionals predicate", `
+version: 1
+filter: git
+cases:
+  - id: branch
+    when_arguments:
+      no_positionals: true
+    passthrough: true
+`, ""),
 		Entry("empty command block", `
 version: 1
 filter: python

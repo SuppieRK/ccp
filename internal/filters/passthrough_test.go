@@ -17,6 +17,10 @@ func (passthroughContext) BufferedLines(contracts.Stream) []string {
 	return nil
 }
 
+func (passthroughContext) ExitCode() int {
+	return 0
+}
+
 var _ = Describe("Passthrough", func() {
 	var (
 		filter  Passthrough

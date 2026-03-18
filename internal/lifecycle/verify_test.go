@@ -19,16 +19,22 @@ import (
 )
 
 type stubVerifyRunner struct {
-	gotArgs   []string
-	gotEvents []replay.Event
-	output    string
-	decisions string
-	err       error
+	gotArgs     []string
+	gotEvents   []replay.Event
+	gotExitCode int
+	output      string
+	decisions   string
+	err         error
 }
 
 func (s *stubVerifyRunner) Replay(args []string, events []replay.Event) (core.ReplayResult, error) {
+	return s.ReplayWithExitCode(args, events, 0)
+}
+
+func (s *stubVerifyRunner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error) {
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)
+	s.gotExitCode = exitCode
 	return core.ReplayResult{Output: s.output, Decisions: s.decisions}, s.err
 }
 
@@ -92,6 +98,7 @@ var _ = Describe("verify", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(strings.Join(stub.gotArgs, " ")).To(Equal("git status"))
+		Expect(stub.gotExitCode).To(BeZero())
 		Expect(stub.gotEvents).To(Equal([]replay.Event{
 			{Sequence: 0, Stream: contracts.StreamStdout, Line: "native stdout\n"},
 			{Sequence: 1, Stream: contracts.StreamStderr, Line: "native stderr\n"},
@@ -176,6 +183,23 @@ var _ = Describe("verify", func() {
 
 		err := RunVerify([]string{"--dir", tmp})
 		Expect(err).To(MatchError(ContainSubstring("sequence")))
+	})
+
+	It("passes fixture exit codes to the runner", func() {
+		restoreVersion := setVersionForTest("dev")
+		DeferCleanup(restoreVersion)
+
+		stub := &stubVerifyRunner{output: "filtered output\n"}
+		DeferCleanup(stubVerifyRunnerForTest(stub))
+
+		tmp := GinkgoT().TempDir()
+		writeFileForTest(filepath.Join(tmp, replay.CommandFileName), "argv: [\"git\", \"show\"]\nexit_code: 128\n")
+		writeFileForTest(filepath.Join(tmp, replay.StderrFileName), "00000|fatal: not a git repository: '.git'\n")
+
+		err := RunVerify([]string{"--dir", tmp})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stub.gotExitCode).To(Equal(128))
 	})
 })
 

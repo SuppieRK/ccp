@@ -1,6 +1,12 @@
-00000|## main
-00001| M modified.txt
-00002|M  staged.txt
-00003|?? .ccp/
-00004|?? scripts/
-00005|?? untracked.txt
+00000|## git-improvements
+00001| M testdata/benchmarks/git/status-success-porcelain/output.txt
+00002| M testdata/benchmarks/git/status-success-porcelain/stdout.txt
+00003| M testdata/benchmarks/git/status-success/output.txt
+00004| M testdata/benchmarks/git/status-success/stdout.txt
+00005|?? FIND.md
+00006|?? GIT.md
+00007|?? GREP.md
+00008|?? LS.md
+00009|?? TOOL_EXPLORATION_LOG.md
+00010|?? testdata/benchmarks/git/status-success-porcelain/stderr.txt
+00011|?? testdata/benchmarks/git/status-success/stderr.txt

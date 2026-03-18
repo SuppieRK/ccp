@@ -17,15 +17,21 @@ import (
 )
 
 type stubCaptureRunner struct {
-	gotArgs   []string
-	gotEvents []replay.Event
-	output    string
-	err       error
+	gotArgs     []string
+	gotEvents   []replay.Event
+	gotExitCode int
+	output      string
+	err         error
 }
 
 func (s *stubCaptureRunner) Replay(args []string, events []replay.Event) (core.ReplayResult, error) {
+	return s.ReplayWithExitCode(args, events, 0)
+}
+
+func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error) {
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)
+	s.gotExitCode = exitCode
 	return core.ReplayResult{Output: s.output}, s.err
 }
 
@@ -53,11 +59,13 @@ var _ = Describe("capture", func() {
 		for _, arg := range commandArgs {
 			Expect(string(commandData)).To(ContainSubstring(strconv.Quote(arg)))
 		}
+		Expect(string(commandData)).NotTo(ContainSubstring("exit_code:"))
 
 		outputData, err := os.ReadFile(filepath.Join(tmp, captureOutputFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(outputData)).To(Equal("proxy output\n"))
 		Expect(stub.gotArgs).To(Equal(commandArgs))
+		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
 		Expect(replay.CombinedInput(stub.gotEvents)).To(Or(
 			Equal(stdoutLine+stderrLine),
@@ -85,6 +93,10 @@ var _ = Describe("capture", func() {
 		Expect(filepath.Join(tmp, captureStdoutFileName)).To(BeAnExistingFile())
 		Expect(filepath.Join(tmp, captureStderrFileName)).To(BeAnExistingFile())
 		Expect(filepath.Join(tmp, captureOutputFileName)).To(BeAnExistingFile())
+		commandData, readErr := os.ReadFile(filepath.Join(tmp, replay.CommandFileName))
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(commandData)).To(ContainSubstring("exit_code: 3"))
+		Expect(stub.gotExitCode).To(Equal(3))
 	})
 
 	It("records capture outcomes in the audit log", func() {

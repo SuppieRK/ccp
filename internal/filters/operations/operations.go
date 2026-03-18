@@ -42,6 +42,16 @@ func MatchesPositionalsLackAny(args, disallowed []string) bool {
 	return len(disallowed) == 0 || !containsAny(positionals(args), disallowed)
 }
 
+func MatchesNoPositionals(args []string, want bool) bool {
+	if !want {
+		return true
+	}
+	if len(args) <= 1 {
+		return true
+	}
+	return len(positionals(args[1:])) == 0
+}
+
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
 	switch stream {
 	case contracts.StreamStdout:

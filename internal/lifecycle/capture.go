@@ -27,6 +27,7 @@ const (
 
 type captureVerifier interface {
 	Replay(args []string, events []replay.Event) (core.ReplayResult, error)
+	ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error)
 }
 
 var newCaptureRunner = func() captureVerifier {
@@ -96,7 +97,7 @@ func RunCapture(args []string) error {
 	stdoutPath := filepath.Join(captureDir, captureStdoutFileName)
 	stderrPath := filepath.Join(captureDir, captureStderrFileName)
 	outputPath := filepath.Join(captureDir, captureOutputFileName)
-	if err := replay.WriteCommandFile(commandPath, commandArgs); err != nil {
+	if err := replay.WriteCommandWithExitCode(commandPath, commandArgs, exitCode); err != nil {
 		return recordFailure(commandArgs, captureDir, "write_command", err)
 	}
 	if err := replay.WriteSequencedEvents(stdoutPath, events, contracts.StreamStdout); err != nil {
@@ -106,7 +107,7 @@ func RunCapture(args []string) error {
 		return recordFailure(commandArgs, captureDir, "write_stderr", err)
 	}
 
-	replayed, err := newCaptureRunner().Replay(commandArgs, events)
+	replayed, err := newCaptureRunner().ReplayWithExitCode(commandArgs, events, exitCode)
 	if err != nil {
 		return recordFailure(commandArgs, captureDir, "replay_output", err)
 	}

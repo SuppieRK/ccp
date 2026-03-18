@@ -131,7 +131,7 @@ func (r *Runner) Run(args []string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + r.writeEntries(state.Exit())
+	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + r.writeEntries(state.Exit(exitCode))
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.appendMetrics(command, isPassthroughFilter(resolved), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
 	audit.MustAppend("execution_finish", map[string]any{
@@ -211,6 +211,10 @@ func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error)
 }
 
 func (r *Runner) Replay(args []string, events []replay.Event) (ReplayResult, error) {
+	return r.ReplayWithExitCode(args, events, 0)
+}
+
+func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (ReplayResult, error) {
 	command, err := ParseCommandArgs(args)
 	if err != nil {
 		return ReplayResult{}, err
@@ -250,7 +254,7 @@ func (r *Runner) Replay(args []string, events []replay.Event) (ReplayResult, err
 		}
 		collector.recordInput(event, action, entries)
 	}
-	exitAction, exitEntries := state.ExitAction()
+	exitAction, exitEntries := state.ExitAction(exitCode)
 	collector.recordExit(exitAction, exitEntries)
 	audit.MustAppend("verify_finish", map[string]any{
 		"command":      command.RawInput,

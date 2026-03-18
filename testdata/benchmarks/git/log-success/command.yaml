@@ -1,1 +1,1 @@
-argv: ["git", "log"]
+argv: ["git", "log", "-n", "5"]

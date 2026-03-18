@@ -1,6 +1,12 @@
-## main
- M modified.txt
-M  staged.txt
-?? .ccp/
-?? scripts/
-?? untracked.txt
+## git-improvements
+ M testdata/benchmarks/git/status-success-porcelain/output.txt
+ M testdata/benchmarks/git/status-success-porcelain/stdout.txt
+ M testdata/benchmarks/git/status-success/output.txt
+ M testdata/benchmarks/git/status-success/stdout.txt
+?? FIND.md
+?? GIT.md
+?? GREP.md
+?? LS.md
+?? TOOL_EXPLORATION_LOG.md
+?? testdata/benchmarks/git/status-success-porcelain/stderr.txt
+?? testdata/benchmarks/git/status-success/stderr.txt
