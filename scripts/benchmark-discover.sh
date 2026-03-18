@@ -184,8 +184,12 @@ for path in "${changed[@]}"; do
       tool="${tool%%/*}"
       add_exact_if_exists "$tool"
       ;;
+    filters/.mappings.yaml)
+      run_all=1
+      ;;
     filters/*)
       tool="${path#filters/}"
+      tool="${tool%%/*}"
       tool="${tool%%.*}"
       add_exact_if_exists "$tool"
       ;;

@@ -127,6 +127,23 @@ filter: broken
 	})
 })
 
+var _ = Describe("Shipped repository filters", func() {
+	It("parse with strict validation from the real filters directory", func() {
+		root := ProjectRootFromSource()
+		paths, err := matchedFilterFiles(filepath.Join(root, "filters"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(paths).NotTo(BeEmpty())
+
+		for _, path := range paths {
+			raw, err := os.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred(), path)
+
+			_, err = ParseDefinition(raw)
+			Expect(err).NotTo(HaveOccurred(), path)
+		}
+	})
+})
+
 var _ = Describe("ProjectRootFromSource", func() {
 	It("resolves to the repository root", func() {
 		root := ProjectRootFromSource()
