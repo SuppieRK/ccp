@@ -56,63 +56,10 @@ fi
 
 tool_matrix_entry() {
   local tool="$1"
-  local needs_python=false
-  local needs_java=false
-  local needs_rust=false
-  local needs_deno=false
-  local needs_node=false
-  local needs_pnpm=false
-  local needs_kind=false
-  local needs_docker_images=false
-
-  case "$tool" in
-    pip|pytest)
-      needs_python=true
-      ;;
-    gradle|maven)
-      needs_java=true
-      ;;
-    cargo)
-      needs_rust=true
-      ;;
-    deno)
-      needs_deno=true
-      ;;
-    node|npm|pnpm|yarn|npx)
-      needs_node=true
-      ;;
-    *)
-      ;;
-  esac
-
-  if [[ "$tool" == "pnpm" ]]; then
-    needs_pnpm=true
-  fi
-
-  if [[ "$tool" == "docker" ]]; then
-    needs_docker_images=true
-  fi
-
   jq -nc \
     --arg tool "$tool" \
-    --argjson needs_python "$needs_python" \
-    --argjson needs_java "$needs_java" \
-    --argjson needs_rust "$needs_rust" \
-    --argjson needs_deno "$needs_deno" \
-    --argjson needs_node "$needs_node" \
-    --argjson needs_pnpm "$needs_pnpm" \
-    --argjson needs_kind "$needs_kind" \
-    --argjson needs_docker_images "$needs_docker_images" \
     '{
-      tool: $tool,
-      needs_python: $needs_python,
-      needs_java: $needs_java,
-      needs_rust: $needs_rust,
-      needs_deno: $needs_deno,
-      needs_node: $needs_node,
-      needs_pnpm: $needs_pnpm,
-      needs_kind: $needs_kind,
-      needs_docker_images: $needs_docker_images
+      tool: $tool
     }'
   return 0
 }

@@ -1,9 +1,56 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: grep
-about: Compact grep output by grouping matches per file.
+about: Group plain grep file:line:text matches conservatively while leaving context, count, byte-offset, only-matching, color, and null-delimited modes native
 cases:
-  - id: grouped_matches
+  - id: precision_short_passthrough
+    when_arguments:
+      have_short_flag:
+        - -A
+        - -B
+        - -C
+        - -Z
+        - -b
+        - -c
+        - -l
+        - -L
+        - -m
+        - -o
+        - -q
+        - -s
+        - -v
+        - -z
+    passthrough: true
+
+  - id: precision_long_passthrough
+    when_arguments:
+      have_any:
+        - --after-context
+        - --before-context
+        - --byte-offset
+        - --color
+        - --color=always
+        - --color=auto
+        - --color=never
+        - --colour
+        - --colour=always
+        - --colour=auto
+        - --colour=never
+        - --context
+        - --count
+        - --files-with-matches
+        - --files-without-match
+        - --invert-match
+        - --max-count
+        - --no-messages
+        - --null
+        - --null-data
+        - --only-matching
+        - --quiet
+        - --silent
+    passthrough: true
+
+  - id: recursive_grouped_matches
     when_arguments:
       have_any:
         - -r
@@ -12,6 +59,149 @@ cases:
         - --dereference-recursive
       have_short_flag:
         - -n
+    compress_output:
+      stdout:
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+):(?P<text>.+)$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: text
+                type: string
+                regex_group: text
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}: {{text}}'
+
+  - id: explicit_with_filename_grouped_matches
+    when_arguments:
+      have_any:
+        - --with-filename
+      have_short_flag:
+        - -n
+      not_have_short_flag:
+        - -A
+        - -B
+        - -C
+        - -Z
+        - -b
+        - -c
+        - -l
+        - -L
+        - -m
+        - -o
+        - -q
+        - -s
+        - -v
+        - -z
+      lack_any:
+        - -r
+        - -R
+        - --recursive
+        - --dereference-recursive
+        - --after-context
+        - --before-context
+        - --byte-offset
+        - --color
+        - --color=always
+        - --color=auto
+        - --color=never
+        - --colour
+        - --colour=always
+        - --colour=auto
+        - --colour=never
+        - --context
+        - --count
+        - --files-with-matches
+        - --files-without-match
+        - --invert-match
+        - --max-count
+        - --no-messages
+        - --null
+        - --null-data
+        - --only-matching
+        - --quiet
+        - --silent
+    compress_output:
+      stdout:
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+):(?P<text>.+)$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: text
+                type: string
+                regex_group: text
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}: {{text}}'
+
+  - id: explicit_h_grouped_matches
+    when_arguments:
+      have_all_short_flags:
+        - -H
+        - -n
+      not_have_short_flag:
+        - -A
+        - -B
+        - -C
+        - -Z
+        - -b
+        - -c
+        - -l
+        - -L
+        - -m
+        - -o
+        - -q
+        - -s
+        - -v
+        - -z
+      lack_any:
+        - -r
+        - -R
+        - --recursive
+        - --dereference-recursive
+        - --after-context
+        - --before-context
+        - --byte-offset
+        - --color
+        - --color=always
+        - --color=auto
+        - --color=never
+        - --colour
+        - --colour=always
+        - --colour=auto
+        - --colour=never
+        - --context
+        - --count
+        - --files-with-matches
+        - --files-without-match
+        - --invert-match
+        - --max-count
+        - --no-messages
+        - --null
+        - --null-data
+        - --only-matching
+        - --quiet
+        - --silent
     compress_output:
       stdout:
         groups:

@@ -1,0 +1,1022 @@
+00000|testdata/benchmarks/grep/explicit-with-filename-match/command.yaml:1:0:argv: ["grep", "--with-filename", "-n", "needle", "testdata/benchmarks/grep/recursive-match/stdout.txt", "testdata/benchmarks/grep/recursive-match/output.txt"]
+00001|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:2:53:  2:   1: needle: docs line one repeated deterministic payload for compression in benchmark output.
+00002|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:3:153:  3:   2: needle: docs line two repeated deterministic payload for compression in benchmark output.
+00003|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:4:253:  4:   3: needle: docs line three repeated deterministic payload for compression in benchmark output.
+00004|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:5:355:  5:   4: needle: docs line four repeated deterministic payload for compression in benchmark output.
+00005|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:6:456:  6:   5: needle: docs line five repeated deterministic payload for compression in benchmark output.
+00006|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:7:557:  7: ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:
+00007|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:8:644:  8:   1: needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00008|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:9:744:  9:   2: needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00009|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:10:844:  10:   3: needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00010|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:11:945:  11:   4: needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00011|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:12:1046:  12:   5: needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00012|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:13:1147:  13:   6: needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00013|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:14:1248:  14:   7: needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00014|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:15:1349:  15:   8: needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00015|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:16:1450:  16:   9: needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00016|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:17:1551:  17:   10: needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00017|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:18:1653:  18:   11: needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00018|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:19:1755:  19:   12: needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00019|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:20:1857:  20:   13: needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00020|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:21:1959:  21:   14: needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00021|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:22:2061:  22:   15: needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00022|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:23:2163:  23:   16: needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00023|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:24:2265:  24:   17: needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00024|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:25:2367:  25:   18: needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00025|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:26:2469:  26:   19: needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00026|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:27:2571:  27:   20: needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00027|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:28:2673:  29:   5: 		"needle: helper one with repeated deterministic payload for compression",
+00028|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:29:2760:  30:   6: 		"needle: helper two with repeated deterministic payload for compression",
+00029|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:30:2847:  31:   7: 		"needle: helper three with repeated deterministic payload for compression",
+00030|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:31:2936:  32:   8: 		"needle: helper four with repeated deterministic payload for compression",
+00031|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:32:3024:  33:   9: 		"needle: helper five with repeated deterministic payload for compression",
+00032|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:33:3112:  35:   6: 	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00033|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:34:3216:  36:   7: 	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00034|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:35:3319:  37:   8: 	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00035|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:36:3423:  38:   9: 	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00036|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:37:3527:  39:   10: 	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00037|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:39:3687:  1: 00000|./docs/notes.txt:1:needle: docs line one repeated deterministic payload for compression in benchmark output.
+00038|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:40:3807:  2: 00001|./docs/notes.txt:2:needle: docs line two repeated deterministic payload for compression in benchmark output.
+00039|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:41:3927:  3: 00002|./docs/notes.txt:3:needle: docs line three repeated deterministic payload for compression in benchmark output.
+00040|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:42:4049:  4: 00003|./docs/notes.txt:4:needle: docs line four repeated deterministic payload for compression in benchmark output.
+00041|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:43:4170:  5: 00004|./docs/notes.txt:5:needle: docs line five repeated deterministic payload for compression in benchmark output.
+00042|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:44:4291:  6: 00005|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:1:needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00043|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:45:4475:  7: 00006|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:2:needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00044|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:46:4659:  8: 00007|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:3:needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00045|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:47:4843:  9: 00008|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:4:needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00046|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:48:5027:  10: 00009|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:5:needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00047|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:49:5212:  11: 00010|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:6:needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00048|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:50:5397:  12: 00011|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:7:needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00049|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:51:5582:  13: 00012|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:8:needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00050|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:52:5767:  14: 00013|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:9:needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00051|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:53:5952:  15: 00014|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:10:needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00052|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:54:6138:  16: 00015|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:11:needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00053|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:55:6324:  17: 00016|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:12:needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00054|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:56:6510:  18: 00017|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:13:needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00055|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:57:6696:  19: 00018|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:14:needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00056|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:58:6882:  20: 00019|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:15:needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00057|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:59:7068:  21: 00020|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:16:needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00058|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:60:7254:  22: 00021|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:17:needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00059|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:61:7440:  23: 00022|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:18:needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00060|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:62:7626:  24: 00023|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:19:needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00061|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:63:7812:  25: 00024|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:20:needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00062|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:64:7998:  26: 00025|./src/helpers.go:5:		"needle: helper one with repeated deterministic payload for compression",
+00063|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:65:8105:  27: 00026|./src/helpers.go:6:		"needle: helper two with repeated deterministic payload for compression",
+00064|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:66:8212:  28: 00027|./src/helpers.go:7:		"needle: helper three with repeated deterministic payload for compression",
+00065|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:67:8321:  29: 00028|./src/helpers.go:8:		"needle: helper four with repeated deterministic payload for compression",
+00066|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:68:8429:  30: 00029|./src/helpers.go:9:		"needle: helper five with repeated deterministic payload for compression",
+00067|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:69:8537:  31: 00030|./src/main.go:6:	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00068|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:70:8658:  32: 00031|./src/main.go:7:	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00069|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:71:8778:  33: 00032|./src/main.go:8:	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00070|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:72:8899:  34: 00033|./src/main.go:9:	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00071|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:73:9020:  35: 00034|./src/main.go:10:	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00072|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:1:0:00000|testdata/benchmarks/grep/recursive-match/stdout.txt:1:00000|./docs/notes.txt:1:needle: docs line one repeated deterministic payload for compression in benchmark output.
+00073|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:2:175:00001|testdata/benchmarks/grep/recursive-match/stdout.txt:2:00001|./docs/notes.txt:2:needle: docs line two repeated deterministic payload for compression in benchmark output.
+00074|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:3:350:00002|testdata/benchmarks/grep/recursive-match/stdout.txt:3:00002|./docs/notes.txt:3:needle: docs line three repeated deterministic payload for compression in benchmark output.
+00075|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:4:527:00003|testdata/benchmarks/grep/recursive-match/stdout.txt:4:00003|./docs/notes.txt:4:needle: docs line four repeated deterministic payload for compression in benchmark output.
+00076|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:5:703:00004|testdata/benchmarks/grep/recursive-match/stdout.txt:5:00004|./docs/notes.txt:5:needle: docs line five repeated deterministic payload for compression in benchmark output.
+00077|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:6:879:00005|testdata/benchmarks/grep/recursive-match/stdout.txt:6:00005|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:1:needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00078|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:7:1118:00006|testdata/benchmarks/grep/recursive-match/stdout.txt:7:00006|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:2:needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00079|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:8:1357:00007|testdata/benchmarks/grep/recursive-match/stdout.txt:8:00007|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:3:needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00080|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:9:1596:00008|testdata/benchmarks/grep/recursive-match/stdout.txt:9:00008|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:4:needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00081|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:10:1835:00009|testdata/benchmarks/grep/recursive-match/stdout.txt:10:00009|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:5:needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00082|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:11:2075:00010|testdata/benchmarks/grep/recursive-match/stdout.txt:11:00010|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:6:needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00083|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:12:2315:00011|testdata/benchmarks/grep/recursive-match/stdout.txt:12:00011|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:7:needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00084|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:13:2555:00012|testdata/benchmarks/grep/recursive-match/stdout.txt:13:00012|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:8:needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00085|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:14:2795:00013|testdata/benchmarks/grep/recursive-match/stdout.txt:14:00013|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:9:needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00086|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:15:3035:00014|testdata/benchmarks/grep/recursive-match/stdout.txt:15:00014|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:10:needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00087|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:16:3276:00015|testdata/benchmarks/grep/recursive-match/stdout.txt:16:00015|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:11:needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00088|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:17:3517:00016|testdata/benchmarks/grep/recursive-match/stdout.txt:17:00016|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:12:needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00089|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:18:3758:00017|testdata/benchmarks/grep/recursive-match/stdout.txt:18:00017|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:13:needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00090|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:19:3999:00018|testdata/benchmarks/grep/recursive-match/stdout.txt:19:00018|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:14:needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00091|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:20:4240:00019|testdata/benchmarks/grep/recursive-match/stdout.txt:20:00019|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:15:needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00092|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:21:4481:00020|testdata/benchmarks/grep/recursive-match/stdout.txt:21:00020|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:16:needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00093|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:22:4722:00021|testdata/benchmarks/grep/recursive-match/stdout.txt:22:00021|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:17:needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00094|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:23:4963:00022|testdata/benchmarks/grep/recursive-match/stdout.txt:23:00022|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:18:needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00095|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:24:5204:00023|testdata/benchmarks/grep/recursive-match/stdout.txt:24:00023|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:19:needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00096|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:25:5445:00024|testdata/benchmarks/grep/recursive-match/stdout.txt:25:00024|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:20:needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00097|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:26:5686:00025|testdata/benchmarks/grep/recursive-match/stdout.txt:26:00025|./src/helpers.go:5:		"needle: helper one with repeated deterministic payload for compression",
+00098|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:27:5848:00026|testdata/benchmarks/grep/recursive-match/stdout.txt:27:00026|./src/helpers.go:6:		"needle: helper two with repeated deterministic payload for compression",
+00099|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:28:6010:00027|testdata/benchmarks/grep/recursive-match/stdout.txt:28:00027|./src/helpers.go:7:		"needle: helper three with repeated deterministic payload for compression",
+00100|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:29:6174:00028|testdata/benchmarks/grep/recursive-match/stdout.txt:29:00028|./src/helpers.go:8:		"needle: helper four with repeated deterministic payload for compression",
+00101|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:30:6337:00029|testdata/benchmarks/grep/recursive-match/stdout.txt:30:00029|./src/helpers.go:9:		"needle: helper five with repeated deterministic payload for compression",
+00102|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:31:6500:00030|testdata/benchmarks/grep/recursive-match/stdout.txt:31:00030|./src/main.go:6:	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00103|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:32:6676:00031|testdata/benchmarks/grep/recursive-match/stdout.txt:32:00031|./src/main.go:7:	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00104|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:33:6851:00032|testdata/benchmarks/grep/recursive-match/stdout.txt:33:00032|./src/main.go:8:	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00105|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:34:7027:00033|testdata/benchmarks/grep/recursive-match/stdout.txt:34:00033|./src/main.go:9:	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00106|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:35:7203:00034|testdata/benchmarks/grep/recursive-match/stdout.txt:35:00034|./src/main.go:10:	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00107|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:36:7382:00035|testdata/benchmarks/grep/recursive-match/output.txt:2:  1: needle: docs line one repeated deterministic payload for compression in benchmark output.
+00108|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:37:7537:00036|testdata/benchmarks/grep/recursive-match/output.txt:3:  2: needle: docs line two repeated deterministic payload for compression in benchmark output.
+00109|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:38:7692:00037|testdata/benchmarks/grep/recursive-match/output.txt:4:  3: needle: docs line three repeated deterministic payload for compression in benchmark output.
+00110|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:39:7849:00038|testdata/benchmarks/grep/recursive-match/output.txt:5:  4: needle: docs line four repeated deterministic payload for compression in benchmark output.
+00111|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:40:8005:00039|testdata/benchmarks/grep/recursive-match/output.txt:6:  5: needle: docs line five repeated deterministic payload for compression in benchmark output.
+00112|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:41:8161:00040|testdata/benchmarks/grep/recursive-match/output.txt:7:./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:
+00113|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:42:8303:00041|testdata/benchmarks/grep/recursive-match/output.txt:8:  1: needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00114|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:43:8458:00042|testdata/benchmarks/grep/recursive-match/output.txt:9:  2: needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00115|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:44:8613:00043|testdata/benchmarks/grep/recursive-match/output.txt:10:  3: needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00116|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:45:8769:00044|testdata/benchmarks/grep/recursive-match/output.txt:11:  4: needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00117|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:46:8925:00045|testdata/benchmarks/grep/recursive-match/output.txt:12:  5: needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00118|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:47:9081:00046|testdata/benchmarks/grep/recursive-match/output.txt:13:  6: needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00119|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:48:9237:00047|testdata/benchmarks/grep/recursive-match/output.txt:14:  7: needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00120|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:49:9393:00048|testdata/benchmarks/grep/recursive-match/output.txt:15:  8: needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00121|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:50:9549:00049|testdata/benchmarks/grep/recursive-match/output.txt:16:  9: needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00122|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:51:9705:00050|testdata/benchmarks/grep/recursive-match/output.txt:17:  10: needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00123|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:52:9862:00051|testdata/benchmarks/grep/recursive-match/output.txt:18:  11: needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00124|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:53:10019:00052|testdata/benchmarks/grep/recursive-match/output.txt:19:  12: needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00125|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:54:10176:00053|testdata/benchmarks/grep/recursive-match/output.txt:20:  13: needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00126|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:55:10333:00054|testdata/benchmarks/grep/recursive-match/output.txt:21:  14: needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00127|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:56:10490:00055|testdata/benchmarks/grep/recursive-match/output.txt:22:  15: needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00128|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:57:10647:00056|testdata/benchmarks/grep/recursive-match/output.txt:23:  16: needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00129|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:58:10804:00057|testdata/benchmarks/grep/recursive-match/output.txt:24:  17: needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00130|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:59:10961:00058|testdata/benchmarks/grep/recursive-match/output.txt:25:  18: needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00131|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:60:11118:00059|testdata/benchmarks/grep/recursive-match/output.txt:26:  19: needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00132|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:61:11275:00060|testdata/benchmarks/grep/recursive-match/output.txt:27:  20: needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00133|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:62:11432:00061|testdata/benchmarks/grep/recursive-match/output.txt:29:  5: 		"needle: helper one with repeated deterministic payload for compression",
+00134|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:63:11574:00062|testdata/benchmarks/grep/recursive-match/output.txt:30:  6: 		"needle: helper two with repeated deterministic payload for compression",
+00135|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:64:11716:00063|testdata/benchmarks/grep/recursive-match/output.txt:31:  7: 		"needle: helper three with repeated deterministic payload for compression",
+00136|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:65:11860:00064|testdata/benchmarks/grep/recursive-match/output.txt:32:  8: 		"needle: helper four with repeated deterministic payload for compression",
+00137|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:66:12003:00065|testdata/benchmarks/grep/recursive-match/output.txt:33:  9: 		"needle: helper five with repeated deterministic payload for compression",
+00138|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:67:12146:00066|testdata/benchmarks/grep/recursive-match/output.txt:35:  6: 	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00139|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:68:12305:00067|testdata/benchmarks/grep/recursive-match/output.txt:36:  7: 	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00140|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:69:12463:00068|testdata/benchmarks/grep/recursive-match/output.txt:37:  8: 	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00141|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:70:12622:00069|testdata/benchmarks/grep/recursive-match/output.txt:38:  9: 	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00142|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:71:12781:00070|testdata/benchmarks/grep/recursive-match/output.txt:39:  10: 	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00143|testdata/benchmarks/grep/failure-missing-path/command.yaml:1:0:argv: ["grep", "-r", "-n", "needle", "./does-not-exist"]
+00144|testdata/benchmarks/grep/recursive-match/command.yaml:1:0:argv: ["grep", "-r", "-n", "needle", "."]
+00145|testdata/benchmarks/grep/recursive-match/output.txt:2:18:  1: needle: docs line one repeated deterministic payload for compression in benchmark output.
+00146|testdata/benchmarks/grep/recursive-match/output.txt:3:113:  2: needle: docs line two repeated deterministic payload for compression in benchmark output.
+00147|testdata/benchmarks/grep/recursive-match/output.txt:4:208:  3: needle: docs line three repeated deterministic payload for compression in benchmark output.
+00148|testdata/benchmarks/grep/recursive-match/output.txt:5:305:  4: needle: docs line four repeated deterministic payload for compression in benchmark output.
+00149|testdata/benchmarks/grep/recursive-match/output.txt:6:401:  5: needle: docs line five repeated deterministic payload for compression in benchmark output.
+00150|testdata/benchmarks/grep/recursive-match/output.txt:7:497:./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:
+00151|testdata/benchmarks/grep/recursive-match/output.txt:8:579:  1: needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00152|testdata/benchmarks/grep/recursive-match/output.txt:9:674:  2: needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00153|testdata/benchmarks/grep/recursive-match/output.txt:10:769:  3: needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00154|testdata/benchmarks/grep/recursive-match/output.txt:11:864:  4: needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00155|testdata/benchmarks/grep/recursive-match/output.txt:12:959:  5: needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00156|testdata/benchmarks/grep/recursive-match/output.txt:13:1054:  6: needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00157|testdata/benchmarks/grep/recursive-match/output.txt:14:1149:  7: needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00158|testdata/benchmarks/grep/recursive-match/output.txt:15:1244:  8: needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00159|testdata/benchmarks/grep/recursive-match/output.txt:16:1339:  9: needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00160|testdata/benchmarks/grep/recursive-match/output.txt:17:1434:  10: needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00161|testdata/benchmarks/grep/recursive-match/output.txt:18:1530:  11: needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00162|testdata/benchmarks/grep/recursive-match/output.txt:19:1626:  12: needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00163|testdata/benchmarks/grep/recursive-match/output.txt:20:1722:  13: needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00164|testdata/benchmarks/grep/recursive-match/output.txt:21:1818:  14: needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00165|testdata/benchmarks/grep/recursive-match/output.txt:22:1914:  15: needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00166|testdata/benchmarks/grep/recursive-match/output.txt:23:2010:  16: needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00167|testdata/benchmarks/grep/recursive-match/output.txt:24:2106:  17: needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00168|testdata/benchmarks/grep/recursive-match/output.txt:25:2202:  18: needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00169|testdata/benchmarks/grep/recursive-match/output.txt:26:2298:  19: needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00170|testdata/benchmarks/grep/recursive-match/output.txt:27:2394:  20: needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00171|testdata/benchmarks/grep/recursive-match/output.txt:29:2508:  5: 		"needle: helper one with repeated deterministic payload for compression",
+00172|testdata/benchmarks/grep/recursive-match/output.txt:30:2589:  6: 		"needle: helper two with repeated deterministic payload for compression",
+00173|testdata/benchmarks/grep/recursive-match/output.txt:31:2670:  7: 		"needle: helper three with repeated deterministic payload for compression",
+00174|testdata/benchmarks/grep/recursive-match/output.txt:32:2753:  8: 		"needle: helper four with repeated deterministic payload for compression",
+00175|testdata/benchmarks/grep/recursive-match/output.txt:33:2835:  9: 		"needle: helper five with repeated deterministic payload for compression",
+00176|testdata/benchmarks/grep/recursive-match/output.txt:35:2932:  6: 	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00177|testdata/benchmarks/grep/recursive-match/output.txt:36:3030:  7: 	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00178|testdata/benchmarks/grep/recursive-match/output.txt:37:3127:  8: 	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00179|testdata/benchmarks/grep/recursive-match/output.txt:38:3225:  9: 	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00180|testdata/benchmarks/grep/recursive-match/output.txt:39:3323:  10: 	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00181|testdata/benchmarks/grep/recursive-match/stdout.txt:1:0:00000|./docs/notes.txt:1:needle: docs line one repeated deterministic payload for compression in benchmark output.
+00182|testdata/benchmarks/grep/recursive-match/stdout.txt:2:115:00001|./docs/notes.txt:2:needle: docs line two repeated deterministic payload for compression in benchmark output.
+00183|testdata/benchmarks/grep/recursive-match/stdout.txt:3:230:00002|./docs/notes.txt:3:needle: docs line three repeated deterministic payload for compression in benchmark output.
+00184|testdata/benchmarks/grep/recursive-match/stdout.txt:4:347:00003|./docs/notes.txt:4:needle: docs line four repeated deterministic payload for compression in benchmark output.
+00185|testdata/benchmarks/grep/recursive-match/stdout.txt:5:463:00004|./docs/notes.txt:5:needle: docs line five repeated deterministic payload for compression in benchmark output.
+00186|testdata/benchmarks/grep/recursive-match/stdout.txt:6:579:00005|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:1:needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00187|testdata/benchmarks/grep/recursive-match/stdout.txt:7:758:00006|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:2:needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00188|testdata/benchmarks/grep/recursive-match/stdout.txt:8:937:00007|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:3:needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00189|testdata/benchmarks/grep/recursive-match/stdout.txt:9:1116:00008|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:4:needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00190|testdata/benchmarks/grep/recursive-match/stdout.txt:10:1295:00009|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:5:needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00191|testdata/benchmarks/grep/recursive-match/stdout.txt:11:1474:00010|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:6:needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00192|testdata/benchmarks/grep/recursive-match/stdout.txt:12:1653:00011|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:7:needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00193|testdata/benchmarks/grep/recursive-match/stdout.txt:13:1832:00012|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:8:needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00194|testdata/benchmarks/grep/recursive-match/stdout.txt:14:2011:00013|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:9:needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00195|testdata/benchmarks/grep/recursive-match/stdout.txt:15:2190:00014|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:10:needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00196|testdata/benchmarks/grep/recursive-match/stdout.txt:16:2370:00015|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:11:needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00197|testdata/benchmarks/grep/recursive-match/stdout.txt:17:2550:00016|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:12:needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00198|testdata/benchmarks/grep/recursive-match/stdout.txt:18:2730:00017|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:13:needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00199|testdata/benchmarks/grep/recursive-match/stdout.txt:19:2910:00018|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:14:needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00200|testdata/benchmarks/grep/recursive-match/stdout.txt:20:3090:00019|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:15:needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00201|testdata/benchmarks/grep/recursive-match/stdout.txt:21:3270:00020|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:16:needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00202|testdata/benchmarks/grep/recursive-match/stdout.txt:22:3450:00021|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:17:needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00203|testdata/benchmarks/grep/recursive-match/stdout.txt:23:3630:00022|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:18:needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00204|testdata/benchmarks/grep/recursive-match/stdout.txt:24:3810:00023|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:19:needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00205|testdata/benchmarks/grep/recursive-match/stdout.txt:25:3990:00024|./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:20:needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00206|testdata/benchmarks/grep/recursive-match/stdout.txt:26:4170:00025|./src/helpers.go:5:		"needle: helper one with repeated deterministic payload for compression",
+00207|testdata/benchmarks/grep/recursive-match/stdout.txt:27:4271:00026|./src/helpers.go:6:		"needle: helper two with repeated deterministic payload for compression",
+00208|testdata/benchmarks/grep/recursive-match/stdout.txt:28:4372:00027|./src/helpers.go:7:		"needle: helper three with repeated deterministic payload for compression",
+00209|testdata/benchmarks/grep/recursive-match/stdout.txt:29:4475:00028|./src/helpers.go:8:		"needle: helper four with repeated deterministic payload for compression",
+00210|testdata/benchmarks/grep/recursive-match/stdout.txt:30:4577:00029|./src/helpers.go:9:		"needle: helper five with repeated deterministic payload for compression",
+00211|testdata/benchmarks/grep/recursive-match/stdout.txt:31:4679:00030|./src/main.go:6:	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00212|testdata/benchmarks/grep/recursive-match/stdout.txt:32:4794:00031|./src/main.go:7:	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00213|testdata/benchmarks/grep/recursive-match/stdout.txt:33:4908:00032|./src/main.go:8:	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00214|testdata/benchmarks/grep/recursive-match/stdout.txt:34:5023:00033|./src/main.go:9:	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00215|testdata/benchmarks/grep/recursive-match/stdout.txt:35:5138:00034|./src/main.go:10:	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00216|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:1:0:<skip>    | ./docs/notes.txt:1:needle: docs line one repeated deterministic payload for compression in benchmark output.
+00217|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:2:121:<skip>    | ./docs/notes.txt:2:needle: docs line two repeated deterministic payload for compression in benchmark output.
+00218|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:3:242:<skip>    | ./docs/notes.txt:3:needle: docs line three repeated deterministic payload for compression in benchmark output.
+00219|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:4:365:<skip>    | ./docs/notes.txt:4:needle: docs line four repeated deterministic payload for compression in benchmark output.
+00220|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:5:487:<skip>    | ./docs/notes.txt:5:needle: docs line five repeated deterministic payload for compression in benchmark output.
+00221|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:6:609:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:1:needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00222|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:7:794:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:2:needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00223|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:8:979:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:3:needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00224|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:9:1164:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:4:needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00225|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:10:1349:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:5:needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00226|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:11:1534:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:6:needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00227|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:12:1719:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:7:needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00228|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:13:1904:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:8:needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00229|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:14:2089:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:9:needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00230|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:15:2274:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:10:needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00231|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:16:2460:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:11:needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00232|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:17:2646:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:12:needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00233|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:18:2832:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:13:needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00234|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:19:3018:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:14:needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00235|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:20:3204:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:15:needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00236|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:21:3390:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:16:needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00237|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:22:3576:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:17:needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00238|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:23:3762:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:18:needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00239|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:24:3948:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:19:needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00240|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:25:4134:<skip>    | ./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:20:needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00241|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:26:4320:<skip>    | ./src/helpers.go:5:		"needle: helper one with repeated deterministic payload for compression",
+00242|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:27:4427:<skip>    | ./src/helpers.go:6:		"needle: helper two with repeated deterministic payload for compression",
+00243|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:28:4534:<skip>    | ./src/helpers.go:7:		"needle: helper three with repeated deterministic payload for compression",
+00244|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:29:4643:<skip>    | ./src/helpers.go:8:		"needle: helper four with repeated deterministic payload for compression",
+00245|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:30:4751:<skip>    | ./src/helpers.go:9:		"needle: helper five with repeated deterministic payload for compression",
+00246|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:31:4859:<skip>    | ./src/main.go:6:	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00247|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:32:4980:<skip>    | ./src/main.go:7:	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00248|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:33:5100:<skip>    | ./src/main.go:8:	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00249|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:34:5221:<skip>    | ./src/main.go:9:	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00250|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:35:5342:<skip>    | ./src/main.go:10:	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00251|testdata/benchmarks/grep/recursive-match/verify-output.txt:2:18:  1: needle: docs line one repeated deterministic payload for compression in benchmark output.
+00252|testdata/benchmarks/grep/recursive-match/verify-output.txt:3:113:  2: needle: docs line two repeated deterministic payload for compression in benchmark output.
+00253|testdata/benchmarks/grep/recursive-match/verify-output.txt:4:208:  3: needle: docs line three repeated deterministic payload for compression in benchmark output.
+00254|testdata/benchmarks/grep/recursive-match/verify-output.txt:5:305:  4: needle: docs line four repeated deterministic payload for compression in benchmark output.
+00255|testdata/benchmarks/grep/recursive-match/verify-output.txt:6:401:  5: needle: docs line five repeated deterministic payload for compression in benchmark output.
+00256|testdata/benchmarks/grep/recursive-match/verify-output.txt:7:497:./src/deeply/nested/very/long/path/component/mega_file_with_repeated_needles.txt:
+00257|testdata/benchmarks/grep/recursive-match/verify-output.txt:8:579:  1: needle: deep path payload 01 repeated for semantic compaction benchmark stability checks.
+00258|testdata/benchmarks/grep/recursive-match/verify-output.txt:9:674:  2: needle: deep path payload 02 repeated for semantic compaction benchmark stability checks.
+00259|testdata/benchmarks/grep/recursive-match/verify-output.txt:10:769:  3: needle: deep path payload 03 repeated for semantic compaction benchmark stability checks.
+00260|testdata/benchmarks/grep/recursive-match/verify-output.txt:11:864:  4: needle: deep path payload 04 repeated for semantic compaction benchmark stability checks.
+00261|testdata/benchmarks/grep/recursive-match/verify-output.txt:12:959:  5: needle: deep path payload 05 repeated for semantic compaction benchmark stability checks.
+00262|testdata/benchmarks/grep/recursive-match/verify-output.txt:13:1054:  6: needle: deep path payload 06 repeated for semantic compaction benchmark stability checks.
+00263|testdata/benchmarks/grep/recursive-match/verify-output.txt:14:1149:  7: needle: deep path payload 07 repeated for semantic compaction benchmark stability checks.
+00264|testdata/benchmarks/grep/recursive-match/verify-output.txt:15:1244:  8: needle: deep path payload 08 repeated for semantic compaction benchmark stability checks.
+00265|testdata/benchmarks/grep/recursive-match/verify-output.txt:16:1339:  9: needle: deep path payload 09 repeated for semantic compaction benchmark stability checks.
+00266|testdata/benchmarks/grep/recursive-match/verify-output.txt:17:1434:  10: needle: deep path payload 10 repeated for semantic compaction benchmark stability checks.
+00267|testdata/benchmarks/grep/recursive-match/verify-output.txt:18:1530:  11: needle: deep path payload 11 repeated for semantic compaction benchmark stability checks.
+00268|testdata/benchmarks/grep/recursive-match/verify-output.txt:19:1626:  12: needle: deep path payload 12 repeated for semantic compaction benchmark stability checks.
+00269|testdata/benchmarks/grep/recursive-match/verify-output.txt:20:1722:  13: needle: deep path payload 13 repeated for semantic compaction benchmark stability checks.
+00270|testdata/benchmarks/grep/recursive-match/verify-output.txt:21:1818:  14: needle: deep path payload 14 repeated for semantic compaction benchmark stability checks.
+00271|testdata/benchmarks/grep/recursive-match/verify-output.txt:22:1914:  15: needle: deep path payload 15 repeated for semantic compaction benchmark stability checks.
+00272|testdata/benchmarks/grep/recursive-match/verify-output.txt:23:2010:  16: needle: deep path payload 16 repeated for semantic compaction benchmark stability checks.
+00273|testdata/benchmarks/grep/recursive-match/verify-output.txt:24:2106:  17: needle: deep path payload 17 repeated for semantic compaction benchmark stability checks.
+00274|testdata/benchmarks/grep/recursive-match/verify-output.txt:25:2202:  18: needle: deep path payload 18 repeated for semantic compaction benchmark stability checks.
+00275|testdata/benchmarks/grep/recursive-match/verify-output.txt:26:2298:  19: needle: deep path payload 19 repeated for semantic compaction benchmark stability checks.
+00276|testdata/benchmarks/grep/recursive-match/verify-output.txt:27:2394:  20: needle: deep path payload 20 repeated for semantic compaction benchmark stability checks.
+00277|testdata/benchmarks/grep/recursive-match/verify-output.txt:29:2508:  5: 		"needle: helper one with repeated deterministic payload for compression",
+00278|testdata/benchmarks/grep/recursive-match/verify-output.txt:30:2589:  6: 		"needle: helper two with repeated deterministic payload for compression",
+00279|testdata/benchmarks/grep/recursive-match/verify-output.txt:31:2670:  7: 		"needle: helper three with repeated deterministic payload for compression",
+00280|testdata/benchmarks/grep/recursive-match/verify-output.txt:32:2753:  8: 		"needle: helper four with repeated deterministic payload for compression",
+00281|testdata/benchmarks/grep/recursive-match/verify-output.txt:33:2835:  9: 		"needle: helper five with repeated deterministic payload for compression",
+00282|testdata/benchmarks/grep/recursive-match/verify-output.txt:35:2932:  6: 	fmt.Println("needle: alpha path check with repeated deterministic payload for compression")
+00283|testdata/benchmarks/grep/recursive-match/verify-output.txt:36:3030:  7: 	fmt.Println("needle: beta path check with repeated deterministic payload for compression")
+00284|testdata/benchmarks/grep/recursive-match/verify-output.txt:37:3127:  8: 	fmt.Println("needle: gamma path check with repeated deterministic payload for compression")
+00285|testdata/benchmarks/grep/recursive-match/verify-output.txt:38:3225:  9: 	fmt.Println("needle: delta path check with repeated deterministic payload for compression")
+00286|testdata/benchmarks/grep/recursive-match/verify-output.txt:39:3323:  10: 	fmt.Println("needle: epsilon path check with repeated deterministic payload for compression")
+00287|testdata/benchmarks/grep/recursive-only-matching/command.yaml:1:0:argv: ["grep", "-r", "-n", "-o", "needle", "testdata/benchmarks/grep"]
+00288|testdata/benchmarks/grep/recursive-only-matching/output.txt:1:0:testdata/benchmarks/grep/explicit-with-filename-match/command.yaml:1:needle
+00289|testdata/benchmarks/grep/recursive-only-matching/output.txt:2:76:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:2:needle
+00290|testdata/benchmarks/grep/recursive-only-matching/output.txt:3:150:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:3:needle
+00291|testdata/benchmarks/grep/recursive-only-matching/output.txt:4:224:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:4:needle
+00292|testdata/benchmarks/grep/recursive-only-matching/output.txt:5:298:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:5:needle
+00293|testdata/benchmarks/grep/recursive-only-matching/output.txt:6:372:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:6:needle
+00294|testdata/benchmarks/grep/recursive-only-matching/output.txt:7:446:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:7:needle
+00295|testdata/benchmarks/grep/recursive-only-matching/output.txt:8:520:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:8:needle
+00296|testdata/benchmarks/grep/recursive-only-matching/output.txt:9:594:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:9:needle
+00297|testdata/benchmarks/grep/recursive-only-matching/output.txt:10:668:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:10:needle
+00298|testdata/benchmarks/grep/recursive-only-matching/output.txt:11:743:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:11:needle
+00299|testdata/benchmarks/grep/recursive-only-matching/output.txt:12:818:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:12:needle
+00300|testdata/benchmarks/grep/recursive-only-matching/output.txt:13:893:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:13:needle
+00301|testdata/benchmarks/grep/recursive-only-matching/output.txt:14:968:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:14:needle
+00302|testdata/benchmarks/grep/recursive-only-matching/output.txt:15:1043:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:15:needle
+00303|testdata/benchmarks/grep/recursive-only-matching/output.txt:16:1118:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:16:needle
+00304|testdata/benchmarks/grep/recursive-only-matching/output.txt:17:1193:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:17:needle
+00305|testdata/benchmarks/grep/recursive-only-matching/output.txt:18:1268:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:18:needle
+00306|testdata/benchmarks/grep/recursive-only-matching/output.txt:19:1343:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:19:needle
+00307|testdata/benchmarks/grep/recursive-only-matching/output.txt:20:1418:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:20:needle
+00308|testdata/benchmarks/grep/recursive-only-matching/output.txt:21:1493:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:21:needle
+00309|testdata/benchmarks/grep/recursive-only-matching/output.txt:22:1568:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:22:needle
+00310|testdata/benchmarks/grep/recursive-only-matching/output.txt:23:1643:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:23:needle
+00311|testdata/benchmarks/grep/recursive-only-matching/output.txt:24:1718:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:24:needle
+00312|testdata/benchmarks/grep/recursive-only-matching/output.txt:25:1793:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:25:needle
+00313|testdata/benchmarks/grep/recursive-only-matching/output.txt:26:1868:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:26:needle
+00314|testdata/benchmarks/grep/recursive-only-matching/output.txt:27:1943:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:27:needle
+00315|testdata/benchmarks/grep/recursive-only-matching/output.txt:28:2018:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:28:needle
+00316|testdata/benchmarks/grep/recursive-only-matching/output.txt:29:2093:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:29:needle
+00317|testdata/benchmarks/grep/recursive-only-matching/output.txt:30:2168:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:30:needle
+00318|testdata/benchmarks/grep/recursive-only-matching/output.txt:31:2243:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:31:needle
+00319|testdata/benchmarks/grep/recursive-only-matching/output.txt:32:2318:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:32:needle
+00320|testdata/benchmarks/grep/recursive-only-matching/output.txt:33:2393:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:33:needle
+00321|testdata/benchmarks/grep/recursive-only-matching/output.txt:34:2468:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:34:needle
+00322|testdata/benchmarks/grep/recursive-only-matching/output.txt:35:2543:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:35:needle
+00323|testdata/benchmarks/grep/recursive-only-matching/output.txt:36:2618:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:36:needle
+00324|testdata/benchmarks/grep/recursive-only-matching/output.txt:37:2693:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:37:needle
+00325|testdata/benchmarks/grep/recursive-only-matching/output.txt:38:2768:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:39:needle
+00326|testdata/benchmarks/grep/recursive-only-matching/output.txt:39:2843:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:40:needle
+00327|testdata/benchmarks/grep/recursive-only-matching/output.txt:40:2918:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:41:needle
+00328|testdata/benchmarks/grep/recursive-only-matching/output.txt:41:2993:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:42:needle
+00329|testdata/benchmarks/grep/recursive-only-matching/output.txt:42:3068:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:43:needle
+00330|testdata/benchmarks/grep/recursive-only-matching/output.txt:43:3143:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:44:needle
+00331|testdata/benchmarks/grep/recursive-only-matching/output.txt:44:3218:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:44:needle
+00332|testdata/benchmarks/grep/recursive-only-matching/output.txt:45:3293:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:45:needle
+00333|testdata/benchmarks/grep/recursive-only-matching/output.txt:46:3368:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:45:needle
+00334|testdata/benchmarks/grep/recursive-only-matching/output.txt:47:3443:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:46:needle
+00335|testdata/benchmarks/grep/recursive-only-matching/output.txt:48:3518:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:46:needle
+00336|testdata/benchmarks/grep/recursive-only-matching/output.txt:49:3593:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:47:needle
+00337|testdata/benchmarks/grep/recursive-only-matching/output.txt:50:3668:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:47:needle
+00338|testdata/benchmarks/grep/recursive-only-matching/output.txt:51:3743:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:48:needle
+00339|testdata/benchmarks/grep/recursive-only-matching/output.txt:52:3818:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:48:needle
+00340|testdata/benchmarks/grep/recursive-only-matching/output.txt:53:3893:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:49:needle
+00341|testdata/benchmarks/grep/recursive-only-matching/output.txt:54:3968:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:49:needle
+00342|testdata/benchmarks/grep/recursive-only-matching/output.txt:55:4043:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:50:needle
+00343|testdata/benchmarks/grep/recursive-only-matching/output.txt:56:4118:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:50:needle
+00344|testdata/benchmarks/grep/recursive-only-matching/output.txt:57:4193:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:51:needle
+00345|testdata/benchmarks/grep/recursive-only-matching/output.txt:58:4268:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:51:needle
+00346|testdata/benchmarks/grep/recursive-only-matching/output.txt:59:4343:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:52:needle
+00347|testdata/benchmarks/grep/recursive-only-matching/output.txt:60:4418:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:52:needle
+00348|testdata/benchmarks/grep/recursive-only-matching/output.txt:61:4493:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:53:needle
+00349|testdata/benchmarks/grep/recursive-only-matching/output.txt:62:4568:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:53:needle
+00350|testdata/benchmarks/grep/recursive-only-matching/output.txt:63:4643:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:54:needle
+00351|testdata/benchmarks/grep/recursive-only-matching/output.txt:64:4718:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:54:needle
+00352|testdata/benchmarks/grep/recursive-only-matching/output.txt:65:4793:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:55:needle
+00353|testdata/benchmarks/grep/recursive-only-matching/output.txt:66:4868:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:55:needle
+00354|testdata/benchmarks/grep/recursive-only-matching/output.txt:67:4943:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:56:needle
+00355|testdata/benchmarks/grep/recursive-only-matching/output.txt:68:5018:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:56:needle
+00356|testdata/benchmarks/grep/recursive-only-matching/output.txt:69:5093:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:57:needle
+00357|testdata/benchmarks/grep/recursive-only-matching/output.txt:70:5168:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:57:needle
+00358|testdata/benchmarks/grep/recursive-only-matching/output.txt:71:5243:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:58:needle
+00359|testdata/benchmarks/grep/recursive-only-matching/output.txt:72:5318:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:58:needle
+00360|testdata/benchmarks/grep/recursive-only-matching/output.txt:73:5393:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:59:needle
+00361|testdata/benchmarks/grep/recursive-only-matching/output.txt:74:5468:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:59:needle
+00362|testdata/benchmarks/grep/recursive-only-matching/output.txt:75:5543:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:60:needle
+00363|testdata/benchmarks/grep/recursive-only-matching/output.txt:76:5618:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:60:needle
+00364|testdata/benchmarks/grep/recursive-only-matching/output.txt:77:5693:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:61:needle
+00365|testdata/benchmarks/grep/recursive-only-matching/output.txt:78:5768:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:61:needle
+00366|testdata/benchmarks/grep/recursive-only-matching/output.txt:79:5843:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:62:needle
+00367|testdata/benchmarks/grep/recursive-only-matching/output.txt:80:5918:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:62:needle
+00368|testdata/benchmarks/grep/recursive-only-matching/output.txt:81:5993:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:63:needle
+00369|testdata/benchmarks/grep/recursive-only-matching/output.txt:82:6068:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:63:needle
+00370|testdata/benchmarks/grep/recursive-only-matching/output.txt:83:6143:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:64:needle
+00371|testdata/benchmarks/grep/recursive-only-matching/output.txt:84:6218:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:65:needle
+00372|testdata/benchmarks/grep/recursive-only-matching/output.txt:85:6293:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:66:needle
+00373|testdata/benchmarks/grep/recursive-only-matching/output.txt:86:6368:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:67:needle
+00374|testdata/benchmarks/grep/recursive-only-matching/output.txt:87:6443:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:68:needle
+00375|testdata/benchmarks/grep/recursive-only-matching/output.txt:88:6518:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:69:needle
+00376|testdata/benchmarks/grep/recursive-only-matching/output.txt:89:6593:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:70:needle
+00377|testdata/benchmarks/grep/recursive-only-matching/output.txt:90:6668:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:71:needle
+00378|testdata/benchmarks/grep/recursive-only-matching/output.txt:91:6743:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:72:needle
+00379|testdata/benchmarks/grep/recursive-only-matching/output.txt:92:6818:testdata/benchmarks/grep/explicit-with-filename-match/output.txt:73:needle
+00380|testdata/benchmarks/grep/recursive-only-matching/output.txt:93:6893:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:1:needle
+00381|testdata/benchmarks/grep/recursive-only-matching/output.txt:94:6967:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:2:needle
+00382|testdata/benchmarks/grep/recursive-only-matching/output.txt:95:7041:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:3:needle
+00383|testdata/benchmarks/grep/recursive-only-matching/output.txt:96:7115:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:4:needle
+00384|testdata/benchmarks/grep/recursive-only-matching/output.txt:97:7189:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:5:needle
+00385|testdata/benchmarks/grep/recursive-only-matching/output.txt:98:7263:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:6:needle
+00386|testdata/benchmarks/grep/recursive-only-matching/output.txt:99:7337:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:6:needle
+00387|testdata/benchmarks/grep/recursive-only-matching/output.txt:100:7411:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:7:needle
+00388|testdata/benchmarks/grep/recursive-only-matching/output.txt:101:7485:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:7:needle
+00389|testdata/benchmarks/grep/recursive-only-matching/output.txt:102:7559:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:8:needle
+00390|testdata/benchmarks/grep/recursive-only-matching/output.txt:103:7633:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:8:needle
+00391|testdata/benchmarks/grep/recursive-only-matching/output.txt:104:7707:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:9:needle
+00392|testdata/benchmarks/grep/recursive-only-matching/output.txt:105:7781:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:9:needle
+00393|testdata/benchmarks/grep/recursive-only-matching/output.txt:106:7855:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:10:needle
+00394|testdata/benchmarks/grep/recursive-only-matching/output.txt:107:7930:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:10:needle
+00395|testdata/benchmarks/grep/recursive-only-matching/output.txt:108:8005:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:11:needle
+00396|testdata/benchmarks/grep/recursive-only-matching/output.txt:109:8080:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:11:needle
+00397|testdata/benchmarks/grep/recursive-only-matching/output.txt:110:8155:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:12:needle
+00398|testdata/benchmarks/grep/recursive-only-matching/output.txt:111:8230:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:12:needle
+00399|testdata/benchmarks/grep/recursive-only-matching/output.txt:112:8305:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:13:needle
+00400|testdata/benchmarks/grep/recursive-only-matching/output.txt:113:8380:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:13:needle
+00401|testdata/benchmarks/grep/recursive-only-matching/output.txt:114:8455:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:14:needle
+00402|testdata/benchmarks/grep/recursive-only-matching/output.txt:115:8530:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:14:needle
+00403|testdata/benchmarks/grep/recursive-only-matching/output.txt:116:8605:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:15:needle
+00404|testdata/benchmarks/grep/recursive-only-matching/output.txt:117:8680:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:15:needle
+00405|testdata/benchmarks/grep/recursive-only-matching/output.txt:118:8755:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:16:needle
+00406|testdata/benchmarks/grep/recursive-only-matching/output.txt:119:8830:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:16:needle
+00407|testdata/benchmarks/grep/recursive-only-matching/output.txt:120:8905:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:17:needle
+00408|testdata/benchmarks/grep/recursive-only-matching/output.txt:121:8980:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:17:needle
+00409|testdata/benchmarks/grep/recursive-only-matching/output.txt:122:9055:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:18:needle
+00410|testdata/benchmarks/grep/recursive-only-matching/output.txt:123:9130:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:18:needle
+00411|testdata/benchmarks/grep/recursive-only-matching/output.txt:124:9205:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:19:needle
+00412|testdata/benchmarks/grep/recursive-only-matching/output.txt:125:9280:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:19:needle
+00413|testdata/benchmarks/grep/recursive-only-matching/output.txt:126:9355:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:20:needle
+00414|testdata/benchmarks/grep/recursive-only-matching/output.txt:127:9430:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:20:needle
+00415|testdata/benchmarks/grep/recursive-only-matching/output.txt:128:9505:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:21:needle
+00416|testdata/benchmarks/grep/recursive-only-matching/output.txt:129:9580:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:21:needle
+00417|testdata/benchmarks/grep/recursive-only-matching/output.txt:130:9655:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:22:needle
+00418|testdata/benchmarks/grep/recursive-only-matching/output.txt:131:9730:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:22:needle
+00419|testdata/benchmarks/grep/recursive-only-matching/output.txt:132:9805:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:23:needle
+00420|testdata/benchmarks/grep/recursive-only-matching/output.txt:133:9880:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:23:needle
+00421|testdata/benchmarks/grep/recursive-only-matching/output.txt:134:9955:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:24:needle
+00422|testdata/benchmarks/grep/recursive-only-matching/output.txt:135:10030:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:24:needle
+00423|testdata/benchmarks/grep/recursive-only-matching/output.txt:136:10105:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:25:needle
+00424|testdata/benchmarks/grep/recursive-only-matching/output.txt:137:10180:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:25:needle
+00425|testdata/benchmarks/grep/recursive-only-matching/output.txt:138:10255:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:26:needle
+00426|testdata/benchmarks/grep/recursive-only-matching/output.txt:139:10330:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:27:needle
+00427|testdata/benchmarks/grep/recursive-only-matching/output.txt:140:10405:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:28:needle
+00428|testdata/benchmarks/grep/recursive-only-matching/output.txt:141:10480:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:29:needle
+00429|testdata/benchmarks/grep/recursive-only-matching/output.txt:142:10555:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:30:needle
+00430|testdata/benchmarks/grep/recursive-only-matching/output.txt:143:10630:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:31:needle
+00431|testdata/benchmarks/grep/recursive-only-matching/output.txt:144:10705:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:32:needle
+00432|testdata/benchmarks/grep/recursive-only-matching/output.txt:145:10780:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:33:needle
+00433|testdata/benchmarks/grep/recursive-only-matching/output.txt:146:10855:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:34:needle
+00434|testdata/benchmarks/grep/recursive-only-matching/output.txt:147:10930:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:35:needle
+00435|testdata/benchmarks/grep/recursive-only-matching/output.txt:148:11005:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:36:needle
+00436|testdata/benchmarks/grep/recursive-only-matching/output.txt:149:11080:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:37:needle
+00437|testdata/benchmarks/grep/recursive-only-matching/output.txt:150:11155:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:38:needle
+00438|testdata/benchmarks/grep/recursive-only-matching/output.txt:151:11230:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:39:needle
+00439|testdata/benchmarks/grep/recursive-only-matching/output.txt:152:11305:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:40:needle
+00440|testdata/benchmarks/grep/recursive-only-matching/output.txt:153:11380:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:41:needle
+00441|testdata/benchmarks/grep/recursive-only-matching/output.txt:154:11455:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:42:needle
+00442|testdata/benchmarks/grep/recursive-only-matching/output.txt:155:11530:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:43:needle
+00443|testdata/benchmarks/grep/recursive-only-matching/output.txt:156:11605:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:44:needle
+00444|testdata/benchmarks/grep/recursive-only-matching/output.txt:157:11680:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:45:needle
+00445|testdata/benchmarks/grep/recursive-only-matching/output.txt:158:11755:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:46:needle
+00446|testdata/benchmarks/grep/recursive-only-matching/output.txt:159:11830:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:47:needle
+00447|testdata/benchmarks/grep/recursive-only-matching/output.txt:160:11905:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:48:needle
+00448|testdata/benchmarks/grep/recursive-only-matching/output.txt:161:11980:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:49:needle
+00449|testdata/benchmarks/grep/recursive-only-matching/output.txt:162:12055:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:50:needle
+00450|testdata/benchmarks/grep/recursive-only-matching/output.txt:163:12130:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:51:needle
+00451|testdata/benchmarks/grep/recursive-only-matching/output.txt:164:12205:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:52:needle
+00452|testdata/benchmarks/grep/recursive-only-matching/output.txt:165:12280:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:53:needle
+00453|testdata/benchmarks/grep/recursive-only-matching/output.txt:166:12355:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:54:needle
+00454|testdata/benchmarks/grep/recursive-only-matching/output.txt:167:12430:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:55:needle
+00455|testdata/benchmarks/grep/recursive-only-matching/output.txt:168:12505:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:56:needle
+00456|testdata/benchmarks/grep/recursive-only-matching/output.txt:169:12580:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:57:needle
+00457|testdata/benchmarks/grep/recursive-only-matching/output.txt:170:12655:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:58:needle
+00458|testdata/benchmarks/grep/recursive-only-matching/output.txt:171:12730:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:59:needle
+00459|testdata/benchmarks/grep/recursive-only-matching/output.txt:172:12805:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:60:needle
+00460|testdata/benchmarks/grep/recursive-only-matching/output.txt:173:12880:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:61:needle
+00461|testdata/benchmarks/grep/recursive-only-matching/output.txt:174:12955:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:62:needle
+00462|testdata/benchmarks/grep/recursive-only-matching/output.txt:175:13030:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:63:needle
+00463|testdata/benchmarks/grep/recursive-only-matching/output.txt:176:13105:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:64:needle
+00464|testdata/benchmarks/grep/recursive-only-matching/output.txt:177:13180:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:65:needle
+00465|testdata/benchmarks/grep/recursive-only-matching/output.txt:178:13255:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:66:needle
+00466|testdata/benchmarks/grep/recursive-only-matching/output.txt:179:13330:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:67:needle
+00467|testdata/benchmarks/grep/recursive-only-matching/output.txt:180:13405:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:68:needle
+00468|testdata/benchmarks/grep/recursive-only-matching/output.txt:181:13480:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:69:needle
+00469|testdata/benchmarks/grep/recursive-only-matching/output.txt:182:13555:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:70:needle
+00470|testdata/benchmarks/grep/recursive-only-matching/output.txt:183:13630:testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:71:needle
+00471|testdata/benchmarks/grep/recursive-only-matching/output.txt:184:13705:testdata/benchmarks/grep/failure-missing-path/command.yaml:1:needle
+00472|testdata/benchmarks/grep/recursive-only-matching/output.txt:185:13773:testdata/benchmarks/grep/recursive-match/command.yaml:1:needle
+00473|testdata/benchmarks/grep/recursive-only-matching/output.txt:186:13836:testdata/benchmarks/grep/recursive-match/output.txt:2:needle
+00474|testdata/benchmarks/grep/recursive-only-matching/output.txt:187:13897:testdata/benchmarks/grep/recursive-match/output.txt:3:needle
+00475|testdata/benchmarks/grep/recursive-only-matching/output.txt:188:13958:testdata/benchmarks/grep/recursive-match/output.txt:4:needle
+00476|testdata/benchmarks/grep/recursive-only-matching/output.txt:189:14019:testdata/benchmarks/grep/recursive-match/output.txt:5:needle
+00477|testdata/benchmarks/grep/recursive-only-matching/output.txt:190:14080:testdata/benchmarks/grep/recursive-match/output.txt:6:needle
+00478|testdata/benchmarks/grep/recursive-only-matching/output.txt:191:14141:testdata/benchmarks/grep/recursive-match/output.txt:7:needle
+00479|testdata/benchmarks/grep/recursive-only-matching/output.txt:192:14202:testdata/benchmarks/grep/recursive-match/output.txt:8:needle
+00480|testdata/benchmarks/grep/recursive-only-matching/output.txt:193:14263:testdata/benchmarks/grep/recursive-match/output.txt:9:needle
+00481|testdata/benchmarks/grep/recursive-only-matching/output.txt:194:14324:testdata/benchmarks/grep/recursive-match/output.txt:10:needle
+00482|testdata/benchmarks/grep/recursive-only-matching/output.txt:195:14386:testdata/benchmarks/grep/recursive-match/output.txt:11:needle
+00483|testdata/benchmarks/grep/recursive-only-matching/output.txt:196:14448:testdata/benchmarks/grep/recursive-match/output.txt:12:needle
+00484|testdata/benchmarks/grep/recursive-only-matching/output.txt:197:14510:testdata/benchmarks/grep/recursive-match/output.txt:13:needle
+00485|testdata/benchmarks/grep/recursive-only-matching/output.txt:198:14572:testdata/benchmarks/grep/recursive-match/output.txt:14:needle
+00486|testdata/benchmarks/grep/recursive-only-matching/output.txt:199:14634:testdata/benchmarks/grep/recursive-match/output.txt:15:needle
+00487|testdata/benchmarks/grep/recursive-only-matching/output.txt:200:14696:testdata/benchmarks/grep/recursive-match/output.txt:16:needle
+00488|testdata/benchmarks/grep/recursive-only-matching/output.txt:201:14758:testdata/benchmarks/grep/recursive-match/output.txt:17:needle
+00489|testdata/benchmarks/grep/recursive-only-matching/output.txt:202:14820:testdata/benchmarks/grep/recursive-match/output.txt:18:needle
+00490|testdata/benchmarks/grep/recursive-only-matching/output.txt:203:14882:testdata/benchmarks/grep/recursive-match/output.txt:19:needle
+00491|testdata/benchmarks/grep/recursive-only-matching/output.txt:204:14944:testdata/benchmarks/grep/recursive-match/output.txt:20:needle
+00492|testdata/benchmarks/grep/recursive-only-matching/output.txt:205:15006:testdata/benchmarks/grep/recursive-match/output.txt:21:needle
+00493|testdata/benchmarks/grep/recursive-only-matching/output.txt:206:15068:testdata/benchmarks/grep/recursive-match/output.txt:22:needle
+00494|testdata/benchmarks/grep/recursive-only-matching/output.txt:207:15130:testdata/benchmarks/grep/recursive-match/output.txt:23:needle
+00495|testdata/benchmarks/grep/recursive-only-matching/output.txt:208:15192:testdata/benchmarks/grep/recursive-match/output.txt:24:needle
+00496|testdata/benchmarks/grep/recursive-only-matching/output.txt:209:15254:testdata/benchmarks/grep/recursive-match/output.txt:25:needle
+00497|testdata/benchmarks/grep/recursive-only-matching/output.txt:210:15316:testdata/benchmarks/grep/recursive-match/output.txt:26:needle
+00498|testdata/benchmarks/grep/recursive-only-matching/output.txt:211:15378:testdata/benchmarks/grep/recursive-match/output.txt:27:needle
+00499|testdata/benchmarks/grep/recursive-only-matching/output.txt:212:15440:testdata/benchmarks/grep/recursive-match/output.txt:29:needle
+00500|testdata/benchmarks/grep/recursive-only-matching/output.txt:213:15502:testdata/benchmarks/grep/recursive-match/output.txt:30:needle
+00501|testdata/benchmarks/grep/recursive-only-matching/output.txt:214:15564:testdata/benchmarks/grep/recursive-match/output.txt:31:needle
+00502|testdata/benchmarks/grep/recursive-only-matching/output.txt:215:15626:testdata/benchmarks/grep/recursive-match/output.txt:32:needle
+00503|testdata/benchmarks/grep/recursive-only-matching/output.txt:216:15688:testdata/benchmarks/grep/recursive-match/output.txt:33:needle
+00504|testdata/benchmarks/grep/recursive-only-matching/output.txt:217:15750:testdata/benchmarks/grep/recursive-match/output.txt:35:needle
+00505|testdata/benchmarks/grep/recursive-only-matching/output.txt:218:15812:testdata/benchmarks/grep/recursive-match/output.txt:36:needle
+00506|testdata/benchmarks/grep/recursive-only-matching/output.txt:219:15874:testdata/benchmarks/grep/recursive-match/output.txt:37:needle
+00507|testdata/benchmarks/grep/recursive-only-matching/output.txt:220:15936:testdata/benchmarks/grep/recursive-match/output.txt:38:needle
+00508|testdata/benchmarks/grep/recursive-only-matching/output.txt:221:15998:testdata/benchmarks/grep/recursive-match/output.txt:39:needle
+00509|testdata/benchmarks/grep/recursive-only-matching/output.txt:222:16060:testdata/benchmarks/grep/recursive-match/stdout.txt:1:needle
+00510|testdata/benchmarks/grep/recursive-only-matching/output.txt:223:16121:testdata/benchmarks/grep/recursive-match/stdout.txt:2:needle
+00511|testdata/benchmarks/grep/recursive-only-matching/output.txt:224:16182:testdata/benchmarks/grep/recursive-match/stdout.txt:3:needle
+00512|testdata/benchmarks/grep/recursive-only-matching/output.txt:225:16243:testdata/benchmarks/grep/recursive-match/stdout.txt:4:needle
+00513|testdata/benchmarks/grep/recursive-only-matching/output.txt:226:16304:testdata/benchmarks/grep/recursive-match/stdout.txt:5:needle
+00514|testdata/benchmarks/grep/recursive-only-matching/output.txt:227:16365:testdata/benchmarks/grep/recursive-match/stdout.txt:6:needle
+00515|testdata/benchmarks/grep/recursive-only-matching/output.txt:228:16426:testdata/benchmarks/grep/recursive-match/stdout.txt:6:needle
+00516|testdata/benchmarks/grep/recursive-only-matching/output.txt:229:16487:testdata/benchmarks/grep/recursive-match/stdout.txt:7:needle
+00517|testdata/benchmarks/grep/recursive-only-matching/output.txt:230:16548:testdata/benchmarks/grep/recursive-match/stdout.txt:7:needle
+00518|testdata/benchmarks/grep/recursive-only-matching/output.txt:231:16609:testdata/benchmarks/grep/recursive-match/stdout.txt:8:needle
+00519|testdata/benchmarks/grep/recursive-only-matching/output.txt:232:16670:testdata/benchmarks/grep/recursive-match/stdout.txt:8:needle
+00520|testdata/benchmarks/grep/recursive-only-matching/output.txt:233:16731:testdata/benchmarks/grep/recursive-match/stdout.txt:9:needle
+00521|testdata/benchmarks/grep/recursive-only-matching/output.txt:234:16792:testdata/benchmarks/grep/recursive-match/stdout.txt:9:needle
+00522|testdata/benchmarks/grep/recursive-only-matching/output.txt:235:16853:testdata/benchmarks/grep/recursive-match/stdout.txt:10:needle
+00523|testdata/benchmarks/grep/recursive-only-matching/output.txt:236:16915:testdata/benchmarks/grep/recursive-match/stdout.txt:10:needle
+00524|testdata/benchmarks/grep/recursive-only-matching/output.txt:237:16977:testdata/benchmarks/grep/recursive-match/stdout.txt:11:needle
+00525|testdata/benchmarks/grep/recursive-only-matching/output.txt:238:17039:testdata/benchmarks/grep/recursive-match/stdout.txt:11:needle
+00526|testdata/benchmarks/grep/recursive-only-matching/output.txt:239:17101:testdata/benchmarks/grep/recursive-match/stdout.txt:12:needle
+00527|testdata/benchmarks/grep/recursive-only-matching/output.txt:240:17163:testdata/benchmarks/grep/recursive-match/stdout.txt:12:needle
+00528|testdata/benchmarks/grep/recursive-only-matching/output.txt:241:17225:testdata/benchmarks/grep/recursive-match/stdout.txt:13:needle
+00529|testdata/benchmarks/grep/recursive-only-matching/output.txt:242:17287:testdata/benchmarks/grep/recursive-match/stdout.txt:13:needle
+00530|testdata/benchmarks/grep/recursive-only-matching/output.txt:243:17349:testdata/benchmarks/grep/recursive-match/stdout.txt:14:needle
+00531|testdata/benchmarks/grep/recursive-only-matching/output.txt:244:17411:testdata/benchmarks/grep/recursive-match/stdout.txt:14:needle
+00532|testdata/benchmarks/grep/recursive-only-matching/output.txt:245:17473:testdata/benchmarks/grep/recursive-match/stdout.txt:15:needle
+00533|testdata/benchmarks/grep/recursive-only-matching/output.txt:246:17535:testdata/benchmarks/grep/recursive-match/stdout.txt:15:needle
+00534|testdata/benchmarks/grep/recursive-only-matching/output.txt:247:17597:testdata/benchmarks/grep/recursive-match/stdout.txt:16:needle
+00535|testdata/benchmarks/grep/recursive-only-matching/output.txt:248:17659:testdata/benchmarks/grep/recursive-match/stdout.txt:16:needle
+00536|testdata/benchmarks/grep/recursive-only-matching/output.txt:249:17721:testdata/benchmarks/grep/recursive-match/stdout.txt:17:needle
+00537|testdata/benchmarks/grep/recursive-only-matching/output.txt:250:17783:testdata/benchmarks/grep/recursive-match/stdout.txt:17:needle
+00538|testdata/benchmarks/grep/recursive-only-matching/output.txt:251:17845:testdata/benchmarks/grep/recursive-match/stdout.txt:18:needle
+00539|testdata/benchmarks/grep/recursive-only-matching/output.txt:252:17907:testdata/benchmarks/grep/recursive-match/stdout.txt:18:needle
+00540|testdata/benchmarks/grep/recursive-only-matching/output.txt:253:17969:testdata/benchmarks/grep/recursive-match/stdout.txt:19:needle
+00541|testdata/benchmarks/grep/recursive-only-matching/output.txt:254:18031:testdata/benchmarks/grep/recursive-match/stdout.txt:19:needle
+00542|testdata/benchmarks/grep/recursive-only-matching/output.txt:255:18093:testdata/benchmarks/grep/recursive-match/stdout.txt:20:needle
+00543|testdata/benchmarks/grep/recursive-only-matching/output.txt:256:18155:testdata/benchmarks/grep/recursive-match/stdout.txt:20:needle
+00544|testdata/benchmarks/grep/recursive-only-matching/output.txt:257:18217:testdata/benchmarks/grep/recursive-match/stdout.txt:21:needle
+00545|testdata/benchmarks/grep/recursive-only-matching/output.txt:258:18279:testdata/benchmarks/grep/recursive-match/stdout.txt:21:needle
+00546|testdata/benchmarks/grep/recursive-only-matching/output.txt:259:18341:testdata/benchmarks/grep/recursive-match/stdout.txt:22:needle
+00547|testdata/benchmarks/grep/recursive-only-matching/output.txt:260:18403:testdata/benchmarks/grep/recursive-match/stdout.txt:22:needle
+00548|testdata/benchmarks/grep/recursive-only-matching/output.txt:261:18465:testdata/benchmarks/grep/recursive-match/stdout.txt:23:needle
+00549|testdata/benchmarks/grep/recursive-only-matching/output.txt:262:18527:testdata/benchmarks/grep/recursive-match/stdout.txt:23:needle
+00550|testdata/benchmarks/grep/recursive-only-matching/output.txt:263:18589:testdata/benchmarks/grep/recursive-match/stdout.txt:24:needle
+00551|testdata/benchmarks/grep/recursive-only-matching/output.txt:264:18651:testdata/benchmarks/grep/recursive-match/stdout.txt:24:needle
+00552|testdata/benchmarks/grep/recursive-only-matching/output.txt:265:18713:testdata/benchmarks/grep/recursive-match/stdout.txt:25:needle
+00553|testdata/benchmarks/grep/recursive-only-matching/output.txt:266:18775:testdata/benchmarks/grep/recursive-match/stdout.txt:25:needle
+00554|testdata/benchmarks/grep/recursive-only-matching/output.txt:267:18837:testdata/benchmarks/grep/recursive-match/stdout.txt:26:needle
+00555|testdata/benchmarks/grep/recursive-only-matching/output.txt:268:18899:testdata/benchmarks/grep/recursive-match/stdout.txt:27:needle
+00556|testdata/benchmarks/grep/recursive-only-matching/output.txt:269:18961:testdata/benchmarks/grep/recursive-match/stdout.txt:28:needle
+00557|testdata/benchmarks/grep/recursive-only-matching/output.txt:270:19023:testdata/benchmarks/grep/recursive-match/stdout.txt:29:needle
+00558|testdata/benchmarks/grep/recursive-only-matching/output.txt:271:19085:testdata/benchmarks/grep/recursive-match/stdout.txt:30:needle
+00559|testdata/benchmarks/grep/recursive-only-matching/output.txt:272:19147:testdata/benchmarks/grep/recursive-match/stdout.txt:31:needle
+00560|testdata/benchmarks/grep/recursive-only-matching/output.txt:273:19209:testdata/benchmarks/grep/recursive-match/stdout.txt:32:needle
+00561|testdata/benchmarks/grep/recursive-only-matching/output.txt:274:19271:testdata/benchmarks/grep/recursive-match/stdout.txt:33:needle
+00562|testdata/benchmarks/grep/recursive-only-matching/output.txt:275:19333:testdata/benchmarks/grep/recursive-match/stdout.txt:34:needle
+00563|testdata/benchmarks/grep/recursive-only-matching/output.txt:276:19395:testdata/benchmarks/grep/recursive-match/stdout.txt:35:needle
+00564|testdata/benchmarks/grep/recursive-only-matching/output.txt:277:19457:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:1:needle
+00565|testdata/benchmarks/grep/recursive-only-matching/output.txt:278:19528:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:2:needle
+00566|testdata/benchmarks/grep/recursive-only-matching/output.txt:279:19599:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:3:needle
+00567|testdata/benchmarks/grep/recursive-only-matching/output.txt:280:19670:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:4:needle
+00568|testdata/benchmarks/grep/recursive-only-matching/output.txt:281:19741:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:5:needle
+00569|testdata/benchmarks/grep/recursive-only-matching/output.txt:282:19812:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:6:needle
+00570|testdata/benchmarks/grep/recursive-only-matching/output.txt:283:19883:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:6:needle
+00571|testdata/benchmarks/grep/recursive-only-matching/output.txt:284:19954:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:7:needle
+00572|testdata/benchmarks/grep/recursive-only-matching/output.txt:285:20025:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:7:needle
+00573|testdata/benchmarks/grep/recursive-only-matching/output.txt:286:20096:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:8:needle
+00574|testdata/benchmarks/grep/recursive-only-matching/output.txt:287:20167:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:8:needle
+00575|testdata/benchmarks/grep/recursive-only-matching/output.txt:288:20238:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:9:needle
+00576|testdata/benchmarks/grep/recursive-only-matching/output.txt:289:20309:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:9:needle
+00577|testdata/benchmarks/grep/recursive-only-matching/output.txt:290:20380:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:10:needle
+00578|testdata/benchmarks/grep/recursive-only-matching/output.txt:291:20452:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:10:needle
+00579|testdata/benchmarks/grep/recursive-only-matching/output.txt:292:20524:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:11:needle
+00580|testdata/benchmarks/grep/recursive-only-matching/output.txt:293:20596:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:11:needle
+00581|testdata/benchmarks/grep/recursive-only-matching/output.txt:294:20668:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:12:needle
+00582|testdata/benchmarks/grep/recursive-only-matching/output.txt:295:20740:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:12:needle
+00583|testdata/benchmarks/grep/recursive-only-matching/output.txt:296:20812:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:13:needle
+00584|testdata/benchmarks/grep/recursive-only-matching/output.txt:297:20884:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:13:needle
+00585|testdata/benchmarks/grep/recursive-only-matching/output.txt:298:20956:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:14:needle
+00586|testdata/benchmarks/grep/recursive-only-matching/output.txt:299:21028:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:14:needle
+00587|testdata/benchmarks/grep/recursive-only-matching/output.txt:300:21100:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:15:needle
+00588|testdata/benchmarks/grep/recursive-only-matching/output.txt:301:21172:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:15:needle
+00589|testdata/benchmarks/grep/recursive-only-matching/output.txt:302:21244:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:16:needle
+00590|testdata/benchmarks/grep/recursive-only-matching/output.txt:303:21316:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:16:needle
+00591|testdata/benchmarks/grep/recursive-only-matching/output.txt:304:21388:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:17:needle
+00592|testdata/benchmarks/grep/recursive-only-matching/output.txt:305:21460:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:17:needle
+00593|testdata/benchmarks/grep/recursive-only-matching/output.txt:306:21532:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:18:needle
+00594|testdata/benchmarks/grep/recursive-only-matching/output.txt:307:21604:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:18:needle
+00595|testdata/benchmarks/grep/recursive-only-matching/output.txt:308:21676:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:19:needle
+00596|testdata/benchmarks/grep/recursive-only-matching/output.txt:309:21748:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:19:needle
+00597|testdata/benchmarks/grep/recursive-only-matching/output.txt:310:21820:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:20:needle
+00598|testdata/benchmarks/grep/recursive-only-matching/output.txt:311:21892:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:20:needle
+00599|testdata/benchmarks/grep/recursive-only-matching/output.txt:312:21964:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:21:needle
+00600|testdata/benchmarks/grep/recursive-only-matching/output.txt:313:22036:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:21:needle
+00601|testdata/benchmarks/grep/recursive-only-matching/output.txt:314:22108:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:22:needle
+00602|testdata/benchmarks/grep/recursive-only-matching/output.txt:315:22180:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:22:needle
+00603|testdata/benchmarks/grep/recursive-only-matching/output.txt:316:22252:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:23:needle
+00604|testdata/benchmarks/grep/recursive-only-matching/output.txt:317:22324:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:23:needle
+00605|testdata/benchmarks/grep/recursive-only-matching/output.txt:318:22396:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:24:needle
+00606|testdata/benchmarks/grep/recursive-only-matching/output.txt:319:22468:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:24:needle
+00607|testdata/benchmarks/grep/recursive-only-matching/output.txt:320:22540:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:25:needle
+00608|testdata/benchmarks/grep/recursive-only-matching/output.txt:321:22612:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:25:needle
+00609|testdata/benchmarks/grep/recursive-only-matching/output.txt:322:22684:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:26:needle
+00610|testdata/benchmarks/grep/recursive-only-matching/output.txt:323:22756:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:27:needle
+00611|testdata/benchmarks/grep/recursive-only-matching/output.txt:324:22828:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:28:needle
+00612|testdata/benchmarks/grep/recursive-only-matching/output.txt:325:22900:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:29:needle
+00613|testdata/benchmarks/grep/recursive-only-matching/output.txt:326:22972:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:30:needle
+00614|testdata/benchmarks/grep/recursive-only-matching/output.txt:327:23044:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:31:needle
+00615|testdata/benchmarks/grep/recursive-only-matching/output.txt:328:23116:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:32:needle
+00616|testdata/benchmarks/grep/recursive-only-matching/output.txt:329:23188:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:33:needle
+00617|testdata/benchmarks/grep/recursive-only-matching/output.txt:330:23260:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:34:needle
+00618|testdata/benchmarks/grep/recursive-only-matching/output.txt:331:23332:testdata/benchmarks/grep/recursive-match/verify-decisions.txt:35:needle
+00619|testdata/benchmarks/grep/recursive-only-matching/output.txt:332:23404:testdata/benchmarks/grep/recursive-match/verify-output.txt:2:needle
+00620|testdata/benchmarks/grep/recursive-only-matching/output.txt:333:23472:testdata/benchmarks/grep/recursive-match/verify-output.txt:3:needle
+00621|testdata/benchmarks/grep/recursive-only-matching/output.txt:334:23540:testdata/benchmarks/grep/recursive-match/verify-output.txt:4:needle
+00622|testdata/benchmarks/grep/recursive-only-matching/output.txt:335:23608:testdata/benchmarks/grep/recursive-match/verify-output.txt:5:needle
+00623|testdata/benchmarks/grep/recursive-only-matching/output.txt:336:23676:testdata/benchmarks/grep/recursive-match/verify-output.txt:6:needle
+00624|testdata/benchmarks/grep/recursive-only-matching/output.txt:337:23744:testdata/benchmarks/grep/recursive-match/verify-output.txt:7:needle
+00625|testdata/benchmarks/grep/recursive-only-matching/output.txt:338:23812:testdata/benchmarks/grep/recursive-match/verify-output.txt:8:needle
+00626|testdata/benchmarks/grep/recursive-only-matching/output.txt:339:23880:testdata/benchmarks/grep/recursive-match/verify-output.txt:9:needle
+00627|testdata/benchmarks/grep/recursive-only-matching/output.txt:340:23948:testdata/benchmarks/grep/recursive-match/verify-output.txt:10:needle
+00628|testdata/benchmarks/grep/recursive-only-matching/output.txt:341:24017:testdata/benchmarks/grep/recursive-match/verify-output.txt:11:needle
+00629|testdata/benchmarks/grep/recursive-only-matching/output.txt:342:24086:testdata/benchmarks/grep/recursive-match/verify-output.txt:12:needle
+00630|testdata/benchmarks/grep/recursive-only-matching/output.txt:343:24155:testdata/benchmarks/grep/recursive-match/verify-output.txt:13:needle
+00631|testdata/benchmarks/grep/recursive-only-matching/output.txt:344:24224:testdata/benchmarks/grep/recursive-match/verify-output.txt:14:needle
+00632|testdata/benchmarks/grep/recursive-only-matching/output.txt:345:24293:testdata/benchmarks/grep/recursive-match/verify-output.txt:15:needle
+00633|testdata/benchmarks/grep/recursive-only-matching/output.txt:346:24362:testdata/benchmarks/grep/recursive-match/verify-output.txt:16:needle
+00634|testdata/benchmarks/grep/recursive-only-matching/output.txt:347:24431:testdata/benchmarks/grep/recursive-match/verify-output.txt:17:needle
+00635|testdata/benchmarks/grep/recursive-only-matching/output.txt:348:24500:testdata/benchmarks/grep/recursive-match/verify-output.txt:18:needle
+00636|testdata/benchmarks/grep/recursive-only-matching/output.txt:349:24569:testdata/benchmarks/grep/recursive-match/verify-output.txt:19:needle
+00637|testdata/benchmarks/grep/recursive-only-matching/output.txt:350:24638:testdata/benchmarks/grep/recursive-match/verify-output.txt:20:needle
+00638|testdata/benchmarks/grep/recursive-only-matching/output.txt:351:24707:testdata/benchmarks/grep/recursive-match/verify-output.txt:21:needle
+00639|testdata/benchmarks/grep/recursive-only-matching/output.txt:352:24776:testdata/benchmarks/grep/recursive-match/verify-output.txt:22:needle
+00640|testdata/benchmarks/grep/recursive-only-matching/output.txt:353:24845:testdata/benchmarks/grep/recursive-match/verify-output.txt:23:needle
+00641|testdata/benchmarks/grep/recursive-only-matching/output.txt:354:24914:testdata/benchmarks/grep/recursive-match/verify-output.txt:24:needle
+00642|testdata/benchmarks/grep/recursive-only-matching/output.txt:355:24983:testdata/benchmarks/grep/recursive-match/verify-output.txt:25:needle
+00643|testdata/benchmarks/grep/recursive-only-matching/output.txt:356:25052:testdata/benchmarks/grep/recursive-match/verify-output.txt:26:needle
+00644|testdata/benchmarks/grep/recursive-only-matching/output.txt:357:25121:testdata/benchmarks/grep/recursive-match/verify-output.txt:27:needle
+00645|testdata/benchmarks/grep/recursive-only-matching/output.txt:358:25190:testdata/benchmarks/grep/recursive-match/verify-output.txt:29:needle
+00646|testdata/benchmarks/grep/recursive-only-matching/output.txt:359:25259:testdata/benchmarks/grep/recursive-match/verify-output.txt:30:needle
+00647|testdata/benchmarks/grep/recursive-only-matching/output.txt:360:25328:testdata/benchmarks/grep/recursive-match/verify-output.txt:31:needle
+00648|testdata/benchmarks/grep/recursive-only-matching/output.txt:361:25397:testdata/benchmarks/grep/recursive-match/verify-output.txt:32:needle
+00649|testdata/benchmarks/grep/recursive-only-matching/output.txt:362:25466:testdata/benchmarks/grep/recursive-match/verify-output.txt:33:needle
+00650|testdata/benchmarks/grep/recursive-only-matching/output.txt:363:25535:testdata/benchmarks/grep/recursive-match/verify-output.txt:35:needle
+00651|testdata/benchmarks/grep/recursive-only-matching/output.txt:364:25604:testdata/benchmarks/grep/recursive-match/verify-output.txt:36:needle
+00652|testdata/benchmarks/grep/recursive-only-matching/output.txt:365:25673:testdata/benchmarks/grep/recursive-match/verify-output.txt:37:needle
+00653|testdata/benchmarks/grep/recursive-only-matching/output.txt:366:25742:testdata/benchmarks/grep/recursive-match/verify-output.txt:38:needle
+00654|testdata/benchmarks/grep/recursive-only-matching/output.txt:367:25811:testdata/benchmarks/grep/recursive-match/verify-output.txt:39:needle
+00655|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:1:0:00000|testdata/benchmarks/grep/explicit-with-filename-match/command.yaml:1:needle
+00656|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:2:82:00001|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:2:needle
+00657|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:3:162:00002|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:3:needle
+00658|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:4:242:00003|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:4:needle
+00659|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:5:322:00004|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:5:needle
+00660|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:6:402:00005|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:6:needle
+00661|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:7:482:00006|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:7:needle
+00662|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:8:562:00007|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:8:needle
+00663|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:9:642:00008|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:9:needle
+00664|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:10:722:00009|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:10:needle
+00665|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:11:803:00010|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:11:needle
+00666|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:12:884:00011|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:12:needle
+00667|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:13:965:00012|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:13:needle
+00668|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:14:1046:00013|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:14:needle
+00669|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:15:1127:00014|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:15:needle
+00670|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:16:1208:00015|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:16:needle
+00671|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:17:1289:00016|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:17:needle
+00672|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:18:1370:00017|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:18:needle
+00673|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:19:1451:00018|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:19:needle
+00674|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:20:1532:00019|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:20:needle
+00675|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:21:1613:00020|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:21:needle
+00676|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:22:1694:00021|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:22:needle
+00677|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:23:1775:00022|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:23:needle
+00678|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:24:1856:00023|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:24:needle
+00679|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:25:1937:00024|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:25:needle
+00680|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:26:2018:00025|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:26:needle
+00681|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:27:2099:00026|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:27:needle
+00682|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:28:2180:00027|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:28:needle
+00683|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:29:2261:00028|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:29:needle
+00684|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:30:2342:00029|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:30:needle
+00685|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:31:2423:00030|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:31:needle
+00686|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:32:2504:00031|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:32:needle
+00687|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:33:2585:00032|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:33:needle
+00688|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:34:2666:00033|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:34:needle
+00689|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:35:2747:00034|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:35:needle
+00690|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:36:2828:00035|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:36:needle
+00691|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:37:2909:00036|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:37:needle
+00692|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:38:2990:00037|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:39:needle
+00693|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:39:3071:00038|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:40:needle
+00694|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:40:3152:00039|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:41:needle
+00695|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:41:3233:00040|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:42:needle
+00696|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:42:3314:00041|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:43:needle
+00697|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:43:3395:00042|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:44:needle
+00698|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:44:3476:00043|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:44:needle
+00699|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:45:3557:00044|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:45:needle
+00700|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:46:3638:00045|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:45:needle
+00701|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:47:3719:00046|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:46:needle
+00702|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:48:3800:00047|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:46:needle
+00703|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:49:3881:00048|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:47:needle
+00704|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:50:3962:00049|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:47:needle
+00705|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:51:4043:00050|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:48:needle
+00706|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:52:4124:00051|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:48:needle
+00707|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:53:4205:00052|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:49:needle
+00708|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:54:4286:00053|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:49:needle
+00709|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:55:4367:00054|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:50:needle
+00710|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:56:4448:00055|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:50:needle
+00711|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:57:4529:00056|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:51:needle
+00712|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:58:4610:00057|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:51:needle
+00713|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:59:4691:00058|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:52:needle
+00714|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:60:4772:00059|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:52:needle
+00715|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:61:4853:00060|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:53:needle
+00716|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:62:4934:00061|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:53:needle
+00717|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:63:5015:00062|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:54:needle
+00718|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:64:5096:00063|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:54:needle
+00719|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:65:5177:00064|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:55:needle
+00720|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:66:5258:00065|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:55:needle
+00721|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:67:5339:00066|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:56:needle
+00722|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:68:5420:00067|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:56:needle
+00723|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:69:5501:00068|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:57:needle
+00724|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:70:5582:00069|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:57:needle
+00725|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:71:5663:00070|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:58:needle
+00726|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:72:5744:00071|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:58:needle
+00727|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:73:5825:00072|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:59:needle
+00728|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:74:5906:00073|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:59:needle
+00729|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:75:5987:00074|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:60:needle
+00730|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:76:6068:00075|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:60:needle
+00731|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:77:6149:00076|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:61:needle
+00732|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:78:6230:00077|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:61:needle
+00733|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:79:6311:00078|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:62:needle
+00734|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:80:6392:00079|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:62:needle
+00735|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:81:6473:00080|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:63:needle
+00736|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:82:6554:00081|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:63:needle
+00737|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:83:6635:00082|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:64:needle
+00738|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:84:6716:00083|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:65:needle
+00739|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:85:6797:00084|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:66:needle
+00740|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:86:6878:00085|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:67:needle
+00741|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:87:6959:00086|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:68:needle
+00742|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:88:7040:00087|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:69:needle
+00743|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:89:7121:00088|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:70:needle
+00744|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:90:7202:00089|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:71:needle
+00745|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:91:7283:00090|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:72:needle
+00746|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:92:7364:00091|testdata/benchmarks/grep/explicit-with-filename-match/output.txt:73:needle
+00747|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:93:7445:00092|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:1:needle
+00748|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:94:7525:00093|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:2:needle
+00749|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:95:7605:00094|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:3:needle
+00750|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:96:7685:00095|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:4:needle
+00751|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:97:7765:00096|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:5:needle
+00752|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:98:7845:00097|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:6:needle
+00753|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:99:7925:00098|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:6:needle
+00754|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:100:8005:00099|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:7:needle
+00755|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:101:8085:00100|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:7:needle
+00756|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:102:8165:00101|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:8:needle
+00757|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:103:8245:00102|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:8:needle
+00758|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:104:8325:00103|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:9:needle
+00759|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:105:8405:00104|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:9:needle
+00760|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:106:8485:00105|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:10:needle
+00761|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:107:8566:00106|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:10:needle
+00762|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:108:8647:00107|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:11:needle
+00763|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:109:8728:00108|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:11:needle
+00764|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:110:8809:00109|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:12:needle
+00765|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:111:8890:00110|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:12:needle
+00766|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:112:8971:00111|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:13:needle
+00767|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:113:9052:00112|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:13:needle
+00768|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:114:9133:00113|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:14:needle
+00769|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:115:9214:00114|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:14:needle
+00770|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:116:9295:00115|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:15:needle
+00771|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:117:9376:00116|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:15:needle
+00772|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:118:9457:00117|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:16:needle
+00773|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:119:9538:00118|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:16:needle
+00774|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:120:9619:00119|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:17:needle
+00775|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:121:9700:00120|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:17:needle
+00776|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:122:9781:00121|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:18:needle
+00777|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:123:9862:00122|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:18:needle
+00778|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:124:9943:00123|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:19:needle
+00779|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:125:10024:00124|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:19:needle
+00780|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:126:10105:00125|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:20:needle
+00781|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:127:10186:00126|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:20:needle
+00782|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:128:10267:00127|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:21:needle
+00783|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:129:10348:00128|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:21:needle
+00784|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:130:10429:00129|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:22:needle
+00785|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:131:10510:00130|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:22:needle
+00786|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:132:10591:00131|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:23:needle
+00787|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:133:10672:00132|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:23:needle
+00788|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:134:10753:00133|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:24:needle
+00789|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:135:10834:00134|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:24:needle
+00790|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:136:10915:00135|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:25:needle
+00791|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:137:10996:00136|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:25:needle
+00792|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:138:11077:00137|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:26:needle
+00793|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:139:11158:00138|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:27:needle
+00794|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:140:11239:00139|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:28:needle
+00795|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:141:11320:00140|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:29:needle
+00796|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:142:11401:00141|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:30:needle
+00797|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:143:11482:00142|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:31:needle
+00798|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:144:11563:00143|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:32:needle
+00799|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:145:11644:00144|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:33:needle
+00800|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:146:11725:00145|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:34:needle
+00801|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:147:11806:00146|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:35:needle
+00802|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:148:11887:00147|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:36:needle
+00803|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:149:11968:00148|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:37:needle
+00804|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:150:12049:00149|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:38:needle
+00805|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:151:12130:00150|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:39:needle
+00806|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:152:12211:00151|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:40:needle
+00807|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:153:12292:00152|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:41:needle
+00808|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:154:12373:00153|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:42:needle
+00809|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:155:12454:00154|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:43:needle
+00810|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:156:12535:00155|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:44:needle
+00811|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:157:12616:00156|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:45:needle
+00812|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:158:12697:00157|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:46:needle
+00813|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:159:12778:00158|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:47:needle
+00814|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:160:12859:00159|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:48:needle
+00815|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:161:12940:00160|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:49:needle
+00816|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:162:13021:00161|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:50:needle
+00817|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:163:13102:00162|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:51:needle
+00818|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:164:13183:00163|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:52:needle
+00819|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:165:13264:00164|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:53:needle
+00820|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:166:13345:00165|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:54:needle
+00821|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:167:13426:00166|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:55:needle
+00822|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:168:13507:00167|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:56:needle
+00823|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:169:13588:00168|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:57:needle
+00824|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:170:13669:00169|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:58:needle
+00825|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:171:13750:00170|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:59:needle
+00826|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:172:13831:00171|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:60:needle
+00827|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:173:13912:00172|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:61:needle
+00828|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:174:13993:00173|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:62:needle
+00829|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:175:14074:00174|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:63:needle
+00830|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:176:14155:00175|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:64:needle
+00831|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:177:14236:00176|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:65:needle
+00832|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:178:14317:00177|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:66:needle
+00833|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:179:14398:00178|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:67:needle
+00834|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:180:14479:00179|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:68:needle
+00835|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:181:14560:00180|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:69:needle
+00836|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:182:14641:00181|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:70:needle
+00837|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:183:14722:00182|testdata/benchmarks/grep/explicit-with-filename-match/stdout.txt:71:needle
+00838|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:184:14803:00183|testdata/benchmarks/grep/failure-missing-path/command.yaml:1:needle
+00839|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:185:14877:00184|testdata/benchmarks/grep/recursive-match/command.yaml:1:needle
+00840|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:186:14946:00185|testdata/benchmarks/grep/recursive-match/output.txt:2:needle
+00841|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:187:15013:00186|testdata/benchmarks/grep/recursive-match/output.txt:3:needle
+00842|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:188:15080:00187|testdata/benchmarks/grep/recursive-match/output.txt:4:needle
+00843|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:189:15147:00188|testdata/benchmarks/grep/recursive-match/output.txt:5:needle
+00844|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:190:15214:00189|testdata/benchmarks/grep/recursive-match/output.txt:6:needle
+00845|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:191:15281:00190|testdata/benchmarks/grep/recursive-match/output.txt:7:needle
+00846|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:192:15348:00191|testdata/benchmarks/grep/recursive-match/output.txt:8:needle
+00847|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:193:15415:00192|testdata/benchmarks/grep/recursive-match/output.txt:9:needle
+00848|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:194:15482:00193|testdata/benchmarks/grep/recursive-match/output.txt:10:needle
+00849|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:195:15550:00194|testdata/benchmarks/grep/recursive-match/output.txt:11:needle
+00850|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:196:15618:00195|testdata/benchmarks/grep/recursive-match/output.txt:12:needle
+00851|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:197:15686:00196|testdata/benchmarks/grep/recursive-match/output.txt:13:needle
+00852|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:198:15754:00197|testdata/benchmarks/grep/recursive-match/output.txt:14:needle
+00853|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:199:15822:00198|testdata/benchmarks/grep/recursive-match/output.txt:15:needle
+00854|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:200:15890:00199|testdata/benchmarks/grep/recursive-match/output.txt:16:needle
+00855|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:201:15958:00200|testdata/benchmarks/grep/recursive-match/output.txt:17:needle
+00856|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:202:16026:00201|testdata/benchmarks/grep/recursive-match/output.txt:18:needle
+00857|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:203:16094:00202|testdata/benchmarks/grep/recursive-match/output.txt:19:needle
+00858|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:204:16162:00203|testdata/benchmarks/grep/recursive-match/output.txt:20:needle
+00859|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:205:16230:00204|testdata/benchmarks/grep/recursive-match/output.txt:21:needle
+00860|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:206:16298:00205|testdata/benchmarks/grep/recursive-match/output.txt:22:needle
+00861|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:207:16366:00206|testdata/benchmarks/grep/recursive-match/output.txt:23:needle
+00862|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:208:16434:00207|testdata/benchmarks/grep/recursive-match/output.txt:24:needle
+00863|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:209:16502:00208|testdata/benchmarks/grep/recursive-match/output.txt:25:needle
+00864|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:210:16570:00209|testdata/benchmarks/grep/recursive-match/output.txt:26:needle
+00865|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:211:16638:00210|testdata/benchmarks/grep/recursive-match/output.txt:27:needle
+00866|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:212:16706:00211|testdata/benchmarks/grep/recursive-match/output.txt:29:needle
+00867|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:213:16774:00212|testdata/benchmarks/grep/recursive-match/output.txt:30:needle
+00868|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:214:16842:00213|testdata/benchmarks/grep/recursive-match/output.txt:31:needle
+00869|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:215:16910:00214|testdata/benchmarks/grep/recursive-match/output.txt:32:needle
+00870|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:216:16978:00215|testdata/benchmarks/grep/recursive-match/output.txt:33:needle
+00871|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:217:17046:00216|testdata/benchmarks/grep/recursive-match/output.txt:35:needle
+00872|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:218:17114:00217|testdata/benchmarks/grep/recursive-match/output.txt:36:needle
+00873|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:219:17182:00218|testdata/benchmarks/grep/recursive-match/output.txt:37:needle
+00874|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:220:17250:00219|testdata/benchmarks/grep/recursive-match/output.txt:38:needle
+00875|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:221:17318:00220|testdata/benchmarks/grep/recursive-match/output.txt:39:needle
+00876|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:222:17386:00221|testdata/benchmarks/grep/recursive-match/stdout.txt:1:needle
+00877|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:223:17453:00222|testdata/benchmarks/grep/recursive-match/stdout.txt:2:needle
+00878|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:224:17520:00223|testdata/benchmarks/grep/recursive-match/stdout.txt:3:needle
+00879|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:225:17587:00224|testdata/benchmarks/grep/recursive-match/stdout.txt:4:needle
+00880|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:226:17654:00225|testdata/benchmarks/grep/recursive-match/stdout.txt:5:needle
+00881|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:227:17721:00226|testdata/benchmarks/grep/recursive-match/stdout.txt:6:needle
+00882|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:228:17788:00227|testdata/benchmarks/grep/recursive-match/stdout.txt:6:needle
+00883|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:229:17855:00228|testdata/benchmarks/grep/recursive-match/stdout.txt:7:needle
+00884|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:230:17922:00229|testdata/benchmarks/grep/recursive-match/stdout.txt:7:needle
+00885|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:231:17989:00230|testdata/benchmarks/grep/recursive-match/stdout.txt:8:needle
+00886|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:232:18056:00231|testdata/benchmarks/grep/recursive-match/stdout.txt:8:needle
+00887|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:233:18123:00232|testdata/benchmarks/grep/recursive-match/stdout.txt:9:needle
+00888|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:234:18190:00233|testdata/benchmarks/grep/recursive-match/stdout.txt:9:needle
+00889|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:235:18257:00234|testdata/benchmarks/grep/recursive-match/stdout.txt:10:needle
+00890|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:236:18325:00235|testdata/benchmarks/grep/recursive-match/stdout.txt:10:needle
+00891|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:237:18393:00236|testdata/benchmarks/grep/recursive-match/stdout.txt:11:needle
+00892|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:238:18461:00237|testdata/benchmarks/grep/recursive-match/stdout.txt:11:needle
+00893|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:239:18529:00238|testdata/benchmarks/grep/recursive-match/stdout.txt:12:needle
+00894|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:240:18597:00239|testdata/benchmarks/grep/recursive-match/stdout.txt:12:needle
+00895|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:241:18665:00240|testdata/benchmarks/grep/recursive-match/stdout.txt:13:needle
+00896|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:242:18733:00241|testdata/benchmarks/grep/recursive-match/stdout.txt:13:needle
+00897|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:243:18801:00242|testdata/benchmarks/grep/recursive-match/stdout.txt:14:needle
+00898|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:244:18869:00243|testdata/benchmarks/grep/recursive-match/stdout.txt:14:needle
+00899|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:245:18937:00244|testdata/benchmarks/grep/recursive-match/stdout.txt:15:needle
+00900|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:246:19005:00245|testdata/benchmarks/grep/recursive-match/stdout.txt:15:needle
+00901|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:247:19073:00246|testdata/benchmarks/grep/recursive-match/stdout.txt:16:needle
+00902|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:248:19141:00247|testdata/benchmarks/grep/recursive-match/stdout.txt:16:needle
+00903|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:249:19209:00248|testdata/benchmarks/grep/recursive-match/stdout.txt:17:needle
+00904|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:250:19277:00249|testdata/benchmarks/grep/recursive-match/stdout.txt:17:needle
+00905|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:251:19345:00250|testdata/benchmarks/grep/recursive-match/stdout.txt:18:needle
+00906|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:252:19413:00251|testdata/benchmarks/grep/recursive-match/stdout.txt:18:needle
+00907|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:253:19481:00252|testdata/benchmarks/grep/recursive-match/stdout.txt:19:needle
+00908|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:254:19549:00253|testdata/benchmarks/grep/recursive-match/stdout.txt:19:needle
+00909|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:255:19617:00254|testdata/benchmarks/grep/recursive-match/stdout.txt:20:needle
+00910|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:256:19685:00255|testdata/benchmarks/grep/recursive-match/stdout.txt:20:needle
+00911|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:257:19753:00256|testdata/benchmarks/grep/recursive-match/stdout.txt:21:needle
+00912|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:258:19821:00257|testdata/benchmarks/grep/recursive-match/stdout.txt:21:needle
+00913|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:259:19889:00258|testdata/benchmarks/grep/recursive-match/stdout.txt:22:needle
+00914|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:260:19957:00259|testdata/benchmarks/grep/recursive-match/stdout.txt:22:needle
+00915|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:261:20025:00260|testdata/benchmarks/grep/recursive-match/stdout.txt:23:needle
+00916|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:262:20093:00261|testdata/benchmarks/grep/recursive-match/stdout.txt:23:needle
+00917|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:263:20161:00262|testdata/benchmarks/grep/recursive-match/stdout.txt:24:needle
+00918|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:264:20229:00263|testdata/benchmarks/grep/recursive-match/stdout.txt:24:needle
+00919|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:265:20297:00264|testdata/benchmarks/grep/recursive-match/stdout.txt:25:needle
+00920|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:266:20365:00265|testdata/benchmarks/grep/recursive-match/stdout.txt:25:needle
+00921|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:267:20433:00266|testdata/benchmarks/grep/recursive-match/stdout.txt:26:needle
+00922|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:268:20501:00267|testdata/benchmarks/grep/recursive-match/stdout.txt:27:needle
+00923|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:269:20569:00268|testdata/benchmarks/grep/recursive-match/stdout.txt:28:needle
+00924|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:270:20637:00269|testdata/benchmarks/grep/recursive-match/stdout.txt:29:needle
+00925|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:271:20705:00270|testdata/benchmarks/grep/recursive-match/stdout.txt:30:needle
+00926|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:272:20773:00271|testdata/benchmarks/grep/recursive-match/stdout.txt:31:needle
+00927|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:273:20841:00272|testdata/benchmarks/grep/recursive-match/stdout.txt:32:needle
+00928|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:274:20909:00273|testdata/benchmarks/grep/recursive-match/stdout.txt:33:needle
+00929|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:275:20977:00274|testdata/benchmarks/grep/recursive-match/stdout.txt:34:needle
+00930|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:276:21045:00275|testdata/benchmarks/grep/recursive-match/stdout.txt:35:needle
+00931|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:277:21113:00276|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:1:needle
+00932|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:278:21190:00277|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:2:needle
+00933|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:279:21267:00278|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:3:needle
+00934|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:280:21344:00279|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:4:needle
+00935|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:281:21421:00280|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:5:needle
+00936|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:282:21498:00281|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:6:needle
+00937|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:283:21575:00282|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:6:needle
+00938|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:284:21652:00283|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:7:needle
+00939|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:285:21729:00284|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:7:needle
+00940|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:286:21806:00285|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:8:needle
+00941|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:287:21883:00286|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:8:needle
+00942|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:288:21960:00287|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:9:needle
+00943|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:289:22037:00288|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:9:needle
+00944|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:290:22114:00289|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:10:needle
+00945|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:291:22192:00290|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:10:needle
+00946|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:292:22270:00291|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:11:needle
+00947|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:293:22348:00292|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:11:needle
+00948|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:294:22426:00293|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:12:needle
+00949|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:295:22504:00294|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:12:needle
+00950|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:296:22582:00295|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:13:needle
+00951|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:297:22660:00296|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:13:needle
+00952|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:298:22738:00297|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:14:needle
+00953|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:299:22816:00298|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:14:needle
+00954|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:300:22894:00299|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:15:needle
+00955|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:301:22972:00300|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:15:needle
+00956|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:302:23050:00301|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:16:needle
+00957|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:303:23128:00302|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:16:needle
+00958|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:304:23206:00303|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:17:needle
+00959|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:305:23284:00304|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:17:needle
+00960|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:306:23362:00305|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:18:needle
+00961|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:307:23440:00306|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:18:needle
+00962|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:308:23518:00307|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:19:needle
+00963|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:309:23596:00308|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:19:needle
+00964|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:310:23674:00309|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:20:needle
+00965|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:311:23752:00310|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:20:needle
+00966|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:312:23830:00311|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:21:needle
+00967|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:313:23908:00312|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:21:needle
+00968|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:314:23986:00313|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:22:needle
+00969|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:315:24064:00314|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:22:needle
+00970|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:316:24142:00315|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:23:needle
+00971|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:317:24220:00316|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:23:needle
+00972|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:318:24298:00317|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:24:needle
+00973|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:319:24376:00318|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:24:needle
+00974|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:320:24454:00319|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:25:needle
+00975|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:321:24532:00320|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:25:needle
+00976|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:322:24610:00321|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:26:needle
+00977|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:323:24688:00322|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:27:needle
+00978|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:324:24766:00323|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:28:needle
+00979|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:325:24844:00324|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:29:needle
+00980|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:326:24922:00325|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:30:needle
+00981|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:327:25000:00326|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:31:needle
+00982|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:328:25078:00327|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:32:needle
+00983|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:329:25156:00328|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:33:needle
+00984|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:330:25234:00329|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:34:needle
+00985|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:331:25312:00330|testdata/benchmarks/grep/recursive-match/verify-decisions.txt:35:needle
+00986|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:332:25390:00331|testdata/benchmarks/grep/recursive-match/verify-output.txt:2:needle
+00987|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:333:25464:00332|testdata/benchmarks/grep/recursive-match/verify-output.txt:3:needle
+00988|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:334:25538:00333|testdata/benchmarks/grep/recursive-match/verify-output.txt:4:needle
+00989|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:335:25612:00334|testdata/benchmarks/grep/recursive-match/verify-output.txt:5:needle
+00990|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:336:25686:00335|testdata/benchmarks/grep/recursive-match/verify-output.txt:6:needle
+00991|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:337:25760:00336|testdata/benchmarks/grep/recursive-match/verify-output.txt:7:needle
+00992|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:338:25834:00337|testdata/benchmarks/grep/recursive-match/verify-output.txt:8:needle
+00993|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:339:25908:00338|testdata/benchmarks/grep/recursive-match/verify-output.txt:9:needle
+00994|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:340:25982:00339|testdata/benchmarks/grep/recursive-match/verify-output.txt:10:needle
+00995|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:341:26057:00340|testdata/benchmarks/grep/recursive-match/verify-output.txt:11:needle
+00996|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:342:26132:00341|testdata/benchmarks/grep/recursive-match/verify-output.txt:12:needle
+00997|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:343:26207:00342|testdata/benchmarks/grep/recursive-match/verify-output.txt:13:needle
+00998|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:344:26282:00343|testdata/benchmarks/grep/recursive-match/verify-output.txt:14:needle
+00999|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:345:26357:00344|testdata/benchmarks/grep/recursive-match/verify-output.txt:15:needle
+01000|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:346:26432:00345|testdata/benchmarks/grep/recursive-match/verify-output.txt:16:needle
+01001|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:347:26507:00346|testdata/benchmarks/grep/recursive-match/verify-output.txt:17:needle
+01002|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:348:26582:00347|testdata/benchmarks/grep/recursive-match/verify-output.txt:18:needle
+01003|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:349:26657:00348|testdata/benchmarks/grep/recursive-match/verify-output.txt:19:needle
+01004|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:350:26732:00349|testdata/benchmarks/grep/recursive-match/verify-output.txt:20:needle
+01005|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:351:26807:00350|testdata/benchmarks/grep/recursive-match/verify-output.txt:21:needle
+01006|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:352:26882:00351|testdata/benchmarks/grep/recursive-match/verify-output.txt:22:needle
+01007|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:353:26957:00352|testdata/benchmarks/grep/recursive-match/verify-output.txt:23:needle
+01008|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:354:27032:00353|testdata/benchmarks/grep/recursive-match/verify-output.txt:24:needle
+01009|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:355:27107:00354|testdata/benchmarks/grep/recursive-match/verify-output.txt:25:needle
+01010|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:356:27182:00355|testdata/benchmarks/grep/recursive-match/verify-output.txt:26:needle
+01011|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:357:27257:00356|testdata/benchmarks/grep/recursive-match/verify-output.txt:27:needle
+01012|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:358:27332:00357|testdata/benchmarks/grep/recursive-match/verify-output.txt:29:needle
+01013|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:359:27407:00358|testdata/benchmarks/grep/recursive-match/verify-output.txt:30:needle
+01014|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:360:27482:00359|testdata/benchmarks/grep/recursive-match/verify-output.txt:31:needle
+01015|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:361:27557:00360|testdata/benchmarks/grep/recursive-match/verify-output.txt:32:needle
+01016|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:362:27632:00361|testdata/benchmarks/grep/recursive-match/verify-output.txt:33:needle
+01017|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:363:27707:00362|testdata/benchmarks/grep/recursive-match/verify-output.txt:35:needle
+01018|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:364:27782:00363|testdata/benchmarks/grep/recursive-match/verify-output.txt:36:needle
+01019|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:365:27857:00364|testdata/benchmarks/grep/recursive-match/verify-output.txt:37:needle
+01020|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:366:27932:00365|testdata/benchmarks/grep/recursive-match/verify-output.txt:38:needle
+01021|testdata/benchmarks/grep/recursive-only-matching/stdout.txt:367:28007:00366|testdata/benchmarks/grep/recursive-match/verify-output.txt:39:needle

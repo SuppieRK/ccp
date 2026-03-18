@@ -101,62 +101,12 @@ jobs:
         with:
           go-version: '1.26.x'
 
-      - name: Setup Python
-        if: ${{ matrix.needs_python }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Setup Java
-        if: ${{ matrix.needs_java }}
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Setup Rust (cargo)
-        if: ${{ matrix.needs_rust }}
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Setup Deno
-        if: ${{ matrix.needs_deno }}
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Setup Node.js
-        if: ${{ matrix.needs_node }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-
-      - name: Setup pnpm
-        if: ${{ matrix.needs_pnpm }}
-        shell: bash
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-          pnpm --version
-
-      - name: Setup kind
-        if: ${{ matrix.needs_kind }}
-        uses: helm/kind-action@v1.14.0
-        with:
-          install_only: true
-
       - name: Build ccp binary
         shell: bash
         run: |
           mkdir -p .bin
           go build -o .bin/ccp ./cmd/ccp
           echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
-
-      - name: Pre-pull Docker benchmark images
-        if: ${{ matrix.needs_docker_images }}
-        shell: bash
-        run: |
-          docker pull nginx:alpine
-          docker pull alpine:latest
 
       - name: Restore benchmark history cache
         uses: actions/cache/restore@v5

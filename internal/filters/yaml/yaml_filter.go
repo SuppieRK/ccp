@@ -138,14 +138,16 @@ type compiledCase struct {
 }
 
 type compiledWhen struct {
-	firstIs            string
-	firstIn            []string
-	haveAny            []string
-	lackAny            []string
-	haveSequence       []string
-	haveShortFlag      []string
-	haveAllShortFlags  []string
-	positionalsLackAny []string
+	firstIs              string
+	firstIn              []string
+	haveAny              []string
+	lackAny              []string
+	haveSequence         []string
+	haveShortFlag        []string
+	notHaveShortFlag     []string
+	haveAllShortFlags    []string
+	notHaveAllShortFlags []string
+	positionalsLackAny   []string
 }
 
 type compiledCommand struct {
@@ -332,14 +334,16 @@ func compileWhenArguments(when *WhenArguments) compiledWhen {
 		return compiledWhen{}
 	}
 	return compiledWhen{
-		firstIs:            when.FirstIs,
-		firstIn:            cloneStrings(when.FirstIn),
-		haveAny:            cloneStrings(when.HaveAny),
-		lackAny:            cloneStrings(when.LackAny),
-		haveSequence:       cloneStrings(when.HaveSequence),
-		haveShortFlag:      cloneStrings(when.HaveShortFlag),
-		haveAllShortFlags:  cloneStrings(when.HaveAllShortFlags),
-		positionalsLackAny: cloneStrings(when.PositionalsLackAny),
+		firstIs:              when.FirstIs,
+		firstIn:              cloneStrings(when.FirstIn),
+		haveAny:              cloneStrings(when.HaveAny),
+		lackAny:              cloneStrings(when.LackAny),
+		haveSequence:         cloneStrings(when.HaveSequence),
+		haveShortFlag:        cloneStrings(when.HaveShortFlag),
+		notHaveShortFlag:     cloneStrings(when.NotHaveShortFlag),
+		haveAllShortFlags:    cloneStrings(when.HaveAllShortFlags),
+		notHaveAllShortFlags: cloneStrings(when.NotHaveAllShortFlags),
+		positionalsLackAny:   cloneStrings(when.PositionalsLackAny),
 	}
 }
 
@@ -1261,7 +1265,9 @@ func matchesWhenArguments(when compiledWhen, args []string) bool {
 		operations.MatchesLackAny(args, when.lackAny) &&
 		operations.MatchesHaveSequence(args, when.haveSequence) &&
 		operations.MatchesHaveShortFlag(args, when.haveShortFlag) &&
+		operations.MatchesNotHaveShortFlag(args, when.notHaveShortFlag) &&
 		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
+		operations.MatchesNotHaveAllShortFlags(args, when.notHaveAllShortFlags) &&
 		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny)
 }
 

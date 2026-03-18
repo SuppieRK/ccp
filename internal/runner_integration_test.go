@@ -87,9 +87,8 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 			"-exec", "ccp", "grep", "-nH", "--", "v2", "{}", "+",
 		)
 
-		Expect(stdout).To(ContainSubstring("./src/alpha.txt:1:alpha v2"))
-		Expect(stdout).To(ContainSubstring("./src/beta.txt:1:beta v2"))
-		Expect(stdout).To(ContainSubstring("./src/beta.txt:2:beta v2 again"))
+		Expect(stdout).To(ContainSubstring("./src/alpha.txt:\n  1: alpha v2"))
+		Expect(stdout).To(ContainSubstring("./src/beta.txt:\n  1: beta v2\n  2: beta v2 again"))
 		Expect(stdout).NotTo(ContainSubstring("ignored.txt"))
 	})
 
@@ -102,9 +101,8 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 			`find . -type f -not -path '*/.git/*' -print0 | ccp xargs -0 -r ccp grep -nH -- 'v2'`,
 		)
 
-		Expect(stdout).To(ContainSubstring("./src/alpha.txt:1:alpha v2"))
-		Expect(stdout).To(ContainSubstring("./src/beta.txt:1:beta v2"))
-		Expect(stdout).To(ContainSubstring("./src/beta.txt:2:beta v2 again"))
+		Expect(stdout).To(ContainSubstring("./src/alpha.txt:\n  1: alpha v2"))
+		Expect(stdout).To(ContainSubstring("./src/beta.txt:\n  1: beta v2\n  2: beta v2 again"))
 		Expect(stdout).NotTo(ContainSubstring("ignored.txt"))
 	})
 

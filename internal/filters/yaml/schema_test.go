@@ -120,6 +120,16 @@ cases:
     when_arguments: {}
     passthrough: true
 `, "cases[0].when_arguments: when_arguments must set at least one predicate"),
+		Entry("valid negative short flag predicates", `
+version: 1
+filter: grep
+cases:
+  - id: explicit
+    when_arguments:
+      not_have_short_flag: ['-o']
+      not_have_all_short_flags: ['-H', '-o']
+    passthrough: true
+`, ""),
 		Entry("empty command block", `
 version: 1
 filter: python
