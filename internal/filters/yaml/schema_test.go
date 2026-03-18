@@ -127,7 +127,7 @@ cases:
   - id: default
     normalize_command: {}
     passthrough: true
-`, "cases[0].normalize_command: command block must define append_if_missing or add_short_flags"),
+`, "cases[0].normalize_command: command block must define append_if_missing, append_if_no_positionals or add_short_flags"),
 		Entry("passthrough output", `
 version: 1
 filter: python

@@ -1,0 +1,1 @@
+argv: ["ls", "-l", "testdata/benchmarks/ls/_fixture-tree/path-one", "testdata/benchmarks/ls/_fixture-tree/path-two"]

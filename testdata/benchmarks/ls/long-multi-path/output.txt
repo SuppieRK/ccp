@@ -1,0 +1,8 @@
+plain.txt  10
+subdir/
+another.md  13
+nested/
+testdata/benchmarks/ls/_fixture-tree/path-one:
+testdata/benchmarks/ls/_fixture-tree/path-two:
+
+2 dirs, 2 files

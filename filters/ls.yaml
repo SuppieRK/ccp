@@ -4,6 +4,67 @@ filter: ls
 about: Compact long ls listings conservatively while leaving other ls shapes untouched
 
 cases:
+  - id: long_dired_passthrough
+    when_arguments:
+      have_any:
+        - --dired
+    passthrough: true
+
+  - id: long_quoted_short_passthrough
+    when_arguments:
+      have_short_flag:
+        - -Q
+    passthrough: true
+
+  - id: long_quoted_long_passthrough
+    when_arguments:
+      have_any:
+        - --quote-name
+    passthrough: true
+
+  - id: long_recursive
+    variables:
+      - name: dirs
+        type: number
+      - name: files
+        type: number
+    when_arguments:
+      have_all_short_flags:
+        - -l
+        - -R
+    normalize_command:
+      add_short_flags:
+        - -h
+      append_if_no_positionals:
+        - .
+    compress_output:
+      combined:
+        groups:
+          - id: recursive_sections
+            starts_with_regex: '^(?P<path>.+):$'
+            variables:
+              - name: path
+                type: string
+                regex_group: path
+            initially:
+              print: '{{path}}:'
+            lines:
+              replace:
+                - regex: '^(?:\S+\s+)?d\S*(?:\s+\S+){7}\s+(.+?)/?$'
+                  to: '  $1/'
+                  on_match:
+                    - variable: dirs
+                      increment: 1
+                - regex: '^(?:\S+\s+)?[\-l]\S*(?:\s+\S+){3}\s+(\S+)(?:\s+\S+){3}\s+(.+)$'
+                  to: '  $2  $1'
+                  on_match:
+                    - variable: files
+                      increment: 1
+              skip:
+                - regex: '^(?i)(total|insgesamt)\s+'
+                - regex: '^[[:space:]]*$'
+                - regex: '^[^\n]*\s\.\.?$'
+
   - id: long
     variables:
       - name: dirs
@@ -17,18 +78,18 @@ cases:
       add_short_flags:
         - -a
         - -h
-      append_if_missing:
+      append_if_no_positionals:
         - .
     compress_output:
       combined:
         lines:
           replace:
-            - regex: '^d\S*(?:\s+\S+){7}\s+(.+)$'
+            - regex: '^(?:\S+\s+)?d\S*(?:\s+\S+){7}\s+(.+?)/?$'
               to: '$1/'
               on_match:
                 - variable: dirs
                   increment: 1
-            - regex: '^[\-l]\S*(?:\s+\S+){3}\s+(\S+)(?:\s+\S+){3}\s+(.+)$'
+            - regex: '^(?:\S+\s+)?[\-l]\S*(?:\s+\S+){3}\s+(\S+)(?:\s+\S+){3}\s+(.+)$'
               to: '$2  $1'
               on_match:
                 - variable: files

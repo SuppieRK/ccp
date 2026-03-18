@@ -26,6 +26,10 @@ func MatchesHaveShortFlag(args, flags []string) bool {
 	return len(flags) == 0 || containsShortFlag(args, flags)
 }
 
+func MatchesHaveAllShortFlags(args, flags []string) bool {
+	return len(flags) == 0 || containsAllShortFlags(args, flags)
+}
+
 func MatchesPositionalsLackAny(args, disallowed []string) bool {
 	return len(disallowed) == 0 || !containsAny(positionals(args), disallowed)
 }
@@ -104,6 +108,15 @@ func containsShortFlag(args, flags []string) bool {
 		}
 	}
 	return false
+}
+
+func containsAllShortFlags(args, flags []string) bool {
+	for _, flag := range flags {
+		if len(flag) != 2 || flag[0] != '-' || !containsShortFlag(args, []string{flag}) {
+			return false
+		}
+	}
+	return true
 }
 
 func containsRune(value string, want rune) bool {
