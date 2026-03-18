@@ -1,6 +1,7 @@
 version: 1
 filter: pip
 about: Compact pip list output while preserving structured and passthrough modes.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 
 cases:
   - id: show_passthrough

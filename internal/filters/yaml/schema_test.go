@@ -206,6 +206,157 @@ cases:
             count: 1
             print: '{{missing}}'
 `, "cases[0].compress_output.stdout.lines.max.print: max.print must reference only \"{{value}}\", got \"missing\""),
+		Entry("valid max print groups summary on collect scope", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "\n+{{value}} more {{groups_summary}}"
+            groups_summary:
+              show: 3
+              print: "{{key}}/({{count}})"
+              delimiter: ", "
+              prefix: "across "
+              suffix: " and {{remaining}} other dirs"
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{name}}'
+`, ""),
+		Entry("groups summary requires collect groups in scope", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          max:
+            count: 1
+            print: '{{value}} {{groups_summary}}'
+            groups_summary:
+              show: 1
+              print: '{{key}}/({{count}})'
+`, "cases[0].compress_output.stdout.lines.max.groups_summary: max.groups_summary requires collect groups in the same output scope"),
+		Entry("invalid max print groups summary variable", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "{{value}} {{missing}}"
+            groups_summary:
+              show: 3
+              print: "{{key}}/({{count}})"
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{name}}'
+`, "cases[0].compress_output.combined.lines.max.print: max.print must reference only \"{{value}}, {{groups_summary}}\", got \"missing\""),
+		Entry("invalid groups summary print variable", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "{{value}} {{groups_summary}}"
+            groups_summary:
+              show: 3
+              print: "{{missing}}/({{count}})"
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{name}}'
+`, "cases[0].compress_output.combined.lines.max.groups_summary.print: template references undeclared variable \"missing\""),
+		Entry("invalid groups summary suffix variable", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "{{value}} {{groups_summary}}"
+            groups_summary:
+              show: 3
+              print: "{{key}}/({{count}})"
+              suffix: " and {{count}} others"
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{name}}'
+`, "cases[0].compress_output.combined.lines.max.groups_summary.suffix: template references undeclared variable \"count\""),
 		Entry("replace rule without matcher", `
 version: 1
 filter: ls

@@ -148,6 +148,49 @@ cases:
             initially:
               print: '{{dir}}/'
 `, parityExpectation{schemaValid: true, parseValid: false}),
+		Entry("valid groups summary on grouped scope", `
+version: 1
+filter: find
+cases:
+  - id: grouped
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "\n+{{value}} more {{groups_summary}}"
+            groups_summary:
+              show: 3
+              print: "{{key}}/({{count}})"
+        groups:
+          - id: dir
+            matches_regex: '^\./(?P<dir>.+)/(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+`, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("groups summary without collect groups remains a runtime-only gap", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          max:
+            count: 1
+            print: '{{value}} {{groups_summary}}'
+            groups_summary:
+              show: 1
+              print: '{{key}}/({{count}})'
+`, parityExpectation{schemaValid: true, parseValid: false}),
 	)
 })
 

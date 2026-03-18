@@ -1,0 +1,122 @@
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/
+  parser.go
+  parser_test.go
+  runner.go
+  runner_integration_test.go
+  runner_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/audit/
+  audit.go
+  audit_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/benchmark/
+  run.go
+  run_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/cli/
+  parse.go
+  parse_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/contracts/
+  types.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/engine/
+  ansi.go
+  ansi_test.go
+  buffer.go
+  buffer_test.go
+  engine.go
+  engine_test.go
+  registry.go
+  registry_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/filters/
+  passthrough.go
+  passthrough_test.go
+  sources.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/filters/operations/
+  operations.go
+  operations_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/filters/yaml/
+  loader.go
+  loader_test.go
+  schema.go
+  schema_parity_test.go
+  schema_test.go
+  suite_test.go
+  yaml_filter.go
+  yaml_filter_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/lifecycle/
+  capture.go
+  capture_test.go
+  filter_new.go
+  filter_new_test.go
+  flags.go
+  gain.go
+  gain_test.go
+  help_test.go
+  init.go
+  init_additional_integrations_test.go
+  init_basic_test.go
+  init_detection_test.go
+  init_managed_content_test.go
+  init_parse_test.go
+  init_support_test.go
+  lifecycle_test.go
+  reconcile.go
+  repair.go
+  suite_test.go
+  test_helpers_test.go
+  uninstall.go
+  uninstall_test.go
+  upgrade.go
+  upgrade_test.go
+  verify.go
+  verify_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/lifecycle/agents/
+  agent_specs.go
+  agent_specs_test.go
+  bash_hook_templates.go
+  bash_hook_templates_test.go
+  claude.go
+  claude_test.go
+  cline.go
+  cline_test.go
+  context_files_family.go
+  context_files_family_test.go
+  context_link_family.go
+  context_link_family_test.go
+  family_conformance_test.go
+  family_support.go
+  hook_settings_family.go
+  hook_settings_family_test.go
+  js_plugin_family.go
+  js_plugin_family_test.go
+  rule_files_family.go
+  rule_files_family_test.go
+  suite_test.go
+  test_helpers_test.go
+  types.go
+  types_test.go
+  windsurf.go
+  windsurf_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/metrics/
+  query_test.go
+  store.go
+  store_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/projectfiles/
+  gitignore.go
+  gitignore_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/quality/coverage/
+  gate.go
+  gate_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/replay/
+  fixture.go
+  fixture_test.go
+  suite_test.go
+/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal/version/
+  version.go

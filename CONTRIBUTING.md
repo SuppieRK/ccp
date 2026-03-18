@@ -83,21 +83,6 @@ Pull requests should:
 
 ---
 
-## Specification Alignment
-
-This repository uses [OpenSpec](https://openspec.dev/) as the behavioral contract system.
-
-Contributors MUST:
-
-- Maintain specs under `openspec/specs/`.
-- Submit behavioral changes through `openspec/changes/`.
-- Keep specifications, fixtures, tests, and implementation aligned.
-- Ensure spec fixture directory names match OpenSpec spec identifiers.
-- Treat `filters/` plus `filters/.mappings.yaml` as the canonical authored filter surface.
-- Treat `internal/lifecycle/agents/catalog.go` as the canonical registration point for built-in lifecycle adapters.
-
----
-
 ## Filter Development Guidelines
 
 When adding or modifying command filters:

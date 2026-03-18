@@ -1,8 +1,10 @@
 package yaml
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -62,7 +64,7 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 }
 
 func renderStdoutExitOutput(output string, scope *compiledScope) string {
-	if renderedGroups := renderScopeGroups(scope); renderedGroups != "" {
+	if renderedGroups := renderScopeGroups(scope); len(renderedGroups) > 0 {
 		return applyRenderedMax(renderedGroups, scope.max)
 	}
 	return appendScopeMaxOverflow(output, scope)
@@ -177,8 +179,17 @@ type compiledMatcher struct {
 }
 
 type compiledMax struct {
-	count int
-	print string
+	count         int
+	print         string
+	groupsSummary *compiledMaxGroupsSummary
+}
+
+type compiledMaxGroupsSummary struct {
+	show      int
+	print     string
+	delimiter string
+	prefix    string
+	suffix    string
 }
 
 type compiledMatchAction struct {
@@ -201,6 +212,17 @@ type compiledVariable struct {
 type compiledGroupItem struct {
 	line string
 	vars map[string]string
+}
+
+type renderedLine struct {
+	text      string
+	groupKey  string
+	groupItem bool
+}
+
+type omittedGroupSummary struct {
+	key   string
+	count int
 }
 
 type compiledBoundarySection struct {
@@ -377,9 +399,20 @@ func compileMax(rule *MaxRule) *compiledMax {
 	if rule == nil {
 		return nil
 	}
+	var groupsSummary *compiledMaxGroupsSummary
+	if rule.GroupsSummary != nil {
+		groupsSummary = &compiledMaxGroupsSummary{
+			show:      rule.GroupsSummary.Show,
+			print:     rule.GroupsSummary.Print,
+			delimiter: rule.GroupsSummary.Delimiter,
+			prefix:    rule.GroupsSummary.Prefix,
+			suffix:    rule.GroupsSummary.Suffix,
+		}
+	}
 	return &compiledMax{
-		count: rule.Count,
-		print: rule.Print,
+		count:         rule.Count,
+		print:         rule.Print,
+		groupsSummary: groupsSummary,
 	}
 }
 
@@ -834,55 +867,56 @@ func renderExitPrint(template string, variables map[string]string) string {
 	return renderTemplate(template, variables)
 }
 
-func renderScopeGroups(scope *compiledScope) string {
+func renderScopeGroups(scope *compiledScope) []renderedLine {
 	if scope == nil || len(scope.groups) == 0 {
-		return ""
+		return nil
 	}
-	var builder strings.Builder
+	rendered := make([]renderedLine, 0)
 	for _, group := range scope.groups {
-		builder.WriteString(group.render())
+		rendered = append(rendered, group.render()...)
 	}
-	return builder.String()
+	return rendered
 }
 
 func renderScopeMaxOverflow(scope *compiledScope) string {
 	if scope == nil || scope.max == nil || scope.hidden == 0 {
 		return ""
 	}
-	return renderMaxPrint(scope.max.print, scope.hidden)
+	return renderMaxPrint(scope.max.print, scope.hidden, "")
 }
 
-func applyRenderedMax(rendered string, max *compiledMax) string {
-	if max == nil || rendered == "" {
-		return rendered
+func applyRenderedMax(rendered []renderedLine, max *compiledMax) string {
+	if len(rendered) == 0 {
+		return ""
 	}
-	trimmed := strings.TrimRight(rendered, "\n")
-	if trimmed == "" {
-		return rendered
+	if max == nil {
+		return renderRenderedLines(rendered)
 	}
-	lines := strings.Split(trimmed, "\n")
-	if len(lines) <= max.count {
-		return rendered
+	if len(rendered) <= max.count {
+		return renderRenderedLines(rendered)
 	}
-	out := strings.Join(lines[:max.count], "\n")
-	printed := renderMaxPrint(max.print, len(lines)-max.count)
+	visible := renderRenderedLines(rendered[:max.count])
+	visible = strings.TrimRight(visible, "\n")
+	hidden := len(rendered) - max.count
+	groupsSummary := renderGroupsSummary(max.groupsSummary, rendered[max.count:])
+	printed := renderMaxPrint(max.print, hidden, groupsSummary)
 	if printed == "" {
-		if out != "" && !strings.HasSuffix(out, "\n") {
-			out += "\n"
+		if visible != "" && !strings.HasSuffix(visible, "\n") {
+			visible += "\n"
 		}
-		return out
+		return visible
 	}
-	if out != "" && !strings.HasPrefix(printed, "\n") {
-		out += "\n"
+	if visible != "" && !strings.HasPrefix(printed, "\n") {
+		visible += "\n"
 	}
-	out += printed
-	if !strings.HasSuffix(out, "\n") {
-		out += "\n"
+	visible += printed
+	if !strings.HasSuffix(visible, "\n") {
+		visible += "\n"
 	}
-	return out
+	return visible
 }
 
-func (g *compiledGroup) render() string {
+func (g *compiledGroup) render() []renderedLine {
 	switch g.mode {
 	case groupModeBoundary:
 		return g.renderBoundary()
@@ -891,9 +925,9 @@ func (g *compiledGroup) render() string {
 	}
 }
 
-func (g *compiledGroup) renderCollected() string {
+func (g *compiledGroup) renderCollected() []renderedLine {
 	if len(g.items) == 0 {
-		return ""
+		return nil
 	}
 	keys := make([]string, 0, len(g.items))
 	for key := range g.items {
@@ -901,64 +935,67 @@ func (g *compiledGroup) renderCollected() string {
 	}
 	sort.Strings(keys)
 
-	var builder strings.Builder
+	rendered := make([]renderedLine, 0)
 	for _, key := range keys {
-		g.renderGroup(&builder, g.items[key])
+		rendered = append(rendered, g.renderGroup(g.items[key], key)...)
 	}
-	return builder.String()
+	return rendered
 }
 
-func (g *compiledGroup) renderBoundary() string {
+func (g *compiledGroup) renderBoundary() []renderedLine {
 	if len(g.sections) == 0 {
-		return ""
+		return nil
 	}
-	var builder strings.Builder
+	rendered := make([]renderedLine, 0)
 	for _, section := range g.sections {
-		g.renderBoundarySection(&builder, section)
+		rendered = append(rendered, g.renderBoundarySection(section)...)
 	}
-	return builder.String()
+	return rendered
 }
 
-func (g *compiledGroup) renderGroup(builder *strings.Builder, groupItems []compiledGroupItem) {
+func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey string) []renderedLine {
 	if len(groupItems) == 0 {
-		return
+		return nil
 	}
-	var groupBuilder strings.Builder
-	emitted, hidden := g.renderGroupItems(&groupBuilder, groupItems)
-	if !emitted && (g.lines == nil || g.lines.max == nil || hidden == 0 || renderMaxPrint(g.lines.max.print, hidden) == "") {
-		return
+	renderedItems, emitted, hidden := g.renderGroupItems(groupItems, groupKey, true)
+	if !emitted && (g.lines == nil || g.lines.max == nil || hidden == 0 || renderMaxPrint(g.lines.max.print, hidden, "") == "") {
+		return nil
 	}
-	g.writeGroupStage(builder, g.initially, groupItems[0].vars)
-	builder.WriteString(groupBuilder.String())
+	lines := make([]renderedLine, 0)
+	lines = append(lines, renderGroupStage(g.initially, groupItems[0].vars)...)
+	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
-		if printed := renderMaxPrint(g.lines.max.print, hidden); printed != "" {
-			writeRenderedLine(builder, printed)
+		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
+			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	g.writeGroupStage(builder, g.finally, groupItems[0].vars)
+	lines = append(lines, renderGroupStage(g.finally, groupItems[0].vars)...)
+	return lines
 }
 
-func (g *compiledGroup) renderBoundarySection(builder *strings.Builder, section compiledBoundarySection) {
-	var sectionBuilder strings.Builder
-	emitted, hidden := g.renderGroupItems(&sectionBuilder, section.items)
-	if !emitted && (g.lines == nil || g.lines.max == nil || hidden == 0 || renderMaxPrint(g.lines.max.print, hidden) == "") {
-		return
+func (g *compiledGroup) renderBoundarySection(section compiledBoundarySection) []renderedLine {
+	renderedItems, emitted, hidden := g.renderGroupItems(section.items, "", false)
+	if !emitted && (g.lines == nil || g.lines.max == nil || hidden == 0 || renderMaxPrint(g.lines.max.print, hidden, "") == "") {
+		return nil
 	}
-	g.writeGroupStage(builder, g.initially, section.vars)
-	builder.WriteString(sectionBuilder.String())
+	lines := make([]renderedLine, 0)
+	lines = append(lines, renderGroupStage(g.initially, section.vars)...)
+	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
-		if printed := renderMaxPrint(g.lines.max.print, hidden); printed != "" {
-			writeRenderedLine(builder, printed)
+		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
+			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	g.writeGroupStage(builder, g.finally, section.vars)
+	lines = append(lines, renderGroupStage(g.finally, section.vars)...)
+	return lines
 }
 
-func (g *compiledGroup) renderGroupItems(builder *strings.Builder, groupItems []compiledGroupItem) (bool, int) {
+func (g *compiledGroup) renderGroupItems(groupItems []compiledGroupItem, groupKey string, countTowardsSummary bool) ([]renderedLine, bool, int) {
 	emitted := 0
 	hidden := 0
+	rendered := make([]renderedLine, 0, len(groupItems))
 	for _, item := range groupItems {
-		rendered, ok, limited := g.renderGroupItem(item, emitted)
+		line, ok, limited := g.renderGroupItem(item, emitted)
 		if limited {
 			hidden++
 			continue
@@ -966,10 +1003,15 @@ func (g *compiledGroup) renderGroupItems(builder *strings.Builder, groupItems []
 		if !ok {
 			continue
 		}
-		writeRenderedLine(builder, rendered)
+		current := renderedLine{text: line}
+		if countTowardsSummary {
+			current.groupKey = groupKey
+			current.groupItem = true
+		}
+		rendered = append(rendered, current)
 		emitted++
 	}
-	return emitted > 0, hidden
+	return rendered, emitted > 0, hidden
 }
 
 func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (string, bool, bool) {
@@ -993,22 +1035,29 @@ func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (st
 	}
 }
 
-func (g *compiledGroup) writeGroupStage(builder *strings.Builder, stage *compiledOnExit, vars map[string]string) {
+func renderGroupStage(stage *compiledOnExit, vars map[string]string) []renderedLine {
 	if stage == nil {
-		return
+		return nil
 	}
 	printed := renderTemplate(stage.print, vars)
 	if printed == "" {
-		return
+		return nil
 	}
-	writeRenderedLine(builder, printed)
+	return []renderedLine{{text: printed}}
 }
 
-func writeRenderedLine(builder *strings.Builder, line string) {
-	builder.WriteString(line)
-	if !strings.HasSuffix(line, "\n") {
-		builder.WriteString("\n")
+func renderRenderedLines(lines []renderedLine) string {
+	if len(lines) == 0 {
+		return ""
 	}
+	var builder strings.Builder
+	for _, line := range lines {
+		builder.WriteString(line.text)
+		if !strings.HasSuffix(line.text, "\n") {
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
 }
 
 func renderTemplate(template string, values map[string]string) string {
@@ -1019,11 +1068,78 @@ func renderTemplate(template string, values map[string]string) string {
 	return out
 }
 
-func renderMaxPrint(template string, value int) string {
+func renderMaxPrint(template string, value int, groupsSummary string) string {
 	if template == "" {
 		return ""
 	}
-	return strings.ReplaceAll(template, "{{value}}", strconv.Itoa(value))
+	rendered := renderTemplate(template, map[string]string{
+		"value":          strconv.Itoa(value),
+		"groups_summary": groupsSummary,
+	})
+	rendered = strings.ReplaceAll(rendered, " \n", "\n")
+	return strings.TrimRight(rendered, " \t")
+}
+
+func renderGroupsSummary(summary *compiledMaxGroupsSummary, hidden []renderedLine) string {
+	if summary == nil {
+		return ""
+	}
+	items := collectOmittedGroupSummaries(hidden)
+	if len(items) == 0 {
+		return ""
+	}
+
+	show := min(summary.show, len(items))
+	parts := make([]string, 0, show)
+	for _, item := range items[:show] {
+		part := renderTemplate(summary.print, map[string]string{
+			"key":   item.key,
+			"count": strconv.Itoa(item.count),
+		})
+		if part == "" {
+			continue
+		}
+		parts = append(parts, part)
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+
+	rendered := strings.Join(parts, summary.delimiter)
+	if summary.prefix != "" {
+		rendered = summary.prefix + rendered
+	}
+	if remaining := len(items) - show; remaining > 0 && summary.suffix != "" {
+		rendered += renderTemplate(summary.suffix, map[string]string{
+			"remaining": strconv.Itoa(remaining),
+		})
+	}
+	return rendered
+}
+
+func collectOmittedGroupSummaries(hidden []renderedLine) []omittedGroupSummary {
+	omittedByGroup := map[string]int{}
+	for _, line := range hidden {
+		if !line.groupItem || line.groupKey == "" {
+			continue
+		}
+		omittedByGroup[line.groupKey]++
+	}
+	if len(omittedByGroup) == 0 {
+		return nil
+	}
+
+	items := make([]omittedGroupSummary, 0, len(omittedByGroup))
+	for key, count := range omittedByGroup {
+		items = append(items, omittedGroupSummary{key: key, count: count})
+	}
+	slices.SortFunc(items, func(left, right omittedGroupSummary) int {
+		if byCount := cmp.Compare(right.count, left.count); byCount != 0 {
+			return byCount
+		}
+		return cmp.Compare(left.key, right.key)
+	})
+	return items
 }
 
 func trimLineEnding(line string) string {

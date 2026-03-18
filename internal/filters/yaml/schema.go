@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	"go-command-compression-proxy/internal/contracts"
 
@@ -80,8 +81,17 @@ type OutputLines struct {
 }
 
 type MaxRule struct {
-	Count int    `yaml:"count"`
-	Print string `yaml:"print"`
+	Count         int               `yaml:"count"`
+	Print         string            `yaml:"print"`
+	GroupsSummary *MaxGroupsSummary `yaml:"groups_summary"`
+}
+
+type MaxGroupsSummary struct {
+	Show      int    `yaml:"show"`
+	Print     string `yaml:"print"`
+	Delimiter string `yaml:"delimiter"`
+	Prefix    string `yaml:"prefix"`
+	Suffix    string `yaml:"suffix"`
 }
 
 type ReplaceRule struct {
@@ -384,7 +394,7 @@ func validateGroupLifecycle(g *OutputGroup, declared map[string]struct{}, path v
 		return err
 	}
 	if g.Lines != nil {
-		if err := validateLines(g.Lines, path.Path("lines")); err != nil {
+		if err := validateLines(g.Lines, path.Path("lines"), linesValidationMode{}); err != nil {
 			return err
 		}
 		if err := validateLineTemplates(g.Lines, declared, path.Path("lines")); err != nil {
@@ -482,7 +492,9 @@ func validateOutputScope(scope *OutputScope, path validationPath) error {
 		return nil
 	}
 	if scope.Lines != nil {
-		if err := validateLines(scope.Lines, path.Path("lines")); err != nil {
+		if err := validateLines(scope.Lines, path.Path("lines"), linesValidationMode{
+			allowGroupsSummary: scopeHasCollectGroups(scope.Groups),
+		}); err != nil {
 			return err
 		}
 	}
@@ -497,7 +509,11 @@ func validateOutputScope(scope *OutputScope, path validationPath) error {
 	return nil
 }
 
-func validateLines(lines *OutputLines, path validationPath) error {
+type linesValidationMode struct {
+	allowGroupsSummary bool
+}
+
+func validateLines(lines *OutputLines, path validationPath, mode linesValidationMode) error {
 	if lines == nil {
 		return nil
 	}
@@ -510,7 +526,7 @@ func validateLines(lines *OutputLines, path validationPath) error {
 	if err := validateSkipOrKeepRules(lines.Keep, path.Path("keep")); err != nil {
 		return err
 	}
-	if err := validateLinesMax(lines.Max, path.Path("max")); err != nil {
+	if err := validateLinesMax(lines.Max, path.Path("max"), mode); err != nil {
 		return err
 	}
 	return validateLinesBounds(lines, path)
@@ -538,17 +554,25 @@ func indexedValidationPath(path validationPath, index int) validationPath {
 	return validationPath(fmt.Sprintf(indexedPathFormat, path, index))
 }
 
-func validateLinesMax(rule *MaxRule, path validationPath) error {
+func validateLinesMax(rule *MaxRule, path validationPath, mode linesValidationMode) error {
 	if rule == nil {
 		return nil
 	}
 	if rule.Count <= 0 {
 		return ValidationError{Path: string(path.Path("count")), Message: "max.count must be positive"}
 	}
+	if rule.GroupsSummary != nil {
+		if !mode.allowGroupsSummary {
+			return ValidationError{Path: string(path.Path("groups_summary")), Message: "max.groups_summary requires collect groups in the same output scope"}
+		}
+		if err := validateMaxGroupsSummary(rule.GroupsSummary, path.Path("groups_summary")); err != nil {
+			return err
+		}
+	}
 	if rule.Print == "" {
 		return nil
 	}
-	return validateMaxPrint(rule.Print, path.Path("print"))
+	return validateMaxPrint(rule.Print, path.Path("print"), rule.GroupsSummary != nil)
 }
 
 func validateLinesBounds(lines *OutputLines, path validationPath) error {
@@ -588,7 +612,11 @@ func validateSkipOrKeepRule(rule *SkipOrKeepRule, path validationPath) error {
 	return nil
 }
 
-func validateMaxPrint(template string, path validationPath) error {
+func validateMaxPrint(template string, path validationPath, allowGroupsSummary bool) error {
+	allowed := []string{"{{value}}"}
+	if allowGroupsSummary {
+		allowed = append(allowed, "{{groups_summary}}")
+	}
 	for _, match := range templateVariablePattern.FindAllStringSubmatch(template, -1) {
 		if len(match) != 2 {
 			continue
@@ -596,9 +624,51 @@ func validateMaxPrint(template string, path validationPath) error {
 		if match[1] == "value" {
 			continue
 		}
-		return ValidationError{Path: string(path), Message: fmt.Sprintf("max.print must reference only %q, got %q", "{{value}}", match[1])}
+		if allowGroupsSummary && match[1] == "groups_summary" {
+			continue
+		}
+		return ValidationError{Path: string(path), Message: fmt.Sprintf("max.print must reference only %q, got %q", strings.Join(allowed, ", "), match[1])}
 	}
 	return nil
+}
+
+func validateMaxGroupsSummary(summary *MaxGroupsSummary, path validationPath) error {
+	if summary == nil {
+		return nil
+	}
+	if summary.Show <= 0 {
+		return ValidationError{Path: string(path.Path("show")), Message: "groups_summary.show must be positive"}
+	}
+	if summary.Print == "" {
+		return ValidationError{Path: string(path.Path("print")), Message: "groups_summary.print must not be empty"}
+	}
+	if err := validateTemplateVariables(summary.Print, map[string]struct{}{
+		"key":   {},
+		"count": {},
+	}, path.Path("print")); err != nil {
+		return err
+	}
+	if err := validateTemplateVariables(summary.Delimiter, map[string]struct{}{}, path.Path("delimiter")); err != nil {
+		return err
+	}
+	if err := validateTemplateVariables(summary.Prefix, map[string]struct{}{}, path.Path("prefix")); err != nil {
+		return err
+	}
+	if err := validateTemplateVariables(summary.Suffix, map[string]struct{}{
+		"remaining": {},
+	}, path.Path("suffix")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func scopeHasCollectGroups(groups []OutputGroup) bool {
+	for _, group := range groups {
+		if group.MatchesRegex != "" && group.GroupBy != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func matcherCount(values ...string) int {

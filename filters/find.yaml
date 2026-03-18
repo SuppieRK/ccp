@@ -1,6 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: find
-about: Start find migration with conservative directory compaction while grouped file rendering is still pending
+about: >-
+  Compact standard find path listings by factoring repeated parent prefixes while
+  preserving native command shape and follow-up shell usability. Keep nested
+  execution and machine-oriented modes such as -exec, -print0, and -printf as
+  passthrough. Preserve the simple flat form for explicit `find . -type d`,
+  group other rooted directory and file listings by parent, and treat overflow
+  summaries as additive hints about omitted grouped items rather than as a
+  replacement for concrete paths.
 
 cases:
   - id: nested_execution_or_machine_output
@@ -15,8 +23,10 @@ cases:
         - -printf
         - -fprintf
     passthrough: true
-  - id: directories
+
+  - id: directories_current_root
     when_arguments:
+      first_is: .
       have_sequence:
         - -type
         - d
@@ -31,10 +41,19 @@ cases:
           replace:
             - regex: '^\./(.+)$'
               to: '$1/'
-  - id: files
+
+  - id: directories_other_roots
+    when_arguments:
+      have_sequence:
+        - -type
+        - d
+      positionals_lack_any:
+        - .
     compress_output:
       combined:
         lines:
+          skip:
+            - regex: '^\.$'
           max:
             count: 200
             print: "\n+{{value}} more"
@@ -48,7 +67,39 @@ cases:
               - name: name
                 type: string
                 regex_group: name
-            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            matches_regex: '^(?:\./)?(?P<dir>.+)/(?P<name>(?:\.[^/]+|[^./][^/]*))$'
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{name}}/'
+
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "\n+{{value}} more {{groups_summary}}"
+            groups_summary:
+              show: 3
+              print: "{{key}}/({{count}})"
+              delimiter: ", "
+              prefix: "across "
+              suffix: " and {{remaining}} other dirs"
+        groups:
+          - id: by_parent_dir
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            matches_regex: '^(?:\./)?(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
             group_by: '{{dir}}'
             initially:
               print: '{{dir}}/'
