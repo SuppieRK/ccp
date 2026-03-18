@@ -1,6 +1,20 @@
-00000|## main
-00001| M modified.txt
-00002|M  staged.txt
-00003|?? .ccp/
-00004|?? scripts/
-00005|?? untracked.txt
+00000|On branch git-improvements
+00001|Changes not staged for commit:
+00002|  (use "git add <file>..." to update what will be committed)
+00003|  (use "git restore <file>..." to discard changes in working directory)
+00004|	modified:   testdata/benchmarks/git/status-success-porcelain/output.txt
+00005|	modified:   testdata/benchmarks/git/status-success-porcelain/stdout.txt
+00006|	modified:   testdata/benchmarks/git/status-success/output.txt
+00007|	modified:   testdata/benchmarks/git/status-success/stdout.txt
+00008|
+00009|Untracked files:
+00010|  (use "git add <file>..." to include in what will be committed)
+00011|	FIND.md
+00012|	GIT.md
+00013|	GREP.md
+00014|	LS.md
+00015|	TOOL_EXPLORATION_LOG.md
+00016|	testdata/benchmarks/git/status-success-porcelain/stderr.txt
+00017|	testdata/benchmarks/git/status-success/stderr.txt
+00018|
+00019|no changes added to commit (use "git add" and/or "git commit -a")

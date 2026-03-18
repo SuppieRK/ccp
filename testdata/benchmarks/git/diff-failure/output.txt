@@ -1,2 +1,1 @@
 fatal: Not a git repository
-summary: 0 files changed, +0 -0

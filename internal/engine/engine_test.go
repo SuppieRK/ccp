@@ -95,7 +95,7 @@ var _ = Describe("Engine integration", func() {
 				Stream: contracts.StreamStderr,
 				Line:   "ERR:warn\n",
 			}}))
-			Expect(state.Exit()).To(Equal([]BufferEntry{{
+			Expect(state.Exit(0)).To(Equal([]BufferEntry{{
 				Stream: contracts.StreamStdout,
 				Line:   "summary: one\n",
 			}}))
@@ -124,7 +124,7 @@ var _ = Describe("Engine integration", func() {
 				Stream: contracts.StreamStderr,
 				Line:   "warn\n",
 			}}))
-			Expect(state.Exit()).To(BeEmpty())
+			Expect(state.Exit(0)).To(BeEmpty())
 		})
 	})
 
@@ -148,7 +148,7 @@ var _ = Describe("Engine integration", func() {
 			Expect(state.Stderr("err-1\n")).To(BeEmpty())
 			Expect(state.Stdout("out-2\n")).To(BeEmpty())
 
-			Expect(state.Exit()).To(Equal([]BufferEntry{
+			Expect(state.Exit(0)).To(Equal([]BufferEntry{
 				{Stream: contracts.StreamStdout, Line: "out-1\n"},
 				{Stream: contracts.StreamStderr, Line: "err-1\n"},
 				{Stream: contracts.StreamStdout, Line: "out-2\n"},
@@ -175,7 +175,7 @@ var _ = Describe("Engine integration", func() {
 		Context("when the ignored line is blank", func() {
 			It("keeps the previously retained line", func() {
 				Expect(state.Stderr("\n")).To(BeEmpty())
-				Expect(state.Exit()).To(Equal([]BufferEntry{
+				Expect(state.Exit(0)).To(Equal([]BufferEntry{
 					{Stream: contracts.StreamStderr, Line: "err-1\n"},
 				}))
 			})
@@ -184,7 +184,7 @@ var _ = Describe("Engine integration", func() {
 		Context("when the ignored line is a duplicate", func() {
 			It("keeps the previously retained line", func() {
 				Expect(state.Stderr("err-1\n")).To(BeEmpty())
-				Expect(state.Exit()).To(Equal([]BufferEntry{
+				Expect(state.Exit(0)).To(Equal([]BufferEntry{
 					{Stream: contracts.StreamStderr, Line: "err-1\n"},
 				}))
 			})

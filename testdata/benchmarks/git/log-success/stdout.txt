@@ -1,3 +1,35 @@
-00000|e09893a 2026-02-27T23:21:55+01:00 bench <bench@example.com> | third commit
-00001|8edee8d 2026-02-27T23:21:54+01:00 bench <bench@example.com> | second commit
-00002|9781804 2026-02-27T23:21:54+01:00 bench <bench@example.com> | initial commit
+00000|commit 88779bb1dda83a87826b0346bb2ffbfc3449d0cf
+00001|Author: Roman Khlebnov <suppie.rk@gmail.com>
+00002|Date:   Wed Mar 18 22:43:24 2026 +0100
+00003|
+00004|    fix: Improving grep (#55)
+00005|
+00006|commit 602be65f411a7a8adadd1cea19a29da4d8e643fc
+00007|Author: Roman Khlebnov <suppie.rk@gmail.com>
+00008|Date:   Wed Mar 18 22:10:14 2026 +0100
+00009|
+00010|    fix: Improving ls (#54)
+00011|
+00012|commit 3ef6ea64771b12d7afe21bd41627cd952021be8f
+00013|Author: Roman Khlebnov <suppie.rk@gmail.com>
+00014|Date:   Wed Mar 18 21:25:17 2026 +0100
+00015|
+00016|    Find improvements (#53)
+00017|    
+00018|    * fix: Adding schemas to existing filters
+00019|    
+00020|    * fix: Improving find
+00021|    
+00022|    * fix: Improving find
+00023|
+00024|commit 1b5d846797af8c2d0d37deb0fcf35a7f97cb346b
+00025|Author: Roman Khlebnov <suppie.rk@gmail.com>
+00026|Date:   Wed Mar 18 09:11:04 2026 +0100
+00027|
+00028|    README update
+00029|
+00030|commit 5cefc5c991891c7081938ee2d6f75e944f9723df
+00031|Author: Roman Khlebnov <suppie.rk@gmail.com>
+00032|Date:   Tue Mar 17 23:24:13 2026 +0100
+00033|
+00034|    feat: Major rework for better filter authoring as a YAML (#52)

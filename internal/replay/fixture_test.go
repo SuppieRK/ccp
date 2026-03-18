@@ -25,6 +25,22 @@ var _ = Describe("replay fixtures", func() {
 			spec, err := ReadCommand(path)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(spec.Argv).To(Equal([]string{"grep", "-r", "-n", "needle", "./internal"}))
+			Expect(spec.ExitCode).To(BeZero())
+		})
+
+		It("writes and reads non-zero exit codes when present", func() {
+			path := filepath.Join(GinkgoT().TempDir(), CommandFileName)
+
+			Expect(WriteCommandWithExitCode(path, []string{"git", "show"}, 128)).To(Succeed())
+
+			body, err := os.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring(`exit_code: 128`))
+
+			spec, err := ReadCommand(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.Argv).To(Equal([]string{"git", "show"}))
+			Expect(spec.ExitCode).To(Equal(128))
 		})
 	})
 

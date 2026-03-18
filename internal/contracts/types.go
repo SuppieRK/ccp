@@ -35,6 +35,7 @@ type Action struct {
 type Context interface {
 	Args() []string
 	BufferedLines(stream Stream) []string
+	ExitCode() int
 }
 
 type Filter interface {

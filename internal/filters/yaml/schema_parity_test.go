@@ -73,6 +73,15 @@ cases:
       not_have_all_short_flags: ['-H', '-o']
     passthrough: true
 `, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("valid no_positionals predicate", `
+version: 1
+filter: git
+cases:
+  - id: branch
+    when_arguments:
+      no_positionals: true
+    passthrough: true
+`, parityExpectation{schemaValid: true, parseValid: true}),
 		Entry("valid append_if_no_positionals command mutation", `
 version: 1
 filter: ls

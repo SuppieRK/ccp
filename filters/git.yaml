@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: git
-about: Compact common git subcommands through one family filter.
+about: Compact common git subcommands while preserving native failure semantics and line-oriented follow-up affordances.
 
 cases:
   - id: status
@@ -11,6 +11,48 @@ cases:
       append_if_missing:
         - --porcelain
         - -b
+    compress_output:
+      stdout:
+        lines:
+          skip:
+            - regex: '^$'
+            - regex: '^Changes to be committed:$'
+            - regex: '^Changes not staged for commit:$'
+            - regex: '^Untracked files:$'
+            - regex: '^Unmerged paths:$'
+            - regex: '^\s+\(use "git .+\)$'
+            - regex: '^nothing added to commit .+$'
+            - regex: '^no changes added to commit .+$'
+            - regex: "^Your branch is up to date with '.+'\\.$"
+          replace:
+            - regex: '^On branch (.+)$'
+              to: '## $1'
+            - regex: '^\tmodified:\s+(.+)$'
+              to: ' M $1'
+            - regex: '^\tnew file:\s+(.+)$'
+              to: 'A  $1'
+            - regex: '^\tdeleted:\s+(.+)$'
+              to: ' D $1'
+            - regex: '^\trenamed:\s+(.+)$'
+              to: 'R  $1'
+            - regex: '^\tcopied:\s+(.+)$'
+              to: 'C  $1'
+            - regex: '^\tboth modified:\s+(.+)$'
+              to: 'UU $1'
+            - regex: '^\tboth added:\s+(.+)$'
+              to: 'AA $1'
+            - regex: '^\tboth deleted:\s+(.+)$'
+              to: 'DD $1'
+            - regex: '^\tdeleted by us:\s+(.+)$'
+              to: 'DU $1'
+            - regex: '^\tdeleted by them:\s+(.+)$'
+              to: 'UD $1'
+            - regex: '^\tadded by us:\s+(.+)$'
+              to: 'AU $1'
+            - regex: '^\tadded by them:\s+(.+)$'
+              to: 'UA $1'
+            - regex: '^\t(.+)$'
+              to: '?? $1'
 
   - id: diff
     variables:
@@ -113,6 +155,130 @@ cases:
       have_sequence:
         - worktree
         - list
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^(.+?)\s+[0-9a-f]{7,40}\s+\[([^\]]+)\]$'
+              to: '[$2] $1'
+            - regex: '^(.+?)\s+([0-9a-f]{7,40})\s+\(detached HEAD\)\s+prunable$'
+              to: '[detached $2, prunable] $1'
+            - regex: '^(.+?)\s+([0-9a-f]{7,40})\s+\(detached HEAD\)$'
+              to: '[detached $2] $1'
+
+  - id: branch-list
+    when_arguments:
+      first_is: branch
+      have_any:
+        - --list
+      lack_any:
+        - --format
+        - --abbrev
+        - --column
+        - --sort
+        - --contains
+        - --no-contains
+        - --merged
+        - --no-merged
+        - --points-at
+        - --recurse-submodules
+      not_have_short_flag:
+        - -v
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^\* (.+)$'
+              to: '* $1'
+            - regex: '^  (.+)$'
+              to: '$1'
+
+  - id: branch-implicit-list
+    when_arguments:
+      first_is: branch
+      no_positionals: true
+      lack_any:
+        - --format
+        - --abbrev
+        - --column
+        - --sort
+        - --contains
+        - --no-contains
+        - --merged
+        - --no-merged
+        - --points-at
+        - --recurse-submodules
+        - --show-current
+        - --edit-description
+        - --set-upstream-to
+        - --unset-upstream
+        - --delete
+        - --move
+        - --copy
+      not_have_short_flag:
+        - -v
+        - -m
+        - -c
+        - -d
+        - -f
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^\* (.+)$'
+              to: '* $1'
+            - regex: '^  (.+)$'
+              to: '$1'
+
+  - id: switch
+    when_arguments:
+      first_is: switch
+      lack_any:
+        - --detach
+        - --discard-changes
+        - --merge
+        - --conflict
+        - --orphan
+        - --recurse-submodules
+      not_have_short_flag:
+        - -d
+        - -f
+        - -m
+    compress_output:
+      stderr:
+        lines:
+          replace:
+            - regex: "^Switched to branch '(.+)'$"
+              to: 'Switched to $1'
+            - regex: "^Switched to a new branch '(.+)'$"
+              to: 'Switched to $1 (new)'
+
+  - id: add-verbose
+    when_arguments:
+      first_is: add
+      have_any:
+        - -v
+        - --verbose
+      lack_any:
+        - --interactive
+        - --patch
+        - --edit
+        - --dry-run
+        - --ignore-errors
+        - --ignore-missing
+      not_have_short_flag:
+        - -i
+        - -p
+        - -e
+        - -n
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: "^add '(.+)'$"
+              to: 'A $1'
+            - regex: "^remove '(.+)'$"
+              to: 'D $1'
 
   - id: blame-line-porcelain
     when_arguments:

@@ -43,6 +43,7 @@ var _ = Describe("Predicate helpers", func() {
 		Entry("MatchesHaveAllShortFlags", "MatchesHaveAllShortFlags", operations.MatchesHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})),
 		Entry("MatchesNotHaveAllShortFlags", "MatchesNotHaveAllShortFlags", operations.MatchesNotHaveAllShortFlags([]string{"-l"}, []string{"-l", "-R"})),
 		Entry("MatchesPositionalsLackAny", "MatchesPositionalsLackAny", operations.MatchesPositionalsLackAny([]string{"test", "--watch", "unit"}, []string{"e2e"})),
+		Entry("MatchesNoPositionals", "MatchesNoPositionals", operations.MatchesNoPositionals([]string{"branch", "--all"}, true)),
 	)
 
 	It("rejects disallowed positional values", func() {
@@ -63,5 +64,9 @@ var _ = Describe("Predicate helpers", func() {
 
 	It("rejects disallowed short flag sets when all are present together", func() {
 		Expect(operations.MatchesNotHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})).To(BeFalse())
+	})
+
+	It("rejects explicit positionals when none are allowed", func() {
+		Expect(operations.MatchesNoPositionals([]string{"branch", "feature"}, true)).To(BeFalse())
 	})
 })

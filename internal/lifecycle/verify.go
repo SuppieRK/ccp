@@ -14,6 +14,7 @@ import (
 
 type verifyRunner interface {
 	Replay(args []string, events []replay.Event) (core.ReplayResult, error)
+	ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error)
 }
 
 var newVerifyRunner = func() verifyRunner {
@@ -84,7 +85,7 @@ func RunVerify(args []string) error {
 		return recordFailure(dir, "read_events", err)
 	}
 
-	replayed, err := newVerifyRunner().Replay(fixture.Command.Argv, events)
+	replayed, err := newVerifyRunner().ReplayWithExitCode(fixture.Command.Argv, events, fixture.Command.ExitCode)
 	if err != nil {
 		return recordFailure(dir, "runner_replay", err)
 	}

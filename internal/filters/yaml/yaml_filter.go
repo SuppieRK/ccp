@@ -56,15 +56,15 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
 	scope := cs.scopeForExit(contracts.StreamStdout)
-	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamStdout), ""), scope)
+	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamStdout), ""), scope, context.ExitCode())
 	if cs.onExit != nil {
-		output = appendCaseExitPrint(output, cs.onExit, cs.variables)
+		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
 	}
 	return exitActionForOutput(output)
 }
 
-func renderStdoutExitOutput(output string, scope *compiledScope) string {
-	if renderedGroups := renderScopeGroups(scope); len(renderedGroups) > 0 {
+func renderStdoutExitOutput(output string, scope *compiledScope, exitCode int) string {
+	if renderedGroups := renderScopeGroups(scope, exitCode); len(renderedGroups) > 0 {
 		return applyRenderedMax(renderedGroups, scope.max)
 	}
 	return appendScopeMaxOverflow(output, scope)
@@ -81,7 +81,10 @@ func appendScopeMaxOverflow(output string, scope *compiledScope) string {
 	return output + overflow
 }
 
-func appendCaseExitPrint(output string, onExit *compiledOnExit, variables map[string]string) string {
+func appendCaseExitPrint(output string, onExit *compiledOnExit, variables map[string]string, exitCode int) string {
+	if !shouldRenderFinally(exitCode) {
+		return output
+	}
 	printed := renderExitPrint(onExit.print, variables)
 	if printed == "" {
 		return output
@@ -148,6 +151,7 @@ type compiledWhen struct {
 	haveAllShortFlags    []string
 	notHaveAllShortFlags []string
 	positionalsLackAny   []string
+	noPositionals        bool
 }
 
 type compiledCommand struct {
@@ -344,6 +348,7 @@ func compileWhenArguments(when *WhenArguments) compiledWhen {
 		haveAllShortFlags:    cloneStrings(when.HaveAllShortFlags),
 		notHaveAllShortFlags: cloneStrings(when.NotHaveAllShortFlags),
 		positionalsLackAny:   cloneStrings(when.PositionalsLackAny),
+		noPositionals:        when.NoPositionals,
 	}
 }
 
@@ -875,13 +880,13 @@ func renderExitPrint(template string, variables map[string]string) string {
 	return renderTemplate(template, variables)
 }
 
-func renderScopeGroups(scope *compiledScope) []renderedLine {
+func renderScopeGroups(scope *compiledScope, exitCode int) []renderedLine {
 	if scope == nil || len(scope.groups) == 0 {
 		return nil
 	}
 	rendered := make([]renderedLine, 0)
 	for _, group := range scope.groups {
-		rendered = append(rendered, group.render()...)
+		rendered = append(rendered, group.render(exitCode)...)
 	}
 	return rendered
 }
@@ -924,16 +929,16 @@ func applyRenderedMax(rendered []renderedLine, max *compiledMax) string {
 	return visible
 }
 
-func (g *compiledGroup) render() []renderedLine {
+func (g *compiledGroup) render(exitCode int) []renderedLine {
 	switch g.mode {
 	case groupModeBoundary:
-		return g.renderBoundary()
+		return g.renderBoundary(exitCode)
 	default:
-		return g.renderCollected()
+		return g.renderCollected(exitCode)
 	}
 }
 
-func (g *compiledGroup) renderCollected() []renderedLine {
+func (g *compiledGroup) renderCollected(exitCode int) []renderedLine {
 	if len(g.items) == 0 {
 		return nil
 	}
@@ -945,23 +950,23 @@ func (g *compiledGroup) renderCollected() []renderedLine {
 
 	rendered := make([]renderedLine, 0)
 	for _, key := range keys {
-		rendered = append(rendered, g.renderGroup(g.items[key], key)...)
+		rendered = append(rendered, g.renderGroup(g.items[key], key, exitCode)...)
 	}
 	return rendered
 }
 
-func (g *compiledGroup) renderBoundary() []renderedLine {
+func (g *compiledGroup) renderBoundary(exitCode int) []renderedLine {
 	if len(g.sections) == 0 {
 		return nil
 	}
 	rendered := make([]renderedLine, 0)
 	for _, section := range g.sections {
-		rendered = append(rendered, g.renderBoundarySection(section)...)
+		rendered = append(rendered, g.renderBoundarySection(section, exitCode)...)
 	}
 	return rendered
 }
 
-func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey string) []renderedLine {
+func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey string, exitCode int) []renderedLine {
 	if len(groupItems) == 0 {
 		return nil
 	}
@@ -970,31 +975,31 @@ func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey str
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStage(g.initially, groupItems[0].vars)...)
+	lines = append(lines, renderGroupStageWithExitCode(g.initially, groupItems[0].vars, exitCode)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStage(g.finally, groupItems[0].vars)...)
+	lines = append(lines, renderGroupStageWithExitCode(g.finally, groupItems[0].vars, exitCode)...)
 	return lines
 }
 
-func (g *compiledGroup) renderBoundarySection(section compiledBoundarySection) []renderedLine {
+func (g *compiledGroup) renderBoundarySection(section compiledBoundarySection, exitCode int) []renderedLine {
 	renderedItems, emitted, hidden := g.renderGroupItems(section.items, "", false)
 	if !emitted && (g.lines == nil || g.lines.max == nil || hidden == 0 || renderMaxPrint(g.lines.max.print, hidden, "") == "") {
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStage(g.initially, section.vars)...)
+	lines = append(lines, renderGroupStageWithExitCode(g.initially, section.vars, exitCode)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStage(g.finally, section.vars)...)
+	lines = append(lines, renderGroupStageWithExitCode(g.finally, section.vars, exitCode)...)
 	return lines
 }
 
@@ -1043,8 +1048,11 @@ func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (st
 	}
 }
 
-func renderGroupStage(stage *compiledOnExit, vars map[string]string) []renderedLine {
+func renderGroupStageWithExitCode(stage *compiledOnExit, vars map[string]string, exitCode int) []renderedLine {
 	if stage == nil {
+		return nil
+	}
+	if !shouldRenderFinally(exitCode) {
 		return nil
 	}
 	printed := renderTemplate(stage.print, vars)
@@ -1052,6 +1060,10 @@ func renderGroupStage(stage *compiledOnExit, vars map[string]string) []renderedL
 		return nil
 	}
 	return []renderedLine{{text: printed}}
+}
+
+func shouldRenderFinally(exitCode int) bool {
+	return exitCode == 0
 }
 
 func renderRenderedLines(lines []renderedLine) string {
@@ -1268,7 +1280,8 @@ func matchesWhenArguments(when compiledWhen, args []string) bool {
 		operations.MatchesNotHaveShortFlag(args, when.notHaveShortFlag) &&
 		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
 		operations.MatchesNotHaveAllShortFlags(args, when.notHaveAllShortFlags) &&
-		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny)
+		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny) &&
+		operations.MatchesNoPositionals(args, when.noPositionals)
 }
 
 func outputCombined(out *OutputShape) *OutputScope {

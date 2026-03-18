@@ -1,3 +1,35 @@
-e09893a 2026-02-27T23:21:55+01:00 bench <bench@example.com> | third commit
-8edee8d 2026-02-27T23:21:54+01:00 bench <bench@example.com> | second commit
-9781804 2026-02-27T23:21:54+01:00 bench <bench@example.com> | initial commit
+commit 88779bb1dda83a87826b0346bb2ffbfc3449d0cf
+Author: Roman Khlebnov <suppie.rk@gmail.com>
+Date:   Wed Mar 18 22:43:24 2026 +0100
+
+    fix: Improving grep (#55)
+
+commit 602be65f411a7a8adadd1cea19a29da4d8e643fc
+Author: Roman Khlebnov <suppie.rk@gmail.com>
+Date:   Wed Mar 18 22:10:14 2026 +0100
+
+    fix: Improving ls (#54)
+
+commit 3ef6ea64771b12d7afe21bd41627cd952021be8f
+Author: Roman Khlebnov <suppie.rk@gmail.com>
+Date:   Wed Mar 18 21:25:17 2026 +0100
+
+    Find improvements (#53)
+    
+    * fix: Adding schemas to existing filters
+    
+    * fix: Improving find
+    
+    * fix: Improving find
+
+commit 1b5d846797af8c2d0d37deb0fcf35a7f97cb346b
+Author: Roman Khlebnov <suppie.rk@gmail.com>
+Date:   Wed Mar 18 09:11:04 2026 +0100
+
+    README update
+
+commit 5cefc5c991891c7081938ee2d6f75e944f9723df
+Author: Roman Khlebnov <suppie.rk@gmail.com>
+Date:   Tue Mar 17 23:24:13 2026 +0100
+
+    feat: Major rework for better filter authoring as a YAML (#52)
