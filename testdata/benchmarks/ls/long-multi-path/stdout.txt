@@ -1,0 +1,9 @@
+00000|testdata/benchmarks/ls/_fixture-tree/path-one:
+00001|total 0
+00002|-rwxrwxrwx 1 suppie suppie   10 Mar 18 21:37 plain.txt
+00003|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 subdir
+00004|
+00005|testdata/benchmarks/ls/_fixture-tree/path-two:
+00006|total 0
+00007|-rwxrwxrwx 1 suppie suppie   13 Mar 18 21:37 another.md
+00008|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 nested

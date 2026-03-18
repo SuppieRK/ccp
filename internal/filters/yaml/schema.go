@@ -52,12 +52,14 @@ type WhenArguments struct {
 	LackAny            []string `yaml:"lack_any"`
 	HaveSequence       []string `yaml:"have_sequence"`
 	HaveShortFlag      []string `yaml:"have_short_flag"`
+	HaveAllShortFlags  []string `yaml:"have_all_short_flags"`
 	PositionalsLackAny []string `yaml:"positionals_lack_any"`
 }
 
 type CommandMutation struct {
-	AppendIfMissing []string `yaml:"append_if_missing"`
-	AddShortFlags   []string `yaml:"add_short_flags"`
+	AppendIfMissing       []string `yaml:"append_if_missing"`
+	AppendIfNoPositionals []string `yaml:"append_if_no_positionals"`
+	AddShortFlags         []string `yaml:"add_short_flags"`
 }
 
 type OutputShape struct {
@@ -299,8 +301,8 @@ func validateGroupVariables(variables []Variable, path validationPath, regex str
 }
 
 func validateCommand(cmd *CommandMutation, path validationPath) error {
-	if len(cmd.AppendIfMissing) == 0 && len(cmd.AddShortFlags) == 0 {
-		return ValidationError{Path: string(path), Message: "command block must define append_if_missing or add_short_flags"}
+	if len(cmd.AppendIfMissing) == 0 && len(cmd.AppendIfNoPositionals) == 0 && len(cmd.AddShortFlags) == 0 {
+		return ValidationError{Path: string(path), Message: "command block must define append_if_missing, append_if_no_positionals or add_short_flags"}
 	}
 	return nil
 }
@@ -308,6 +310,7 @@ func validateCommand(cmd *CommandMutation, path validationPath) error {
 func validateWhenArguments(wa *WhenArguments, path validationPath) error {
 	if len(wa.FirstIs) == 0 && len(wa.FirstIn) == 0 && len(wa.HaveAny) == 0 &&
 		len(wa.LackAny) == 0 && len(wa.HaveSequence) == 0 && len(wa.HaveShortFlag) == 0 &&
+		len(wa.HaveAllShortFlags) == 0 &&
 		len(wa.PositionalsLackAny) == 0 {
 		return ValidationError{Path: string(path), Message: "when_arguments must set at least one predicate"}
 	}

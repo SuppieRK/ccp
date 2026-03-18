@@ -113,6 +113,9 @@
         "have_short_flag": {
           "$ref": "#/$defs/string_array"
         },
+        "have_all_short_flags": {
+          "$ref": "#/$defs/string_array"
+        },
         "positionals_lack_any": {
           "$ref": "#/$defs/string_array"
         }
@@ -123,6 +126,9 @@
       "additionalProperties": false,
       "properties": {
         "append_if_missing": {
+          "$ref": "#/$defs/string_array"
+        },
+        "append_if_no_positionals": {
           "$ref": "#/$defs/string_array"
         },
         "add_short_flags": {

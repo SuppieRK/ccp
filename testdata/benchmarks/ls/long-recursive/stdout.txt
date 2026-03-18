@@ -1,0 +1,22 @@
+00000|testdata/benchmarks/ls/_fixture-tree:
+00001|total 0
+00002|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-one
+00003|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-two
+00004|
+00005|testdata/benchmarks/ls/_fixture-tree/path-one:
+00006|total 0
+00007|-rwxrwxrwx 1 suppie suppie   10 Mar 18 21:37 plain.txt
+00008|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 subdir
+00009|
+00010|testdata/benchmarks/ls/_fixture-tree/path-one/subdir:
+00011|total 0
+00012|-rwxrwxrwx 1 suppie suppie 11 Mar 18 21:37 nested.txt
+00013|
+00014|testdata/benchmarks/ls/_fixture-tree/path-two:
+00015|total 0
+00016|-rwxrwxrwx 1 suppie suppie   13 Mar 18 21:37 another.md
+00017|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 nested
+00018|
+00019|testdata/benchmarks/ls/_fixture-tree/path-two/nested:
+00020|total 0
+00021|-rwxrwxrwx 1 suppie suppie 15 Mar 18 21:37 deep.go

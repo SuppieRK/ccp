@@ -1,0 +1,3 @@
+00000|total 0
+00001|-rwxrwxrwx 1 suppie suppie   10 Mar 18 21:37 plain.txt
+00002|drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 subdir

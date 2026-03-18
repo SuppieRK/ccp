@@ -144,12 +144,14 @@ type compiledWhen struct {
 	lackAny            []string
 	haveSequence       []string
 	haveShortFlag      []string
+	haveAllShortFlags  []string
 	positionalsLackAny []string
 }
 
 type compiledCommand struct {
-	appendIfMissing []string
-	addShortFlags   []string
+	appendIfMissing       []string
+	appendIfNoPositionals []string
+	addShortFlags         []string
 }
 
 type compiledScope struct {
@@ -319,8 +321,9 @@ func compileCommandMutation(command *CommandMutation) *compiledCommand {
 		return nil
 	}
 	return &compiledCommand{
-		appendIfMissing: cloneStrings(command.AppendIfMissing),
-		addShortFlags:   cloneStrings(command.AddShortFlags),
+		appendIfMissing:       cloneStrings(command.AppendIfMissing),
+		appendIfNoPositionals: cloneStrings(command.AppendIfNoPositionals),
+		addShortFlags:         cloneStrings(command.AddShortFlags),
 	}
 }
 
@@ -335,6 +338,7 @@ func compileWhenArguments(when *WhenArguments) compiledWhen {
 		lackAny:            cloneStrings(when.LackAny),
 		haveSequence:       cloneStrings(when.HaveSequence),
 		haveShortFlag:      cloneStrings(when.HaveShortFlag),
+		haveAllShortFlags:  cloneStrings(when.HaveAllShortFlags),
 		positionalsLackAny: cloneStrings(when.PositionalsLackAny),
 	}
 }
@@ -1192,7 +1196,28 @@ func applyCommandMutations(args []string, command *compiledCommand) []string {
 		}
 		mutated = append(mutated, arg)
 	}
+	if !hasExplicitPositionals(mutated[1:]) {
+		mutated = append(mutated, command.appendIfNoPositionals...)
+	}
 	return mutated
+}
+
+func hasExplicitPositionals(args []string) bool {
+	afterSeparator := false
+	for _, arg := range args {
+		if afterSeparator {
+			return true
+		}
+		if arg == "--" {
+			afterSeparator = true
+			continue
+		}
+		if len(arg) > 0 && arg[0] == '-' {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
@@ -1236,6 +1261,7 @@ func matchesWhenArguments(when compiledWhen, args []string) bool {
 		operations.MatchesLackAny(args, when.lackAny) &&
 		operations.MatchesHaveSequence(args, when.haveSequence) &&
 		operations.MatchesHaveShortFlag(args, when.haveShortFlag) &&
+		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
 		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny)
 }
 

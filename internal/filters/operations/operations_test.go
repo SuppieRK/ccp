@@ -39,6 +39,7 @@ var _ = Describe("Predicate helpers", func() {
 		Entry("MatchesLackAny", "MatchesLackAny", operations.MatchesLackAny([]string{"--watch"}, []string{"--scan"})),
 		Entry("MatchesHaveSequence", "MatchesHaveSequence", operations.MatchesHaveSequence([]string{"-m", "pytest", "-q"}, []string{"-m", "pytest"})),
 		Entry("MatchesHaveShortFlag", "MatchesHaveShortFlag", operations.MatchesHaveShortFlag([]string{"-it"}, []string{"-t"})),
+		Entry("MatchesHaveAllShortFlags", "MatchesHaveAllShortFlags", operations.MatchesHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})),
 		Entry("MatchesPositionalsLackAny", "MatchesPositionalsLackAny", operations.MatchesPositionalsLackAny([]string{"test", "--watch", "unit"}, []string{"e2e"})),
 	)
 
@@ -48,5 +49,9 @@ var _ = Describe("Predicate helpers", func() {
 
 	It("rejects missing required sequence", func() {
 		Expect(operations.MatchesHaveSequence([]string{"-m", "pytest"}, []string{"-q"})).To(BeFalse())
+	})
+
+	It("rejects missing required short flags when all are required", func() {
+		Expect(operations.MatchesHaveAllShortFlags([]string{"-l"}, []string{"-l", "-R"})).To(BeFalse())
 	})
 })

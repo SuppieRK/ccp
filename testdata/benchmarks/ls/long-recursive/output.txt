@@ -1,0 +1,13 @@
+testdata/benchmarks/ls/_fixture-tree:
+  path-one/
+  path-two/
+testdata/benchmarks/ls/_fixture-tree/path-one:
+  plain.txt  10
+  subdir/
+testdata/benchmarks/ls/_fixture-tree/path-one/subdir:
+  nested.txt  11
+testdata/benchmarks/ls/_fixture-tree/path-two:
+  another.md  13
+  nested/
+testdata/benchmarks/ls/_fixture-tree/path-two/nested:
+  deep.go  15

@@ -54,6 +54,24 @@ cases:
   - id: default
     passthrough: true
 `, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("valid have_all_short_flags predicate", `
+version: 1
+filter: ls
+cases:
+  - id: long_recursive
+    when_arguments:
+      have_all_short_flags: ['-l', '-R']
+    passthrough: true
+`, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("valid append_if_no_positionals command mutation", `
+version: 1
+filter: ls
+cases:
+  - id: long
+    normalize_command:
+      append_if_no_positionals: ['.']
+    passthrough: true
+`, parityExpectation{schemaValid: true, parseValid: true}),
 		Entry("valid combined output case", `
 version: 1
 filter: ls

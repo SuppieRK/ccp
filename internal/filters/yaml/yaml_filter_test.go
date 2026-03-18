@@ -457,8 +457,8 @@ var _ = Describe("YamlFilter", func() {
 					HaveShortFlag: []string{"-l"},
 				},
 				NormalizeCommand: &CommandMutation{
-					AddShortFlags:   []string{"-a"},
-					AppendIfMissing: []string{"."},
+					AddShortFlags:         []string{"-a"},
+					AppendIfNoPositionals: []string{"."},
 				},
 				CompressOutput: &OutputShape{
 					Combined: &OutputScope{
@@ -482,6 +482,39 @@ var _ = Describe("YamlFilter", func() {
 			Tool: "ls",
 			Args: []string{"ls", "-l"},
 		})).To(Equal("ls|long"))
+	})
+
+	It("does not append default positionals when explicit paths are present", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "ls",
+			Cases: []CaseClause{{
+				ID: "long",
+				WhenArguments: &WhenArguments{
+					HaveShortFlag: []string{"-l"},
+				},
+				NormalizeCommand: &CommandMutation{
+					AddShortFlags:         []string{"-a"},
+					AppendIfNoPositionals: []string{"."},
+				},
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{
+						Lines: &OutputLines{
+							Keep: []SkipOrKeepRule{{Regex: "^"}},
+						},
+					},
+				},
+			}},
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+
+		command, err := filter.PrepareCommand(contracts.Command{
+			Tool: "ls",
+			Args: []string{"ls", "-l", "filters", "docs"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(command.Args).To(Equal([]string{"ls", "-l", "filters", "docs", "-a"}))
 	})
 
 	It("tracks declared variables on match and prints them at exit", func() {
