@@ -46,14 +46,16 @@ type Variable struct {
 }
 
 type WhenArguments struct {
-	FirstIs            string   `yaml:"first_is"`
-	FirstIn            []string `yaml:"first_in"`
-	HaveAny            []string `yaml:"have_any"`
-	LackAny            []string `yaml:"lack_any"`
-	HaveSequence       []string `yaml:"have_sequence"`
-	HaveShortFlag      []string `yaml:"have_short_flag"`
-	HaveAllShortFlags  []string `yaml:"have_all_short_flags"`
-	PositionalsLackAny []string `yaml:"positionals_lack_any"`
+	FirstIs              string   `yaml:"first_is"`
+	FirstIn              []string `yaml:"first_in"`
+	HaveAny              []string `yaml:"have_any"`
+	LackAny              []string `yaml:"lack_any"`
+	HaveSequence         []string `yaml:"have_sequence"`
+	HaveShortFlag        []string `yaml:"have_short_flag"`
+	NotHaveShortFlag     []string `yaml:"not_have_short_flag"`
+	HaveAllShortFlags    []string `yaml:"have_all_short_flags"`
+	NotHaveAllShortFlags []string `yaml:"not_have_all_short_flags"`
+	PositionalsLackAny   []string `yaml:"positionals_lack_any"`
 }
 
 type CommandMutation struct {
@@ -310,7 +312,8 @@ func validateCommand(cmd *CommandMutation, path validationPath) error {
 func validateWhenArguments(wa *WhenArguments, path validationPath) error {
 	if len(wa.FirstIs) == 0 && len(wa.FirstIn) == 0 && len(wa.HaveAny) == 0 &&
 		len(wa.LackAny) == 0 && len(wa.HaveSequence) == 0 && len(wa.HaveShortFlag) == 0 &&
-		len(wa.HaveAllShortFlags) == 0 &&
+		len(wa.NotHaveShortFlag) == 0 && len(wa.HaveAllShortFlags) == 0 &&
+		len(wa.NotHaveAllShortFlags) == 0 &&
 		len(wa.PositionalsLackAny) == 0 {
 		return ValidationError{Path: string(path), Message: "when_arguments must set at least one predicate"}
 	}

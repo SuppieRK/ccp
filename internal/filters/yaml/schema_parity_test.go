@@ -63,6 +63,16 @@ cases:
       have_all_short_flags: ['-l', '-R']
     passthrough: true
 `, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("valid negative short flag predicates", `
+version: 1
+filter: grep
+cases:
+  - id: explicit
+    when_arguments:
+      not_have_short_flag: ['-o']
+      not_have_all_short_flags: ['-H', '-o']
+    passthrough: true
+`, parityExpectation{schemaValid: true, parseValid: true}),
 		Entry("valid append_if_no_positionals command mutation", `
 version: 1
 filter: ls

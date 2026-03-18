@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: ls
-about: Compact long ls listings conservatively while leaving other ls shapes untouched
+about: Compact long ls listings while preserving explicit path roots, recursive section headers, and native precision modes like --dired and quoted-name output
 
 cases:
   - id: long_dired_passthrough

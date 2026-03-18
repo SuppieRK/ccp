@@ -39,7 +39,9 @@ var _ = Describe("Predicate helpers", func() {
 		Entry("MatchesLackAny", "MatchesLackAny", operations.MatchesLackAny([]string{"--watch"}, []string{"--scan"})),
 		Entry("MatchesHaveSequence", "MatchesHaveSequence", operations.MatchesHaveSequence([]string{"-m", "pytest", "-q"}, []string{"-m", "pytest"})),
 		Entry("MatchesHaveShortFlag", "MatchesHaveShortFlag", operations.MatchesHaveShortFlag([]string{"-it"}, []string{"-t"})),
+		Entry("MatchesNotHaveShortFlag", "MatchesNotHaveShortFlag", operations.MatchesNotHaveShortFlag([]string{"-it"}, []string{"-x"})),
 		Entry("MatchesHaveAllShortFlags", "MatchesHaveAllShortFlags", operations.MatchesHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})),
+		Entry("MatchesNotHaveAllShortFlags", "MatchesNotHaveAllShortFlags", operations.MatchesNotHaveAllShortFlags([]string{"-l"}, []string{"-l", "-R"})),
 		Entry("MatchesPositionalsLackAny", "MatchesPositionalsLackAny", operations.MatchesPositionalsLackAny([]string{"test", "--watch", "unit"}, []string{"e2e"})),
 	)
 
@@ -53,5 +55,13 @@ var _ = Describe("Predicate helpers", func() {
 
 	It("rejects missing required short flags when all are required", func() {
 		Expect(operations.MatchesHaveAllShortFlags([]string{"-l"}, []string{"-l", "-R"})).To(BeFalse())
+	})
+
+	It("rejects disallowed short flags when any are present", func() {
+		Expect(operations.MatchesNotHaveShortFlag([]string{"-it"}, []string{"-t"})).To(BeFalse())
+	})
+
+	It("rejects disallowed short flag sets when all are present together", func() {
+		Expect(operations.MatchesNotHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})).To(BeFalse())
 	})
 })

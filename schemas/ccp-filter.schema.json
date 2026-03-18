@@ -113,7 +113,13 @@
         "have_short_flag": {
           "$ref": "#/$defs/string_array"
         },
+        "not_have_short_flag": {
+          "$ref": "#/$defs/string_array"
+        },
         "have_all_short_flags": {
+          "$ref": "#/$defs/string_array"
+        },
+        "not_have_all_short_flags": {
           "$ref": "#/$defs/string_array"
         },
         "positionals_lack_any": {

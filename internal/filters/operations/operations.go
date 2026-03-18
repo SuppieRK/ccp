@@ -26,8 +26,16 @@ func MatchesHaveShortFlag(args, flags []string) bool {
 	return len(flags) == 0 || containsShortFlag(args, flags)
 }
 
+func MatchesNotHaveShortFlag(args, flags []string) bool {
+	return len(flags) == 0 || !containsShortFlag(args, flags)
+}
+
 func MatchesHaveAllShortFlags(args, flags []string) bool {
 	return len(flags) == 0 || containsAllShortFlags(args, flags)
+}
+
+func MatchesNotHaveAllShortFlags(args, flags []string) bool {
+	return len(flags) == 0 || !containsAllShortFlags(args, flags)
 }
 
 func MatchesPositionalsLackAny(args, disallowed []string) bool {
