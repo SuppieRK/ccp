@@ -102,9 +102,9 @@ Short benchmark receipts from CI:
 
 | Command | Scenario | Native tokens | CCP tokens | Savings |
 |---|---|---:|---:|---:|
-| `./gradlew build` | large generated-build failure | 22,917 | 1,132 | 95.06% |
-| `docker logs <container>` | noisy container logs | 1009 | 19 | 98.12% |
-| `cargo build` | failing build | 280 | 32 | 88.57% |
+| `./gradlew build` | large generated-build failure | 236 | 47 | 80.08% |
+| `./mvnw test` | successful test | 590 | 29 | 95.08% |
+| `cargo build` | failing build | 130 | 22 | 83.08% |
 
 ## Where It Helps Less
 
@@ -123,9 +123,9 @@ Short benchmark receipts where savings are limited on purpose:
 
 | Command | Scenario | Native tokens | CCP tokens | Savings |
 |---|---|---:|---:|---:|
-| `docker ps --format {{json .}}` | structured passthrough safety | 169 | 167 | 0.00% |
-| `find . -name *.go -type f` | small recursive code search | 202 | 171 | 15.35% |
-| `go test -count=1 ./...` | failing test run | 130 | 80 | 38.46% |
+| `go test -count=1 -json ./...` | structured passthrough safety | 2114 | 2114 | 0.00% |
+| `find . -name *.go -type f` | small recursive code search | 176 | 147 | 16.48% |
+| `go test -count=1 ./...` | failing test run | 109 | 63 | 42.20% |
 
 Results depend on command mix. Run `ccp gain` after real work to see both the wins and the weak spots in your own repo.
 
