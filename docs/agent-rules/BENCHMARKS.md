@@ -1,33 +1,48 @@
 # Agent Rule – Benchmarks
 
-## Scope
+## Fixture Model
 
-- Fixtures live under `testdata/benchmarks/<tool>/<case>-<invariant>/`.
-- Replay fixtures are directory-driven and use `command.yaml` plus optional `stdout.txt`, `stderr.txt`, `output.txt`, and `decisions.txt`.
-- `command.yaml` stores structured argv, and `stdout.txt` / `stderr.txt` keep sequenced `00000|` prefixes validated by `internal/replay`.
-- Assertions default to exact `output.txt` equality when `output.txt` exists and exact `decisions.txt` equality when `decisions.txt` exists.
+- Replay benchmark fixtures live under `testdata/benchmarks/<tool>/<case>/`.
+- A fixture is runnable when it contains `command.yaml`.
+- `command.yaml` stores argv and optional `exit_code`.
+- Fixture files are text-driven:
+  - optional `stdout.txt`
+  - optional `stderr.txt`
+  - optional `output.txt`
+  - optional `decisions.txt`
+- At least one of `stdout.txt`, `stderr.txt`, or `output.txt` must exist.
+- `stdout.txt` and `stderr.txt` use contiguous zero-based `00000|` prefixes enforced by `internal/replay`.
+- When present, `output.txt` and `decisions.txt` are exact expectations checked against `verify-output.txt` and `verify-decisions.txt`.
 
-## Expectations
+## Runner Model
 
-- Primary KPI: token-oriented metrics.
-- Replay benchmarks compute token counts from concatenated sequenced `stdout.txt` + `stderr.txt`.
-- Runtime artifacts MUST NOT be committed.
-- Use `ccp gain`, not just the harness summary, to judge compression results for a tool.
-- Highlight runs with no `gain.db` files or no meaningful compression result for the changed tool.
-- Corpus honesty matters as much as savings. Prefer widening fixtures with real output before making strong claims from tiny or toy scenarios.
-- `stdout.txt` and `stderr.txt` must start at `00000|` and remain contiguous; replay treats broken or one-based numbering as an error.
-- When a fixture drifts, prefer promoting the verified runtime output (`verify-output.txt`) or regenerating it with `ccp capture` instead of rewriting expected output from memory.
+- `cmd/ccp-ci` is a thin wrapper over `internal/benchmark.Run`.
+- The runner discovers fixture directories, copies each case into an artifact directory, and runs `ccp verify --dir <artifact-dir>`.
+- Native token count comes from merged sequenced `stdout.txt` + `stderr.txt`.
+- Proxy token count comes from `verify-output.txt`.
+- Per-case metrics are written to `<artifact-dir>/.ccp/gain.db`.
+- Read `ccp gain` from the case artifact directory, not from the parent benchmark directory.
 
-## Local Execution
+## Working Rules
 
-- Use `go build -o .bin/ccp ./cmd/ccp && PATH="$PWD/.bin:$PATH" go run ./cmd/ccp-ci -tool <tool> -artifacts-dir .artifacts/benchmark-<tool>` for tool-specific changes.
-- SHOULD run the benchmark before changing an existing tool filter when a local baseline is useful.
-- MUST run the benchmark after changing a tool filter or benchmarked execution behavior.
-- Treat any non-zero benchmark exit as a failure.
-- Compare before/after `ccp gain` output when a baseline exists.
+- Primary KPI: token-oriented compaction from real replay fixtures.
+- Corpus honesty matters as much as savings. Add boundary and passthrough cases, not just wins.
+- Prefer widening real corpus before redesigning a filter around tiny or toy fixtures.
+- When a fixture drifts, promote `verify-output.txt` / `verify-decisions.txt` or regenerate with `ccp capture` instead of rewriting expectations from memory.
+- Treat missing `gain.db`, missing `verify-output.txt`, output mismatches, decision mismatches, or any non-zero benchmark exit as failures to investigate.
+- Use `ccp gain`, not just the harness summary, to judge compression for the changed tool.
+- Benchmark logs or other user-defined output only when the intended result is native passthrough or the tool provides a safe structured mode.
 
-## Fixture Strategy
+## Local Verification
 
-- Add boundary fixtures, not just winning fixtures. Passthrough cases are valuable when they prove a filter is intentionally conservative.
-- Prefer real warning-bearing success, rich failure, and machine-mode examples over duplicated clean-success variants.
-- If a command family has user-defined content such as logs, benchmark it only when CCP is truly expected to leave it native or when the tool itself provides a safe structured mode.
+Run the benchmark-related Ginkgo/Gomega suites when changing replay fixtures, benchmark harness behavior, `ccp verify`, or tool filters:
+
+```bash
+go test -count=1 ./internal/benchmark ./cmd/ccp-ci ./internal/lifecycle
+```
+
+Full contributor validation remains:
+
+```bash
+./scripts/validate.sh
+```
