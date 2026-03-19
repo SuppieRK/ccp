@@ -22,7 +22,7 @@ BIN_NAME="ccp"
 PROFILE_NOTE="# added by ccp installer"
 REPAIR_CUTOFF_VERSION="0.5.1"
 curl_secure() {
-  curl --proto "=https" --tlsv1.2 -sSfL "$@"
+  curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-all-errors -sSfL "$@"
   return 0
 }
 
