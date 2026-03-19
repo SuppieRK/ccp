@@ -1,0 +1,95 @@
+cargo check: ok
+warning: unused import: `regex::Regex`
+ --> src/lint_cmd.rs:6:5
+  |
+6 | use regex::Regex;
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+warning: unused variable: `start`
+    |
+640 |             let start = i;
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+warning: constant `BILLION` is never used
+   |
+17 | const BILLION: f64 = 1e9;
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+warning: function `is_available` is never used
+118 | pub fn is_available() -> bool {
+warning: field `sequence_index` is never read
+11 | pub struct ExtractedCommand {
+21 |     pub sequence_index: usize,
+   = note: `ExtractedCommand` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: fields `line` and `column` are never read
+ 9 | struct Position {
+13 |     line: usize,
+14 |     #[serde(rename = "Column")]
+15 |     column: usize,
+   = note: `Position` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: field `text` is never read
+19 | struct Issue {
+23 |     text: String,
+   = note: `Issue` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: variant `WrongSyntax` is never constructed
+ --> src/learn/detector.rs:8:5
+5 | pub enum ErrorType {
+8 |     WrongSyntax,
+  = note: `ErrorType` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+warning: fields `line` and `message` are never read
+33 | struct PylintDiagnostic {
+40 |     line: usize,
+45 |     message: String,
+   = note: `PylintDiagnostic` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: methods `unwrap`, `tier`, `is_ok`, `map`, and `warnings` are never used
+30 | impl<T> ParseResult<T> {
+31 |     /// Unwrap the parsed data, panicking on Passthrough
+32 |     pub fn unwrap(self) -> T {
+41 |     pub fn tier(&self) -> u8 {
+50 |     pub fn is_ok(&self) -> bool {
+55 |     pub fn map<U, F>(self, f: F) -> ParseResult<U>
+67 |     pub fn warnings(&self) -> Vec<String> {
+warning: associated function `parse_with_tier` is never used
+76 | pub trait OutputParser: Sized {
+88 |     fn parse_with_tier(input: &str, max_tier: u8) -> ParseResult<Self::Output> {
+warning: enum `ParseError` is never used
+ --> src/parser/error.rs:5:10
+5 | pub enum ParseError {
+warning: struct `LintResult` is never constructed
+26 | pub struct LintResult {
+warning: struct `LintIssue` is never constructed
+36 | pub struct LintIssue {
+warning: enum `LintSeverity` is never used
+46 | pub enum LintSeverity {
+warning: struct `BuildOutput` is never constructed
+71 | pub struct BuildOutput {
+warning: struct `BundleInfo` is never constructed
+81 | pub struct BundleInfo {
+warning: struct `RouteInfo` is never constructed
+88 | pub struct RouteInfo {
+warning: struct `GitResult` is never constructed
+96 | pub struct GitResult {
+warning: struct `GitCommit` is never constructed
+105 | pub struct GitCommit {
+warning: struct `GenericOutput` is never constructed
+114 | pub struct GenericOutput {
+warning: fields `row` and `column` are never read
+ 9 | struct RuffLocation {
+10 |     row: usize,
+11 |     column: usize,
+   = note: `RuffLocation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: fields `message` and `location` are never read
+21 | struct RuffDiagnostic {
+22 |     code: String,
+23 |     message: String,
+24 |     location: RuffLocation,
+   = note: `RuffDiagnostic` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: methods `get_summary` and `get_recent` are never used
+224 | impl Tracker {
+491 |     pub fn get_summary(&self) -> Result<GainSummary> {
+854 |     pub fn get_recent(&self, limit: usize) -> Result<Vec<CommandRecord>> {
+warning: field `error_message` is never read
+971 | pub struct ParseFailureRecord {
+974 |     pub error_message: String,
+    = note: `ParseFailureRecord` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+warning: function `track` is never used
+     |
+1178 | pub fn track(original_cmd: &str, rtk_cmd: &str, input: &str, output: &str) {
+warning: `rtk` (bin "rtk") generated 26 warnings (run `cargo fix --bin "rtk" -p rtk` to apply 2 suggestions)

@@ -27,6 +27,7 @@ var (
 	upgradeHTTPClient     = &http.Client{Timeout: 30 * time.Second}
 	upgradeRuntimeOS      = func() string { return runtime.GOOS }
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
+	upgradeInstalledVer   = currentInstalledVersion
 	upgradeRunRepair      = runInstalledRepair
 )
 
@@ -98,6 +99,7 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err != nil {
 		return err
 	}
+	installedVersion, _ := upgradeInstalledVer(exePath)
 	backupPath, err := backupBinaryPath(exePath)
 	if err != nil {
 		return err
@@ -119,8 +121,10 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err := ensureUpgradeExecutablePermissions(exePath); err != nil {
 		return err
 	}
-	if err := upgradeRunRepair(exePath); err != nil {
-		return fmt.Errorf("run repair after upgrade: %w; restored previous binary; recommend running ccp restore", err)
+	if shouldRunLegacyRepair(installedVersion) {
+		if err := upgradeRunRepair(exePath); err != nil {
+			return fmt.Errorf("run repair after upgrade: %w; restored previous binary; recommend running ccp restore", err)
+		}
 	}
 	restoreBackup = false
 	return printUpgradeSuccess(exePath, assetName, tag)

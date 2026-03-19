@@ -1,0 +1,22 @@
+00000|SyntaxError: /workspace/src/repo-54/packages/playwright-mcp/tests/capabilities.spec.ts: Unexpected token, expected "," (17:22)
+00001|
+00002|  15 |  */
+00003|  16 |
+00004|> 17 | import { test, expect from './fixtures';
+00005|     |                       ^
+00006|  18 |
+00007|  19 | test('test snapshot tool list', async ({ client }) => {
+00008|  20 |   const { tools } = await client.listTools();
+00009|
+00010|   at capabilities.spec.ts:17
+00011|
+00012|  15 |  */
+00013|  16 |
+00014|> 17 | import { test, expect from './fixtures';
+00015|     |                      ^
+00016|  18 |
+00017|  19 | test('test snapshot tool list', async ({ client }) => {
+00018|  20 |   const { tools } = await client.listTools();
+00019|Error: No tests found.
+00020|Make sure that arguments are regular expressions matching test files.
+00021|You may need to escape symbols like "$" or "*" and quote the arguments.

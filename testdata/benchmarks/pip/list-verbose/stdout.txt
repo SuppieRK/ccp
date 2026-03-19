@@ -1,1 +1,107 @@
-00000|[{"name":"pip","version":"24.0","location":"testdata/tool-fixtures/pip/projects/basic/.venv/lib/python3.12/site-packages","installer":"pip"}]
+00000|Package              Version         Location                       Installer
+00001|-------------------- --------------- ------------------------------ ---------
+00002|argcomplete          3.1.4           /usr/lib/python3/dist-packages debian
+00003|attrs                23.2.0          /usr/lib/python3/dist-packages debian
+00004|Automat              22.10.0         /usr/lib/python3/dist-packages
+00005|Babel                2.10.3          /usr/lib/python3/dist-packages
+00006|bcrypt               3.2.2           /usr/lib/python3/dist-packages
+00007|blinker              1.7.0           /usr/lib/python3/dist-packages debian
+00008|build                1.0.3           /usr/lib/python3/dist-packages debian
+00009|CacheControl         0.14.0          /usr/lib/python3/dist-packages debian
+00010|certifi              2023.11.17      /usr/lib/python3/dist-packages
+00011|chardet              5.2.0           /usr/lib/python3/dist-packages debian
+00012|cleo                 2.1.0           /usr/lib/python3/dist-packages debian
+00013|click                8.1.6           /usr/lib/python3/dist-packages
+00014|cloud-init           25.3            /usr/lib/python3/dist-packages
+00015|colorama             0.4.6           /usr/lib/python3/dist-packages debian
+00016|command-not-found    0.3             /usr/lib/python3/dist-packages
+00017|configobj            5.0.8           /usr/lib/python3/dist-packages debian
+00018|constantly           23.10.4         /usr/lib/python3/dist-packages
+00019|crashtest            0.4.1           /usr/lib/python3/dist-packages
+00020|cryptography         41.0.7          /usr/lib/python3/dist-packages
+00021|dbus-python          1.3.2           /usr/lib/python3/dist-packages
+00022|distlib              0.3.8           /usr/lib/python3/dist-packages
+00023|distro               1.9.0           /usr/lib/python3/dist-packages debian
+00024|distro-info          1.7+build1      /usr/lib/python3/dist-packages
+00025|dulwich              0.21.6          /usr/lib/python3/dist-packages
+00026|fail2ban             1.0.2           /usr/lib/python3/dist-packages
+00027|fastimport           0.9.14          /usr/lib/python3/dist-packages
+00028|fastjsonschema       2.19.0          /usr/lib/python3/dist-packages debian
+00029|filelock             3.13.1          /usr/lib/python3/dist-packages debian
+00030|httplib2             0.20.4          /usr/lib/python3/dist-packages
+00031|hyperlink            21.0.0          /usr/lib/python3/dist-packages
+00032|idna                 3.6             /usr/lib/python3/dist-packages debian
+00033|importlib-metadata   4.12.0          /usr/lib/python3/dist-packages
+00034|incremental          22.10.0         /usr/lib/python3/dist-packages debian
+00035|installer            0.7.0           /usr/lib/python3/dist-packages debian
+00036|jaraco.classes       3.2.1           /usr/lib/python3/dist-packages
+00037|jeepney              0.8.0           /usr/lib/python3/dist-packages
+00038|Jinja2               3.1.2           /usr/lib/python3/dist-packages
+00039|jsonpatch            1.32            /usr/lib/python3/dist-packages
+00040|jsonpointer          2.0             /usr/lib/python3/dist-packages
+00041|jsonschema           4.10.3          /usr/lib/python3/dist-packages debian
+00042|keyring              24.3.1          /usr/lib/python3/dist-packages debian
+00043|launchpadlib         1.11.0          /usr/lib/python3/dist-packages
+00044|lazr.restfulclient   0.14.6          /usr/lib/python3/dist-packages
+00045|lazr.uri             1.0.6           /usr/lib/python3/dist-packages
+00046|lockfile             0.12.2          /usr/lib/python3/dist-packages
+00047|markdown-it-py       3.0.0           /usr/lib/python3/dist-packages debian
+00048|MarkupSafe           2.1.5           /usr/lib/python3/dist-packages
+00049|mdurl                0.1.2           /usr/lib/python3/dist-packages
+00050|more-itertools       10.2.0          /usr/lib/python3/dist-packages debian
+00051|msgpack              1.0.3           /usr/lib/python3/dist-packages
+00052|netifaces            0.11.0          /usr/lib/python3/dist-packages
+00053|oauthlib             3.2.2           /usr/lib/python3/dist-packages
+00054|packaging            24.0            /usr/lib/python3/dist-packages debian
+00055|pathspec             0.12.1          /usr/lib/python3/dist-packages debian
+00056|pexpect              4.9.0           /usr/lib/python3/dist-packages
+00057|pip                  24.0            /usr/lib/python3/dist-packages debian
+00058|pkginfo              1.9.6           /usr/lib/python3/dist-packages
+00059|platformdirs         4.2.0           /usr/lib/python3/dist-packages debian
+00060|poetry               1.8.2           /usr/lib/python3/dist-packages debian
+00061|poetry-core          1.9.0           /usr/lib/python3/dist-packages debian
+00062|poetry-plugin-export 1.6.0           /usr/lib/python3/dist-packages debian
+00063|ptyprocess           0.7.0           /usr/lib/python3/dist-packages
+00064|pyasn1               0.4.8           /usr/lib/python3/dist-packages
+00065|pyasn1-modules       0.2.8           /usr/lib/python3/dist-packages
+00066|pyasyncore           1.0.2           /usr/lib/python3/dist-packages
+00067|pycurl               7.45.3          /usr/lib/python3/dist-packages
+00068|Pygments             2.17.2          /usr/lib/python3/dist-packages debian
+00069|PyGObject            3.48.2          /usr/lib/python3/dist-packages
+00070|PyHamcrest           2.1.0           /usr/lib/python3/dist-packages debian
+00071|pyinotify            0.9.6           /usr/lib/python3/dist-packages
+00072|PyJWT                2.7.0           /usr/lib/python3/dist-packages debian
+00073|pylev                1.4.0           /usr/lib/python3/dist-packages
+00074|pyOpenSSL            23.2.0          /usr/lib/python3/dist-packages
+00075|pyparsing            3.1.1           /usr/lib/python3/dist-packages debian
+00076|pyproject_hooks      1.0.0           /usr/lib/python3/dist-packages debian
+00077|pyrsistent           0.20.0          /usr/lib/python3/dist-packages
+00078|pyserial             3.5             /usr/lib/python3/dist-packages
+00079|python-apt           2.7.7+ubuntu5.2 /usr/lib/python3/dist-packages
+00080|pytz                 2024.1          /usr/lib/python3/dist-packages
+00081|PyYAML               6.0.1           /usr/lib/python3/dist-packages debian
+00082|requests             2.31.0          /usr/lib/python3/dist-packages
+00083|requests-toolbelt    1.0.0           /usr/lib/python3/dist-packages
+00084|rich                 13.7.1          /usr/lib/python3/dist-packages debian
+00085|SecretStorage        3.3.3           /usr/lib/python3/dist-packages
+00086|service-identity     24.1.0          /usr/lib/python3/dist-packages debian
+00087|setuptools           68.1.2          /usr/lib/python3/dist-packages
+00088|shellingham          1.5.4           /usr/lib/python3/dist-packages debian
+00089|six                  1.16.0          /usr/lib/python3/dist-packages
+00090|systemd-python       235             /usr/lib/python3/dist-packages
+00091|toml                 0.10.2          /usr/lib/python3/dist-packages
+00092|tomlkit              0.12.4          /usr/lib/python3/dist-packages debian
+00093|trove-classifiers    2024.1.31       /usr/lib/python3/dist-packages debian
+00094|Twisted              24.3.0          /usr/lib/python3/dist-packages debian
+00095|typing_extensions    4.10.0          /usr/lib/python3/dist-packages debian
+00096|ubuntu-pro-client    8001            /usr/lib/python3/dist-packages
+00097|unattended-upgrades  0.1             /usr/lib/python3/dist-packages
+00098|urllib3              2.0.7           /usr/lib/python3/dist-packages debian
+00099|virtualenv           20.25.0+ds      /usr/lib/python3/dist-packages debian
+00100|wadllib              1.3.6           /usr/lib/python3/dist-packages
+00101|wheel                0.42.0          /usr/lib/python3/dist-packages debian
+00102|xmltodict            0.13.0          /usr/lib/python3/dist-packages
+00103|yamllint             1.33.0          /usr/lib/python3/dist-packages debian
+00104|yq                   3.1.0           /usr/lib/python3/dist-packages
+00105|zipp                 1.0.0           /usr/lib/python3/dist-packages debian
+00106|zope.interface       6.1             /usr/lib/python3/dist-packages

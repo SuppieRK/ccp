@@ -1,0 +1,6 @@
+/tmp/repo-44a/data/siteMetadata.js:4
+  author: 'Tails Azimuth',
+  ^^^^^^
+SyntaxError: Unexpected identifier 'author'
+    at [eval]:1:1
+Node.js v22.22.1

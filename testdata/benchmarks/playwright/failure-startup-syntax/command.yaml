@@ -1,0 +1,1 @@
+argv: ["./playwright", "test", "tests/capabilities.spec.ts", "-g", "test snapshot tool list", "--project=chrome", "--workers=1"]

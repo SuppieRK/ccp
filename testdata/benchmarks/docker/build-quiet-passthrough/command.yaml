@@ -1,0 +1,1 @@
+argv: ["docker", "build", "-q", "-t", "ccp-corpus-docker-build:latest", ".artifacts/docker-build-demo"]

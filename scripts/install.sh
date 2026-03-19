@@ -20,6 +20,7 @@ REPO="SuppieRK/ccp"
 VERSION="${VERSION:-latest}"
 BIN_NAME="ccp"
 PROFILE_NOTE="# added by ccp installer"
+REPAIR_CUTOFF_VERSION="0.5.1"
 curl_secure() {
   curl --proto "=https" --tlsv1.2 -sSfL "$@"
   return 0
@@ -37,6 +38,64 @@ need_cmd() {
 need_cmd uname
 need_cmd curl
 need_cmd unzip
+
+normalize_release_version() {
+  ver="$(printf '%s' "$1" | tr -d '\r\n')"
+  ver="${ver#v}"
+  ver="${ver%%-*}"
+  ver="${ver%%+*}"
+  case "$ver" in
+    ''|*[!0-9.]*) return 1 ;;
+  esac
+  printf '%s' "$ver"
+  return 0
+}
+
+version_lt_cutoff() {
+  ver="$(normalize_release_version "$1")" || return 1
+  cutoff="$(normalize_release_version "$REPAIR_CUTOFF_VERSION")" || return 1
+
+  old_ifs="$IFS"
+  IFS=.
+  set -- $ver
+  [ "$#" -eq 3 ] || return 1
+  ver_major="${1:-}" ver_minor="${2:-}" ver_patch="${3:-}"
+  set -- $cutoff
+  [ "$#" -eq 3 ] || return 1
+  cutoff_major="${1:-}" cutoff_minor="${2:-}" cutoff_patch="${3:-}"
+  IFS="$old_ifs"
+
+  case "$ver_major:$ver_minor:$ver_patch:$cutoff_major:$cutoff_minor:$cutoff_patch" in
+    *::*) return 1 ;;
+    *[!0-9:]*) return 1 ;;
+  esac
+
+  if [ "$ver_major" -lt "$cutoff_major" ]; then
+    return 0
+  fi
+  if [ "$ver_major" -gt "$cutoff_major" ]; then
+    return 1
+  fi
+  if [ "$ver_minor" -lt "$cutoff_minor" ]; then
+    return 0
+  fi
+  if [ "$ver_minor" -gt "$cutoff_minor" ]; then
+    return 1
+  fi
+  if [ "$ver_patch" -lt "$cutoff_patch" ]; then
+    return 0
+  fi
+  return 1
+}
+
+probe_installed_version() {
+  candidate="$1"
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    "$candidate" --version 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
 
 choose_install_dir() {
   if [ -w "/usr/local/bin" ]; then
@@ -176,6 +235,14 @@ else
   DST="$INSTALL_DIR/$BIN_NAME"
 fi
 
+PREVIOUS_VERSION=""
+if [ -x "$DST" ]; then
+  PREVIOUS_VERSION="$(probe_installed_version "$DST")"
+else
+  EXISTING_BIN="$(command -v "$BIN_NAME" 2>/dev/null || true)"
+  PREVIOUS_VERSION="$(probe_installed_version "$EXISTING_BIN")"
+fi
+
 if [ ! -f "$SRC" ]; then
   echo "archive did not contain expected binary: $SRC" >&2
   exit 1
@@ -194,17 +261,19 @@ install -m 0755 "$SRC" "$DST"
 update_path_if_needed "$INSTALL_DIR"
 echo "Installed $BIN_NAME $VERSION to $DST"
 
-if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
-  printf '%s\n' "$REPAIR_OUTPUT"
-else
-  case "$REPAIR_OUTPUT" in
-    *"executable file not found"*|*"not found"*|*"Usage:"*)
-      echo "Installed binary does not support 'ccp repair'; skipping managed state rewrite"
-      ;;
-    *)
-      printf '%s\n' "$REPAIR_OUTPUT" >&2
-      echo "ccp repair failed after install" >&2
-      exit 1
-      ;;
-  esac
+if version_lt_cutoff "$PREVIOUS_VERSION"; then
+  if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
+    printf '%s\n' "$REPAIR_OUTPUT"
+  else
+    case "$REPAIR_OUTPUT" in
+      *"executable file not found"*|*"not found"*|*"Usage:"*)
+        echo "Installed binary does not support 'ccp repair'; skipping managed state rewrite"
+        ;;
+      *)
+        printf '%s\n' "$REPAIR_OUTPUT" >&2
+        echo "ccp repair failed after install" >&2
+        exit 1
+        ;;
+    esac
+  fi
 fi

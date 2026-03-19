@@ -1,0 +1,2 @@
+argv: ["npm", "install"]
+exit_code: 1

@@ -1,0 +1,120 @@
+00000|[INFO] Scanning for projects...
+00001|[INFO] 
+00002|[INFO] ------------< org-41:repo-41 >------------
+00003|[INFO] Building repo-41 4.0.0-SNAPSHOT
+00004|[INFO]   from pom.xml
+00005|[INFO] --------------------------------[ jar ]---------------------------------
+00006|[INFO] 
+00007|[INFO] --- enforcer:3.6.2:enforce (enforce-java) @ repo-41 ---
+00008|[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireJavaVersion passed
+00009|[INFO] 
+00010|[INFO] --- spring-javaformat:0.0.47:validate (default) @ repo-41 ---
+00011|[INFO] 
+00012|[INFO] --- checkstyle:3.6.0:check (nohttp-checkstyle-validation) @ repo-41 ---
+00013|[INFO] You have 0 Checkstyle violations.
+00014|[INFO] 
+00015|[INFO] --- jacoco:0.8.14:prepare-agent (default) @ repo-41 ---
+00016|[INFO] argLine set to -javaagent:/home/user/.m2/repository/org/jacoco/org.jacoco.agent/0.8.14/org.jacoco.agent-0.8.14-runtime.jar=destfile=/workspace/src/repo-41/target/jacoco.exec
+00017|[INFO] 
+00018|[INFO] --- git-commit-id:9.0.2:revision (default) @ repo-41 ---
+00019|[INFO] dotGitDirectory '/workspace/src/repo-41/.git'
+00020|[INFO] Collected git.build.user.name with value Repo User
+00021|[INFO] Collected git.build.user.email with value user@example.com
+00022|[INFO] Collected git.branch with value main
+00023|[INFO] Collected git.commit.id.describe with value aaaaaaa-dirty
+00024|[INFO] Collected git.commit.id.describe-short with value aaaaaaa-dirty
+00025|[INFO] Collected git.commit.id with value aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+00026|[INFO] Collected git.commit.id.abbrev with value aaaaaaa
+00027|[INFO] Collected git.dirty with value true
+00028|[INFO] Collected git.commit.user.name with value Commit Author
+00029|[INFO] Collected git.commit.user.email with value author@example.com
+00030|[INFO] Collected git.commit.message.full with value Redacted commit subject
+00031|
+00032|Signed-off-by: Commit Author <author@example.com>
+00033|[INFO] Collected git.commit.message.short with value Redacted commit subject
+00034|[INFO] Collected git.commit.time with value 2026-03-11T08:09:31+01:00
+00035|[INFO] Collected git.commit.author.time with value 2026-03-07T18:53:21+01:00
+00036|[INFO] Collected git.commit.committer.time with value 2026-03-11T08:09:31+01:00
+00037|[INFO] Collected git.remote.origin.url with value https://github.com/org-41/repo-41.git
+00038|[INFO] Collected git.tags with value 
+00039|[INFO] Collected git.tag with value 
+00040|[INFO] Collected git.closest.tag.name with value 
+00041|[INFO] Collected git.closest.tag.commit.count with value 
+00042|[INFO] Collected git.total.commit.count with value 1
+00043|[INFO] Collected git.local.branch.ahead with value 0
+00044|[INFO] Collected git.local.branch.behind with value 0
+00045|[INFO] Collected git.build.time with value 2024-11-28T15:37:52+01:00
+00046|[INFO] Collected git.build.version with value 4.0.0-SNAPSHOT
+00047|[INFO] Collected git.build.host with value build-host
+00048|[INFO] including property 'git.tags' in results
+00049|[INFO] including property 'git.build.version' in results
+00050|[INFO] including property 'git.branch' in results
+00051|[INFO] including property 'git.build.host' in results
+00052|[INFO] including property 'git.commit.id' in results
+00053|[INFO] including property 'git.commit.user.email' in results
+00054|[INFO] including property 'git.local.branch.behind' in results
+00055|[INFO] including property 'git.commit.author.time' in results
+00056|[INFO] including property 'git.build.user.name' in results
+00057|[INFO] including property 'git.dirty' in results
+00058|[INFO] including property 'git.closest.tag.commit.count' in results
+00059|[INFO] including property 'git.commit.user.name' in results
+00060|[INFO] including property 'git.commit.id.abbrev' in results
+00061|[INFO] including property 'git.commit.id.describe-short' in results
+00062|[INFO] including property 'git.total.commit.count' in results
+00063|[INFO] including property 'git.commit.id.describe' in results
+00064|[INFO] including property 'git.build.user.email' in results
+00065|[INFO] including property 'git.commit.message.short' in results
+00066|[INFO] including property 'git.commit.committer.time' in results
+00067|[INFO] including property 'git.tag' in results
+00068|[INFO] including property 'git.closest.tag.name' in results
+00069|[INFO] including property 'git.local.branch.ahead' in results
+00070|[INFO] including property 'git.commit.time' in results
+00071|[INFO] including property 'git.build.time' in results
+00072|[INFO] including property 'git.commit.message.full' in results
+00073|[INFO] including property 'git.remote.origin.url' in results
+00074|[INFO] Reading existing properties file [/workspace/src/repo-41/target/classes/git.properties] (for project repo-41)...
+00075|[INFO] Writing properties file [/workspace/src/repo-41/target/classes/git.properties] (for project repo-41)...
+00076|[INFO] 
+00077|[INFO] --- spring-boot:4.0.3:build-info (default) @ repo-41 ---
+00078|[INFO] 
+00079|[INFO] --- cyclonedx:2.9.1:makeAggregateBom (default) @ repo-41 ---
+00080|[INFO] CycloneDX: Resolving Dependencies
+00081|[INFO] CycloneDX: Creating BOM version 1.6 with 108 component(s)
+00082|[INFO] CycloneDX: Writing and validating BOM (JSON): /workspace/src/repo-41/target/classes/META-INF/sbom/application.cdx.json
+00083|[WARNING] Unknown keyword meta:enum - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+00084|[WARNING] Unknown keyword deprecated - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+00085|[INFO]            attaching as repo-41-4.0.0-SNAPSHOT-cyclonedx.json
+00086|[INFO] 
+00087|[INFO] --- resources:3.3.1:resources (default-resources) @ repo-41 ---
+00088|[INFO] Copying 3 resources from src/main/resources to target/classes
+00089|[INFO] Copying 45 resources from src/main/resources to target/classes
+00090|[INFO] 
+00091|[INFO] --- compiler:3.14.1:compile (default-compile) @ repo-41 ---
+00092|[INFO] Recompiling the module because of changed source code.
+00093|[INFO] Compiling 30 source files with javac [debug parameters release 17] to target/classes
+00094|[INFO] -------------------------------------------------------------
+00095|[ERROR] COMPILATION ERROR : 
+00096|[INFO] -------------------------------------------------------------
+00097|[ERROR] /workspace/src/repo-41/src/main/java/org/springframework/samples/petclinic/owner/Owner.java:[70,24] cannot find symbol
+00098|  symbol:   variable missingAddressSymbol
+00099|  location: class org.springframework.samples.petclinic.owner.Owner
+00100|[INFO] 1 error
+00101|[INFO] -------------------------------------------------------------
+00102|[INFO] ------------------------------------------------------------------------
+00103|[INFO] BUILD FAILURE
+00104|[INFO] ------------------------------------------------------------------------
+00105|[INFO] Total time:  5.423 s
+00106|[INFO] Finished at: 2026-03-15T07:54:42+01:00
+00107|[INFO] ------------------------------------------------------------------------
+00108|[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project repo-41: Compilation failure
+00109|[ERROR] /workspace/src/repo-41/src/main/java/org/springframework/samples/petclinic/owner/Owner.java:[70,24] cannot find symbol
+00110|[ERROR]   symbol:   variable missingAddressSymbol
+00111|[ERROR]   location: class org.springframework.samples.petclinic.owner.Owner
+00112|[ERROR] 
+00113|[ERROR] -> [Help 1]
+00114|[ERROR] 
+00115|[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+00116|[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+00117|[ERROR] 
+00118|[ERROR] For more information about the errors and possible solutions, please read the following articles:
+00119|[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

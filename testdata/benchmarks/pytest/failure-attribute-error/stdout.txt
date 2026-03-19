@@ -1,0 +1,12 @@
+00000|F                                                                        [100%]
+00001|=================================== FAILURES ===================================
+00002|______________________ test_can_access_urllib3_attribute _______________________
+00003|
+00004|    def test_can_access_urllib3_attribute():
+00005|>       requests.packages.does_not_exist
+00006|E       AttributeError: module 'requests.packages' has no attribute 'does_not_exist'
+00007|
+00008|tests/test_packages.py:5: AttributeError
+00009|=========================== short test summary info ============================
+00010|FAILED tests/test_packages.py::test_can_access_urllib3_attribute - AttributeE...
+00011|1 failed in 0.01s

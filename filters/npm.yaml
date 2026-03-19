@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: npm
-about: Placeholder npm filter scaffold for YAML migration.
+about: Compact npm run wrapper output conservatively, trim low-value TAP harness noise, and keep npm install failures native.
 cases:
   - id: run
     when_arguments:
@@ -10,8 +10,18 @@ cases:
       combined:
         lines:
           skip:
+            - regex: '^$'
             - starts_with: "> "
             - regex: "^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*$"
+            - regex: '^TAP version \d+$'
+            - regex: '^  ---$'
+            - regex: '^  \.\.\.$'
+            - regex: '^  duration_ms: .+$'
+            - regex: "^  type: 'test'$"
+            - regex: '^# suites 0$'
+            - regex: '^# cancelled 0$'
+            - regex: '^# skipped 0$'
+            - regex: '^# todo 0$'
             - starts_with: "npm notice"
             - starts_with: "Done in "
             - starts_with: "info Visit https://yarnpkg.com"

@@ -1,0 +1,4 @@
+[0m[1m[31merror[0m: Uncaught (in promise) ReferenceError: notDefinedVar is not defined
+console.log(notDefinedVar)
+[0m[31m            ^[0m
+    at [0m[2m[38;5;245mfile:///tmp/deno-local-corpus/[0m[0m[36mmain.ts[0m:[0m[33m1[0m:[0m[33m13[0m

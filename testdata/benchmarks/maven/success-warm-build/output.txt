@@ -1,0 +1,12 @@
+repo-41 : enforce
+repo-41 : validate
+repo-41 : check
+repo-41 : prepare-agent
+repo-41 : revision
+repo-41 : build-info
+repo-41 : makeAggregateBom
+repo-41 : resources
+repo-41 : compile
+BUILD SUCCESS
+[WARNING] Unknown keyword meta:enum - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+[WARNING] Unknown keyword deprecated - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword

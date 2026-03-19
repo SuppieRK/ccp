@@ -2,41 +2,33 @@
 
 CCP filters are ordinary YAML files. You can inspect shipped filters, override them locally, and iterate on new filters without rebuilding CCP.
 
-## Architecture
+## Authoring Model
 
-- Runtime behavior is defined by authored YAML filters under `filters/` plus the invariant-enforcing Go runtime in `internal/`.
-- Local overrides and in-progress authoring live under `./.ccp/filters`, which takes precedence over `~/.config/ccp/filters` at runtime.
+- Built-in filters belong in `filters/<tool>.yaml`.
+- Wrapper or alias spellings belong in `filters/.mappings.yaml`.
+- Local iteration happens in `./.ccp/filters`.
+- Managed home-scoped filters live in `~/.config/ccp/filters`.
+- Release builds load `./.ccp/filters` first and `~/.config/ccp/filters` second.
+- Project-local filter definitions override home-scoped definitions with the same canonical filter id.
+- Project-local `.mappings.yaml` aliases override home-scoped aliases with the same key.
+- Shipped filters are embedded from `filters/` and materialized into `~/.config/ccp/filters` by `ccp repair` and startup maintenance. `ccp init` installs integrations; it does not own home filter materialization.
+
+Use the existing YAML DSL as-is whenever possible.
+
+- Be extremely hesitant to change the DSL.
+- If a concise implementation is not possible without a DSL change, stop and get explicit confirmation before changing it.
+- Keep authored behavior in YAML whenever the current runtime vocabulary can express it.
+- Put shared runtime behavior in `internal/filters`, `internal/engine`, or `internal/contracts`, not in bespoke per-tool Go filters.
+
+Family-level guidance:
+
 - Single-entity tools typically use one YAML file such as `filters/npm.yaml`.
-- Family tools should prefer one family YAML file such as `filters/git.yaml` when the commands share one logical behavior surface.
-- Direct-tool and wrapper-tool pairs with one logical behavior should prefer one canonical YAML filter and reuse it through `filters/.mappings.yaml`.
-- Shared runtime behavior belongs in the Go core under `internal/filters`, `internal/engine`, and `internal/contracts`, not in bespoke per-tool Go filters.
+- Family tools should prefer one YAML file when the commands share one logical behavior surface, for example `filters/git.yaml`.
+- Direct-tool and wrapper-tool pairs that intentionally share one logical behavior should prefer one canonical filter plus mappings.
 
-## Layout Guidance
+## Scaffolds, Schema, And Mappings
 
-- Keep authored behavior in YAML whenever the existing runtime vocabulary can express it.
-- Keep Go files responsibility-scoped, but do not force a strict one-file-per-tool rule where the runtime is clearer split across multiple files.
-- Put broadly reusable runtime behavior in `internal/filters/`, `internal/engine/`, or `internal/contracts/` based on scope.
-- Reuse existing shared helper files where they already exist, but avoid introducing new generic helper files unless the scope is clearly distinct and justified.
-
-## Active Filter Locations
-
-CCP uses two active filter scopes:
-
-- project scope: `./.ccp/filters`
-- home scope: `~/.config/ccp/filters`
-
-Precedence is:
-
-1. project scope
-2. home scope
-
-If both scopes define the same filter identity or mapping target, the project version wins.
-
-Shipped filters are materialized into `~/.config/ccp/filters` by `ccp init`, `ccp upgrade`, and `ccp repair`. CCP does not recreate or overwrite project-local filters during normal command execution.
-
-## Create A New Filter
-
-Generate a scaffold in the current project:
+Create a project-local scaffold with:
 
 ```bash
 ccp filter new my-tool
@@ -53,22 +45,20 @@ The scaffold includes:
 - a `yaml-language-server` schema directive
 - a valid passthrough-safe initial case
 
-## Schema Support
+Use project-local scaffolds first. Promote the finished result into `filters/<tool>.yaml` and `filters/.mappings.yaml` only when the behavior belongs in the shipped built-in set.
 
-The current authoring schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
+The current schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
 
-`ccp filter new` adds a `yaml-language-server` comment pointing at that schema so editors can offer validation and completion immediately.
+Schema notes:
 
-The JSON Schema is intentionally structural. Go validation remains authoritative for runtime-only rules such as:
+- the JSON Schema is structural
+- Go validation remains authoritative for runtime-only rules
+- examples include cross-field semantic checks, regex capture references, template references, and unsupported declared shapes
 
-- some cross-field semantic constraints
-- regex named-capture references
-- template variable references
-- runtime support gaps for declared-but-not-generically-supported fields
+Mappings live in:
 
-## Mappings
-
-`./.ccp/filters/.mappings.yaml` and `~/.config/ccp/filters/.mappings.yaml` map command spellings to canonical filter ids.
+- `./.ccp/filters/.mappings.yaml`
+- `~/.config/ccp/filters/.mappings.yaml`
 
 Typical use:
 
@@ -77,16 +67,31 @@ gradle: gradle
 gradlew: gradle
 ```
 
-Use mappings when:
+Mapping rules:
 
-- one YAML filter should serve wrapper and direct-tool spellings
-- the executable name does not match the canonical filter filename
+- keep mappings small and explicit
+- use them when one filter should serve multiple command spellings
+- a project-local alias can only bind to a filter that compiled successfully in `./.ccp/filters`
+- a home-scoped alias can only bind to a filter that compiled successfully in `~/.config/ccp/filters`
+- lower-priority aliases do not replace aliases that were already registered from a higher-priority source
+- broken mappings fall back safely to passthrough and are recorded in the audit log
 
-Keep mappings small and explicit. Ambiguous or broken mappings fall back safely to passthrough and are recorded in the audit log.
+## Workflow
 
-## Capture Workflow
+Recommended iteration loop:
 
-Capture a real command into the current directory:
+1. `ccp filter new my-tool`
+2. `ccp capture -- my-tool ...`
+3. edit `./.ccp/filters/my-tool.yaml`
+4. `ccp verify`
+5. compare `output.txt` with `verify-output.txt`
+6. inspect `verify-decisions.txt` when behavior is unclear
+
+If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local filter acts as the active override.
+
+### Capture
+
+Capture a real command with:
 
 ```bash
 ccp capture -- my-tool --flag value
@@ -99,21 +104,21 @@ Capture writes:
 - `stderr.txt`
 - `output.txt`
 
-Notes:
+Capture rules:
 
-- `stdout.txt` and `stderr.txt` use `00000|` sequence prefixes so replay preserves cross-stream ordering.
-- capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap `output.txt`.
-- non-zero exits still write artifacts so you can iterate on failures locally.
+- `stdout.txt` and `stderr.txt` use `00000|` sequence prefixes to preserve cross-stream ordering
+- capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap `output.txt`
+- non-zero exits still write artifacts so failures can be iterated locally
 
-## Verify Workflow
+### Verify
 
-Replay a captured fixture directory:
+Replay a captured fixture with:
 
 ```bash
 ccp verify
 ```
 
-Or:
+or:
 
 ```bash
 ccp verify --dir path/to/fixture
@@ -130,53 +135,46 @@ Verify writes:
 - `verify-output.txt`
 - `verify-decisions.txt`
 
-`verify-decisions.txt` is always generated and shows fixed-width replay decisions so you can see why lines were kept, replaced, skipped, or emitted synthetically.
+Verification rules:
 
-Missing `stdout.txt` or `stderr.txt` means that stream is empty. Broken sequence numbering is treated as an error.
+- missing `stdout.txt` or `stderr.txt` means that stream is empty
+- broken sequence numbering is an error
+- `verify-decisions.txt` is always generated and shows why lines were kept, replaced, skipped, or emitted synthetically
 
-## Restore Shipped Defaults
+### Repair
 
-To restore the managed home-level filter state:
+Restore the managed home-level filter state with:
 
 ```bash
 ccp repair
 ```
 
-Or for automation:
+or:
 
 ```bash
 ccp repair --yes
 ```
 
-`ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`.
+`ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`. It does not touch project-local `./.ccp/filters`.
 
-It does not touch project-local `./.ccp/filters`.
+## Authoring Guardrails
 
-## Suggested Iteration Loop
+- Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously unrepresentative.
+- Prefer one hypothesis at a time.
+- Use real command output whenever feasible, ideally from `ccp capture` or an existing research corpus that reflects native output.
+- Treat warning-bearing success paths as first-class behavior. Clean success fixtures alone are often misleading.
+- Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the current filter contract already defines normalization.
+- Be skeptical of table rewrites. Many native tables are already near the token floor.
+- Be skeptical of log compression. Tool-defined build/test output is often compressible; user application logs usually are not.
+- Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably not worth it.
+- Prefer promoting verified output from `verify-output.txt` or fresh `ccp capture` output instead of hand-editing expectations by guesswork.
 
-1. `ccp filter new my-tool`
-2. `ccp capture -- my-tool ...`
-3. edit `./.ccp/filters/my-tool.yaml`
-4. `ccp verify`
-5. compare `output.txt` with `verify-output.txt`
-6. inspect `verify-decisions.txt` when behavior is unclear
-
-## Spec Alignment
-
-- Family tools require one spec that covers the shared entity behavior.
-- Spec-fixture directory names MUST match spec IDs.
-- When specs change, update the matching YAML benchmark coverage under `testdata/benchmarks/`.
-
-## Benchmark Coverage
+## Benchmark And Test Alignment
 
 - Follow `docs/agent-rules/BENCHMARKS.md` for benchmark workflow and expectations.
+- Follow `docs/agent-rules/TESTING.md` for test-layer selection and placement rules.
 - New filters MUST add benchmark fixtures under `testdata/benchmarks/<tool>/`.
 - Existing filters with behavior changes MUST update benchmark coverage for the changed behavior.
 - Family filters should keep sibling replay fixture directories under the family benchmark root, each with `command.yaml` and any required replay artifacts.
-- For built-in filters contributed to the repository, keep authored YAML under `filters/` and replay fixtures under `testdata/benchmarks/<tool>/`.
-
-## Runner Test Coverage
-
-- Follow `docs/agent-rules/TESTING.md` for test-layer selection and generic placement rules.
-- New runtime/filter features MUST add command-specific or runtime-specific coverage in the narrowest relevant package, and shared planner/runtime helpers should live in shared test helper files instead of one helper per tool.
-- Existing filters with planning or runtime behavior changes MUST update those tests alongside YAML fixtures.
+- Benchmark verification is exercised through the benchmark-related Ginkgo/Gomega suites rather than a separate manual `ccp-ci` workflow.
+- New runtime/filter features MUST add command-specific or runtime-specific coverage in the narrowest relevant package.

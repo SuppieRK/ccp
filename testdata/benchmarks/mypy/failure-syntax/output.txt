@@ -1,0 +1,2 @@
+test-data/packages/typedpkg/typedpkg/pkg/aaa.py:
+  L1 [syntax] Expected ':'

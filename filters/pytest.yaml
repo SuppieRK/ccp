@@ -1,19 +1,23 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: pytest
-about: Placeholder pytest filter scaffold for YAML migration.
+about: Compact quiet pytest summaries, preserve reusable failure and error loci, and trim assertion, setup, collection, and mixed-status noise without forcing traceback-mode rewrites.
 cases:
   - id: default
     compress_output:
       combined:
         lines:
+          skip:
+            - regex: '^[.FEsxX ]+ +\[[0-9]+%\]$'
           replace:
             - regex: '^(\d+) passed in .*$'
-              to: 'pytest: $1 passed'
+              to: '$1 passed'
             - regex: '^no tests ran in .*$'
-              to: 'pytest: no tests collected'
+              to: 'no tests ran'
             - regex: '^(\d+) failed in .*$'
-              to: 'pytest: $1 failed'
+              to: '$1 failed'
+            - regex: '^=+\s*(.+?)\s+in .+\s*=+$'
+              to: '$1'
         groups:
           - id: failures
             starts_with: '=================================== FAILURES'
@@ -22,24 +26,40 @@ cases:
             lines:
               keep:
                 - contains: 'AssertionError:'
-                - starts_with: 'tests/'
+                - regex: '^(?:tests/|test_).+:\d+: .+$'
                 - contains: 'Captured stdout call'
               replace:
                 - regex: '^_+\s+(.*?)\s+_+$'
                   to: '- $1'
-                - regex: '^E\s+AssertionError:\s+(.+)$'
-                  to: '  AssertionError: $1'
-                - regex: '^(tests/.+)$'
-                  to: '  $1'
                 - regex: '^captured stdout call$'
                   to: '  captured stdout call'
-          - id: short_summary
-            starts_with: '=========================== short test summary info'
+          - id: errors
+            starts_with: '==================================== ERRORS'
             initially:
-              print: 'failed tests:'
+              print: 'error details:'
+            lines:
+              keep:
+                - regex: '^_+\s+ERROR .+\s+_+$'
+                - regex: '^E\s+.+$'
+                - regex: '^(?:tests/|test_).+:\d+: .+$'
+              replace:
+                - regex: '^_+\s+(ERROR .+)\s+_+$'
+                  to: '- $1'
+                - regex: '^E\s+(.+)$'
+                  to: '$1'
+                - regex: '^(?:(?:tests/|test_).+:\d+: .+)$'
+                  to: '$1'
+          - id: short_summary
+            starts_with_regex: '^=+\s+short test summary info\s+=+$'
+            initially:
+              print: 'summary:'
             lines:
               keep:
                 - starts_with: 'FAILED '
+                - starts_with: 'ERROR '
+                - starts_with: 'SKIPPED '
+                - starts_with: 'XFAIL '
+                - starts_with: 'XPASS '
               replace:
-                - regex: '^FAILED\s+(.+)$'
-                  to: '- $1'
+                - regex: '^(FAILED|ERROR|SKIPPED|XFAIL|XPASS)\s+(.+)$'
+                  to: '$1 $2'

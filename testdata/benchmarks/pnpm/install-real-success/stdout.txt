@@ -1,0 +1,53 @@
+00000|Lockfile is up to date, resolution step is skipped
+00001|Progress: resolved 1, reused 0, downloaded 0, added 0
+00002|Packages: +306
+00003|++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+00004|Progress: resolved 306, reused 306, downloaded 0, added 306, done
+00005|
+00006|dependencies:
+00007|+ @inquirer/core 10.2.2
+00008|+ @inquirer/prompts 7.8.0
+00009|+ chalk 5.5.0
+00010|+ commander 14.0.0
+00011|+ fast-glob 3.3.3
+00012|+ ora 8.2.0
+00013|+ posthog-node 5.20.0
+00014|+ yaml 2.8.2
+00015|+ zod 4.0.17
+00016|
+00017|devDependencies:
+00018|+ @changesets/changelog-github 0.5.2
+00019|+ @changesets/cli 2.29.6
+00020|+ @types/node 24.2.0
+00021|+ @vitest/ui 3.2.4
+00022|+ eslint 9.39.2
+00023|+ typescript 5.9.3
+00024|+ typescript-eslint 8.50.1
+00025|+ vitest 3.2.4
+00026|
+00027|
+00028|> @fission-ai/openspec@1.2.0 postinstall /workspace/src/repo-55
+00029|> node scripts/postinstall.js
+00030|
+00031|
+00032|> @fission-ai/openspec@1.2.0 prepare /workspace/src/repo-55
+00033|> pnpm run build
+00034|
+00035|
+00036|> @fission-ai/openspec@1.2.0 build /workspace/src/repo-55
+00037|> node build.js
+00038|
+00039|🔨 Building OpenSpec...
+00040|
+00041|Compiling TypeScript...
+00042|Version 5.9.3
+00043|
+00044|✅ Build completed successfully!
+00045|╭ Warning ─────────────────────────────────────────────────────────────────────╮
+00046|│                                                                              │
+00047|│   Ignored build scripts: esbuild@0.25.8.                                     │
+00048|│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+00049|│   to run scripts.                                                            │
+00050|│                                                                              │
+00051|╰──────────────────────────────────────────────────────────────────────────────╯
+00052|Done in 2.3s using pnpm v10.30.3

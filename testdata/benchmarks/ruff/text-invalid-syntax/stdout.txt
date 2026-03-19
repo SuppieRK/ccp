@@ -1,0 +1,17 @@
+00003|invalid-syntax: Expected a parameter or the end of the parameter list
+00004| --> src/requests/_ruff_corpus_broken.py:1:12
+00005|  |
+00006|1 | def broken(:
+00007|  |            ^
+00008|2 |     pass
+00009|  |
+00010|
+00011|invalid-syntax: Expected `)`, found newline
+00012| --> src/requests/_ruff_corpus_broken.py:1:13
+00013|  |
+00014|1 | def broken(:
+00015|  |             ^
+00016|2 |     pass
+00017|  |
+00018|
+00019|Found 2 errors.

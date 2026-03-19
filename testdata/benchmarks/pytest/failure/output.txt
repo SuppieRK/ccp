@@ -4,5 +4,5 @@ E       AssertionError: assert {'ok': False} == {'ok': True}
 tests/test_app.py:10: AssertionError
 ----------------------------- Captured stdout call -----------------------------
   captured stdout call
-failed tests:
+summary:
 FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...

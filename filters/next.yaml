@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
-filter: next-build
-about: Compact Next.js build output conservatively.
+filter: next
+about: Compact Next.js build output conservatively, keep config-load failures native, preserve actionable compile diagnostics, and retain a compact route/build summary on success.
 
 cases:
   - id: build_summary
@@ -11,18 +11,46 @@ cases:
       combined:
         lines:
           keep:
-            - regex: '^\.\/app\/page\.tsx$'
+            - regex: '^\s*▲ Next\.js .+$'
+            - contains: 'DeprecationWarning:'
+            - starts_with: '(Use `node --trace-deprecation'
+            - starts_with: 'Local search index generated'
+            - regex: '^Generated \d+ documents in \.contentlayer$'
+            - regex: '^\s*⚠ .+$'
+            - regex: '^\s*⨯ Failed to load next\.config\.js.+$'
+            - regex: '^> Build error occurred$'
+            - regex: '^\[Error: .+$'
+            - regex: '^Require stack:$'
+            - regex: '^- .+$'
+            - regex: "^  code: '.+',$"
+            - regex: '^  requireStack: \[Array\]$'
+            - regex: '^}$'
+            - regex: '^Failed to compile\.$'
+            - regex: '^\.\/.+$'
             - regex: '^Error: .+$'
+            - regex: '^\s*,-\[.+:\d+:\d+\]$'
+            - regex: '^\s*\d+\s*\| .+$'
+            - regex: '^\s*: .+\^.*$'
+            - regex: '^\s*`----$'
+            - contains: 'Unexpected eof'
+            - regex: '^Caused by:$'
+            - regex: '^\s+Syntax Error$'
+            - regex: '^Import trace for requested module:$'
+            - regex: '^> Build failed because of webpack errors$'
+            - regex: '^Route \(app\).+$'
+            - regex: '^[┌├└]\s+[○●ƒ] .+$'
+            - regex: '^\+ First Load JS shared by all.+$'
+            - regex: '^[○●ƒ]  \(.+\).+$'
           replace:
             - regex: '^Build already optimized using cache$'
               to: 'next build: cached'
             - regex: '^Failed to compile\.$'
               to: "next build: failed\nFailed to compile."
-            - regex: '^✓ Built in .+$'
-              to: 'next build: success'
-            - regex: '^├ .+ (/[^ ]*)\s+.+$'
-              to: 'route: $1'
-            - regex: '^└ .+ (/[^ ]*)\s+.+$'
-              to: 'route: $1'
-            - regex: '^✓ Compiled successfully$'
-              to: 'routes: 2 total'
+            - regex: '^Generated (\d+) documents in \.contentlayer$'
+              to: 'contentlayer: $1 docs'
+            - regex: '^\s*✓ Compiled successfully in .+$'
+              to: 'next build: compiled'
+            - regex: '^\s*✓ Generating static pages \(\d+/\d+\)$'
+              to: 'next build: static pages ready'
+            - regex: '^[┌├└]\s+([○●ƒ])\s+(/[^ ]*).*$'
+              to: '$1 $2'

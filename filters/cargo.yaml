@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: cargo
-about: Compact cargo build, check, test, and clippy through one family filter.
+about: Compact cargo build, check, test, and clippy while preserving failure loci and warning-bearing success output that still matters for follow-up work.
 
 cases:
   - id: build
@@ -11,8 +11,13 @@ cases:
       stderr:
         lines:
           keep:
+            - regex: '^warning: .+$'
             - regex: '^error\[[A-Z0-9]+\]: .+$'
             - regex: '^ --> .+$'
+            - regex: '^ {2,}\|$'
+            - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^ {0,}= note: .+$'
+            - regex: '^ {0,}= help: .+$'
           replace:
             - regex: '^\s*Finished .+$'
               to: 'cargo build: ok'
@@ -28,8 +33,13 @@ cases:
       stderr:
         lines:
           keep:
+            - regex: '^warning: .+$'
             - regex: '^error\[[A-Z0-9]+\]: .+$'
             - regex: '^ --> .+$'
+            - regex: '^ {2,}\|$'
+            - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^ {0,}= note: .+$'
+            - regex: '^ {0,}= help: .+$'
           replace:
             - regex: '^\s*Finished .+$'
               to: 'cargo check: ok'
@@ -45,9 +55,15 @@ cases:
       stdout:
         lines:
           keep:
+            - regex: '^warning: .+$'
             - regex: '^thread .+ panicked at .+$'
             - regex: '^assertion `left == right` failed$'
             - regex: '^\s+(left|right): .+$'
+            - regex: '^ --> .+$'
+            - regex: '^ {2,}\|$'
+            - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^ {0,}= note: .+$'
+            - regex: '^ {0,}= help: .+$'
           replace:
             - regex: '^test result: ok\. ([0-9]+) passed; ([0-9]+) failed; ([0-9]+) ignored; .+$'
               to: 'cargo test: ok ($1 passed, $2 failed, $3 ignored)'
@@ -70,8 +86,11 @@ cases:
       stderr:
         lines:
           keep:
+            - regex: '^warning: .+$'
             - regex: '^error: [^`]+$'
             - regex: '^ --> .+$'
+            - regex: '^ {2,}\|$'
+            - regex: '^ {0,}\d+ \| .+$'
             - regex: '^  = note: .+$'
             - regex: '^  = help: .+$'
           replace:

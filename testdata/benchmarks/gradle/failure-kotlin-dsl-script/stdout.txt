@@ -1,0 +1,64 @@
+00000|
+00001|> Configure project :plugin
+00002|Inferred project: ktlint-gradle, version: 14.3.0-dev.0.uncommitted+4f887d2
+00003|Publishing key or secret was null
+00004|GitHub key was null
+00005|Type-safe project accessors is an incubating feature.
+00006|
+00007|> Task :plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00008|> Task :plugin:compileKotlin UP-TO-DATE
+00009|> Task :plugin:compileJava NO-SOURCE
+00010|> Task :plugin:pluginDescriptors UP-TO-DATE
+00011|> Task :plugin:processResources UP-TO-DATE
+00012|> Task :plugin:classes UP-TO-DATE
+00013|> Task :plugin:jar UP-TO-DATE
+00014|> Task :plugin:shadowJar UP-TO-DATE
+00015|
+00016|> Configure project :
+00017|5 actionable tasks: 5 up-to-date
+00018|
+00019|Publishing Build Scan to Develocity...
+00020|https://gradle.com/s/jyg5adam2tptc
+00021|
+00022|WARNING: A restricted method in java.lang.System has been called
+00023|WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.1.0-bin/9agqghryom9wkf8r80qlhnts3/gradle-9.1.0/lib/native-platform-0.22-milestone-28.jar)
+00024|WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+00025|WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+00026|
+00027|e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:9: Unresolved reference 'not'.
+00028|e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:13: Unresolved reference 'valid'.
+00029|e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:26: Function invocation 'build(...)' expected.
+00030|e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:32: Unresolved reference 'script'.
+00031|e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:39: Unresolved reference 'syntax'.
+00032|
+00033|FAILURE: Build failed with an exception.
+00034|
+00035|* Where:
+00036|Build file '/tmp/ktlint-gradle-corpus/build.gradle.kts' line: 28
+00037|
+00038|* What went wrong:
+00039|Script compilation errors:
+00040|
+00041|  Line 28: this is not valid kotlin build script syntax
+00042|                   ^ Unresolved reference 'not'.
+00043|
+00044|  Line 28: this is not valid kotlin build script syntax
+00045|                       ^ Unresolved reference 'valid'.
+00046|
+00047|  Line 28: this is not valid kotlin build script syntax
+00048|                                    ^ Function invocation 'build(...)' expected.
+00049|
+00050|  Line 28: this is not valid kotlin build script syntax
+00051|                                          ^ Unresolved reference 'script'.
+00052|
+00053|  Line 28: this is not valid kotlin build script syntax
+00054|                                                 ^ Unresolved reference 'syntax'.
+00055|
+00056|5 errors
+00057|
+00058|* Try:
+00059|> Run with --stacktrace option to get the stack trace.
+00060|> Run with --info or --debug option to get more log output.
+00061|> Get more help at https://help.gradle.org.
+00062|
+00063|BUILD FAILED in 717ms

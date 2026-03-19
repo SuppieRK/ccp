@@ -1,6 +1,6 @@
 version: 1
 filter: pip
-about: Compact pip list output while preserving structured and passthrough modes.
+about: Compact common read-only pip package inventory tables, keep terse failures and package metadata native, and preserve literal or structured modes when fidelity matters more than savings.
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 
 cases:
@@ -17,19 +17,88 @@ cases:
         - --format=freeze
     passthrough: true
 
-  - id: list_verbose
+  - id: list_outdated
+    variables:
+      - name: packages
+        type: number
+        initial_value: '0'
     when_arguments:
-      have_sequence:
-        - list
-        - --verbose
-    normalize_command:
-      append_if_missing:
+      first_is: list
+      have_any:
+        - --outdated
+      lack_any:
+        - --format
         - --format=json
+        - --format=freeze
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^Package\s+Version\s+Latest\s+Type$'
+            - regex: '^-+\s+-+\s+-+\s+-+$'
+          replace:
+            - regex: '^(\S+)\s+([0-9][^\s]*)\s+([0-9][^\s]*)\s+\S+$'
+              to: '  $1 ($2 -> $3)'
+              on_match:
+                - variable: packages
+                  increment: 1
+    finally:
+      print: 'pip outdated: {{packages}} packages'
+
+  - id: list_default
+    variables:
+      - name: packages
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: list
+      lack_any:
+        - --format
+        - --format=freeze
+        - --format=json
+        - --verbose
+        - --outdated
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^Package\s+Version$'
+            - regex: '^-+\s+-+$'
+          replace:
+            - regex: '^(\S+)\s+([0-9][^\s]*)$'
+              to: '  $1 ($2)'
+              on_match:
+                - variable: packages
+                  increment: 1
+    finally:
+      print: 'pip list: {{packages}} packages'
+
+  - id: list_verbose
+    variables:
+      - name: packages
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: list
+      have_any:
+        - --verbose
+      lack_any:
+        - --format
+        - --format=json
+        - --format=freeze
+        - --outdated
     compress_output:
       combined:
         lines:
           skip:
             - starts_with: 'DEBUG '
+            - regex: '^Package\s+Version\s+Location\s+Installer$'
+            - regex: '^-+\s+-+\s+-+\s+-+$'
           replace:
-            - regex: '^\[\{"name":\s*"([^"]+)",\s*"version":\s*"([^"]+)".*\}\]$'
-              to: "pip list: 1 packages\n  $1 ($2)"
+            - regex: '^(\S+)\s+([0-9][^\s]*)\s+.+$'
+              to: '  $1 ($2)'
+              on_match:
+                - variable: packages
+                  increment: 1
+    finally:
+      print: 'pip list: {{packages}} packages'

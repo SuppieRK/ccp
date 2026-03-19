@@ -1,5 +1,0 @@
-▲ Next.js 15.2.0
-Creating an optimized production build ...
-Failed to compile.
-./app/page.tsx
-Error: Missing required export

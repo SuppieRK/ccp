@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: node
-about: Compact Node.js warnings and runtime failures conservatively.
+about: Compact repeated Node.js warnings and trim loader-boilerplate from safe `node -p` failure stacks while keeping broader runtime failures native.
 
 cases:
   - id: warning_dedupe
@@ -14,3 +14,20 @@ cases:
             - contains: "ExperimentalWarning:"
             - starts_with: "(Use `node --trace-warnings"
             - regex: '^application payload$'
+
+  - id: eval_loader_stack_trim
+    when_arguments:
+      have_any: ["-p"]
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^    at wrapSafe \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at Module\._compile \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at Object\.\.js \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at Module\.load \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at Function\._load \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at TracingChannel\.traceSync \(node:diagnostics_channel:\d+:\d+\)$'
+            - regex: '^    at wrapModuleLoad \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at Module\.require \(node:internal/modules/cjs/loader:\d+:\d+\)$'
+            - regex: '^    at require \(node:internal/modules/helpers:\d+:\d+\)$'

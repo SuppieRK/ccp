@@ -1,0 +1,3360 @@
+00000|    Checking grep-matcher v0.1.8 (/workspace/src/repo-06/crates/matcher)
+00001|   Compiling ripgrep v15.1.0 (/workspace/src/repo-06)
+00002|    Checking globset v0.4.18 (/workspace/src/repo-06/crates/globset)
+00003|warning: can be more succinctly written as a byte str
+00004|   --> crates/matcher/src/lib.rs:253:40
+00005|    |
+00006|253 |             LineTerminatorImp::CRLF => &[b'\r', b'\n'],
+00007|    |                                        ^^^^^^^^^^^^^^^ help: try: `b"\r\n"`
+00008|    |
+00009|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#byte_char_slices
+00010|    = note: `#[warn(clippy::byte_char_slices)]` on by default
+00011|
+00012|warning: this `map_or` can be simplified
+00013|  --> crates/matcher/src/interpolate.rs:31:12
+00014|   |
+00015|31 |         if replacement.get(1).map_or(false, |&b| b == b'$') {
+00016|   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00017|   |
+00018|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00019|   = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+00020|help: use is_some_and instead
+00021|   |
+00022|31 -         if replacement.get(1).map_or(false, |&b| b == b'$') {
+00023|31 +         if replacement.get(1).is_some_and(|&b| b == b'$') {
+00024|   |
+00025|
+00026|warning: this `map_or` can be simplified
+00027|   --> crates/matcher/src/interpolate.rs:109:11
+00028|    |
+00029|109 |     while replacement.get(cap_end).map_or(false, is_valid_cap_letter) {
+00030|    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00031|    |
+00032|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00033|help: use is_some_and instead
+00034|    |
+00035|109 -     while replacement.get(cap_end).map_or(false, is_valid_cap_letter) {
+00036|109 +     while replacement.get(cap_end).is_some_and(is_valid_cap_letter) {
+00037|    |
+00038|
+00039|warning: this `map_or` can be simplified
+00040|   --> crates/matcher/src/interpolate.rs:122:13
+00041|    |
+00042|122 |         if !replacement.get(cap_end).map_or(false, |&b| b == b'}') {
+00043|    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00044|    |
+00045|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00046|help: use is_some_and instead
+00047|    |
+00048|122 -         if !replacement.get(cap_end).map_or(false, |&b| b == b'}') {
+00049|122 +         if !replacement.get(cap_end).is_some_and(|&b| b == b'}') {
+00050|    |
+00051|
+00052|warning: match expression looks like `matches!` macro
+00053|   --> crates/matcher/src/interpolate.rs:139:5
+00054|    |
+00055|139 | /     match *b {
+00056|140 | |         b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' => true,
+00057|141 | |         _ => false,
+00058|142 | |     }
+00059|    | |_____^ help: try: `matches!(*b, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_')`
+00060|    |
+00061|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_like_matches_macro
+00062|    = note: `#[warn(clippy::match_like_matches_macro)]` on by default
+00063|
+00064|warning: name `CRLF` contains a capitalized acronym
+00065|   --> crates/matcher/src/lib.rs:205:5
+00066|    |
+00067|205 |     CRLF,
+00068|    |     ^^^^ help: consider making the acronym lowercase, except the initial letter: `Crlf`
+00069|    |
+00070|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#upper_case_acronyms
+00071|    = note: `#[warn(clippy::upper_case_acronyms)]` on by default
+00072|
+00073|warning: this `map_or` can be simplified
+00074|   --> crates/matcher/src/lib.rs:264:9
+00075|    |
+00076|264 |         slice.last().map_or(false, |&b| b == self.as_byte())
+00077|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00078|    |
+00079|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00080|help: use is_some_and instead
+00081|    |
+00082|264 -         slice.last().map_or(false, |&b| b == self.as_byte())
+00083|264 +         slice.last().is_some_and(|&b| b == self.as_byte())
+00084|    |
+00085|
+00086|warning: manual implementation of an assign operation
+00087|  --> crates/globset/src/fnv.rs:26:13
+00088|   |
+00089|26 |             self.0 = self.0 ^ u64::from(byte);
+00090|   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace it with: `self.0 ^= u64::from(byte)`
+00091|   |
+00092|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assign_op_pattern
+00093|   = note: `#[warn(clippy::assign_op_pattern)]` on by default
+00094|
+00095|warning: you should consider adding a `Default` implementation for `NoCaptures`
+00096|   --> crates/matcher/src/lib.rs:473:5
+00097|    |
+00098|473 | /     pub fn new() -> NoCaptures {
+00099|474 | |         NoCaptures(())
+00100|475 | |     }
+00101|    | |_____^
+00102|    |
+00103|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+00104|    = note: `#[warn(clippy::new_without_default)]` on by default
+00105|help: try adding this
+00106|    |
+00107|470 + impl Default for NoCaptures {
+00108|471 +     fn default() -> Self {
+00109|472 +         Self::new()
+00110|473 +     }
+00111|474 + }
+00112|    |
+00113|
+00114|warning: the following explicit lifetimes could be elided: 'a
+00115|    --> crates/matcher/src/lib.rs:1133:6
+00116|     |
+00117|1133 | impl<'a, M: Matcher> Matcher for &'a M {
+00118|     |      ^^                           ^^
+00119|     |
+00120|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+00121|     = note: `#[warn(clippy::needless_lifetimes)]` on by default
+00122|help: elide the lifetimes
+00123|     |
+00124|1133 - impl<'a, M: Matcher> Matcher for &'a M {
+00125|1133 + impl<M: Matcher> Matcher for &M {
+00126|     |
+00127|
+00128|warning: accessing first element with `self.tokens.get(0)`
+00129|   --> crates/globset/src/glob.rs:357:28
+00130|    |
+00131|357 |         let start = match *self.tokens.get(0)? {
+00132|    |                            ^^^^^^^^^^^^^^^^^^ help: try: `self.tokens.first()`
+00133|    |
+00134|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#get_first
+00135|    = note: `#[warn(clippy::get_first)]` on by default
+00136|
+00137|warning: accessing first element with `self.tokens.get(0)`
+00138|   --> crates/globset/src/glob.rs:467:38
+00139|    |
+00140|467 |         let (start, entire) = match *self.tokens.get(0)? {
+00141|    |                                      ^^^^^^^^^^^^^^^^^^ help: try: `self.tokens.first()`
+00142|    |
+00143|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#get_first
+00144|
+00145|warning: accessing first element with `self.tokens.get(0)`
+00146|   --> crates/globset/src/glob.rs:514:28
+00147|    |
+00148|514 |         let start = match *self.tokens.get(0)? {
+00149|    |                            ^^^^^^^^^^^^^^^^^^ help: try: `self.tokens.first()`
+00150|    |
+00151|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#get_first
+00152|
+00153|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00154|   --> crates/globset/src/glob.rs:581:19
+00155|    |
+00156|581 |             glob: &self.glob,
+00157|    |                   ^^^^^^^^^^ help: change this to: `self.glob`
+00158|    |
+00159|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00160|    = note: `#[warn(clippy::needless_borrow)]` on by default
+00161|
+00162|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00163|   --> crates/globset/src/glob.rs:687:39
+00164|    |
+00165|687 |         self.tokens_to_regex(options, &self, &mut re);
+00166|    |                                       ^^^^^ help: change this to: `self`
+00167|    |
+00168|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00169|
+00170|warning: `grep-matcher` (lib) generated 9 warnings (run `cargo clippy --fix --lib -p grep-matcher` to apply 6 suggestions)
+00171|warning: calling `push_str()` using a single-character string literal
+00172|   --> crates/globset/src/glob.rs:707:25
+00173|    |
+00174|707 |                         re.push_str(".");
+00175|    |                         ^^^^^^^^^^^^^^^^ help: consider using `push` with a character literal: `re.push('.')`
+00176|    |
+00177|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_char_add_str
+00178|    = note: `#[warn(clippy::single_char_add_str)]` on by default
+00179|
+00180|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00181|   --> crates/globset/src/glob.rs:747:55
+00182|    |
+00183|747 |                         self.tokens_to_regex(options, &pat, &mut altre);
+00184|    |                                                       ^^^^ help: change this to: `pat`
+00185|    |
+00186|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00187|
+00188|warning: passing a unit value to a function
+00189|   --> crates/globset/src/glob.rs:857:20
+00190|    |
+00191|857 |             return Ok(pat.push(tok));
+00192|    |                    ^^^^^^^^^^^^^^^^^
+00193|    |
+00194|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unit_arg
+00195|    = note: `#[warn(clippy::unit_arg)]` on by default
+00196|help: move the expression in front of the call and replace it with the unit literal `()`
+00197|    |
+00198|857 ~             return {
+00199|858 +                 let _: () = pat.push(tok);
+00200|859 +                 Ok(())
+00201|860 ~             };
+00202|    |
+00203|
+00204|warning: this pattern creates a reference to a reference
+00205|   --> crates/globset/src/glob.rs:872:18
+00206|    |
+00207|872 |             Some(ref pat) => Ok(!pat.is_empty()),
+00208|    |                  ^^^^^^^ help: try: `pat`
+00209|    |
+00210|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00211|
+00212|warning: passing a unit value to a function
+00213|   --> crates/globset/src/glob.rs:883:13
+00214|    |
+00215|883 |             Ok(self.branches.push(Tokens::default()))
+00216|    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00217|    |
+00218|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unit_arg
+00219|help: move the expression in front of the call and replace it with the unit literal `()`
+00220|    |
+00221|883 ~             self.branches.push(Tokens::default());
+00222|884 +             Ok(())
+00223|    |
+00224|
+00225|warning: this `map_or` can be simplified
+00226|   --> crates/globset/src/glob.rs:909:17
+00227|    |
+00228|909 |             if !self.peek().map_or(true, is_separator) {
+00229|    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00230|    |
+00231|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00232|    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+00233|help: use is_none_or instead
+00234|    |
+00235|909 -             if !self.peek().map_or(true, is_separator) {
+00236|909 +             if !self.peek().is_none_or(is_separator) {
+00237|    |
+00238|
+00239|    Checking grep-searcher v0.1.16 (/workspace/src/repo-06/crates/searcher)
+00240|warning: this `map_or` can be simplified
+00241|   --> crates/globset/src/glob.rs:914:25
+00242|    |
+00243|914 |                 assert!(self.bump().map_or(true, is_separator));
+00244|    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00245|    |
+00246|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00247|help: use is_none_or instead
+00248|    |
+00249|914 -                 assert!(self.bump().map_or(true, is_separator));
+00250|914 +                 assert!(self.bump().is_none_or(is_separator));
+00251|    |
+00252|
+00253|warning: this `if` statement can be collapsed
+00254|   --> crates/globset/src/glob.rs:919:9
+00255|    |
+00256|919 | /         if !prev.map(is_separator).unwrap_or(false) {
+00257|920 | |             if self.branches.len() <= 1
+00258|921 | |                 || (prev != Some(',') && prev != Some('{'))
+00259|...   |
+00260|927 | |         }
+00261|    | |_________^
+00262|    |
+00263|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00264|    = note: `#[warn(clippy::collapsible_if)]` on by default
+00265|help: collapse nested if block
+00266|    |
+00267|919 ~         if !prev.map(is_separator).unwrap_or(false)
+00268|920 ~             && (self.branches.len() <= 1
+00269|921 ~                 || (prev != Some(',') && prev != Some('{')))
+00270|922 |             {
+00271|...
+00272|925 |                 return Ok(());
+00273|926 ~             }
+00274|    |
+00275|
+00276|warning: equality checks against true are unnecessary
+00277|   --> crates/globset/src/glob.rs:996:27
+00278|    |
+00279|996 |                 return if self.opts.allow_unclosed_class == true {
+00280|    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `self.opts.allow_unclosed_class`
+00281|    |
+00282|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#bool_comparison
+00283|    = note: `#[warn(clippy::bool_comparison)]` on by default
+00284|
+00285|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00286|    --> crates/globset/src/glob.rs:1022:43
+00287|     |
+00288|1022 |                         add_to_last_range(&self.glob, r, '-')?;
+00289|     |                                           ^^^^^^^^^^ help: change this to: `self.glob`
+00290|     |
+00291|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00292|
+00293|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00294|    --> crates/globset/src/glob.rs:1034:29
+00295|     |
+00296|1034 | ...                   &self.glob,
+00297|     |                       ^^^^^^^^^^ help: change this to: `self.glob`
+00298|     |
+00299|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00300|
+00301|warning: you are using an explicit closure for copying elements
+00302|    --> crates/globset/src/glob.rs:1061:9
+00303|     |
+00304|1061 |         self.chars.peek().map(|&ch| ch)
+00305|     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `copied` method: `self.chars.peek().copied()`
+00306|     |
+00307|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#map_clone
+00308|     = note: `#[warn(clippy::map_clone)]` on by default
+00309|
+00310|warning: this `match` expression can be replaced with `?`
+00311|  --> crates/globset/src/pathutil.rs:50:23
+00312|   |
+00313|50 |       let last_dot_at = match name.rfind_byte(b'.') {
+00314|   |  _______________________^
+00315|51 | |         None => return None,
+00316|52 | |         Some(i) => i,
+00317|53 | |     };
+00318|   | |_____^ help: try instead: `name.rfind_byte(b'.')?`
+00319|   |
+00320|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#question_mark
+00321|   = note: `#[warn(clippy::question_mark)]` on by default
+00322|
+00323|warning: called `.as_ref().map(|s| &**s)` on an `Option` value
+00324|   --> crates/globset/src/lib.rs:207:9
+00325|    |
+00326|207 |         self.glob.as_ref().map(|s| &**s)
+00327|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using as_deref: `self.glob.as_deref()`
+00328|    |
+00329|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#option_as_ref_deref
+00330|    = note: `#[warn(clippy::option_as_ref_deref)]` on by default
+00331|
+00332|warning: you should consider adding a `Default` implementation for `GlobSetBuilder`
+00333|   --> crates/globset/src/lib.rs:574:5
+00334|    |
+00335|574 | /     pub fn new() -> GlobSetBuilder {
+00336|575 | |         GlobSetBuilder { pats: vec![] }
+00337|576 | |     }
+00338|    | |_____^
+00339|    |
+00340|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+00341|    = note: `#[warn(clippy::new_without_default)]` on by default
+00342|help: try adding this
+00343|    |
+00344|570 + impl Default for GlobSetBuilder {
+00345|571 +     fn default() -> Self {
+00346|572 +         Self::new()
+00347|573 +     }
+00348|574 + }
+00349|    |
+00350|
+00351|warning: deref which would be done by auto-deref
+00352|   --> crates/globset/src/lib.rs:641:37
+00353|    |
+00354|641 |         if self.path.len() <= max { &*self.path } else { &self.path[..max] }
+00355|    |                                     ^^^^^^^^^^^ help: try: `&self.path`
+00356|    |
+00357|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00358|    = note: `#[warn(clippy::explicit_auto_deref)]` on by default
+00359|
+00360|warning: deref which would be done by auto-deref
+00361|   --> crates/globset/src/lib.rs:646:13
+00362|    |
+00363|646 |             &*self.path
+00364|    |             ^^^^^^^^^^^ help: try: `&self.path`
+00365|    |
+00366|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00367|
+00368|warning: dereferencing a tuple pattern where every element takes a reference
+00369|   --> crates/globset/src/lib.rs:867:21
+00370|    |
+00371|867 |                 for &(_, ref re) in regexes {
+00372|    |                     ^^^^^^^^^^^^
+00373|    |
+00374|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrowed_reference
+00375|    = note: `#[warn(clippy::needless_borrowed_reference)]` on by default
+00376|help: try removing the `&` and `ref` parts
+00377|    |
+00378|867 -                 for &(_, ref re) in regexes {
+00379|867 +                 for (_, re) in regexes {
+00380|    |
+00381|
+00382|warning: `globset` (lib) generated 24 warnings (run `cargo clippy --fix --lib -p globset` to apply 23 suggestions)
+00383|    Checking grep-cli v0.1.12 (/workspace/src/repo-06/crates/cli)
+00384|    Checking grep-regex v0.1.14 (/workspace/src/repo-06/crates/regex)
+00385|    Checking ignore v0.4.25 (/workspace/src/repo-06/crates/ignore)
+00386|warning: this `impl` can be derived
+00387|  --> crates/searcher/src/line_buffer.rs:29:1
+00388|   |
+00389|29 | / impl Default for BufferAllocation {
+00390|30 | |     fn default() -> BufferAllocation {
+00391|31 | |         BufferAllocation::Eager
+00392|32 | |     }
+00393|33 | | }
+00394|   | |_^
+00395|   |
+00396|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#derivable_impls
+00397|   = note: `#[warn(clippy::derivable_impls)]` on by default
+00398|help: replace the manual implementation with a derive attribute and mark the default variant
+00399|   |
+00400|17 + #[derive(Default)]
+00401|18 | pub(crate) enum BufferAllocation {
+00402|19 |     /// Attempt to expand the size of the buffer until either at least the next
+00403|...
+00404|22 |     /// This is the default.
+00405|23 ~     #[default]
+00406|24 ~     Eager,
+00407|   |
+00408|
+00409|warning: this can be `std::io::Error::other(_)`
+00410|  --> crates/searcher/src/line_buffer.rs:39:5
+00411|   |
+00412|39 |     io::Error::new(io::ErrorKind::Other, msg)
+00413|   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00414|   |
+00415|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00416|   = note: `#[warn(clippy::io_other_error)]` on by default
+00417|help: use `std::io::Error::other`
+00418|   |
+00419|39 -     io::Error::new(io::ErrorKind::Other, msg)
+00420|39 +     io::Error::other(msg)
+00421|   |
+00422|
+00423|warning: this `impl` can be derived
+00424|  --> crates/searcher/src/line_buffer.rs:66:1
+00425|   |
+00426|66 | / impl Default for BinaryDetection {
+00427|67 | |     fn default() -> BinaryDetection {
+00428|68 | |         BinaryDetection::None
+00429|69 | |     }
+00430|70 | | }
+00431|   | |_^
+00432|   |
+00433|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#derivable_impls
+00434|help: replace the manual implementation with a derive attribute and mark the default variant
+00435|   |
+00436|51 + #[derive(Default)]
+00437|52 | pub(crate) enum BinaryDetection {
+00438|53 |     /// No binary detection is performed. Data reported by the line buffer may
+00439|54 |     /// contain arbitrary bytes.
+00440|55 ~     #[default]
+00441|56 ~     None,
+00442|   |
+00443|
+00444|warning: match expression looks like `matches!` macro
+00445|  --> crates/searcher/src/line_buffer.rs:76:9
+00446|   |
+00447|76 | /         match *self {
+00448|77 | |             BinaryDetection::Quit(_) => true,
+00449|78 | |             _ => false,
+00450|79 | |         }
+00451|   | |_________^ help: try: `matches!(*self, BinaryDetection::Quit(_))`
+00452|   |
+00453|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_like_matches_macro
+00454|   = note: `#[warn(clippy::match_like_matches_macro)]` on by default
+00455|
+00456|warning: accessing first element with `bytes.get(0)`
+00457|   --> crates/searcher/src/line_buffer.rs:546:15
+00458|    |
+00459|546 |         while bytes.get(0) == Some(&src) {
+00460|    |               ^^^^^^^^^^^^ help: try: `bytes.first()`
+00461|    |
+00462|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#get_first
+00463|    = note: `#[warn(clippy::get_first)]` on by default
+00464|
+00465|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00466|   --> crates/searcher/src/searcher/core.rs:111:31
+00467|    |
+00468|111 |         self.sink.binary_data(&self.searcher, binary_byte_offset)
+00469|    |                               ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00470|    |
+00471|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00472|    = note: `#[warn(clippy::needless_borrow)]` on by default
+00473|
+00474|warning: unneeded `return` statement
+00475|   --> crates/searcher/src/searcher/core.rs:149:25
+00476|    |
+00477|149 |             Err(err) => return Err(S::Error::error_message(err)),
+00478|    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00479|    |
+00480|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_return
+00481|    = note: `#[warn(clippy::needless_return)]` on by default
+00482|help: remove `return`
+00483|    |
+00484|149 -             Err(err) => return Err(S::Error::error_message(err)),
+00485|149 +             Err(err) => Err(S::Error::error_message(err)),
+00486|    |
+00487|
+00488|warning: unneeded `return` statement
+00489|   --> crates/searcher/src/searcher/core.rs:150:25
+00490|    |
+00491|150 |             Ok(None) => return Ok(None),
+00492|    |                         ^^^^^^^^^^^^^^^
+00493|    |
+00494|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_return
+00495|help: remove `return`
+00496|    |
+00497|150 -             Ok(None) => return Ok(None),
+00498|150 +             Ok(None) => Ok(None),
+00499|    |
+00500|
+00501|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00502|   --> crates/searcher/src/searcher/core.rs:156:25
+00503|    |
+00504|156 |         self.sink.begin(&self.searcher)
+00505|    |                         ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00506|    |
+00507|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00508|
+00509|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00510|   --> crates/searcher/src/searcher/core.rs:165:13
+00511|    |
+00512|165 |             &self.searcher,
+00513|    |             ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00514|    |
+00515|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00516|
+00517|warning: returning the result of a `let` binding from a block
+00518|   --> crates/searcher/src/searcher/core.rs:205:13
+00519|    |
+00520|203 | /             let consumed =
+00521|204 | |                 std::cmp::max(context_start, self.last_line_visited);
+00522|    | |_____________________________________________________________________- unnecessary `let` binding
+00523|205 |               consumed
+00524|    |               ^^^^^^^^
+00525|    |
+00526|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#let_and_return
+00527|    = note: `#[warn(clippy::let_and_return)]` on by default
+00528|help: return the expression directly
+00529|    |
+00530|203 ~             
+00531|204 ~             std::cmp::max(context_start, self.last_line_visited)
+00532|    |
+00533|
+00534|warning: this `if` statement can be collapsed
+00535|   --> crates/searcher/src/searcher/core.rs:373:20
+00536|    |
+00537|373 |               } else if self.config.passthru {
+00538|    |  ____________________^
+00539|374 | |                 if !self.sink_other_context(buf, &line)? {
+00540|375 | |                     return Ok(false);
+00541|376 | |                 }
+00542|377 | |             }
+00543|    | |_____________^
+00544|    |
+00545|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00546|    = note: `#[warn(clippy::collapsible_if)]` on by default
+00547|help: collapse nested if block
+00548|    |
+00549|373 ~             } else if self.config.passthru
+00550|374 ~                 && !self.sink_other_context(buf, &line)? {
+00551|375 |                     return Ok(false);
+00552|376 ~                 }
+00553|    |
+00554|
+00555|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00556|   --> crates/searcher/src/searcher/core.rs:537:13
+00557|    |
+00558|537 |             &self.searcher,
+00559|    |             ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00560|    |
+00561|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00562|
+00563|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00564|   --> crates/searcher/src/searcher/core.rs:567:13
+00565|    |
+00566|567 |             &self.searcher,
+00567|    |             ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00568|    |
+00569|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00570|
+00571|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00572|   --> crates/searcher/src/searcher/core.rs:598:13
+00573|    |
+00574|598 |             &self.searcher,
+00575|    |             ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00576|    |
+00577|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00578|
+00579|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00580|   --> crates/searcher/src/searcher/core.rs:628:13
+00581|    |
+00582|628 |             &self.searcher,
+00583|    |             ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00584|    |
+00585|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00586|
+00587|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00588|   --> crates/searcher/src/searcher/core.rs:657:37
+00589|    |
+00590|657 |             self.sink.context_break(&self.searcher)
+00591|    |                                     ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+00592|    |
+00593|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00594|
+00595|warning: this `map_or` can be simplified
+00596|   --> crates/searcher/src/searcher/core.rs:711:9
+00597|    |
+00598|711 |         self.config.max_matches.map_or(false, |limit| self.count() >= limit)
+00599|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00600|    |
+00601|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+00602|    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+00603|help: use is_some_and instead
+00604|    |
+00605|711 -         self.config.max_matches.map_or(false, |limit| self.count() >= limit)
+00606|711 +         self.config.max_matches.is_some_and(|limit| self.count() >= limit)
+00607|    |
+00608|
+00609|warning: this `if` statement can be collapsed
+00610|  --> crates/searcher/src/searcher/glue.rs:69:9
+00611|   |
+00612|69 | /         if !already_binary {
+00613|70 | |             if let Some(offset) = self.rdr.binary_byte_offset() {
+00614|71 | |                 if !self.core.binary_data(offset)? {
+00615|72 | |                     return Ok(false);
+00616|...  |
+00617|75 | |         }
+00618|   | |_________^
+00619|   |
+00620|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00621|help: collapse nested if block
+00622|   |
+00623|69 ~         if !already_binary
+00624|70 ~             && let Some(offset) = self.rdr.binary_byte_offset() {
+00625|71 |                 if !self.core.binary_data(offset)? {
+00626|72 |                     return Ok(false);
+00627|73 |                 }
+00628|74 ~             }
+00629|   |
+00630|
+00631|warning: this `if` statement can be collapsed
+00632|  --> crates/searcher/src/searcher/glue.rs:70:13
+00633|   |
+00634|70 | /             if let Some(offset) = self.rdr.binary_byte_offset() {
+00635|71 | |                 if !self.core.binary_data(offset)? {
+00636|72 | |                     return Ok(false);
+00637|73 | |                 }
+00638|74 | |             }
+00639|   | |_____________^
+00640|   |
+00641|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00642|help: collapse nested if block
+00643|   |
+00644|70 ~             if let Some(offset) = self.rdr.binary_byte_offset()
+00645|71 ~                 && !self.core.binary_data(offset)? {
+00646|72 |                     return Ok(false);
+00647|73 ~                 }
+00648|   |
+00649|
+00650|warning: you should consider adding a `Default` implementation for `Searcher`
+00651|   --> crates/searcher/src/searcher/mod.rs:632:5
+00652|    |
+00653|632 | /     pub fn new() -> Searcher {
+00654|633 | |         SearcherBuilder::new().build()
+00655|634 | |     }
+00656|    | |_____^
+00657|    |
+00658|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+00659|    = note: `#[warn(clippy::new_without_default)]` on by default
+00660|help: try adding this
+00661|    |
+00662|627 + impl Default for Searcher {
+00663|628 +     fn default() -> Self {
+00664|629 +         Self::new()
+00665|630 +     }
+00666|631 + }
+00667|    |
+00668|
+00669|warning: deref which would be done by auto-deref
+00670|   --> crates/searcher/src/searcher/mod.rs:706:17
+00671|    |
+00672|706 |                 &*self.multi_line_buffer.borrow(),
+00673|    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `&self.multi_line_buffer.borrow()`
+00674|    |
+00675|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00676|    = note: `#[warn(clippy::explicit_auto_deref)]` on by default
+00677|
+00678|warning: deref which would be done by auto-deref
+00679|   --> crates/searcher/src/searcher/mod.rs:755:17
+00680|    |
+00681|755 |                 &*self.multi_line_buffer.borrow(),
+00682|    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `&self.multi_line_buffer.borrow()`
+00683|    |
+00684|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00685|
+00686|warning: deref which would be done by auto-deref
+00687|   --> crates/searcher/src/searcher/mod.rs:761:54
+00688|    |
+00689|761 |             let rdr = LineBufferReader::new(decoder, &mut *line_buffer);
+00690|    |                                                      ^^^^^^^^^^^^^^^^^ help: try: `&mut line_buffer`
+00691|    |
+00692|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00693|
+00694|warning: this `if` statement can be collapsed
+00695|   --> crates/searcher/src/searcher/mod.rs:900:9
+00696|    |
+00697|900 | /         if let Some(line_term) = matcher.line_terminator() {
+00698|901 | |             if line_term == self.line_terminator() {
+00699|902 | |                 return false;
+00700|903 | |             }
+00701|904 | |         }
+00702|    | |_________^
+00703|    |
+00704|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00705|help: collapse nested if block
+00706|    |
+00707|900 ~         if let Some(line_term) = matcher.line_terminator()
+00708|901 ~             && line_term == self.line_terminator() {
+00709|902 |                 return false;
+00710|903 ~             }
+00711|    |
+00712|
+00713|warning: deref which would be done by auto-deref
+00714|   --> crates/searcher/src/searcher/mod.rs:965:35
+00715|    |
+00716|965 |             read_from.read_to_end(&mut *buf).map_err(S::Error::error_io)?;
+00717|    |                                   ^^^^^^^^^ help: try: `&mut buf`
+00718|    |
+00719|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00720|
+00721|warning: deref which would be done by auto-deref
+00722|   --> crates/searcher/src/searcher/mod.rs:990:34
+00723|    |
+00724|990 |                     .read_to_end(&mut *buf)
+00725|    |                                  ^^^^^^^^^ help: try: `&mut buf`
+00726|    |
+00727|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+00728|
+00729|warning: this can be `std::io::Error::other(_)`
+00730|  --> crates/searcher/src/sink.rs:44:9
+00731|   |
+00732|44 |         io::Error::new(io::ErrorKind::Other, message.to_string())
+00733|   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00734|   |
+00735|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00736|help: use `std::io::Error::other`
+00737|   |
+00738|44 -         io::Error::new(io::ErrorKind::Other, message.to_string())
+00739|44 +         io::Error::other(message.to_string())
+00740|   |
+00741|
+00742|warning: the following explicit lifetimes could be elided: 'a
+00743|   --> crates/searcher/src/sink.rs:225:6
+00744|    |
+00745|225 | impl<'a, S: Sink> Sink for &'a mut S {
+00746|    |      ^^                     ^^
+00747|    |
+00748|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+00749|    = note: `#[warn(clippy::needless_lifetimes)]` on by default
+00750|help: elide the lifetimes
+00751|    |
+00752|225 - impl<'a, S: Sink> Sink for &'a mut S {
+00753|225 + impl<S: Sink> Sink for &mut S {
+00754|    |
+00755|
+00756|warning: this expression creates a reference which is immediately dereferenced by the compiler
+00757|   --> crates/searcher/src/sink.rs:566:35
+00758|    |
+00759|566 |             (self.0)(line_number, &matched)
+00760|    |                                   ^^^^^^^^ help: change this to: `matched`
+00761|    |
+00762|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+00763|
+00764|warning: methods called `from_*` usually take no `self`
+00765|  --> crates/regex/src/ast.rs:56:22
+00766|   |
+00767|56 |     fn from_ast_impl(&mut self, ast: &Ast) {
+00768|   |                      ^^^^^^^^^
+00769|   |
+00770|   = help: consider choosing a less ambiguous name
+00771|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#wrong_self_convention
+00772|   = note: `#[warn(clippy::wrong_self_convention)]` on by default
+00773|
+00774|warning: methods called `from_*` usually take no `self`
+00775|  --> crates/regex/src/ast.rs:92:27
+00776|   |
+00777|92 |     fn from_ast_class_set(&mut self, ast: &ast::ClassSet) {
+00778|   |                           ^^^^^^^^^
+00779|   |
+00780|   = help: consider choosing a less ambiguous name
+00781|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#wrong_self_convention
+00782|
+00783|warning: methods called `from_*` usually take no `self`
+00784|   --> crates/regex/src/ast.rs:107:32
+00785|    |
+00786|107 |     fn from_ast_class_set_item(&mut self, ast: &ast::ClassSetItem) {
+00787|    |                                ^^^^^^^^^
+00788|    |
+00789|    = help: consider choosing a less ambiguous name
+00790|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#wrong_self_convention
+00791|
+00792|warning: `grep-searcher` (lib) generated 30 warnings (run `cargo clippy --fix --lib -p grep-searcher` to apply 28 suggestions)
+00793|warning: methods called `from_*` usually take no `self`
+00794|   --> crates/regex/src/ast.rs:134:25
+00795|    |
+00796|134 |     fn from_ast_literal(&mut self, ast: &ast::Literal) {
+00797|    |                         ^^^^^^^^^
+00798|    |
+00799|    = help: consider choosing a less ambiguous name
+00800|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#wrong_self_convention
+00801|
+00802|warning: this can be `std::io::Error::other(_)`
+00803|  --> crates/cli/src/decompress.rs:60:34
+00804|   |
+00805|60 |                 CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+00806|   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00807|   |
+00808|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00809|   = note: `#[warn(clippy::io_other_error)]` on by default
+00810|help: use `std::io::Error::other`
+00811|   |
+00812|60 -                 CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+00813|60 +                 CommandError::io(io::Error::other(err))
+00814|   |
+00815|
+00816|warning: this can be `std::io::Error::other(_)`
+00817|  --> crates/cli/src/decompress.rs:66:30
+00818|   |
+00819|66 |             CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+00820|   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00821|   |
+00822|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00823|help: use `std::io::Error::other`
+00824|   |
+00825|66 -             CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+00826|66 +             CommandError::io(io::Error::other(err))
+00827|   |
+00828|
+00829|warning: called `is_some()` after searching an `Iterator` with `find`
+00830|  --> crates/regex/src/ban.rs:15:27
+00831|   |
+00832|15 |             if lit.iter().find(|&&b| b == byte).is_some() {
+00833|   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `any(|&b| b == byte)`
+00834|   |
+00835|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#search_is_some
+00836|   = note: `#[warn(clippy::search_is_some)]` on by default
+00837|
+00838|warning: called `is_some()` after searching an `Iterator` with `find`
+00839|  --> crates/regex/src/ban.rs:23:40
+00840|   |
+00841|23 |                 if cls.ranges().iter().find(contains).is_some() {
+00842|   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `any(contains)`
+00843|   |
+00844|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#search_is_some
+00845|
+00846|warning: called `is_some()` after searching an `Iterator` with `find`
+00847|  --> crates/regex/src/ban.rs:33:40
+00848|   |
+00849|33 |                 if cls.ranges().iter().find(contains).is_some() {
+00850|   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `any(contains)`
+00851|   |
+00852|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#search_is_some
+00853|
+00854|warning: statics have by default a `'static` lifetime
+00855|   --> crates/ignore/src/types.rs:483:22
+00856|    |
+00857|483 |         static MSG: &'static str = "adding a default type should never fail";
+00858|    |                     -^^^^^^^---- help: consider removing `'static`: `&str`
+00859|    |
+00860|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+00861|    = note: `#[warn(clippy::redundant_static_lifetimes)]` on by default
+00862|
+00863|warning: this `if` statement can be collapsed
+00864|   --> crates/regex/src/config.rs:136:13
+00865|    |
+00866|136 | /             if let Some(lineterm) = self.line_terminator {
+00867|137 | |                 if has_line_terminator(lineterm, p) {
+00868|138 | |                     return false;
+00869|139 | |                 }
+00870|140 | |             }
+00871|    | |_____________^
+00872|    |
+00873|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00874|    = note: `#[warn(clippy::collapsible_if)]` on by default
+00875|help: collapse nested if block
+00876|    |
+00877|136 ~             if let Some(lineterm) = self.line_terminator
+00878|137 ~                 && has_line_terminator(lineterm, p) {
+00879|138 |                     return false;
+00880|139 ~                 }
+00881|    |
+00882|
+00883|warning: returning the result of a `let` binding from a block
+00884|   --> crates/regex/src/config.rs:180:13
+00885|    |
+00886|179 |             let hir = Hir::alternation(alts);
+00887|    |             --------------------------------- unnecessary `let` binding
+00888|180 |             hir
+00889|    |             ^^^
+00890|    |
+00891|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#let_and_return
+00892|    = note: `#[warn(clippy::let_and_return)]` on by default
+00893|help: return the expression directly
+00894|    |
+00895|179 ~             
+00896|180 ~             Hir::alternation(alts)
+00897|    |
+00898|
+00899|warning: unneeded `return` statement
+00900|   --> crates/cli/src/decompress.rs:487:5
+00901|    |
+00902|487 |     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
+00903|    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00904|    |
+00905|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_return
+00906|    = note: `#[warn(clippy::needless_return)]` on by default
+00907|help: remove `return`
+00908|    |
+00909|487 -     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
+00910|487 +     Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)))
+00911|    |
+00912|
+00913|warning: this can be `std::io::Error::other(_)`
+00914|   --> crates/cli/src/decompress.rs:464:37
+00915|    |
+00916|464 |           return Err(CommandError::io(io::Error::new(
+00917|    |  _____________________________________^
+00918|465 | |             io::ErrorKind::Other,
+00919|466 | |             msg,
+00920|467 | |         )));
+00921|    | |_________^
+00922|    |
+00923|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00924|help: use `std::io::Error::other`
+00925|    |
+00926|464 ~         return Err(CommandError::io(io::Error::other(
+00927|465 ~             msg,
+00928|    |
+00929|
+00930|warning: this can be `std::io::Error::other(_)`
+00931|   --> crates/cli/src/decompress.rs:487:33
+00932|    |
+00933|487 |     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
+00934|    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00935|    |
+00936|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00937|help: use `std::io::Error::other`
+00938|    |
+00939|487 -     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
+00940|487 +     return Err(CommandError::io(io::Error::other(msg)));
+00941|    |
+00942|
+00943|warning: this operation has no effect
+00944|   --> crates/regex/src/config.rs:253:34
+00945|    |
+00946|253 |             .dfa_size_limit(Some(1 * (1 << 20)))
+00947|    |                                  ^^^^^^^^^^^^^ help: consider reducing it to: `((1 << 20))`
+00948|    |
+00949|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#identity_op
+00950|    = note: `#[warn(clippy::identity_op)]` on by default
+00951|
+00952|warning: this `if` statement can be collapsed
+00953|  --> crates/regex/src/literal.rs:72:9
+00954|   |
+00955|72 | /         if re.is_accelerated() {
+00956|73 | |             if !chir.hir().properties().look_set().contains_word_unicode() {
+00957|74 | |                 log::trace!(
+00958|75 | |                     "skipping inner literal extraction, \
+00959|...  |
+00960|80 | |         }
+00961|   | |_________^
+00962|   |
+00963|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+00964|help: collapse nested if block
+00965|   |
+00966|72 ~         if re.is_accelerated()
+00967|73 ~             && !chir.hir().properties().look_set().contains_word_unicode() {
+00968|74 |                 log::trace!(
+00969|...
+00970|78 |                 return InnerLiterals::none();
+00971|79 ~             }
+00972|   |
+00973|
+00974|warning: this can be `std::io::Error::other(_)`
+00975|  --> crates/cli/src/hostname.rs:52:20
+00976|   |
+00977|52 |         return Err(io::Error::new(io::ErrorKind::Other, msg));
+00978|   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00979|   |
+00980|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00981|help: use `std::io::Error::other`
+00982|   |
+00983|52 -         return Err(io::Error::new(io::ErrorKind::Other, msg));
+00984|52 +         return Err(io::Error::other(msg));
+00985|   |
+00986|
+00987|warning: this can be `std::io::Error::other(_)`
+00988|  --> crates/cli/src/hostname.rs:70:20
+00989|   |
+00990|70 |         return Err(io::Error::new(io::ErrorKind::Other, msg));
+00991|   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00992|   |
+00993|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+00994|help: use `std::io::Error::other`
+00995|   |
+00996|70 -         return Err(io::Error::new(io::ErrorKind::Other, msg));
+00997|70 +         return Err(io::Error::other(msg));
+00998|   |
+00999|
+01000|warning: this can be `std::io::Error::other(_)`
+01001|  --> crates/cli/src/human.rs:67:9
+01002|   |
+01003|67 |         std::io::Error::new(std::io::ErrorKind::Other, size_err)
+01004|   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01005|   |
+01006|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01007|help: use `std::io::Error::other`
+01008|   |
+01009|67 -         std::io::Error::new(std::io::ErrorKind::Other, size_err)
+01010|67 +         std::io::Error::other(size_err)
+01011|   |
+01012|
+01013|warning: this `map_or` can be simplified
+01014|   --> crates/regex/src/literal.rs:383:12
+01015|    |
+01016|383 |           if seq1
+01017|    |  ____________^
+01018|384 | |             .max_cross_len(&seq2)
+01019|385 | |             .map_or(false, |len| len > self.limit_total)
+01020|    | |________________________________________________________^
+01021|    |
+01022|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01023|    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+01024|help: use is_some_and instead
+01025|    |
+01026|385 -             .map_or(false, |len| len > self.limit_total)
+01027|385 +             .is_some_and(|len| len > self.limit_total)
+01028|    |
+01029|
+01030|warning: this `map_or` can be simplified
+01031|   --> crates/regex/src/literal.rs:390:17
+01032|    |
+01033|390 |         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+01034|    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01035|    |
+01036|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01037|help: use is_none_or instead
+01038|    |
+01039|390 -         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+01040|390 +         assert!(seq1.len().is_none_or(|x| x <= self.limit_total));
+01041|    |
+01042|
+01043|warning: this can be `std::io::Error::other(_)`
+01044|  --> crates/cli/src/pattern.rs:41:9
+01045|   |
+01046|41 |         io::Error::new(io::ErrorKind::Other, paterr)
+01047|   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01048|   |
+01049|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01050|help: use `std::io::Error::other`
+01051|   |
+01052|41 -         io::Error::new(io::ErrorKind::Other, paterr)
+01053|41 +         io::Error::other(paterr)
+01054|   |
+01055|
+01056|warning: this `map_or` can be simplified
+01057|   --> crates/regex/src/literal.rs:399:12
+01058|    |
+01059|399 |         if seq1.max_union_len(seq2).map_or(false, |len| len > self.limit_total)
+01060|    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01061|    |
+01062|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01063|help: use is_some_and instead
+01064|    |
+01065|399 -         if seq1.max_union_len(seq2).map_or(false, |len| len > self.limit_total)
+01066|399 +         if seq1.max_union_len(seq2).is_some_and(|len| len > self.limit_total)
+01067|    |
+01068|
+01069|warning: this `map_or` can be simplified
+01070|   --> crates/regex/src/literal.rs:419:16
+01071|    |
+01072|419 |               if seq1
+01073|    |  ________________^
+01074|420 | |                 .max_union_len(seq2)
+01075|421 | |                 .map_or(false, |len| len > self.limit_total)
+01076|    | |____________________________________________________________^
+01077|    |
+01078|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01079|help: use is_some_and instead
+01080|    |
+01081|421 -                 .map_or(false, |len| len > self.limit_total)
+01082|421 +                 .is_some_and(|len| len > self.limit_total)
+01083|    |
+01084|
+01085|warning: this `map_or` can be simplified
+01086|   --> crates/regex/src/literal.rs:427:17
+01087|    |
+01088|427 |         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+01089|    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01090|    |
+01091|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01092|help: use is_none_or instead
+01093|    |
+01094|427 -         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+01095|427 +         assert!(seq1.len().is_none_or(|x| x <= self.limit_total));
+01096|    |
+01097|
+01098|warning: this can be `std::io::Error::other(_)`
+01099|  --> crates/cli/src/pattern.rs:85:9
+01100|   |
+01101|85 | /         io::Error::new(
+01102|86 | |             io::ErrorKind::Other,
+01103|87 | |             format!("{}: {}", path.display(), err),
+01104|88 | |         )
+01105|   | |_________^
+01106|   |
+01107|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01108|help: use `std::io::Error::other`
+01109|   |
+01110|85 ~         io::Error::other(
+01111|86 ~             format!("{}: {}", path.display(), err),
+01112|   |
+01113|
+01114|warning: this can be `std::io::Error::other(_)`
+01115|  --> crates/cli/src/pattern.rs:91:9
+01116|   |
+01117|91 | /         io::Error::new(
+01118|92 | |             io::ErrorKind::Other,
+01119|93 | |             format!("{}:{}", path.display(), err),
+01120|94 | |         )
+01121|   | |_________^
+01122|   |
+01123|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01124|help: use `std::io::Error::other`
+01125|   |
+01126|91 ~         io::Error::other(
+01127|92 ~             format!("{}:{}", path.display(), err),
+01128|   |
+01129|
+01130|warning: this can be `std::io::Error::other(_)`
+01131|   --> crates/cli/src/pattern.rs:108:9
+01132|    |
+01133|108 |         io::Error::new(io::ErrorKind::Other, format!("<stdin>:{}", err))
+01134|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01135|    |
+01136|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01137|help: use `std::io::Error::other`
+01138|    |
+01139|108 -         io::Error::new(io::ErrorKind::Other, format!("<stdin>:{}", err))
+01140|108 +         io::Error::other(format!("<stdin>:{}", err))
+01141|    |
+01142|
+01143|warning: this can be `std::io::Error::other(_)`
+01144|   --> crates/cli/src/pattern.rs:151:29
+01145|    |
+01146|151 |               Err(err) => Err(io::Error::new(
+01147|    |  _____________________________^
+01148|152 | |                 io::ErrorKind::Other,
+01149|153 | |                 format!("{}: {}", line_number, err),
+01150|154 | |             )),
+01151|    | |_____________^
+01152|    |
+01153|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01154|help: use `std::io::Error::other`
+01155|    |
+01156|151 ~             Err(err) => Err(io::Error::other(
+01157|152 ~                 format!("{}: {}", line_number, err),
+01158|    |
+01159|
+01160|warning: this can be `std::io::Error::other(_)`
+01161|  --> crates/cli/src/process.rs:76:17
+01162|   |
+01163|76 |                 io::Error::new(io::ErrorKind::Other, cmderr)
+01164|   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01165|   |
+01166|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01167|help: use `std::io::Error::other`
+01168|   |
+01169|76 -                 io::Error::new(io::ErrorKind::Other, cmderr)
+01170|76 +                 io::Error::other(cmderr)
+01171|   |
+01172|
+01173|warning: this `if` statement can be collapsed
+01174|   --> crates/ignore/src/dir.rs:215:13
+01175|    |
+01176|215 | /             if let Some(weak) = compiled.get(parent.as_os_str()) {
+01177|216 | |                 if let Some(prebuilt) = weak.upgrade() {
+01178|217 | |                     ig = Ignore(prebuilt);
+01179|218 | |                     continue;
+01180|219 | |                 }
+01181|220 | |             }
+01182|    | |_____________^
+01183|    |
+01184|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+01185|    = note: `#[warn(clippy::collapsible_if)]` on by default
+01186|help: collapse nested if block
+01187|    |
+01188|215 ~             if let Some(weak) = compiled.get(parent.as_os_str())
+01189|216 ~                 && let Some(prebuilt) = weak.upgrade() {
+01190|217 |                     ig = Ignore(prebuilt);
+01191|218 |                     continue;
+01192|219 ~                 }
+01193|    |
+01194|
+01195|warning: called `is_some()` after searching an `Iterator` with `find`
+01196|  --> crates/regex/src/strip.rs:64:27
+01197|   |
+01198|64 |             if lit.iter().find(|&&b| b == byte).is_some() {
+01199|   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `any(|&b| b == byte)`
+01200|   |
+01201|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#search_is_some
+01202|
+01203|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01204|   --> crates/ignore/src/dir.rs:274:17
+01205|    |
+01206|274 |                 &dir,
+01207|    |                 ^^^^ help: change this to: `dir`
+01208|    |
+01209|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01210|    = note: `#[warn(clippy::needless_borrow)]` on by default
+01211|
+01212|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01213|   --> crates/ignore/src/dir.rs:275:17
+01214|    |
+01215|275 |                 &dir,
+01216|    |                 ^^^^ help: change this to: `dir`
+01217|    |
+01218|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01219|
+01220|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01221|   --> crates/ignore/src/dir.rs:286:17
+01222|    |
+01223|286 |                 &dir,
+01224|    |                 ^^^^ help: change this to: `dir`
+01225|    |
+01226|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01227|
+01228|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01229|   --> crates/ignore/src/dir.rs:287:17
+01230|    |
+01231|287 |                 &dir,
+01232|    |                 ^^^^ help: change this to: `dir`
+01233|    |
+01234|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01235|
+01236|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01237|   --> crates/ignore/src/dir.rs:298:17
+01238|    |
+01239|298 |                 &dir,
+01240|    |                 ^^^^ help: change this to: `dir`
+01241|    |
+01242|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01243|
+01244|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01245|   --> crates/ignore/src/dir.rs:299:17
+01246|    |
+01247|299 |                 &dir,
+01248|    |                 ^^^^ help: change this to: `dir`
+01249|    |
+01250|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01251|
+01252|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01253|   --> crates/ignore/src/dir.rs:313:25
+01254|    |
+01255|313 |                         &dir,
+01256|    |                         ^^^^ help: change this to: `dir`
+01257|    |
+01258|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01259|
+01260|warning: this `if` statement can be collapsed
+01261|   --> crates/ignore/src/dir.rs:473:9
+01262|    |
+01263|473 | /         if self.0.opts.parents {
+01264|474 | |             if let Some(abs_parent_path) = self.absolute_base() {
+01265|...   |
+01266|534 | |         }
+01267|    | |_________^
+01268|    |
+01269|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+01270|help: collapse nested if block
+01271|    |
+01272|473 ~         if self.0.opts.parents
+01273|474 ~             && let Some(abs_parent_path) = self.absolute_base() {
+01274|475 |                 // What we want to do here is take the absolute base path of
+01275|...
+01276|532 |                 }
+01277|533 ~             }
+01278|    |
+01279|
+01280|warning: the borrowed expression implements the required traits
+01281|   --> crates/ignore/src/dir.rs:539:37
+01282|    |
+01283|539 |             m_explicit = gi.matched(&path, is_dir).map(IgnoreMatch::gitignore);
+01284|    |                                     ^^^^^ help: change this to: `path`
+01285|    |
+01286|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrows_for_generic_args
+01287|    = note: `#[warn(clippy::needless_borrows_for_generic_args)]` on by default
+01288|
+01289|warning: the borrowed expression implements the required traits
+01290|   --> crates/ignore/src/dir.rs:544:26
+01291|    |
+01292|544 |                 .matched(&path, is_dir)
+01293|    |                          ^^^^^ help: change this to: `path`
+01294|    |
+01295|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrows_for_generic_args
+01296|
+01297|warning: `grep-regex` (lib) generated 17 warnings (run `cargo clippy --fix --lib -p grep-regex` to apply 13 suggestions)
+01298|warning: `grep-cli` (lib) generated 14 warnings (run `cargo clippy --fix --lib -p grep-cli` to apply 14 suggestions)
+01299|warning: this `map_or` can be simplified
+01300|   --> crates/ignore/src/dir.rs:898:9
+01301|    |
+01302|898 |     if !git_type.map_or(false, |ft| ft.is_file()) {
+01303|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01304|    |
+01305|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+01306|    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+01307|help: use is_some_and instead
+01308|    |
+01309|898 -     if !git_type.map_or(false, |ft| ft.is_file()) {
+01310|898 +     if !git_type.is_some_and(|ft| ft.is_file()) {
+01311|    |
+01312|
+01313|warning: called `.as_ref().map(|p| &**p)` on an `Option` value
+01314|  --> crates/ignore/src/gitignore.rs:48:9
+01315|   |
+01316|48 |         self.from.as_ref().map(|p| &**p)
+01317|   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using as_deref: `self.from.as_deref()`
+01318|   |
+01319|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#option_as_ref_deref
+01320|   = note: `#[warn(clippy::option_as_ref_deref)]` on by default
+01321|
+01322|warning: deref which would be done by auto-deref
+01323|   --> crates/ignore/src/gitignore.rs:155:9
+01324|    |
+01325|155 |         &*self.root
+01326|    |         ^^^^^^^^^^^ help: try: `&self.root`
+01327|    |
+01328|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+01329|    = note: `#[warn(clippy::explicit_auto_deref)]` on by default
+01330|
+01331|warning: deref which would be done by auto-deref
+01332|   --> crates/ignore/src/gitignore.rs:259:53
+01333|    |
+01334|259 |         self.set.matches_candidate_into(&candidate, &mut *matches);
+01335|    |                                                     ^^^^^^^^^^^^^ help: try: `&mut matches`
+01336|    |
+01337|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+01338|
+01339|warning: this `if` statement can be collapsed
+01340|   --> crates/ignore/src/gitignore.rs:294:9
+01341|    |
+01342|294 | /         if self.root != Path::new(".") && !is_file_name(path) {
+01343|295 | |             if let Some(p) = strip_prefix(&self.root, path) {
+01344|296 | |                 path = p;
+01345|...   |
+01346|302 | |         }
+01347|    | |_________^
+01348|    |
+01349|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+01350|help: collapse nested if block
+01351|    |
+01352|294 ~         if self.root != Path::new(".") && !is_file_name(path)
+01353|295 ~             && let Some(p) = strip_prefix(&self.root, path) {
+01354|296 |                 path = p;
+01355|...
+01356|300 |                 }
+01357|301 ~             }
+01358|    |
+01359|
+01360|warning: redundant closure
+01361|   --> crates/ignore/src/gitignore.rs:351:46
+01362|    |
+01363|351 |             matches: Some(Arc::new(Pool::new(|| vec![]))),
+01364|    |                                              ^^^^^^^^^ help: replace the closure with `Vec::new`: `std::vec::Vec::new`
+01365|    |
+01366|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_closure
+01367|    = note: `#[warn(clippy::redundant_closure)]` on by default
+01368|
+01369|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01370|   --> crates/ignore/src/gitignore.rs:416:71
+01371|    |
+01372|416 |             if let Err(err) = self.add_line(Some(path.to_path_buf()), &line) {
+01373|    |                                                                       ^^^^^ help: change this to: `line`
+01374|    |
+01375|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01376|
+01377|warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+01378|   --> crates/ignore/src/gitignore.rs:575:5
+01379|    |
+01380|575 | /     match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
+01381|576 | |         Some(path) => return Some(path),
+01382|577 | |         None => {}
+01383|578 | |     }
+01384|    | |_____^ help: try: `if let Some(path) = gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) { return Some(path) }`
+01385|    |
+01386|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_match
+01387|    = note: `#[warn(clippy::single_match)]` on by default
+01388|
+01389|warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+01390|   --> crates/ignore/src/gitignore.rs:579:5
+01391|    |
+01392|579 | /     match gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)) {
+01393|580 | |         Some(path) => return Some(path),
+01394|581 | |         None => {}
+01395|582 | |     }
+01396|    | |_____^ help: try: `if let Some(path) = gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)) { return Some(path) }`
+01397|    |
+01398|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_match
+01399|
+01400|warning: this `match` expression can be replaced with `?`
+01401|   --> crates/ignore/src/gitignore.rs:589:16
+01402|    |
+01403|589 |       let home = match home_dir() {
+01404|    |  ________________^
+01405|590 | |         None => return None,
+01406|591 | |         Some(home) => home,
+01407|592 | |     };
+01408|    | |_____^ help: try instead: `home_dir()?`
+01409|    |
+01410|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#question_mark
+01411|    = note: `#[warn(clippy::question_mark)]` on by default
+01412|
+01413|warning: accessing first element with `name.as_bytes().get(0)`
+01414|  --> crates/ignore/src/pathutil.rs:15:9
+01415|   |
+01416|15 |         name.as_bytes().get(0) == Some(&b'.')
+01417|   |         ^^^^^^^^^^^^^^^^^^^^^^ help: try: `name.as_bytes().first()`
+01418|   |
+01419|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#get_first
+01420|   = note: `#[warn(clippy::get_first)]` on by default
+01421|
+01422|warning: this expression creates a reference which is immediately dereferenced by the compiler
+01423|  --> crates/ignore/src/pathutil.rs:74:14
+01424|   |
+01425|74 |         Some(&Path::new(OsStr::from_bytes(&path[prefix.len()..])))
+01426|   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `Path::new(OsStr::from_bytes(&path[prefix.len()..]))`
+01427|   |
+01428|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+01429|
+01430|warning: the following explicit lifetimes could be elided: 'a
+01431|   --> crates/ignore/src/pathutil.rs:113:25
+01432|    |
+01433|113 | pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
+01434|    |                         ^^
+01435|114 |     path: &'a P,
+01436|    |            ^^
+01437|115 | ) -> Option<&'a OsStr> {
+01438|    |              ^^
+01439|    |
+01440|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+01441|    = note: `#[warn(clippy::needless_lifetimes)]` on by default
+01442|help: elide the lifetimes
+01443|    |
+01444|113 ~ pub(crate) fn file_name<P: AsRef<Path> + ?Sized>(
+01445|114 ~     path: &P,
+01446|115 ~ ) -> Option<&OsStr> {
+01447|    |
+01448|
+01449|warning: this `if` has identical blocks
+01450|   --> crates/ignore/src/pathutil.rs:120:24
+01451|    |
+01452|120 |       if path.is_empty() {
+01453|    |  ________________________^
+01454|121 | |         return None;
+01455|122 | |     } else if path.len() == 1 && path[0] == b'.' {
+01456|    | |_____^
+01457|    |
+01458|note: same as this
+01459|   --> crates/ignore/src/pathutil.rs:122:50
+01460|    |
+01461|122 |       } else if path.len() == 1 && path[0] == b'.' {
+01462|    |  __________________________________________________^
+01463|123 | |         return None;
+01464|124 | |     } else if path.last() == Some(&b'.') {
+01465|    | |_____^
+01466|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#if_same_then_else
+01467|    = note: `#[warn(clippy::if_same_then_else)]` on by default
+01468|
+01469|warning: this `if` has identical blocks
+01470|   --> crates/ignore/src/pathutil.rs:122:50
+01471|    |
+01472|122 |       } else if path.len() == 1 && path[0] == b'.' {
+01473|    |  __________________________________________________^
+01474|123 | |         return None;
+01475|124 | |     } else if path.last() == Some(&b'.') {
+01476|    | |_____^
+01477|    |
+01478|note: same as this
+01479|   --> crates/ignore/src/pathutil.rs:124:42
+01480|    |
+01481|124 |       } else if path.last() == Some(&b'.') {
+01482|    |  __________________________________________^
+01483|125 | |         return None;
+01484|126 | |     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+01485|    | |_____^
+01486|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#if_same_then_else
+01487|
+01488|warning: this `if` has identical blocks
+01489|   --> crates/ignore/src/pathutil.rs:124:42
+01490|    |
+01491|124 |       } else if path.last() == Some(&b'.') {
+01492|    |  __________________________________________^
+01493|125 | |         return None;
+01494|126 | |     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+01495|    | |_____^
+01496|    |
+01497|note: same as this
+01498|   --> crates/ignore/src/pathutil.rs:126:72
+01499|    |
+01500|126 |       } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+01501|    |  ________________________________________________________________________^
+01502|127 | |         return None;
+01503|128 | |     }
+01504|    | |_____^
+01505|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#if_same_then_else
+01506|
+01507|warning: needlessly taken reference of both operands
+01508|   --> crates/ignore/src/pathutil.rs:126:34
+01509|    |
+01510|126 |     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+01511|    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01512|    |
+01513|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#op_ref
+01514|    = note: `#[warn(clippy::op_ref)]` on by default
+01515|help: use the values directly
+01516|    |
+01517|126 -     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+01518|126 +     } else if path.len() >= 2 && path[path.len() - 2..] == b".."[..] {
+01519|    |
+01520|
+01521|warning: redundant closure
+01522|   --> crates/ignore/src/types.rs:234:41
+01523|    |
+01524|234 |             matches: Arc::new(Pool::new(|| vec![])),
+01525|    |                                         ^^^^^^^^^ help: replace the closure with `Vec::new`: `std::vec::Vec::new`
+01526|    |
+01527|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_closure
+01528|
+01529|warning: deref which would be done by auto-deref
+01530|   --> crates/ignore/src/types.rs:283:37
+01531|    |
+01532|283 |         self.set.matches_into(name, &mut *matches);
+01533|    |                                     ^^^^^^^^^^^^^ help: try: `&mut matches`
+01534|    |
+01535|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+01536|
+01537|warning: you should consider adding a `Default` implementation for `TypesBuilder`
+01538|   --> crates/ignore/src/types.rs:316:5
+01539|    |
+01540|316 | /     pub fn new() -> TypesBuilder {
+01541|317 | |         TypesBuilder { types: HashMap::new(), selections: vec![] }
+01542|318 | |     }
+01543|    | |_____^
+01544|    |
+01545|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+01546|    = note: `#[warn(clippy::new_without_default)]` on by default
+01547|help: try adding this
+01548|    |
+01549|310 + impl Default for TypesBuilder {
+01550|311 +     fn default() -> Self {
+01551|312 +         Self::new()
+01552|313 +     }
+01553|314 + }
+01554|    |
+01555|
+01556|warning: redundant closure
+01557|   --> crates/ignore/src/types.rs:360:41
+01558|    |
+01559|360 |             matches: Arc::new(Pool::new(|| vec![])),
+01560|    |                                         ^^^^^^^^^ help: replace the closure with `Vec::new`: `std::vec::Vec::new`
+01561|    |
+01562|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_closure
+01563|
+01564|warning: doc list item overindented
+01565|   --> crates/ignore/src/types.rs:436:9
+01566|    |
+01567|436 |     ///     given name with the given glob.
+01568|    |         ^^^^ help: try using `   ` (3 spaces)
+01569|    |
+01570|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_overindented_list_items
+01571|    = note: `#[warn(clippy::doc_overindented_list_items)]` on by default
+01572|
+01573|warning: doc list item overindented
+01574|   --> crates/ignore/src/types.rs:438:9
+01575|    |
+01576|438 |     ///     This defines an 'include' definition that associates the given name
+01577|    |         ^^^^ help: try using `   ` (3 spaces)
+01578|    |
+01579|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_overindented_list_items
+01580|
+01581|warning: doc list item overindented
+01582|   --> crates/ignore/src/types.rs:439:9
+01583|    |
+01584|439 |     ///     with the definitions of the given existing types.
+01585|    |         ^^^^ help: try using `   ` (3 spaces)
+01586|    |
+01587|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_overindented_list_items
+01588|
+01589|warning: doc list item without indentation
+01590|   --> crates/ignore/src/types.rs:440:9
+01591|    |
+01592|440 |     /// Names may not include any characters that are not
+01593|    |         ^
+01594|    |
+01595|    = help: if this is supposed to be its own paragraph, add a blank line
+01596|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01597|    = note: `#[warn(clippy::doc_lazy_continuation)]` on by default
+01598|help: indent this line
+01599|    |
+01600|440 |     ///    Names may not include any characters that are not
+01601|    |         +++
+01602|
+01603|warning: doc list item without indentation
+01604|   --> crates/ignore/src/types.rs:441:9
+01605|    |
+01606|441 |     /// Unicode letters or numbers.
+01607|    |         ^
+01608|    |
+01609|    = help: if this is supposed to be its own paragraph, add a blank line
+01610|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01611|help: indent this line
+01612|    |
+01613|441 |     ///    Unicode letters or numbers.
+01614|    |         +++
+01615|
+01616|warning: match expression looks like `matches!` macro
+01617|   --> crates/ignore/src/walk.rs:165:9
+01618|    |
+01619|165 | /         match *self {
+01620|166 | |             DirEntryInner::Stdin => true,
+01621|167 | |             _ => false,
+01622|168 | |         }
+01623|    | |_________^ help: try: `matches!(*self, DirEntryInner::Stdin)`
+01624|    |
+01625|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_like_matches_macro
+01626|    = note: `#[warn(clippy::match_like_matches_macro)]` on by default
+01627|
+01628|warning: this can be `std::io::Error::other(_)`
+01629|   --> crates/ignore/src/walk.rs:175:37
+01630|    |
+01631|175 |                   let err = Error::Io(io::Error::new(
+01632|    |  _____________________________________^
+01633|176 | |                     io::ErrorKind::Other,
+01634|177 | |                     "<stdin> has no metadata",
+01635|178 | |                 ));
+01636|    | |_________________^
+01637|    |
+01638|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+01639|    = note: `#[warn(clippy::io_other_error)]` on by default
+01640|help: use `std::io::Error::other`
+01641|    |
+01642|175 ~                 let err = Error::Io(io::Error::other(
+01643|176 ~                     "<stdin> has no metadata",
+01644|    |
+01645|
+01646|warning: useless conversion to the same type: `std::io::Error`
+01647|   --> crates/ignore/src/walk.rs:302:34
+01648|    |
+01649|302 |         .map_err(|err| Error::Io(io::Error::from(err)).with_path(&self.path))
+01650|    |                                  ^^^^^^^^^^^^^^^^^^^^ help: consider removing `io::Error::from()`: `err`
+01651|    |
+01652|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_conversion
+01653|    = note: `#[warn(clippy::useless_conversion)]` on by default
+01654|
+01655|warning: useless conversion to the same type: `std::io::Error`
+01656|   --> crates/ignore/src/walk.rs:327:33
+01657|    |
+01658|327 |             let err = Error::Io(io::Error::from(err)).with_path(ent.path());
+01659|    |                                 ^^^^^^^^^^^^^^^^^^^^ help: consider removing `io::Error::from()`: `err`
+01660|    |
+01661|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_conversion
+01662|
+01663|warning: doc list item without indentation
+01664|   --> crates/ignore/src/walk.rs:456:5
+01665|    |
+01666|456 | /// then matching stops. The path is then only skipped if the glob that matched
+01667|    |     ^
+01668|    |
+01669|    = help: if this is supposed to be its own paragraph, add a blank line
+01670|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01671|help: indent this line
+01672|    |
+01673|456 | ///   then matching stops. The path is then only skipped if the glob that matched
+01674|    |     ++
+01675|
+01676|warning: doc list item without indentation
+01677|   --> crates/ignore/src/walk.rs:457:5
+01678|    |
+01679|457 | /// the path is an ignore glob. (An override glob is a whitelist glob unless it
+01680|    |     ^
+01681|    |
+01682|    = help: if this is supposed to be its own paragraph, add a blank line
+01683|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01684|help: indent this line
+01685|    |
+01686|457 | ///   the path is an ignore glob. (An override glob is a whitelist glob unless it
+01687|    |     ++
+01688|
+01689|warning: doc list item without indentation
+01690|   --> crates/ignore/src/walk.rs:458:5
+01691|    |
+01692|458 | /// starts with a `!`, in which case it is an ignore glob.)
+01693|    |     ^
+01694|    |
+01695|    = help: if this is supposed to be its own paragraph, add a blank line
+01696|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01697|help: indent this line
+01698|    |
+01699|458 | ///   starts with a `!`, in which case it is an ignore glob.)
+01700|    |     ++
+01701|
+01702|warning: doc list item without indentation
+01703|   --> crates/ignore/src/walk.rs:460:5
+01704|    |
+01705|460 | /// git ignore files (`.gitignore`, `.git/info/exclude` and the configured
+01706|    |     ^
+01707|    |
+01708|    = help: if this is supposed to be its own paragraph, add a blank line
+01709|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01710|help: indent this line
+01711|    |
+01712|460 | ///   git ignore files (`.gitignore`, `.git/info/exclude` and the configured
+01713|    |     ++
+01714|
+01715|warning: doc list item without indentation
+01716|   --> crates/ignore/src/walk.rs:461:5
+01717|    |
+01718|461 | /// global gitignore file), plain `.ignore` files, which have the same format
+01719|    |     ^
+01720|    |
+01721|    = help: if this is supposed to be its own paragraph, add a blank line
+01722|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01723|help: indent this line
+01724|    |
+01725|461 | ///   global gitignore file), plain `.ignore` files, which have the same format
+01726|    |     ++
+01727|
+01728|warning: doc list item without indentation
+01729|   --> crates/ignore/src/walk.rs:462:5
+01730|    |
+01731|462 | /// as gitignore files, or explicitly added ignore files. The precedence order
+01732|    |     ^
+01733|    |
+01734|    = help: if this is supposed to be its own paragraph, add a blank line
+01735|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01736|help: indent this line
+01737|    |
+01738|462 | ///   as gitignore files, or explicitly added ignore files. The precedence order
+01739|    |     ++
+01740|
+01741|warning: doc list item without indentation
+01742|   --> crates/ignore/src/walk.rs:463:5
+01743|    |
+01744|463 | /// is: `.ignore`, `.gitignore`, `.git/info/exclude`, global gitignore and
+01745|    |     ^
+01746|    |
+01747|    = help: if this is supposed to be its own paragraph, add a blank line
+01748|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01749|help: indent this line
+01750|    |
+01751|463 | ///   is: `.ignore`, `.gitignore`, `.git/info/exclude`, global gitignore and
+01752|    |     ++
+01753|
+01754|warning: doc list item without indentation
+01755|   --> crates/ignore/src/walk.rs:464:5
+01756|    |
+01757|464 | /// finally explicitly added ignore files. Note that precedence between
+01758|    |     ^
+01759|    |
+01760|    = help: if this is supposed to be its own paragraph, add a blank line
+01761|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01762|help: indent this line
+01763|    |
+01764|464 | ///   finally explicitly added ignore files. Note that precedence between
+01765|    |     ++
+01766|
+01767|warning: doc list item without indentation
+01768|   --> crates/ignore/src/walk.rs:465:5
+01769|    |
+01770|465 | /// different types of ignore files is not impacted by the directory hierarchy;
+01771|    |     ^
+01772|    |
+01773|    = help: if this is supposed to be its own paragraph, add a blank line
+01774|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01775|help: indent this line
+01776|    |
+01777|465 | ///   different types of ignore files is not impacted by the directory hierarchy;
+01778|    |     ++
+01779|
+01780|warning: doc list item without indentation
+01781|   --> crates/ignore/src/walk.rs:466:5
+01782|    |
+01783|466 | /// any `.ignore` file overrides all `.gitignore` files. Within each precedence
+01784|    |     ^
+01785|    |
+01786|    = help: if this is supposed to be its own paragraph, add a blank line
+01787|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01788|help: indent this line
+01789|    |
+01790|466 | ///   any `.ignore` file overrides all `.gitignore` files. Within each precedence
+01791|    |     ++
+01792|
+01793|    Checking grep-printer v0.3.1 (/workspace/src/repo-06/crates/printer)
+01794|warning: doc list item without indentation
+01795|   --> crates/ignore/src/walk.rs:467:5
+01796|    |
+01797|467 | /// level, more nested ignore files have a higher precedence than less nested
+01798|    |     ^
+01799|    |
+01800|    = help: if this is supposed to be its own paragraph, add a blank line
+01801|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01802|help: indent this line
+01803|    |
+01804|467 | ///   level, more nested ignore files have a higher precedence than less nested
+01805|    |     ++
+01806|
+01807|warning: doc list item without indentation
+01808|   --> crates/ignore/src/walk.rs:468:5
+01809|    |
+01810|468 | /// ignore files.
+01811|    |     ^
+01812|    |
+01813|    = help: if this is supposed to be its own paragraph, add a blank line
+01814|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01815|help: indent this line
+01816|    |
+01817|468 | ///   ignore files.
+01818|    |     ++
+01819|
+01820|warning: doc list item without indentation
+01821|   --> crates/ignore/src/walk.rs:470:5
+01822|    |
+01823|470 | /// is stopped and the path is skipped. If it yields a whitelist match, then
+01824|    |     ^
+01825|    |
+01826|    = help: if this is supposed to be its own paragraph, add a blank line
+01827|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01828|help: indent this line
+01829|    |
+01830|470 | ///   is stopped and the path is skipped. If it yields a whitelist match, then
+01831|    |     ++
+01832|
+01833|warning: doc list item without indentation
+01834|   --> crates/ignore/src/walk.rs:471:5
+01835|    |
+01836|471 | /// matching continues. A whitelist match can be overridden by a later matcher.
+01837|    |     ^
+01838|    |
+01839|    = help: if this is supposed to be its own paragraph, add a blank line
+01840|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01841|help: indent this line
+01842|    |
+01843|471 | ///   matching continues. A whitelist match can be overridden by a later matcher.
+01844|    |     ++
+01845|
+01846|warning: doc list item without indentation
+01847|   --> crates/ignore/src/walk.rs:473:5
+01848|    |
+01849|473 | /// the path. As above, if it yields an ignore match, then all matching is
+01850|    |     ^
+01851|    |
+01852|    = help: if this is supposed to be its own paragraph, add a blank line
+01853|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01854|help: indent this line
+01855|    |
+01856|473 | ///   the path. As above, if it yields an ignore match, then all matching is
+01857|    |     ++
+01858|
+01859|warning: doc list item without indentation
+01860|   --> crates/ignore/src/walk.rs:474:5
+01861|    |
+01862|474 | /// stopped and the path is skipped. If it yields a whitelist match, then
+01863|    |     ^
+01864|    |
+01865|    = help: if this is supposed to be its own paragraph, add a blank line
+01866|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01867|help: indent this line
+01868|    |
+01869|474 | ///   stopped and the path is skipped. If it yields a whitelist match, then
+01870|    |     ++
+01871|
+01872|warning: doc list item without indentation
+01873|   --> crates/ignore/src/walk.rs:475:5
+01874|    |
+01875|475 | /// matching continues.
+01876|    |     ^
+01877|    |
+01878|    = help: if this is supposed to be its own paragraph, add a blank line
+01879|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01880|help: indent this line
+01881|    |
+01882|475 | ///   matching continues.
+01883|    |     ++
+01884|
+01885|warning: doc list item without indentation
+01886|   --> crates/ignore/src/walk.rs:477:5
+01887|    |
+01888|477 | /// path is skipped.
+01889|    |     ^
+01890|    |
+01891|    = help: if this is supposed to be its own paragraph, add a blank line
+01892|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01893|help: indent this line
+01894|    |
+01895|477 | ///   path is skipped.
+01896|    |     ++
+01897|
+01898|warning: doc list item without indentation
+01899|   --> crates/ignore/src/walk.rs:479:5
+01900|    |
+01901|479 | /// against the max filesize limit. If it exceeds the limit, it is skipped.
+01902|    |     ^
+01903|    |
+01904|    = help: if this is supposed to be its own paragraph, add a blank line
+01905|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01906|help: indent this line
+01907|    |
+01908|479 | ///   against the max filesize limit. If it exceeds the limit, it is skipped.
+01909|    |     ++
+01910|
+01911|warning: doc list item without indentation
+01912|   --> crates/ignore/src/walk.rs:481:5
+01913|    |
+01914|481 | /// iterator.
+01915|    |     ^
+01916|    |
+01917|    = help: if this is supposed to be its own paragraph, add a blank line
+01918|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+01919|help: indent this line
+01920|    |
+01921|481 | ///   iterator.
+01922|    |     ++
+01923|
+01924|warning: very complex type used. Consider factoring parts into `type` definitions
+01925|   --> crates/ignore/src/walk.rs:511:12
+01926|    |
+01927|511 |     ByName(Arc<dyn Fn(&OsStr, &OsStr) -> Ordering + Send + Sync + 'static>),
+01928|    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01929|    |
+01930|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#type_complexity
+01931|    = note: `#[warn(clippy::type_complexity)]` on by default
+01932|
+01933|warning: very complex type used. Consider factoring parts into `type` definitions
+01934|   --> crates/ignore/src/walk.rs:512:12
+01935|    |
+01936|512 |     ByPath(Arc<dyn Fn(&Path, &Path) -> Ordering + Send + Sync + 'static>),
+01937|    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+01938|    |
+01939|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#type_complexity
+01940|
+01941|warning: called `unwrap` on `self.max_filesize` after checking its variant with `is_some`
+01942|    --> crates/ignore/src/walk.rs:1080:17
+01943|     |
+01944|1078 |         if self.max_filesize.is_some() && !ent.is_dir() {
+01945|     |            --------------------------- the check is happening here
+01946|1079 |             return Ok(skip_filesize(
+01947|1080 |                 self.max_filesize.unwrap(),
+01948|     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+01949|     |
+01950|     = help: try using `if let` or `match`
+01951|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_unwrap
+01952|     = note: `#[warn(clippy::unnecessary_unwrap)]` on by default
+01953|
+01954|warning: this `if` statement can be collapsed
+01955|    --> crates/ignore/src/walk.rs:1073:9
+01956|     |
+01957|1073 | /         if let Some(ref stdout) = self.skip {
+01958|1074 | |             if path_equals(ent, stdout)? {
+01959|1075 | |                 return Ok(true);
+01960|1076 | |             }
+01961|1077 | |         }
+01962|     | |_________^
+01963|     |
+01964|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+01965|help: collapse nested if block
+01966|     |
+01967|1073 ~         if let Some(ref stdout) = self.skip
+01968|1074 ~             && path_equals(ent, stdout)? {
+01969|1075 |                 return Ok(true);
+01970|1076 ~             }
+01971|     |
+01972|
+01973|warning: this `if` statement can be collapsed
+01974|    --> crates/ignore/src/walk.rs:1085:9
+01975|     |
+01976|1085 | /         if let Some(Filter(filter)) = &self.filter {
+01977|1086 | |             if !filter(ent) {
+01978|1087 | |                 return Ok(true);
+01979|1088 | |             }
+01980|1089 | |         }
+01981|     | |_________^
+01982|     |
+01983|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+01984|help: collapse nested if block
+01985|     |
+01986|1085 ~         if let Some(Filter(filter)) = &self.filter
+01987|1086 ~             && !filter(ent) {
+01988|1087 |                 return Ok(true);
+01989|1088 ~             }
+01990|     |
+01991|
+01992|warning: the following explicit lifetimes could be elided: 'a
+01993|    --> crates/ignore/src/walk.rs:1261:6
+01994|     |
+01995|1261 | impl<'a, 's, P: ParallelVisitorBuilder<'s>> ParallelVisitorBuilder<'s>
+01996|     |      ^^
+01997|1262 |     for &'a mut P
+01998|     |          ^^
+01999|     |
+02000|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+02001|help: elide the lifetimes
+02002|     |
+02003|1261 ~ impl<'s, P: ParallelVisitorBuilder<'s>> ParallelVisitorBuilder<'s>
+02004|1262 ~     for &mut P
+02005|     |
+02006|
+02007|warning: this `map_or` can be simplified
+02008|    --> crates/ignore/src/walk.rs:1474:9
+02009|     |
+02010|1474 |         self.dent.file_type().map_or(false, |ft| ft.is_symlink())
+02011|     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02012|     |
+02013|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+02014|help: use is_some_and instead
+02015|     |
+02016|1474 -         self.dent.file_type().map_or(false, |ft| ft.is_symlink())
+02017|1474 +         self.dent.file_type().is_some_and(|ft| ft.is_symlink())
+02018|     |
+02019|
+02020|warning: this `map_or` can be simplified
+02021|    --> crates/ignore/src/walk.rs:1701:12
+02022|     |
+02023|1701 |         if self.max_depth.map_or(false, |max| depth >= max) {
+02024|     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02025|     |
+02026|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+02027|help: use is_some_and instead
+02028|     |
+02029|1701 -         if self.max_depth.map_or(false, |max| depth >= max) {
+02030|1701 +         if self.max_depth.is_some_and(|max| depth >= max) {
+02031|     |
+02032|
+02033|warning: called `unwrap` on `self.max_filesize` after checking its variant with `is_some`
+02034|    --> crates/ignore/src/walk.rs:1784:21
+02035|     |
+02036|1782 |             if self.max_filesize.is_some() && !dent.is_dir() {
+02037|     |                --------------------------- the check is happening here
+02038|1783 |                 skip_filesize(
+02039|1784 |                     self.max_filesize.unwrap(),
+02040|     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+02041|     |
+02042|     = help: try using `if let` or `match`
+02043|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_unwrap
+02044|
+02045|warning: this `map_or` can be simplified
+02046|    --> crates/ignore/src/walk.rs:1752:26
+02047|     |
+02048|1752 |         let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
+02049|     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02050|     |
+02051|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+02052|help: use is_some_and instead
+02053|     |
+02054|1752 -         let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
+02055|1752 +         let is_symlink = dent.file_type().is_some_and(|ft| ft.is_symlink());
+02056|     |
+02057|
+02058|warning: this `if` statement can be collapsed
+02059|    --> crates/ignore/src/walk.rs:1761:13
+02060|     |
+02061|1761 | /             if dent.is_dir() {
+02062|1762 | |                 if let Err(err) = check_symlink_loop(ig, dent.path(), depth) {
+02063|1763 | |                     return self.visitor.visit(Err(err));
+02064|1764 | |                 }
+02065|1765 | |             }
+02066|     | |_____________^
+02067|     |
+02068|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02069|help: collapse nested if block
+02070|     |
+02071|1761 ~             if dent.is_dir()
+02072|1762 ~                 && let Err(err) = check_symlink_loop(ig, dent.path(), depth) {
+02073|1763 |                     return self.visitor.visit(Err(err));
+02074|1764 ~                 }
+02075|     |
+02076|
+02077|warning: manual implementation of `Option::map`
+02078|    --> crates/ignore/src/walk.rs:1922:20
+02079|     |
+02080|1922 |       let filesize = match *ent {
+02081|     |  ____________________^
+02082|1923 | |         Some(ref md) => Some(md.len()),
+02083|1924 | |         None => None,
+02084|1925 | |     };
+02085|     | |_____^ help: try: `(*ent).as_ref().map(|md| md.len())`
+02086|     |
+02087|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#manual_map
+02088|     = note: `#[warn(clippy::manual_map)]` on by default
+02089|
+02090|warning: this `map_or` can be simplified
+02091|    --> crates/ignore/src/walk.rs:2013:5
+02092|     |
+02093|2013 |     dent.path().metadata().ok().map_or(false, |md| md.file_type().is_dir())
+02094|     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02095|     |
+02096|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+02097|help: use is_some_and instead
+02098|     |
+02099|2013 -     dent.path().metadata().ok().map_or(false, |md| md.file_type().is_dir())
+02100|2013 +     dent.path().metadata().ok().is_some_and(|md| md.file_type().is_dir())
+02101|     |
+02102|
+02103|warning: `ignore` (lib) generated 75 warnings (run `cargo clippy --fix --lib -p ignore` to apply 41 suggestions)
+02104|warning: using `clone` on type `Color` which implements the `Copy` trait
+02105|   --> crates/printer/src/color.rs:276:35
+02106|    |
+02107|276 |                 cspec.set_fg(Some(color.clone()));
+02108|    |                                   ^^^^^^^^^^^^^ help: try dereferencing it: `*color`
+02109|    |
+02110|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+02111|    = note: `#[warn(clippy::clone_on_copy)]` on by default
+02112|
+02113|warning: using `clone` on type `Color` which implements the `Copy` trait
+02114|   --> crates/printer/src/color.rs:279:35
+02115|    |
+02116|279 |                 cspec.set_bg(Some(color.clone()));
+02117|    |                                   ^^^^^^^^^^^^^ help: try dereferencing it: `*color`
+02118|    |
+02119|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+02120|
+02121|warning: match expression looks like `matches!` macro
+02122|   --> crates/printer/src/hyperlink/mod.rs:495:43
+02123|    |
+02124|495 |           let is_valid_scheme_char = |byte| match byte {
+02125|    |  ___________________________________________^
+02126|496 | |             b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' | b'+' | b'-' | b'.' => {
+02127|497 | |                 true
+02128|...   |
+02129|500 | |         };
+02130|    | |_________^ help: try: `matches!(byte, b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' | b'+' | b'-' | b'.')`
+02131|    |
+02132|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_like_matches_macro
+02133|    = note: `#[warn(clippy::match_like_matches_macro)]` on by default
+02134|
+02135|warning: called `iter().cloned().collect()` on a slice to create a `Vec`. Calling `to_vec()` is both faster and more readable
+02136|   --> crates/printer/src/hyperlink/mod.rs:947:30
+02137|    |
+02138|947 |     HYPERLINK_PATTERN_ALIASES.iter().cloned().collect()
+02139|    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `.to_vec()`
+02140|    |
+02141|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#iter_cloned_collect
+02142|    = note: `#[warn(clippy::iter_cloned_collect)]` on by default
+02143|
+02144|warning: you should consider adding a `Default` implementation for `JSONBuilder`
+02145|  --> crates/printer/src/json.rs:60:5
+02146|   |
+02147|60 | /     pub fn new() -> JSONBuilder {
+02148|61 | |         JSONBuilder { config: Config::default() }
+02149|62 | |     }
+02150|   | |_____^
+02151|   |
+02152|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+02153|   = note: `#[warn(clippy::new_without_default)]` on by default
+02154|help: try adding this
+02155|   |
+02156|58 + impl Default for JSONBuilder {
+02157|59 +     fn default() -> Self {
+02158|60 +         Self::new()
+02159|61 +     }
+02160|62 + }
+02161|   |
+02162|
+02163|warning: doc list item without indentation
+02164|   --> crates/printer/src/json.rs:588:5
+02165|    |
+02166|588 | /// no file path is given, then this is `'static`.
+02167|    |     ^
+02168|    |
+02169|    = help: if this is supposed to be its own paragraph, add a blank line
+02170|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02171|    = note: `#[warn(clippy::doc_lazy_continuation)]` on by default
+02172|help: indent this line
+02173|    |
+02174|588 | ///   no file path is given, then this is `'static`.
+02175|    |     ++
+02176|
+02177|warning: doc list item without indentation
+02178|   --> crates/printer/src/json.rs:590:5
+02179|    |
+02180|590 | /// borrows.
+02181|    |     ^
+02182|    |
+02183|    = help: if this is supposed to be its own paragraph, add a blank line
+02184|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02185|help: indent this line
+02186|    |
+02187|590 | ///   borrows.
+02188|    |     ++
+02189|
+02190|warning: doc list item without indentation
+02191|   --> crates/printer/src/json.rs:592:5
+02192|    |
+02193|592 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+02194|    |     ^
+02195|    |
+02196|    = help: if this is supposed to be its own paragraph, add a blank line
+02197|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02198|help: indent this line
+02199|    |
+02200|592 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+02201|    |     ++
+02202|
+02203|warning: doc list item without indentation
+02204|   --> crates/printer/src/json.rs:594:5
+02205|    |
+02206|594 | /// output to.
+02207|    |     ^
+02208|    |
+02209|    = help: if this is supposed to be its own paragraph, add a blank line
+02210|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02211|help: indent this line
+02212|    |
+02213|594 | ///   output to.
+02214|    |     ++
+02215|
+02216|warning: deref on an immutable reference
+02217|   --> crates/printer/src/json.rs:695:66
+02218|    |
+02219|695 |                 (*self.json.config.replacement).as_ref().map(|r| &*r).unwrap();
+02220|    |                                                                  ^^^
+02221|    |
+02222|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#borrow_deref_ref
+02223|    = note: `#[warn(clippy::borrow_deref_ref)]` on by default
+02224|help: if you would like to reborrow, try removing `&*`
+02225|    |
+02226|695 -                 (*self.json.config.replacement).as_ref().map(|r| &*r).unwrap();
+02227|695 +                 (*self.json.config.replacement).as_ref().map(|r| r).unwrap();
+02228|    |
+02229|help: if you would like to deref, try using `&**`
+02230|    |
+02231|695 |                 (*self.json.config.replacement).as_ref().map(|r| &**r).unwrap();
+02232|    |                                                                    +
+02233|
+02234|warning: this `if` statement can be collapsed
+02235|   --> crates/printer/src/json.rs:790:9
+02236|    |
+02237|790 | /         if searcher.binary_detection().quit_byte().is_some() {
+02238|791 | |             if let Some(ref path) = self.path {
+02239|792 | |                 log::debug!(
+02240|793 | |                     "ignoring {path}: found binary data at \
+02241|...   |
+02242|798 | |         }
+02243|    | |_________^
+02244|    |
+02245|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02246|    = note: `#[warn(clippy::collapsible_if)]` on by default
+02247|help: collapse nested if block
+02248|    |
+02249|790 ~         if searcher.binary_detection().quit_byte().is_some()
+02250|791 ~             && let Some(ref path) = self.path {
+02251|792 |                 log::debug!(
+02252|...
+02253|796 |                 );
+02254|797 ~             }
+02255|    |
+02256|
+02257|warning: this pattern creates a reference to a reference
+02258|   --> crates/printer/src/json.rs:791:25
+02259|    |
+02260|791 |             if let Some(ref path) = self.path {
+02261|    |                         ^^^^^^^^ help: try: `path`
+02262|    |
+02263|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02264|    = note: `#[warn(clippy::needless_borrow)]` on by default
+02265|
+02266|warning: this loop could be written as a `for` loop
+02267|   --> crates/printer/src/jsont.rs:237:5
+02268|    |
+02269|237 |     while let Some(chunk) = it.next() {
+02270|    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `for chunk in it.by_ref()`
+02271|    |
+02272|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#while_let_on_iterator
+02273|    = note: `#[warn(clippy::while_let_on_iterator)]` on by default
+02274|
+02275|warning: this operation has no effect
+02276|   --> crates/printer/src/jsont.rs:244:22
+02277|    |
+02278|244 |         let index4 = (group24 >> 0) & 0b111_111;
+02279|    |                      ^^^^^^^^^^^^^^ help: consider reducing it to: `group24`
+02280|    |
+02281|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#identity_op
+02282|    = note: `#[warn(clippy::identity_op)]` on by default
+02283|
+02284|warning: you don't need to add `&` to all patterns
+02285|   --> crates/printer/src/jsont.rs:250:5
+02286|    |
+02287|250 | /     match it.remainder() {
+02288|251 | |         &[] => {}
+02289|252 | |         &[byte0] => {
+02290|253 | |             let group8 = usize::from(byte0);
+02291|...   |
+02292|271 | |         _ => unreachable!("remainder must have length < 3"),
+02293|272 | |     }
+02294|    | |_____^
+02295|    |
+02296|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_ref_pats
+02297|    = note: `#[warn(clippy::match_ref_pats)]` on by default
+02298|help: instead of prefixing all patterns with `&`, you can dereference the expression
+02299|    |
+02300|250 ~     match *it.remainder() {
+02301|251 ~         [] => {}
+02302|252 ~         [byte0] => {
+02303|253 |             let group8 = usize::from(byte0);
+02304|...
+02305|260 |         }
+02306|261 ~         [byte0, byte1] => {
+02307|    |
+02308|
+02309|warning: you should consider adding a `Default` implementation for `PathPrinterBuilder`
+02310|  --> crates/printer/src/path.rs:39:5
+02311|   |
+02312|39 | /     pub fn new() -> PathPrinterBuilder {
+02313|40 | |         PathPrinterBuilder { config: Config::default() }
+02314|41 | |     }
+02315|   | |_____^
+02316|   |
+02317|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+02318|help: try adding this
+02319|   |
+02320|37 + impl Default for PathPrinterBuilder {
+02321|38 +     fn default() -> Self {
+02322|39 +         Self::new()
+02323|40 +     }
+02324|41 + }
+02325|   |
+02326|
+02327|warning: doc list item without indentation
+02328|   --> crates/printer/src/path.rs:138:5
+02329|    |
+02330|138 | /// with the other printers in this crate.
+02331|    |     ^
+02332|    |
+02333|    = help: if this is supposed to be its own paragraph, add a blank line
+02334|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02335|help: indent this line
+02336|    |
+02337|138 | ///   with the other printers in this crate.
+02338|    |     ++
+02339|
+02340|warning: doc list item without indentation
+02341|   --> crates/printer/src/path.rs:140:5
+02342|    |
+02343|140 | /// with the other printers in this crate.
+02344|    |     ^
+02345|    |
+02346|    = help: if this is supposed to be its own paragraph, add a blank line
+02347|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02348|help: indent this line
+02349|    |
+02350|140 | ///   with the other printers in this crate.
+02351|    |     ++
+02352|
+02353|warning: this call to `as_ref` does nothing
+02354|   --> crates/printer/src/path.rs:151:38
+02355|    |
+02356|151 |         let ppath = PrinterPath::new(path.as_ref())
+02357|    |                                      ^^^^^^^^^^^^^ help: try: `path`
+02358|    |
+02359|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_asref
+02360|    = note: `#[warn(clippy::useless_asref)]` on by default
+02361|
+02362|warning: you should consider adding a `Default` implementation for `StandardBuilder`
+02363|   --> crates/printer/src/standard.rs:105:5
+02364|    |
+02365|105 | /     pub fn new() -> StandardBuilder {
+02366|106 | |         StandardBuilder { config: Config::default() }
+02367|107 | |     }
+02368|    | |_____^
+02369|    |
+02370|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+02371|help: try adding this
+02372|    |
+02373|103 + impl Default for StandardBuilder {
+02374|104 +     fn default() -> Self {
+02375|105 +         Self::new()
+02376|106 +     }
+02377|107 + }
+02378|    |
+02379|
+02380|warning: doc list item without indentation
+02381|   --> crates/printer/src/standard.rs:631:5
+02382|    |
+02383|631 | /// no file path is given, then this is `'static`.
+02384|    |     ^
+02385|    |
+02386|    = help: if this is supposed to be its own paragraph, add a blank line
+02387|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02388|help: indent this line
+02389|    |
+02390|631 | ///   no file path is given, then this is `'static`.
+02391|    |     ++
+02392|
+02393|warning: doc list item without indentation
+02394|   --> crates/printer/src/standard.rs:633:5
+02395|    |
+02396|633 | /// borrows.
+02397|    |     ^
+02398|    |
+02399|    = help: if this is supposed to be its own paragraph, add a blank line
+02400|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02401|help: indent this line
+02402|    |
+02403|633 | ///   borrows.
+02404|    |     ++
+02405|
+02406|warning: doc list item without indentation
+02407|   --> crates/printer/src/standard.rs:635:5
+02408|    |
+02409|635 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+02410|    |     ^
+02411|    |
+02412|    = help: if this is supposed to be its own paragraph, add a blank line
+02413|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02414|help: indent this line
+02415|    |
+02416|635 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+02417|    |     ++
+02418|
+02419|warning: doc list item without indentation
+02420|   --> crates/printer/src/standard.rs:637:5
+02421|    |
+02422|637 | /// output to.
+02423|    |     ^
+02424|    |
+02425|    = help: if this is supposed to be its own paragraph, add a blank line
+02426|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02427|help: indent this line
+02428|    |
+02429|637 | ///   output to.
+02430|    |     ++
+02431|
+02432|warning: this `if` statement can be collapsed
+02433|   --> crates/printer/src/standard.rs:784:9
+02434|    |
+02435|784 | /         if searcher.binary_detection().convert_byte().is_some() {
+02436|785 | |             if self.binary_byte_offset.is_some() {
+02437|786 | |                 return Ok(false);
+02438|787 | |             }
+02439|788 | |         }
+02440|    | |_________^
+02441|    |
+02442|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02443|help: collapse nested if block
+02444|    |
+02445|784 ~         if searcher.binary_detection().convert_byte().is_some()
+02446|785 ~             && self.binary_byte_offset.is_some() {
+02447|786 |                 return Ok(false);
+02448|787 ~             }
+02449|    |
+02450|
+02451|warning: this `if` statement can be collapsed
+02452|   --> crates/printer/src/standard.rs:805:9
+02453|    |
+02454|805 | /         if searcher.binary_detection().convert_byte().is_some() {
+02455|806 | |             if self.binary_byte_offset.is_some() {
+02456|807 | |                 return Ok(false);
+02457|808 | |             }
+02458|809 | |         }
+02459|    | |_________^
+02460|    |
+02461|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02462|help: collapse nested if block
+02463|    |
+02464|805 ~         if searcher.binary_detection().convert_byte().is_some()
+02465|806 ~             && self.binary_byte_offset.is_some() {
+02466|807 |                 return Ok(false);
+02467|808 ~             }
+02468|    |
+02469|
+02470|warning: this `if` statement can be collapsed
+02471|   --> crates/printer/src/standard.rs:828:9
+02472|    |
+02473|828 | /         if searcher.binary_detection().quit_byte().is_some() {
+02474|829 | |             if let Some(ref path) = self.path {
+02475|830 | |                 log::debug!(
+02476|831 | |                     "ignoring {path}: found binary data at \
+02477|...   |
+02478|836 | |         }
+02479|    | |_________^
+02480|    |
+02481|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02482|help: collapse nested if block
+02483|    |
+02484|828 ~         if searcher.binary_detection().quit_byte().is_some()
+02485|829 ~             && let Some(ref path) = self.path {
+02486|830 |                 log::debug!(
+02487|...
+02488|834 |                 );
+02489|835 ~             }
+02490|    |
+02491|
+02492|warning: this `else { if .. }` block can be collapsed
+02493|   --> crates/printer/src/standard.rs:936:16
+02494|    |
+02495|936 |           } else {
+02496|    |  ________________^
+02497|937 | |             if self.multi_line() && !self.is_context() {
+02498|938 | |                 self.sink_slow_multi_line()
+02499|939 | |             } else {
+02500|...   |
+02501|942 | |         }
+02502|    | |_________^
+02503|    |
+02504|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_else_if
+02505|    = note: `#[warn(clippy::collapsible_else_if)]` on by default
+02506|help: collapse nested if block
+02507|    |
+02508|936 ~         } else if self.multi_line() && !self.is_context() {
+02509|937 +             self.sink_slow_multi_line()
+02510|938 +         } else {
+02511|939 +             self.sink_slow()
+02512|940 +         }
+02513|    |
+02514|
+02515|warning: this `else { if .. }` block can be collapsed
+02516|    --> crates/printer/src/standard.rs:1335:16
+02517|     |
+02518|1335 |           } else {
+02519|     |  ________________^
+02520|1336 | |             if self.config().only_matching {
+02521|1337 | |                 if self.is_context() {
+02522|1338 | |                     self.write(b"[Omitted long context line]")?;
+02523|...    |
+02524|1349 | |         }
+02525|     | |_________^
+02526|     |
+02527|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_else_if
+02528|help: collapse nested if block
+02529|     |
+02530|1335 ~         } else if self.config().only_matching {
+02531|1336 +             if self.is_context() {
+02532|1337 +                 self.write(b"[Omitted long context line]")?;
+02533|1338 +             } else {
+02534|1339 +                 self.write(b"[Omitted long matching line]")?;
+02535|1340 +             }
+02536|1341 +         } else {
+02537|1342 +             write!(
+02538|1343 +                 self.wtr().borrow_mut(),
+02539|1344 +                 "[Omitted long line with {} matches]",
+02540|1345 +                 self.sunk.original_matches().len(),
+02541|1346 +             )?;
+02542|1347 +         }
+02543|     |
+02544|
+02545|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02546|    --> crates/printer/src/standard.rs:1524:30
+02547|     |
+02548|1524 |         trim_line_terminator(&self.searcher, buf, line);
+02549|     |                              ^^^^^^^^^^^^^^ help: change this to: `self.searcher`
+02550|     |
+02551|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02552|
+02553|warning: this `map_or` can be simplified
+02554|    --> crates/printer/src/standard.rs:1563:9
+02555|     |
+02556|1563 |         self.config().max_columns.map_or(false, |m| line.len() as u64 > m)
+02557|     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02558|     |
+02559|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+02560|     = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+02561|help: use is_some_and instead
+02562|     |
+02563|1563 -         self.config().max_columns.map_or(false, |m| line.len() as u64 > m)
+02564|1563 +         self.config().max_columns.is_some_and(|m| line.len() as u64 > m)
+02565|     |
+02566|
+02567|warning: you should consider adding a `Default` implementation for `SummaryBuilder`
+02568|   --> crates/printer/src/summary.rs:153:5
+02569|    |
+02570|153 | /     pub fn new() -> SummaryBuilder {
+02571|154 | |         SummaryBuilder { config: Config::default() }
+02572|155 | |     }
+02573|    | |_____^
+02574|    |
+02575|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#new_without_default
+02576|help: try adding this
+02577|    |
+02578|151 + impl Default for SummaryBuilder {
+02579|152 +     fn default() -> Self {
+02580|153 +         Self::new()
+02581|154 +     }
+02582|155 + }
+02583|    |
+02584|
+02585|warning: doc list item without indentation
+02586|   --> crates/printer/src/summary.rs:476:5
+02587|    |
+02588|476 | /// no file path is given, then this is `'static`.
+02589|    |     ^
+02590|    |
+02591|    = help: if this is supposed to be its own paragraph, add a blank line
+02592|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02593|help: indent this line
+02594|    |
+02595|476 | ///   no file path is given, then this is `'static`.
+02596|    |     ++
+02597|
+02598|warning: doc list item without indentation
+02599|   --> crates/printer/src/summary.rs:478:5
+02600|    |
+02601|478 | /// borrows.
+02602|    |     ^
+02603|    |
+02604|    = help: if this is supposed to be its own paragraph, add a blank line
+02605|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02606|help: indent this line
+02607|    |
+02608|478 | ///   borrows.
+02609|    |     ++
+02610|
+02611|warning: doc list item without indentation
+02612|   --> crates/printer/src/summary.rs:480:5
+02613|    |
+02614|480 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+02615|    |     ^
+02616|    |
+02617|    = help: if this is supposed to be its own paragraph, add a blank line
+02618|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02619|help: indent this line
+02620|    |
+02621|480 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+02622|    |     ++
+02623|
+02624|warning: doc list item without indentation
+02625|   --> crates/printer/src/summary.rs:482:5
+02626|    |
+02627|482 | /// output to.
+02628|    |     ^
+02629|    |
+02630|    = help: if this is supposed to be its own paragraph, add a blank line
+02631|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02632|help: indent this line
+02633|    |
+02634|482 | ///   output to.
+02635|    |     ++
+02636|
+02637|warning: this `if` statement can be collapsed
+02638|   --> crates/printer/src/summary.rs:684:9
+02639|    |
+02640|684 | /         if searcher.binary_detection().quit_byte().is_some() {
+02641|685 | |             if let Some(ref path) = self.path {
+02642|686 | |                 log::debug!(
+02643|687 | |                     "ignoring {path}: found binary data at \
+02644|...   |
+02645|692 | |         }
+02646|    | |_________^
+02647|    |
+02648|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#collapsible_if
+02649|help: collapse nested if block
+02650|    |
+02651|684 ~         if searcher.binary_detection().quit_byte().is_some()
+02652|685 ~             && let Some(ref path) = self.path {
+02653|686 |                 log::debug!(
+02654|...
+02655|690 |                 );
+02656|691 ~             }
+02657|    |
+02658|
+02659|warning: the following explicit lifetimes could be elided: 'a
+02660|  --> crates/printer/src/util.rs:51:31
+02661|   |
+02662|51 |     pub(crate) fn replace_all<'a>(
+02663|   |                               ^^
+02664|52 |         &'a mut self,
+02665|   |          ^^
+02666|   |
+02667|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+02668|   = note: `#[warn(clippy::needless_lifetimes)]` on by default
+02669|help: elide the lifetimes
+02670|   |
+02671|51 ~     pub(crate) fn replace_all(
+02672|52 ~         &mut self,
+02673|   |
+02674|
+02675|warning: the borrowed expression implements the required traits
+02676|  --> crates/printer/src/util.rs:61:62
+02677|   |
+02678|61 |         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
+02679|   |                                                              ^^^^^^^^ help: change this to: `matcher`
+02680|   |
+02681|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrows_for_generic_args
+02682|   = note: `#[warn(clippy::needless_borrows_for_generic_args)]` on by default
+02683|
+02684|warning: the following explicit lifetimes could be elided: 'a
+02685|   --> crates/printer/src/util.rs:115:31
+02686|    |
+02687|115 |     pub(crate) fn replacement<'a>(
+02688|    |                               ^^
+02689|116 |         &'a self,
+02690|    |          ^^
+02691|117 |     ) -> Option<(&'a [u8], &'a [Match])> {
+02692|    |                   ^^        ^^
+02693|    |
+02694|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_lifetimes
+02695|help: elide the lifetimes
+02696|    |
+02697|115 ~     pub(crate) fn replacement(
+02698|116 ~         &self,
+02699|117 ~     ) -> Option<(&[u8], &[Match])> {
+02700|    |
+02701|
+02702|warning: match expression looks like `matches!` macro
+02703|   --> crates/printer/src/util.rs:458:9
+02704|    |
+02705|458 | /         match b {
+02706|459 | |             b'\t' | b'\n' | b'\x0B' | b'\x0C' | b'\r' | b' ' => true,
+02707|460 | |             _ => false,
+02708|461 | |         }
+02709|    | |_________^ help: try: `matches!(b, b'\t' | b'\n' | b'\x0B' | b'\x0C' | b'\r' | b' ')`
+02710|    |
+02711|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#match_like_matches_macro
+02712|
+02713|warning: `grep-printer` (lib) generated 41 warnings (run `cargo clippy --fix --lib -p grep-printer` to apply 21 suggestions)
+02714|    Checking grep v0.4.1 (/workspace/src/repo-06/crates/grep)
+02715|warning: `crate` references the macro call's crate
+02716|  --> crates/core/messages.rs:73:12
+02717|   |
+02718|73 |         if crate::messages::messages() {
+02719|   |            ^^^^^ help: to reference the macro definition's crate, use: `$crate`
+02720|   |
+02721|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#crate_in_macro_def
+02722|   = note: `#[warn(clippy::crate_in_macro_def)]` on by default
+02723|
+02724|warning: `crate` references the macro call's crate
+02725|  --> crates/core/messages.rs:84:9
+02726|   |
+02727|84 |         crate::messages::set_errored();
+02728|   |         ^^^^^ help: to reference the macro definition's crate, use: `$crate`
+02729|   |
+02730|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#crate_in_macro_def
+02731|
+02732|warning: `crate` references the macro call's crate
+02733|  --> crates/core/messages.rs:94:12
+02734|   |
+02735|94 |         if crate::messages::messages() && crate::messages::ignore_messages() {
+02736|   |            ^^^^^ help: to reference the macro definition's crate, use: `$crate`
+02737|   |
+02738|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#crate_in_macro_def
+02739|
+02740|warning: statics have by default a `'static` lifetime
+02741| --> crates/core/flags/complete/mod.rs:5:20
+02742|  |
+02743|5 | static ENCODINGS: &'static str = include_str!("encodings.sh");
+02744|  |                   -^^^^^^^---- help: consider removing `'static`: `&str`
+02745|  |
+02746|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02747|  = note: `#[warn(clippy::redundant_static_lifetimes)]` on by default
+02748|
+02749|warning: constants have by default a `'static` lifetime
+02750| --> crates/core/flags/complete/bash.rs:7:23
+02751|  |
+02752|7 | const TEMPLATE_FULL: &'static str = "
+02753|  |                      -^^^^^^^---- help: consider removing `'static`: `&str`
+02754|  |
+02755|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02756|
+02757|warning: constants have by default a `'static` lifetime
+02758|  --> crates/core/flags/complete/bash.rs:45:23
+02759|   |
+02760|45 | const TEMPLATE_CASE: &'static str = "
+02761|   |                      -^^^^^^^---- help: consider removing `'static`: `&str`
+02762|   |
+02763|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02764|
+02765|warning: constants have by default a `'static` lifetime
+02766|  --> crates/core/flags/complete/bash.rs:52:31
+02767|   |
+02768|52 | const TEMPLATE_CASE_CHOICES: &'static str = "
+02769|   |                              -^^^^^^^---- help: consider removing `'static`: `&str`
+02770|   |
+02771|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02772|
+02773|warning: constants have by default a `'static` lifetime
+02774| --> crates/core/flags/complete/fish.rs:7:18
+02775|  |
+02776|7 | const TEMPLATE: &'static str = "complete -c rg !SHORT! -l !LONG! -d '!DOC!'";
+02777|  |                 -^^^^^^^---- help: consider removing `'static`: `&str`
+02778|  |
+02779|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02780|
+02781|warning: constants have by default a `'static` lifetime
+02782| --> crates/core/flags/complete/fish.rs:8:26
+02783|  |
+02784|8 | const TEMPLATE_NEGATED: &'static str = "complete -c rg -l !NEGATED! -n '__rg_contains_opt !LONG! !SHORT!' -d '!DOC!'\n";
+02785|  |                         -^^^^^^^---- help: consider removing `'static`: `&str`
+02786|  |
+02787|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02788|
+02789|warning: constants have by default a `'static` lifetime
+02790| --> crates/core/flags/complete/powershell.rs:7:18
+02791|  |
+02792|7 | const TEMPLATE: &'static str = "
+02793|  |                 -^^^^^^^---- help: consider removing `'static`: `&str`
+02794|  |
+02795|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02796|
+02797|warning: constants have by default a `'static` lifetime
+02798|  --> crates/core/flags/complete/powershell.rs:37:23
+02799|   |
+02800|37 | const TEMPLATE_FLAG: &'static str = "[CompletionResult]::new('!DASH_NAME!', '!NAME!', [CompletionResultType]::ParameterName, '!DOC!')";
+02801|   |                      -^^^^^^^---- help: consider removing `'static`: `&str`
+02802|   |
+02803|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02804|
+02805|warning: constants have by default a `'static` lifetime
+02806|  --> crates/core/flags/doc/help.rs:13:24
+02807|   |
+02808|13 | const TEMPLATE_SHORT: &'static str = include_str!("template.short.help");
+02809|   |                       -^^^^^^^---- help: consider removing `'static`: `&str`
+02810|   |
+02811|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02812|
+02813|warning: constants have by default a `'static` lifetime
+02814|  --> crates/core/flags/doc/help.rs:14:23
+02815|   |
+02816|14 | const TEMPLATE_LONG: &'static str = include_str!("template.long.help");
+02817|   |                      -^^^^^^^---- help: consider removing `'static`: `&str`
+02818|   |
+02819|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02820|
+02821|warning: constants have by default a `'static` lifetime
+02822| --> crates/core/flags/doc/man.rs:9:18
+02823|  |
+02824|9 | const TEMPLATE: &'static str = include_str!("template.rg.1");
+02825|  |                 -^^^^^^^---- help: consider removing `'static`: `&str`
+02826|  |
+02827|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02828|
+02829|warning: constants have by default a `'static` lifetime
+02830|  --> crates/core/logger.rs:19:16
+02831|   |
+02832|19 | const LOGGER: &'static Logger = &Logger(());
+02833|   |               -^^^^^^^------- help: consider removing `'static`: `&Logger`
+02834|   |
+02835|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+02836|
+02837|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02838|  --> crates/core/flags/complete/fish.rs:26:32
+02839|   |
+02840|26 |             .replace("!LONG!", &long)
+02841|   |                                ^^^^^ help: change this to: `long`
+02842|   |
+02843|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02844|   = note: `#[warn(clippy::needless_borrow)]` on by default
+02845|
+02846|warning: calling `push_str()` using a single-character string literal
+02847|  --> crates/core/flags/complete/fish.rs:44:17
+02848|   |
+02849|44 |                 completion.push_str("'");
+02850|   |                 ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `push` with a character literal: `completion.push('\'')`
+02851|   |
+02852|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_char_add_str
+02853|   = note: `#[warn(clippy::single_char_add_str)]` on by default
+02854|
+02855|warning: calling `push_str()` using a single-character string literal
+02856|  --> crates/core/flags/complete/fish.rs:49:17
+02857|   |
+02858|49 |                 completion.push_str("'");
+02859|   |                 ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `push` with a character literal: `completion.push('\'')`
+02860|   |
+02861|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_char_add_str
+02862|
+02863|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02864|  --> crates/core/flags/complete/fish.rs:67:43
+02865|   |
+02866|67 |                     .replace("!NEGATED!", &negated)
+02867|   |                                           ^^^^^^^^ help: change this to: `negated`
+02868|   |
+02869|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02870|
+02871|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02872|  --> crates/core/flags/complete/fish.rs:69:40
+02873|   |
+02874|69 |                     .replace("!LONG!", &long)
+02875|   |                                        ^^^^^ help: change this to: `long`
+02876|   |
+02877|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02878|
+02879|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02880|  --> crates/core/flags/complete/powershell.rs:57:36
+02881|   |
+02882|57 |                 .replace("!NAME!", &name)
+02883|   |                                    ^^^^^ help: change this to: `name`
+02884|   |
+02885|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02886|
+02887|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02888|  --> crates/core/flags/complete/powershell.rs:79:40
+02889|   |
+02890|79 |                     .replace("!NAME!", &negated)
+02891|   |                                        ^^^^^^^^ help: change this to: `negated`
+02892|   |
+02893|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02894|
+02895|warning: doc list item without indentation
+02896| --> crates/core/flags/complete/zsh.rs:9:1
+02897|  |
+02898|9 | Namely, the zsh completions take application level context about flag
+02899|  | ^
+02900|  |
+02901|  = help: if this is supposed to be its own paragraph, add a blank line
+02902|  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02903|  = note: `#[warn(clippy::doc_lazy_continuation)]` on by default
+02904|help: indent this line
+02905|  |
+02906|9 |    Namely, the zsh completions take application level context about flag
+02907|  | +++
+02908|
+02909|warning: doc list item without indentation
+02910|  --> crates/core/flags/complete/zsh.rs:10:1
+02911|   |
+02912|10 | compatibility into account.
+02913|   | ^
+02914|   |
+02915|   = help: if this is supposed to be its own paragraph, add a blank line
+02916|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02917|help: indent this line
+02918|   |
+02919|10 |    compatibility into account.
+02920|   | +++
+02921|
+02922|warning: doc list item without indentation
+02923|  --> crates/core/flags/complete/zsh.rs:12:1
+02924|   |
+02925|12 | isn't included in the zsh completions.
+02926|   | ^
+02927|   |
+02928|   = help: if this is supposed to be its own paragraph, add a blank line
+02929|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02930|help: indent this line
+02931|   |
+02932|12 |    isn't included in the zsh completions.
+02933|   | +++
+02934|
+02935|warning: doc list item without indentation
+02936|  --> crates/core/flags/complete/zsh.rs:14:1
+02937|   |
+02938|14 | works and how it can be extended.
+02939|   | ^
+02940|   |
+02941|   = help: if this is supposed to be its own paragraph, add a blank line
+02942|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+02943|help: indent this line
+02944|   |
+02945|14 |    works and how it can be extended.
+02946|   | +++
+02947|
+02948|warning: the borrowed expression implements the required traits
+02949|  --> crates/core/flags/config.rs:67:31
+02950|   |
+02951|67 |     match std::fs::File::open(&path) {
+02952|   |                               ^^^^^ help: change this to: `path`
+02953|   |
+02954|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrows_for_generic_args
+02955|   = note: `#[warn(clippy::needless_borrows_for_generic_args)]` on by default
+02956|
+02957|warning: deref which would be done by auto-deref
+02958|    --> crates/core/flags/defs.rs:3038:9
+02959|     |
+02960|3038 |         &*BORROWED
+02961|     |         ^^^^^^^^^^ help: try: `&BORROWED`
+02962|     |
+02963|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#explicit_auto_deref
+02964|     = note: `#[warn(clippy::explicit_auto_deref)]` on by default
+02965|
+02966|warning: name `JSON` contains a capitalized acronym
+02967|    --> crates/core/flags/defs.rs:3436:8
+02968|     |
+02969|3436 | struct JSON;
+02970|     |        ^^^^ help: consider making the acronym lowercase, except the initial letter: `Json`
+02971|     |
+02972|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#upper_case_acronyms
+02973|     = note: `#[warn(clippy::upper_case_acronyms)]` on by default
+02974|
+02975|warning: this expression creates a reference which is immediately dereferenced by the compiler
+02976|   --> crates/core/flags/doc/help.rs:118:34
+02977|    |
+02978|118 |         generate_long_flag(flag, &mut cat);
+02979|    |                                  ^^^^^^^^ help: change this to: `cat`
+02980|    |
+02981|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+02982|
+02983|warning: useless use of `format!`
+02984|   --> crates/core/flags/doc/help.rs:229:28
+02985|    |
+02986|229 |                 lines.push(format!("{item_label}"));
+02987|    |                            ^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `.to_string()`: `item_label.to_string()`
+02988|    |
+02989|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_format
+02990|    = note: `#[warn(clippy::useless_format)]` on by default
+02991|
+02992|warning: useless use of `format!`
+02993|   --> crates/core/flags/doc/help.rs:236:28
+02994|    |
+02995|236 |                 lines.push(format!("{pieces}"));
+02996|    |                            ^^^^^^^^^^^^^^^^^^^ help: consider using `.to_string()`: `pieces.to_string()`
+02997|    |
+02998|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_format
+02999|
+03000|warning: this expression creates a reference which is immediately dereferenced by the compiler
+03001|  --> crates/core/flags/doc/man.rs:34:29
+03002|   |
+03003|34 |         generate_flag(flag, &mut cat);
+03004|   |                             ^^^^^^^^ help: change this to: `cat`
+03005|   |
+03006|   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+03007|
+03008|warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+03009|   --> crates/core/flags/hiargs.rs:127:9
+03010|    |
+03011|127 | /         match low.mode {
+03012|128 | |             Mode::Search(ref mut mode) => match *mode {
+03013|129 | |                 // treat `-v --count-matches` as `-v --count`
+03014|130 | |                 SearchMode::CountMatches if low.invert_match => {
+03015|...   |
+03016|139 | |             _ => {}
+03017|140 | |         }
+03018|    | |_________^
+03019|    |
+03020|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#single_match
+03021|    = note: `#[warn(clippy::single_match)]` on by default
+03022|help: try
+03023|    |
+03024|127 ~         if let Mode::Search(ref mut mode) = low.mode { match *mode {
+03025|128 +             // treat `-v --count-matches` as `-v --count`
+03026|129 +             SearchMode::CountMatches if low.invert_match => {
+03027|130 +                 *mode = SearchMode::Count;
+03028|131 +             }
+03029|132 +             // treat `-o --count` as `--count-matches`
+03030|133 +             SearchMode::Count if low.only_matching => {
+03031|134 +                 *mode = SearchMode::CountMatches;
+03032|135 +             }
+03033|136 +             _ => {}
+03034|137 +         } }
+03035|    |
+03036|
+03037|warning: unnecessary closure used to substitute value for `Option::None`
+03038|   --> crates/core/flags/hiargs.rs:176:29
+03039|    |
+03040|176 |           let with_filename = low
+03041|    |  _____________________________^
+03042|177 | |             .with_filename
+03043|178 | |             .unwrap_or_else(|| low.vimgrep || !paths.is_one_file);
+03044|    | |_________________________________________________________________^
+03045|    |
+03046|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_lazy_evaluations
+03047|    = note: `#[warn(clippy::unnecessary_lazy_evaluations)]` on by default
+03048|help: use `unwrap_or` instead
+03049|    |
+03050|178 -             .unwrap_or_else(|| low.vimgrep || !paths.is_one_file);
+03051|178 +             .unwrap_or(low.vimgrep || !paths.is_one_file);
+03052|    |
+03053|
+03054|warning: unneeded `return` statement
+03055|   --> crates/core/flags/hiargs.rs:207:47
+03056|    |
+03057|207 |                 | SearchMode::CountMatches => return false,
+03058|    |                                               ^^^^^^^^^^^^
+03059|    |
+03060|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_return
+03061|    = note: `#[warn(clippy::needless_return)]` on by default
+03062|help: remove `return`
+03063|    |
+03064|207 -                 | SearchMode::CountMatches => return false,
+03065|207 +                 | SearchMode::CountMatches => false,
+03066|    |
+03067|
+03068|warning: unneeded `return` statement
+03069|   --> crates/core/flags/hiargs.rs:208:37
+03070|    |
+03071|208 |                 SearchMode::JSON => return true,
+03072|    |                                     ^^^^^^^^^^^
+03073|    |
+03074|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_return
+03075|help: remove `return`
+03076|    |
+03077|208 -                 SearchMode::JSON => return true,
+03078|208 +                 SearchMode::JSON => true,
+03079|    |
+03080|
+03081|warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+03082|   --> crates/core/flags/hiargs.rs:552:24
+03083|    |
+03084|552 |             .separator(self.path_separator.clone())
+03085|    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `self.path_separator`
+03086|    |
+03087|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+03088|    = note: `#[warn(clippy::clone_on_copy)]` on by default
+03089|
+03090|warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+03091|   --> crates/core/flags/hiargs.rs:623:30
+03092|    |
+03093|623 |             .path_terminator(self.path_terminator.clone())
+03094|    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `self.path_terminator`
+03095|    |
+03096|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+03097|
+03098|warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+03099|   --> crates/core/flags/hiargs.rs:634:29
+03100|    |
+03101|634 |             .separator_path(self.path_separator.clone())
+03102|    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `self.path_separator`
+03103|    |
+03104|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+03105|
+03106|warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+03107|   --> crates/core/flags/hiargs.rs:661:30
+03108|    |
+03109|661 |             .path_terminator(self.path_terminator.clone())
+03110|    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `self.path_terminator`
+03111|    |
+03112|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+03113|
+03114|warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+03115|   --> crates/core/flags/hiargs.rs:663:29
+03116|    |
+03117|663 |             .separator_path(self.path_separator.clone())
+03118|    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `self.path_separator`
+03119|    |
+03120|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#clone_on_copy
+03121|
+03122|warning: this pattern creates a reference to a reference
+03123|   --> crates/core/flags/hiargs.rs:786:36
+03124|    |
+03125|786 |                 haystacks.sort_by(|ref h1, ref h2| {
+03126|    |                                    ^^^^^^ help: try: `h1`
+03127|    |
+03128|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+03129|
+03130|warning: this pattern creates a reference to a reference
+03131|   --> crates/core/flags/hiargs.rs:786:44
+03132|    |
+03133|786 |                 haystacks.sort_by(|ref h1, ref h2| {
+03134|    |                                            ^^^^^^ help: try: `h2`
+03135|    |
+03136|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+03137|
+03138|warning: this expression creates a reference which is immediately dereferenced by the compiler
+03139|    --> crates/core/flags/hiargs.rs:1228:21
+03140|     |
+03141|1228 |         builder.add(&glob)?;
+03142|     |                     ^^^^^ help: change this to: `glob`
+03143|     |
+03144|     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+03145|
+03146|warning: name `JSON` contains a capitalized acronym
+03147|   --> crates/core/flags/lowargs.rs:213:5
+03148|    |
+03149|213 |     JSON,
+03150|    |     ^^^^ help: consider making the acronym lowercase, except the initial letter: `Json`
+03151|    |
+03152|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#upper_case_acronyms
+03153|
+03154|warning: explicit call to `.into_iter()` in function argument accepting `IntoIterator`
+03155|   --> crates/core/flags/parse.rs:107:36
+03156|    |
+03157|107 |     if let Err(err) = parser.parse(final_args.into_iter(), &mut low) {
+03158|    |                                    ^^^^^^^^^^------------
+03159|    |                                              |
+03160|    |                                              help: consider removing the `.into_iter()`
+03161|    |
+03162|note: this parameter accepts any `IntoIterator`, so you don't need to call `.into_iter()`
+03163|   --> crates/core/flags/parse.rs:223:12
+03164|    |
+03165|223 |         I: IntoIterator<Item = O>,
+03166|    |            ^^^^^^^^^^^^^^^^^^^^^^
+03167|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_conversion
+03168|    = note: `#[warn(clippy::useless_conversion)]` on by default
+03169|
+03170|warning: redundant guard
+03171|   --> crates/core/flags/parse.rs:233:43
+03172|    |
+03173|233 |                 lexopt::Arg::Short(ch) if ch == 'h' => {
+03174|    |                                           ^^^^^^^^^
+03175|    |
+03176|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_guards
+03177|    = note: `#[warn(clippy::redundant_guards)]` on by default
+03178|help: try
+03179|    |
+03180|233 -                 lexopt::Arg::Short(ch) if ch == 'h' => {
+03181|233 +                 lexopt::Arg::Short('h') => {
+03182|    |
+03183|
+03184|warning: redundant guard
+03185|   --> crates/core/flags/parse.rs:239:43
+03186|    |
+03187|239 |                 lexopt::Arg::Short(ch) if ch == 'V' => {
+03188|    |                                           ^^^^^^^^^
+03189|    |
+03190|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_guards
+03191|help: try
+03192|    |
+03193|239 -                 lexopt::Arg::Short(ch) if ch == 'V' => {
+03194|239 +                 lexopt::Arg::Short('V') => {
+03195|    |
+03196|
+03197|warning: redundant guard
+03198|   --> crates/core/flags/parse.rs:246:44
+03199|    |
+03200|246 |                 lexopt::Arg::Long(name) if name == "help" => {
+03201|    |                                            ^^^^^^^^^^^^^^
+03202|    |
+03203|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_guards
+03204|help: try
+03205|    |
+03206|246 -                 lexopt::Arg::Long(name) if name == "help" => {
+03207|246 +                 lexopt::Arg::Long("help") => {
+03208|    |
+03209|
+03210|warning: redundant guard
+03211|   --> crates/core/flags/parse.rs:252:44
+03212|    |
+03213|252 |                 lexopt::Arg::Long(name) if name == "version" => {
+03214|    |                                            ^^^^^^^^^^^^^^^^^
+03215|    |
+03216|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_guards
+03217|help: try
+03218|    |
+03219|252 -                 lexopt::Arg::Long(name) if name == "version" => {
+03220|252 +                 lexopt::Arg::Long("version") => {
+03221|    |
+03222|
+03223|warning: this `map_or` can be simplified
+03224|   --> crates/core/haystack.rs:158:9
+03225|    |
+03226|158 |         self.dent.file_type().map_or(false, |ft| ft.is_file())
+03227|    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+03228|    |
+03229|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_map_or
+03230|    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+03231|help: use is_some_and instead
+03232|    |
+03233|158 -         self.dent.file_type().map_or(false, |ft| ft.is_file())
+03234|158 +         self.dent.file_type().is_some_and(|ft| ft.is_file())
+03235|    |
+03236|
+03237|warning: name `JSON` contains a capitalized acronym
+03238|   --> crates/core/search.rs:210:5
+03239|    |
+03240|210 |     JSON(grep::printer::JSON<W>),
+03241|    |     ^^^^ help: consider making the acronym lowercase, except the initial letter: `Json`
+03242|    |
+03243|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#upper_case_acronyms
+03244|
+03245|warning: this boolean expression can be simplified
+03246|   --> crates/core/search.rs:285:12
+03247|    |
+03248|285 |         if !self.config.preprocessor.is_some() {
+03249|    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `self.config.preprocessor.is_none()`
+03250|    |
+03251|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#nonminimal_bool
+03252|    = note: `#[warn(clippy::nonminimal_bool)]` on by default
+03253|
+03254|warning: this can be `std::io::Error::other(_)`
+03255|   --> crates/core/search.rs:307:13
+03256|    |
+03257|307 | /             io::Error::new(
+03258|308 | |                 io::ErrorKind::Other,
+03259|309 | |                 format!(
+03260|310 | |                     "preprocessor command could not start: '{cmd:?}': {err}",
+03261|311 | |                 ),
+03262|312 | |             )
+03263|    | |_____________^
+03264|    |
+03265|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+03266|    = note: `#[warn(clippy::io_other_error)]` on by default
+03267|help: use `std::io::Error::other`
+03268|    |
+03269|307 ~             io::Error::other(
+03270|308 ~                 format!(
+03271|    |
+03272|
+03273|warning: this can be `std::io::Error::other(_)`
+03274|   --> crates/core/search.rs:315:13
+03275|    |
+03276|315 | /             io::Error::new(
+03277|316 | |                 io::ErrorKind::Other,
+03278|317 | |                 format!("preprocessor command failed: '{cmd:?}': {err}"),
+03279|318 | |             )
+03280|    | |_____________^
+03281|    |
+03282|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#io_other_error
+03283|help: use `std::io::Error::other`
+03284|    |
+03285|315 ~             io::Error::other(
+03286|316 ~                 format!("preprocessor command failed: '{cmd:?}': {err}"),
+03287|    |
+03288|
+03289|warning: you are using an explicit closure for cloning elements
+03290|   --> crates/core/search.rs:392:24
+03291|    |
+03292|392 |                 stats: sink.stats().map(|s| s.clone()),
+03293|    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `cloned` method: `sink.stats().cloned()`
+03294|    |
+03295|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#map_clone
+03296|    = note: `#[warn(clippy::map_clone)]` on by default
+03297|
+03298|warning: you are using an explicit closure for cloning elements
+03299|   --> crates/core/search.rs:400:24
+03300|    |
+03301|400 |                 stats: sink.stats().map(|s| s.clone()),
+03302|    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `cloned` method: `sink.stats().cloned()`
+03303|    |
+03304|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#map_clone
+03305|
+03306|warning: you are using an explicit closure for cloning elements
+03307|   --> crates/core/search.rs:429:24
+03308|    |
+03309|429 |                 stats: sink.stats().map(|s| s.clone()),
+03310|    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `cloned` method: `sink.stats().cloned()`
+03311|    |
+03312|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#map_clone
+03313|
+03314|warning: you are using an explicit closure for cloning elements
+03315|   --> crates/core/search.rs:437:24
+03316|    |
+03317|437 |                 stats: sink.stats().map(|s| s.clone()),
+03318|    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `cloned` method: `sink.stats().cloned()`
+03319|    |
+03320|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#map_clone
+03321|
+03322|warning: the method `print` doesn't need a mutable reference
+03323|   --> crates/core/main.rs:226:30
+03324|    |
+03325|226 |         let _ = bufwtr.print(&mut wtr);
+03326|    |                              ^^^^^^^^
+03327|    |
+03328|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_mut_passed
+03329|    = note: `#[warn(clippy::unnecessary_mut_passed)]` on by default
+03330|help: remove this `mut`
+03331|    |
+03332|226 -         let _ = bufwtr.print(&mut wtr);
+03333|226 +         let _ = bufwtr.print(&wtr);
+03334|    |
+03335|
+03336|warning: this expression creates a reference which is immediately dereferenced by the compiler
+03337|   --> crates/core/main.rs:226:30
+03338|    |
+03339|226 |         let _ = bufwtr.print(&mut wtr);
+03340|    |                              ^^^^^^^^ help: change this to: `wtr`
+03341|    |
+03342|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+03343|
+03344|warning: using `write!()` with a format string that ends in a single newline
+03345|   --> crates/core/main.rs:459:9
+03346|    |
+03347|459 |         write!(wtr, "\n")
+03348|    |         ^^^^^^^^^^^^^^^^^
+03349|    |
+03350|    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#write_with_newline
+03351|    = note: `#[warn(clippy::write_with_newline)]` on by default
+03352|help: use `writeln!` instead
+03353|    |
+03354|459 -         write!(wtr, "\n")
+03355|459 +         writeln!(wtr)
+03356|    |
+03357|
+03358|warning: `ripgrep` (bin "rg") generated 63 warnings (run `cargo clippy --fix --bin "rg" -p ripgrep` to apply 52 suggestions)
+03359|    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.53s

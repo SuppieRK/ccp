@@ -1,0 +1,2 @@
+next build: cached
+▲ Next.js 15.2.0

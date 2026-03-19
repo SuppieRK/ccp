@@ -1,1 +1,9 @@
-00000|{"Issues":[{"FromLinter":"errcheck","Text":"ignored error","Pos":{"Filename":"internal/api/server.go","Line":14,"Column":2}},{"FromLinter":"revive","Text":"missing doc","Pos":{"Filename":"internal/api/server.go","Line":20,"Column":1}},{"FromLinter":"gosec","Text":"weak random source","Pos":{"Filename":"internal/api/server.go","Line":27,"Column":9}},{"FromLinter":"govet","Text":"Printf format mismatch","Pos":{"Filename":"cmd/app/main.go","Line":9,"Column":3}},{"FromLinter":"gosimple","Text":"should use strings.Contains","Pos":{"Filename":"internal/checks/check.go","Line":11,"Column":5}},{"FromLinter":"stylecheck","Text":"comment should start with name","Pos":{"Filename":"internal/checks/check.go","Line":22,"Column":1}}]}
+00000|main.go:6:12: Error return value of `fmt.Errorf` is not checked (errcheck)
+00001|	fmt.Errorf("ignored")
+00002|	          ^
+00003|main.go:7:14: printf: fmt.Printf format %d has arg "wrong" of wrong type string (govet)
+00004|	fmt.Printf("%d", "wrong")
+00005|	            ^
+00006|2 issues:
+00007|* errcheck: 1
+00008|* govet: 1

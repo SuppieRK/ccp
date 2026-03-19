@@ -1,5 +1,4 @@
 :clean: ok
-:examples:basic-demo:clean: ok
 :spotlessInternalRegisterDependencies: ok
 :spotlessGroovyGradle: ok
 :spotlessGroovyGradleApply: ok

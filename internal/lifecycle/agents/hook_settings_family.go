@@ -172,20 +172,9 @@ func persistJSONSettings(settingsPath string, root map[string]any) (bool, error)
 }
 
 const (
-	continueHookScriptName = "ccp-rewrite.sh"
-	continueSettingsName   = "settings.json"
-
 	codebuddyHookScriptName = "ccp-rewrite.sh"
 	codebuddySettingsName   = "settings.json"
 )
-
-func continueRoot(ctx Context) string {
-	return homeOrScopePath(ctx, ".continue")
-}
-
-func continueHookScriptContent() string {
-	return bashRewriteHookScriptContent("continue", "ccp-continue-hook.log")
-}
 
 func codebuddyRoot(ctx Context) string {
 	return ResolveHomeScopedPath(ctx.HomeDir, ".codebuddy")

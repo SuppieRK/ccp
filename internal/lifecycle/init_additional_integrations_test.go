@@ -64,16 +64,6 @@ var _ = Describe("init additional integration coverage", func() {
 			artifactRoot: "root",
 			artifactRel:  filepath.Join(initTraeDir, "rules", initTraeRuleName),
 		}),
-		Entry("windsurf", additionalDetectionCase{
-			tool:        "windsurf",
-			markerPath:  initWindsurfDir,
-			artifactRel: filepath.Join(".codeium", "windsurf", "hooks.json"),
-		}),
-		Entry("cline", additionalDetectionCase{
-			tool:        "cline",
-			markerPath:  initClineDir,
-			artifactRel: filepath.Join("Documents", "Cline", "Hooks", initClineHookName),
-		}),
 	)
 
 	It("maps the costrict alias to roocode", func() {
@@ -292,27 +282,4 @@ var _ = Describe("init additional integration coverage", func() {
 		Expect(text).NotTo(ContainSubstring("old content"))
 	})
 
-	It("installs windsurf settings and hook content", func() {
-		ws := newInitManagedWorkspace()
-		Expect(os.MkdirAll(filepath.Join(ws.work, initWindsurfDir), 0o755)).To(Succeed())
-
-		Expect(RunInit([]string{initToolsFlag, "windsurf"})).To(Succeed())
-
-		settingsBody, err := os.ReadFile(filepath.Join(ws.home, ".codeium", "windsurf", "hooks.json"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(settingsBody)).To(ContainSubstring(`"pre_run_command"`))
-		Expect(string(settingsBody)).To(ContainSubstring(strings.ReplaceAll(filepath.Join(ws.home, ".codeium", "windsurf", "hooks", "ccp-block.sh"), "\\", "\\\\")))
-	})
-
-	It("installs cline settings and hook content", func() {
-		ws := newInitManagedWorkspace()
-		Expect(os.MkdirAll(filepath.Join(ws.work, initClineDir), 0o755)).To(Succeed())
-
-		Expect(RunInit([]string{initToolsFlag, "cline"})).To(Succeed())
-
-		settingsBody, err := os.ReadFile(filepath.Join(ws.home, "Documents", "Cline", "Hooks", initClineHookName))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(settingsBody)).To(ContainSubstring(`"Decision":"block"`))
-		Expect(string(settingsBody)).To(ContainSubstring("Use ccp as the command prefix for shell commands"))
-	})
 })

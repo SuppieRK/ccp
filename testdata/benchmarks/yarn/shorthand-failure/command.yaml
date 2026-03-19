@@ -1,0 +1,2 @@
+argv: ["yarn", "failure"]
+exit_code: 1

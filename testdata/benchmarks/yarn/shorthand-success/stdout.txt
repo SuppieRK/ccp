@@ -1,0 +1,5 @@
+00000|yarn run v1.22.22
+00001|$ node scripts/success.js
+00002|success-line-1
+00003|success-line-2
+00004|Done in 0.07s.

@@ -1,0 +1,2 @@
+argv: ["./.venv/bin/pip", "show", "definitely-missing-package-ccp-corpus"]
+exit_code: 1

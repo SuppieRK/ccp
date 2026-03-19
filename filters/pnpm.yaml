@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: pnpm
-about: Compact pnpm install/list/outdated output.
+about: Compact pnpm install/list/outdated output while preserving real package state, dependency identities, and no-lockfile diagnostics.
 
 cases:
   - id: install
@@ -10,8 +10,24 @@ cases:
     compress_output:
       combined:
         lines:
-          keep:
-            - regex: '^Done in .+ using pnpm .+$'
+          skip:
+            - regex: '^Scope: .+$'
+            - regex: '^Lockfile is up to date, resolution step is skipped$'
+            - regex: '^Already up to date$'
+            - regex: '^Progress: .+$'
+            - regex: '^Packages: \+\d+$'
+            - regex: '^\++$'
+            - regex: '^dependencies:$'
+            - regex: '^devDependencies:$'
+            - regex: '^\+ .+$'
+            - regex: '^> .+$'
+            - regex: '^╭ .+$'
+            - regex: '^╰.+$'
+            - regex: '^│\s*│$'
+            - regex: '^[[:space:]]*$'
+          replace:
+            - regex: '^│\s+(\S.*\S|\S)\s+│$'
+              to: '$1'
 
   - id: list
     when_arguments:
@@ -22,7 +38,7 @@ cases:
       combined:
         groups:
           - id: dependencies
-            matches_regex: '^(?:└── )?(?P<pkg>@[^@/\s]+/[^@\s]+@\S+|@?[^@\s]+@\S+).*$'
+            matches_regex: '^(?:├── |└── )(?P<pkg>@[^@/\s]+/[^@\s]+@\S+|@?[^@\s]+@\S+).*$'
             variables:
               - name: section
                 type: string
@@ -46,4 +62,4 @@ cases:
         lines:
           replace:
             - regex: '^.*ERR_PNPM_OUTDATED_NO_LOCKFILE.*$'
-              to: 'All packages up-to-date'
+              to: 'pnpm outdated: no lockfile, run pnpm install first'

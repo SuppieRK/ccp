@@ -1,9 +1,18 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: prettier
-about: Compact Prettier check and write output.
+about: Compact Prettier check output, preserve parser diagnostics and file lists, and leave write-mode behavior close to native until broader corpus justifies more.
 
 cases:
+  - id: write
+    when_arguments:
+      have_any: ["--write"]
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^(.+?)\s+\d+(?:\.\d+)?ms$'
+              to: '$1'
   - id: check
     when_arguments:
       have_any: ["--check"]
@@ -12,6 +21,7 @@ cases:
         lines:
           skip:
             - starts_with: "Checking formatting..."
+            - starts_with: "Error occurred when checking code style in the above file."
           replace:
             - regex: '^\[warn\] Code style issues found in the above file\. Run Prettier with --write to fix\.$'
               to: 'prettier check: 1 files need formatting'

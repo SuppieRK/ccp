@@ -82,12 +82,6 @@ var _ = Describe("init auto-detection", func() {
 			expectedTool: "antigravity",
 			artifactRel:  filepath.Join(initGeminiDir, initGeminiFileName),
 		}),
-		Entry("continue", initDetectionCase{
-			name:         "continue",
-			markerPath:   initContinueDir,
-			expectedTool: "continue",
-			artifactRel:  filepath.Join(initContinueDir, "hooks", initRewriteScriptName),
-		}),
 		Entry("kiro", initDetectionCase{
 			name:         "kiro",
 			markerPath:   initKiroDir,

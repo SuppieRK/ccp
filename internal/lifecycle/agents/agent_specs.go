@@ -198,7 +198,6 @@ var managedContextLinkAdapterSpecs = []ManagedContextLinkAdapterSpec{
 
 var managedHookSettingsAdapterSpecs = []ManagedHookSettingsAdapterSpec{
 	codebuddyHookSettingsSpec,
-	continueHookSettingsSpec,
 }
 
 var kilocodeJSPluginSpec = ManagedJSPluginAdapterSpec{
@@ -317,31 +316,6 @@ var qwenContextLinkSpec = ManagedContextLinkAdapterSpec{
 	RemoveConfig: func(configPath string, _ Context) (string, bool, bool, error) {
 		return removeQwenSettings(configPath)
 	},
-}
-
-var continueHookSettingsSpec = ManagedHookSettingsAdapterSpec{
-	ID:                  AgentContinue,
-	DetectRootPath:      ".continue",
-	Root:                continueRoot,
-	HookScriptName:      continueHookScriptName,
-	SettingsName:        continueSettingsName,
-	HookContent:         continueHookScriptContent,
-	PlanSettingsContent: preToolUseCommandSettingsContent,
-	UpsertSettings: func(_ string, hookPath string) (string, error) {
-		return preToolUseCommandSettingsContent(hookPath), nil
-	},
-	UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
-		changed, err := removePreToolUseCommandHook(settingsPath, hookPath)
-		if err != nil {
-			return InstallResult{}, err
-		}
-		if changed {
-			return InstallResult{Applied: 1}, nil
-		}
-		return InstallResult{Noop: 1}, nil
-	},
-	MissingHookFmt:     "missing continue hook script: %s",
-	MissingSettingsFmt: "missing continue settings file: %s",
 }
 
 var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
@@ -516,9 +490,7 @@ func expectedRuleDetectRoot(scopeRoot string, spec managedRuleFileAdapterSpec) s
 
 var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 	catalog := []BuiltInAdapterSpec{
-		{ID: AgentCline, New: func() Adapter { return ClineAdapter{} }},
 		{ID: AgentClaude, New: func() Adapter { return ClaudeAdapter{} }},
-		{ID: AgentWindsurf, New: func() Adapter { return WindsurfAdapter{} }},
 	}
 	catalog = append(catalog, builtInRuleFileAdapterCatalog()...)
 	catalog = append(catalog, builtInHookSettingsAdapterCatalog()...)

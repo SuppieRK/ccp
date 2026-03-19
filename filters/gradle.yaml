@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: gradle
-about: Compact Gradle and Gradle Wrapper output.
+about: Trim Gradle and Gradle Wrapper boilerplate aggressively, keep task and failure loci visible, and drop low-value configuration, internal stack, and INFO chatter when it does not help follow-up shell work.
 
 cases:
   - id: gradle_output
@@ -9,6 +9,12 @@ cases:
       combined:
         lines:
           skip:
+            - regex: '^> Configure project .*$'
+            - regex: '^Inferred project: .*$'
+            - regex: '^Publishing key or secret was null$'
+            - regex: '^GitHub key was null$'
+            - regex: '^Type-safe project accessors is an incubating feature\.$'
+            - regex: '^.*\bINFO\b.*$'
             - regex: '^\d{1,2}:\d{2}:\d{2}\s+[AP]M: Executing .*$'
             - regex: '^\d{1,2}:\d{2}:\d{2}\s+[AP]M: Execution finished .*$'
             - regex: '^Starting Gradle Daemon\.\.\.$'
@@ -16,6 +22,8 @@ cases:
             - regex: '^Gradle Daemon started in .*$'
             - regex: '^Download https?://.*$'
             - regex: '^Consider enabling configuration cache to speed up this build: .*$'
+            - regex: '^Publishing Build Scan to Develocity\.\.\.$'
+            - regex: '^https://gradle\.com/s/.*$'
             - regex: '^WARNING: A restricted method in java\.lang\.System has been called$'
             - regex: '^WARNING: java\.lang\.System::load has been called by .*NativeLibraryLoader.*$'
             - regex: '^WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module$'
@@ -29,10 +37,11 @@ cases:
             - regex: '^Recommend setting osgi\.configuration\.area to a directory, getDataFile will return null$'
             - regex: '^Starting Groovy-Eclipse compiler resolver\. Specified compiler level: .*$'
             - regex: '^\s+\d+\s+org\.codehaus\.groovy_.*$'
+            - regex: '^\s*at org\.gradle\..*$'
+            - regex: '^\s*at java\.base(?:@[^/]+)?/.*$'
             - regex: '^> Run with --scan to generate a Build Scan \(powered by Develocity\)\.$'
             - regex: '^> Check your code and dependencies to fix the compilation error\(s\)$'
+            - regex: '^> Task (:[^\s]+) (?:NO-SOURCE|UP-TO-DATE|FROM-CACHE|SKIPPED)$'
           replace:
             - regex: '^> Task (:[^\s]+)$'
-              to: '$1: ok'
-            - regex: '^> Task (:[^\s]+) (?:NO-SOURCE|UP-TO-DATE|FROM-CACHE|SKIPPED)$'
               to: '$1: ok'

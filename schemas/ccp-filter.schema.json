@@ -9,18 +9,22 @@
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1
+      "const": 1,
+      "description": "Schema version for the YAML filter format. Must be exactly 1."
     },
     "filter": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Canonical filter id. This usually matches the YAML filename and any mapping targets."
     },
     "about": {
-      "type": "string"
+      "type": "string",
+      "description": "Optional human-readable note describing the filter's purpose or scope."
     },
     "cases": {
       "type": "array",
       "minItems": 1,
+      "description": "Ordered matching cases for this filter. At least one case is required. Runtime validation also requires each case id to be unique.",
       "items": {
         "$ref": "#/$defs/case"
       }
@@ -31,31 +35,39 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id"],
+      "description": "One rule branch selected by command shape. A case may normalize arguments, pass through unchanged, compress output, and emit a final summary.",
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Stable case identifier used for authoring and diagnostics. Must be non-empty and unique within the filter."
         },
         "variables": {
           "type": "array",
+          "description": "Case-scoped variables for line-level counters and summaries. Runtime validation requires unique names, and case-level variables must not set regex_group.",
           "items": {
             "$ref": "#/$defs/variable"
           }
         },
         "when_arguments": {
-          "$ref": "#/$defs/when_arguments"
+          "$ref": "#/$defs/when_arguments",
+          "description": "Optional predicates for matching argv before this case applies. Runtime validation requires at least one predicate when the block is present."
         },
         "normalize_command": {
-          "$ref": "#/$defs/command_mutation"
+          "$ref": "#/$defs/command_mutation",
+          "description": "Optional command normalization applied before execution. Runtime validation requires at least one mutation when the block is present."
         },
         "passthrough": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, CCP keeps the command output unchanged for this case. Invariant: passthrough cases must not also define compress_output."
         },
         "compress_output": {
-          "$ref": "#/$defs/output_shape"
+          "$ref": "#/$defs/output_shape",
+          "description": "Optional output compaction rules for this case. Invariant: not allowed when passthrough is true."
         },
         "finally": {
-          "$ref": "#/$defs/on_exit"
+          "$ref": "#/$defs/on_exit",
+          "description": "Optional text emitted after the case finishes."
         }
       }
     },
@@ -63,97 +75,124 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "type"],
+      "description": "Declared variable used by counters, templates, and grouped output. Some invariants depend on where the variable is declared.",
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Variable name used in templates such as {{name}}. Runtime validation requires names to be unique within the enclosing variable list."
         },
         "type": {
           "type": "string",
-          "enum": ["number", "string"]
+          "enum": ["number", "string"],
+          "description": "Variable storage type. Only number and string are supported."
         },
         "initial_value": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional initial value before any matches run. Stored as text even for number variables and interpreted by runtime code."
         },
         "regex_group": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Named regex capture to import into this variable. Runtime invariants: case-level variables must not set it; boundary groups may use it only with starts_with_regex; collect groups may use it only when the named capture exists in matches_regex; number variables must not set it."
         },
         "default_value": {
-          "type": "string"
+          "type": "string",
+          "description": "Fallback value used when the selected regex capture is empty or missing."
         }
       }
     },
     "string_array": {
       "type": "array",
+      "description": "List of literal argv tokens, flags, or substrings evaluated in order by the relevant predicate or mutation.",
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "One literal token or flag."
       }
     },
     "when_arguments": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Argument predicates for selecting a case. Runtime validation requires at least one field in this block to be set.",
       "properties": {
         "first_is": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Matches when the first argument equals this exact token."
         },
         "first_in": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when the first argument equals any listed token."
         },
         "have_any": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when argv contains at least one listed token anywhere."
         },
         "lack_any": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when argv contains none of the listed tokens."
         },
         "have_sequence": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when argv contains this exact ordered subsequence."
         },
         "have_short_flag": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when at least one listed short flag is present."
         },
         "not_have_short_flag": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when each listed short flag is absent."
         },
         "have_all_short_flags": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when all listed short flags are present."
         },
         "not_have_all_short_flags": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when the full listed short-flag set is not present together."
         },
         "positionals_lack_any": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Matches when positional arguments contain none of the listed tokens."
         },
         "no_positionals": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Matches when the command has no positional arguments."
         }
       }
     },
     "command_mutation": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Command normalization applied before execution. Runtime validation requires at least one mutation field in this block.",
       "properties": {
         "append_if_missing": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Append these tokens only if they are not already present anywhere in argv."
         },
         "append_if_no_positionals": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Append these tokens only when the command has no positional arguments."
         },
         "add_short_flags": {
-          "$ref": "#/$defs/string_array"
+          "$ref": "#/$defs/string_array",
+          "description": "Ensure these short flags are present, preserving native flag semantics handled by the runtime."
         }
       }
     },
     "output_shape": {
+      "description": "Top-level output routing for compressed output. Invariants: define at least one scope, and never mix combined with stdout or stderr scopes.",
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
           "required": ["combined"],
+          "description": "Compress the merged output stream as one ordered sequence.",
           "properties": {
             "combined": {
-              "$ref": "#/$defs/output_scope"
+              "$ref": "#/$defs/output_scope",
+              "description": "Rules applied to the combined stdout and stderr stream. Must not appear with stdout or stderr."
             }
           }
         },
@@ -161,12 +200,15 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["stdout"],
+          "description": "Compress stdout, optionally with a separate stderr scope.",
           "properties": {
             "stdout": {
-              "$ref": "#/$defs/output_scope"
+              "$ref": "#/$defs/output_scope",
+              "description": "Rules applied only to stdout."
             },
             "stderr": {
-              "$ref": "#/$defs/output_scope"
+              "$ref": "#/$defs/output_scope",
+              "description": "Optional rules applied only to stderr."
             }
           }
         },
@@ -174,12 +216,15 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["stderr"],
+          "description": "Compress stderr, optionally with a separate stdout scope.",
           "properties": {
             "stdout": {
-              "$ref": "#/$defs/output_scope"
+              "$ref": "#/$defs/output_scope",
+              "description": "Optional rules applied only to stdout."
             },
             "stderr": {
-              "$ref": "#/$defs/output_scope"
+              "$ref": "#/$defs/output_scope",
+              "description": "Rules applied only to stderr."
             }
           }
         }
@@ -188,13 +233,16 @@
     "output_scope": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Compression rules for one output stream. Runtime validation requires at least one of lines or groups.",
       "properties": {
         "lines": {
-          "$ref": "#/$defs/output_lines"
+          "$ref": "#/$defs/output_lines",
+          "description": "Line-oriented filtering and summarization for this scope."
         },
         "groups": {
           "type": "array",
           "minItems": 1,
+          "description": "Optional grouping rules evaluated within this scope. Collect groups unlock max.groups_summary in the same scope.",
           "items": {
             "$ref": "#/$defs/output_group"
           }
@@ -204,35 +252,42 @@
     "output_lines": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Line-level transformations. Replace, skip, and keep rules may coexist. Runtime validation enforces matcher exclusivity inside each rule.",
       "properties": {
         "replace": {
           "type": "array",
+          "description": "Line rewrite rules evaluated in order.",
           "items": {
             "$ref": "#/$defs/replace_rule"
           }
         },
         "skip": {
           "type": "array",
+          "description": "Rules for lines to drop from the output.",
           "items": {
             "$ref": "#/$defs/skip_keep_rule"
           }
         },
         "keep": {
           "type": "array",
+          "description": "Rules for lines to force through even when other filters would normally reduce them.",
           "items": {
             "$ref": "#/$defs/skip_keep_rule"
           }
         },
         "max": {
-          "$ref": "#/$defs/max_rule"
+          "$ref": "#/$defs/max_rule",
+          "description": "Optional cap on the number of lines emitted from this scope."
         },
         "tail": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Keep at most this many trailing lines. Must be non-negative."
         },
         "truncate": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Shorten each emitted line to this maximum width. Must be non-negative."
         }
       }
     },
@@ -240,16 +295,20 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["count"],
+      "description": "Line limit plus optional summary text emitted for omitted lines.",
       "properties": {
         "count": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Maximum number of lines to emit before CCP starts summarizing. Must be positive."
         },
         "print": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional summary template printed when lines are omitted. Runtime invariant: may reference only {{value}}, plus {{groups_summary}} when groups_summary is configured."
         },
         "groups_summary": {
-          "$ref": "#/$defs/max_groups_summary"
+          "$ref": "#/$defs/max_groups_summary",
+          "description": "Optional grouped summary appended to max.print. Runtime invariant: only valid when the same output scope contains at least one collect group."
         }
       }
     },
@@ -257,22 +316,28 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["show", "print"],
+      "description": "Formatting rules for summarizing collect groups when max truncates output.",
       "properties": {
         "show": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "How many top groups to render before collapsing the remainder. Must be positive."
         },
         "print": {
-          "type": "string"
+          "type": "string",
+          "description": "Template for one rendered group entry. Runtime invariant: may reference only {{key}} and {{count}}."
         },
         "delimiter": {
-          "type": "string"
+          "type": "string",
+          "description": "Literal text inserted between rendered group entries. Runtime invariant: template variables are not allowed here."
         },
         "prefix": {
-          "type": "string"
+          "type": "string",
+          "description": "Literal text prepended before the rendered group list. Runtime invariant: template variables are not allowed here."
         },
         "suffix": {
-          "type": "string"
+          "type": "string",
+          "description": "Text appended after the rendered group list. Runtime invariant: may reference only {{remaining}}."
         }
       }
     },
@@ -280,28 +345,35 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["to"],
+      "description": "Replace matching lines with new text. Runtime invariant: set exactly one matcher field from regex, starts_with, contains, or ends_with.",
       "properties": {
         "regex": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Regular expression matcher for the full line. Must be the only matcher field when used."
         },
         "starts_with": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal line-prefix matcher. Must be the only matcher field when used."
         },
         "contains": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal substring matcher. Must be the only matcher field when used."
         },
         "ends_with": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal line-suffix matcher. Must be the only matcher field when used."
         },
         "to": {
-          "type": "string"
+          "type": "string",
+          "description": "Replacement text for a matched line. May be empty. In group lines, runtime validation checks template variables against declared group variables."
         },
         "on_match": {
           "type": "array",
+          "description": "Variable updates performed when this rule matches. Runtime validation requires each action to reference a declared case variable.",
           "items": {
             "$ref": "#/$defs/match_action"
           }
@@ -311,22 +383,27 @@
     "skip_keep_rule": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Predicate for skipping or keeping lines. Runtime invariant: set exactly one matcher field from regex, starts_with, contains, or ends_with.",
       "properties": {
         "regex": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Regular expression matcher for the full line."
         },
         "starts_with": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal line-prefix matcher."
         },
         "contains": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal substring matcher."
         },
         "ends_with": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Literal line-suffix matcher."
         }
       }
     },
@@ -334,13 +411,16 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["variable", "increment"],
+      "description": "Counter update performed after a replace rule matches.",
       "properties": {
         "variable": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Declared case variable to update. Runtime validation requires this name to exist in the enclosing case variables list."
         },
         "increment": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Signed delta applied to the target variable."
         }
       }
     },
@@ -348,10 +428,12 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["print"],
+      "description": "Synthetic text emitted at a lifecycle boundary.",
       "properties": {
         "print": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Text to emit. Must be non-empty. In group lifecycle stages, runtime validation checks template variables against declared group variables."
         }
       }
     },
@@ -359,41 +441,51 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id"],
+      "description": "Line grouping rule. A group must be either boundary-based or collect-based, never both, and must define at least one lifecycle stage: initially, lines, or finally.",
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Stable group identifier used in diagnostics."
         },
         "starts_with": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Boundary-group opener matched by literal prefix. Invariant: boundary groups may set starts_with or starts_with_regex, but not both, and must not mix with collect fields."
         },
         "starts_with_regex": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Boundary-group opener matched by regex. String variables may bind named captures through regex_group when this is set."
         },
         "matches_regex": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Collect-group matcher for lines that should be aggregated. Invariant: collect groups require both matches_regex and group_by."
         },
         "variables": {
           "type": "array",
+          "description": "Group-scoped variables available to group templates. Runtime validation requires unique names and enforces regex_group rules based on group mode.",
           "items": {
             "$ref": "#/$defs/variable"
           }
         },
         "group_by": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Collect-group key template. Runtime invariant: may reference only variables declared in this group's variables list."
         },
         "initially": {
-          "$ref": "#/$defs/on_exit"
+          "$ref": "#/$defs/on_exit",
+          "description": "Optional text emitted when the group starts. At least one of initially, lines, or finally is required for every group."
         },
         "lines": {
-          "$ref": "#/$defs/output_lines"
+          "$ref": "#/$defs/output_lines",
+          "description": "Optional line-level rules applied within the group."
         },
         "finally": {
-          "$ref": "#/$defs/on_exit"
+          "$ref": "#/$defs/on_exit",
+          "description": "Optional text emitted when the group ends. At least one of initially, lines, or finally is required for every group."
         }
       }
     }

@@ -1,2 +1,0 @@
-▲ Next.js 15.2.0
-Build already optimized using cache

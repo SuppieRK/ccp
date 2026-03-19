@@ -1,0 +1,1 @@
+argv: ["tsc", "--pretty", "false", "--noEmit", "-p", ".artifacts/tsc-demo/tsconfig.json"]

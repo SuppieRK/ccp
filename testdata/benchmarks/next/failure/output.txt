@@ -1,0 +1,4 @@
+▲ Next.js 15.2.0
+Failed to compile.
+./app/page.tsx
+Error: Missing required export

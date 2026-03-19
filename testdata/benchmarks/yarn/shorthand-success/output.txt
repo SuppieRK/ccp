@@ -1,0 +1,5 @@
+yarn run v1.22.22
+$ node scripts/success.js
+success-line-1
+success-line-2
+Done in 0.07s.

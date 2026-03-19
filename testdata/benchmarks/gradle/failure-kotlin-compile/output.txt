@@ -1,0 +1,20 @@
+> Task :plugin:compileKotlin FAILED
+w: Language version 1.8 is deprecated and its support will be removed in a future version of Kotlin
+3 actionable tasks: 1 executed, 2 up-to-date
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:1 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:6 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:9 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:13 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:19 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:26 Expecting a top level declaration
+e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:33 Expecting a top level declaration
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':plugin:compileKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Get more help at https://help.gradle.org.
+BUILD FAILED in 781ms

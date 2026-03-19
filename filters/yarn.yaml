@@ -1,11 +1,26 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: yarn
-about: Placeholder yarn filter scaffold for YAML migration.
+about: Compact Yarn Classic script-run boilerplate for explicit run flows while preserving script output, failure text, and shell-usable line shapes.
 cases:
   - id: run
     when_arguments:
       first_is: run
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: "yarn run v"
+            - starts_with: "$ "
+            - starts_with: "Done in "
+            - starts_with: "info Visit https://yarnpkg.com"
+
+  - id: run-with-cwd
+    when_arguments:
+      have_any:
+        - --cwd
+      have_sequence:
+        - run
     compress_output:
       combined:
         lines:

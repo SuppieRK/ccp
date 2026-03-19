@@ -1,0 +1,17 @@
+00000|/tmp/repo-44a/data/siteMetadata.js:4
+00001|  author: 'Tails Azimuth',
+00002|  ^^^^^^
+00003|
+00004|SyntaxError: Unexpected identifier 'author'
+00005|    at wrapSafe (node:internal/modules/cjs/loader:1637:18)
+00006|    at Module._compile (node:internal/modules/cjs/loader:1679:20)
+00007|    at Object..js (node:internal/modules/cjs/loader:1838:10)
+00008|    at Module.load (node:internal/modules/cjs/loader:1441:32)
+00009|    at Function._load (node:internal/modules/cjs/loader:1263:12)
+00010|    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+00011|    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+00012|    at Module.require (node:internal/modules/cjs/loader:1463:12)
+00013|    at require (node:internal/modules/helpers:147:16)
+00014|    at [eval]:1:1
+00015|
+00016|Node.js v22.22.1

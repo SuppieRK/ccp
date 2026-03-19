@@ -1,0 +1,139 @@
+00000|
+00001|> Configure project :plugin
+00002|Inferred project: ktlint-gradle, version: 14.3.0-dev.0.uncommitted+4f887d2
+00003|Publishing key or secret was null
+00004|GitHub key was null
+00005|Type-safe project accessors is an incubating feature.
+00006|
+00007|> Task :plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00008|> Task :plugin:compileKotlin UP-TO-DATE
+00009|> Task :plugin:compileJava NO-SOURCE
+00010|> Task :plugin:pluginDescriptors UP-TO-DATE
+00011|> Task :plugin:processResources UP-TO-DATE
+00012|> Task :plugin:classes UP-TO-DATE
+00013|> Task :plugin:jar
+00014|> Task :plugin:shadowJar
+00015|
+00016|> Configure project :samples:kotlin-js
+00017|w: 'kotlin-js' Gradle plugin is deprecated and will be removed in the future. 
+00018|Please use 'kotlin("multiplatform")' plugin with a 'js()' target instead. See the migration guide: https://kotl.in/t6m3vu
+00019|w: [33m[1m⚠️ Deprecated Gradle Property 'kotlin.js.compiler' Used[0m[0m
+00020|The `kotlin.js.compiler` deprecated property is used in your build.
+00021|[32m[1mSolution:[0m[0m
+00022|[32m[3mIt is unsupported, please stop using it.[0m[0m
+00023|
+00024|
+00025|> Task :samples:kotlin-reporter-creating:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00026|> Task :samples:kotlin-reporter-using:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00027|> Task :samples:kotlin-gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00028|> Task :samples:kotlin-ks:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00029|> Task :samples:kotlin-rulesets-using:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00030|> Task :samples:kotlin-js:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00031|> Task :samples:kotlin-rulesets-creating:checkKotlinGradlePluginConfigurationErrors SKIPPED
+00032|> Task :kotlinKotlinNpmCachesSetup
+00033|> Task :samples:kotlin-mpp:jsPackageJson
+00034|> Task :samples:kotlin-mpp:jsTestPackageJson
+00035|> Task :samples:kotlin-mpp:jsPublicPackageJson
+00036|> Task :samples:kotlin-mpp:jsTestPublicPackageJson
+00037|> Task :samples:kotlin-rulesets-using:processResources NO-SOURCE
+00038|> Task :samples:kotlin-reporter-using:processResources NO-SOURCE
+00039|> Task :samples:kotlin-reporter-creating:processResources UP-TO-DATE
+00040|> Task :samples:kotlin-rulesets-creating:processResources UP-TO-DATE
+00041|> Task :samples:kotlin-gradle:processResources NO-SOURCE
+00042|> Task :samples:kotlin-reporter-using:processTestResources NO-SOURCE
+00043|> Task :samples:kotlin-rulesets-using:processTestResources NO-SOURCE
+00044|> Task :samples:kotlin-reporter-creating:processTestResources NO-SOURCE
+00045|> Task :samples:kotlin-js:packageJson
+00046|> Task :samples:kotlin-ks:processResources NO-SOURCE
+00047|> Task :samples:kotlin-gradle:processTestResources NO-SOURCE
+00048|> Task :samples:kotlin-rulesets-creating:processTestResources NO-SOURCE
+00049|> Task :samples:kotlin-ks:processTestResources NO-SOURCE
+00050|> Task :samples:kotlin-js:testPackageJson
+00051|> Task :samples:kotlin-js:publicPackageJson
+00052|> Task :samples:kotlin-js:testPublicPackageJson
+00053|> Task :samples:kotlin-js:processResources NO-SOURCE
+00054|> Task :samples:kotlin-js:testProcessResources NO-SOURCE
+00055|> Task :kotlinNodeJsSetup
+00056|> Task :kotlinRestoreYarnLock
+00057|> Task :kotlinYarnSetup
+00058|> Task :kotlinPackageJsonUmbrella
+00059|> Task :rootPackageJson
+00060|> Task :samples:kotlin-js:kotlinNodeJsSetup
+00061|> Task :samples:kotlin-js:compileKotlinJs
+00062|> Task :samples:kotlin-js:mainClasses
+00063|> Task :samples:kotlin-js:compileTestKotlinJs NO-SOURCE
+00064|> Task :samples:kotlin-js:testClasses UP-TO-DATE
+00065|> Task :samples:kotlin-js:compileTestDevelopmentExecutableKotlinJs NO-SOURCE
+00066|> Task :samples:kotlin-js:testTestDevelopmentExecutableCompileSync NO-SOURCE
+00067|> Task :samples:kotlin-rulesets-using:compileKotlin
+00068|> Task :samples:kotlin-rulesets-using:compileJava NO-SOURCE
+00069|> Task :samples:kotlin-rulesets-using:classes UP-TO-DATE
+00070|> Task :samples:kotlin-rulesets-using:jar UP-TO-DATE
+00071|> Task :samples:kotlin-reporter-using:compileKotlin
+00072|> Task :samples:kotlin-rulesets-using:compileTestKotlin NO-SOURCE
+00073|> Task :samples:kotlin-reporter-using:compileJava NO-SOURCE
+00074|> Task :samples:kotlin-reporter-using:classes UP-TO-DATE
+00075|> Task :samples:kotlin-rulesets-using:compileTestJava NO-SOURCE
+00076|> Task :samples:kotlin-rulesets-using:testClasses UP-TO-DATE
+00077|> Task :samples:kotlin-reporter-using:jar UP-TO-DATE
+00078|> Task :samples:kotlin-rulesets-using:test NO-SOURCE
+00079|> Task :samples:kotlin-reporter-using:compileTestKotlin NO-SOURCE
+00080|> Task :samples:kotlin-reporter-using:compileTestJava NO-SOURCE
+00081|> Task :samples:kotlin-reporter-using:testClasses UP-TO-DATE
+00082|> Task :samples:kotlin-reporter-using:test NO-SOURCE
+00083|> Task :kotlinNpmInstall
+00084|> Task :kotlinStoreYarnLock
+00085|> Task :samples:kotlin-js:nodeTest SKIPPED
+00086|> Task :samples:kotlin-js:test NO-SOURCE
+00087|> Task :samples:kotlin-gradle:compileKotlin
+00088|> Task :samples:kotlin-gradle:compileJava NO-SOURCE
+00089|> Task :samples:kotlin-gradle:classes UP-TO-DATE
+00090|> Task :samples:kotlin-gradle:jar UP-TO-DATE
+00091|> Task :samples:kotlin-gradle:compileTestKotlin NO-SOURCE
+00092|> Task :samples:kotlin-gradle:compileTestJava NO-SOURCE
+00093|> Task :samples:kotlin-gradle:testClasses UP-TO-DATE
+00094|> Task :samples:kotlin-ks:compileKotlin
+00095|> Task :samples:kotlin-gradle:test NO-SOURCE
+00096|> Task :samples:kotlin-ks:compileJava NO-SOURCE
+00097|> Task :samples:kotlin-ks:classes UP-TO-DATE
+00098|> Task :samples:kotlin-ks:jar UP-TO-DATE
+00099|> Task :samples:kotlin-reporter-creating:compileKotlin
+00100|> Task :samples:kotlin-ks:compileTestKotlin NO-SOURCE
+00101|> Task :samples:kotlin-reporter-creating:compileJava NO-SOURCE
+00102|> Task :samples:kotlin-reporter-creating:classes UP-TO-DATE
+00103|> Task :samples:kotlin-ks:compileTestJava NO-SOURCE
+00104|> Task :samples:kotlin-ks:testClasses UP-TO-DATE
+00105|> Task :samples:kotlin-reporter-creating:jar UP-TO-DATE
+00106|> Task :samples:kotlin-ks:test NO-SOURCE
+00107|> Task :samples:kotlin-reporter-creating:compileTestKotlin NO-SOURCE
+00108|> Task :samples:kotlin-reporter-creating:compileTestJava NO-SOURCE
+00109|> Task :samples:kotlin-reporter-creating:testClasses UP-TO-DATE
+00110|> Task :samples:kotlin-reporter-creating:test NO-SOURCE
+00111|> Task :samples:kotlin-rulesets-creating:compileKotlin
+00112|> Task :samples:kotlin-rulesets-creating:compileJava NO-SOURCE
+00113|> Task :samples:kotlin-rulesets-creating:classes UP-TO-DATE
+00114|> Task :samples:kotlin-rulesets-creating:jar UP-TO-DATE
+00115|> Task :samples:kotlin-rulesets-creating:compileTestKotlin NO-SOURCE
+00116|> Task :samples:kotlin-rulesets-creating:compileTestJava NO-SOURCE
+00117|> Task :samples:kotlin-rulesets-creating:testClasses UP-TO-DATE
+00118|> Task :samples:kotlin-rulesets-creating:test NO-SOURCE
+00119|
+00120|[Incubating] Problems report is available at: file:///tmp/ktlint-gradle-corpus/build/reports/problems/problems-report.html
+00121|
+00122|Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+00123|
+00124|You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+00125|
+00126|For more on this, please refer to https://docs.gradle.org/9.1.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+00127|
+00128|BUILD SUCCESSFUL in 2s
+00129|36 actionable tasks: 25 executed, 11 up-to-date
+00130|
+00131|Publishing Build Scan to Develocity...
+00132|https://gradle.com/s/xxm3jxcukzpnq
+00133|
+00134|Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.1.0/userguide/configuration_cache_enabling.html
+00135|WARNING: A restricted method in java.lang.System has been called
+00136|WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.1.0-bin/9agqghryom9wkf8r80qlhnts3/gradle-9.1.0/lib/native-platform-0.22-milestone-28.jar)
+00137|WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+00138|WARNING: Restricted methods will be blocked in a future release unless native access is enabled

@@ -1,0 +1,35 @@
+:plugin:jar: ok
+:plugin:shadowJar: ok
+:kotlinKotlinNpmCachesSetup: ok
+:samples:kotlin-mpp:jsPackageJson: ok
+:samples:kotlin-mpp:jsTestPackageJson: ok
+:samples:kotlin-mpp:jsPublicPackageJson: ok
+:samples:kotlin-mpp:jsTestPublicPackageJson: ok
+:samples:kotlin-js:packageJson: ok
+:samples:kotlin-js:testPackageJson: ok
+:samples:kotlin-js:publicPackageJson: ok
+:samples:kotlin-js:testPublicPackageJson: ok
+:kotlinNodeJsSetup: ok
+:kotlinRestoreYarnLock: ok
+:kotlinYarnSetup: ok
+:kotlinPackageJsonUmbrella: ok
+:rootPackageJson: ok
+:samples:kotlin-js:kotlinNodeJsSetup: ok
+:samples:kotlin-js:compileKotlinJs: ok
+:samples:kotlin-js:mainClasses: ok
+:samples:kotlin-rulesets-using:compileKotlin: ok
+:samples:kotlin-reporter-using:compileKotlin: ok
+:kotlinNpmInstall: ok
+:kotlinStoreYarnLock: ok
+:samples:kotlin-gradle:compileKotlin: ok
+:samples:kotlin-ks:compileKotlin: ok
+:samples:kotlin-reporter-creating:compileKotlin: ok
+:samples:kotlin-rulesets-creating:compileKotlin: ok
+w: 'kotlin-js' Gradle plugin is deprecated and will be removed in the future. 
+Please use 'kotlin("multiplatform")' plugin with a 'js()' target instead. See the migration guide: https://kotl.in/t6m3vu
+w: ⚠️ Deprecated Gradle Property 'kotlin.js.compiler' Used
+The `kotlin.js.compiler` deprecated property is used in your build.
+Solution:
+It is unsupported, please stop using it.
+BUILD SUCCESSFUL in 2s
+36 actionable tasks: 25 executed, 11 up-to-date

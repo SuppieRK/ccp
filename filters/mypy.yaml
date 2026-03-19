@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: mypy
-about: Compact mypy diagnostics conservatively.
+about: Group mypy diagnostics by file, preserve exact line and error-code context, drop only the trailing summary footer, and keep clean success output native.
 
 cases:
   - id: diagnostics

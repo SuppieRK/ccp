@@ -1,0 +1,8 @@
+00000|npm error code E404
+00001|npm error 404 Not Found - GET https://registry.npmjs.org/definitely-not-a-real-package-xyz - Not found
+00002|npm error 404
+00003|npm error 404  'definitely-not-a-real-package-xyz@1.0.0' is not in this registry.
+00004|npm error 404
+00005|npm error 404 Note that you can also install from a
+00006|npm error 404 tarball, folder, http url, or git url.
+00007|npm error A complete log of this run can be found in: /home/suppie/.npm/_logs/2026-03-15T13_29_52_596Z-debug-0.log

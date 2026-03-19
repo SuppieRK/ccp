@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" /></a>
-  <a href="#security--stability"><img alt="Status: incubating" src="https://img.shields.io/badge/status-incubating-orange?style=flat-square" /></a>
+  <a href="#design-choices"><img alt="Status: incubating" src="https://img.shields.io/badge/status-incubating-orange?style=flat-square" /></a>
   <a href="https://github.com/SuppieRK/ccp/releases"><img alt="Release" src="https://img.shields.io/github/v/release/SuppieRK/ccp?style=flat-square" /></a>
 </p>
 
@@ -21,28 +21,76 @@
 </p>
 
 <p align="center">
+  <a href="#bring-your-own-filter">Bring Your Own Filter</a> &bull;
+  <a href="#early-proof">Early Proof</a> &bull;
+  <a href="#capability-matrix">Capability Matrix</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#example-gains">Example Gains</a> &bull;
-  <a href="#where-it-helps-less">Where It Helps Less</a> &bull;
-  <a href="#usage">Usage</a> &bull;
-  <a href="./ARCHITECTURE.md">Architecture</a> &bull;
-  <a href="#support--documentation">Support</a>
+  <a href="#design-choices">Design Choices</a>
 </p>
 
-## Why It’s Useful
+## Command Compression Proxy for coding agents
 
-Use `ccp` when coding agents are burning too much context on terminal output.
+- Run the same shell commands. Keep native exit codes and critical diagnostics.
+- Save context when output is genuinely compressible. More room for code, requirements, and reasoning.
+- Native output when trust matters more than squeezing tokens. Drop back to `--raw` when exact output matters.
 
-- More room for code, requirements, and reasoning.
-- Same shell commands, exit codes, and critical diagnostics.
-- Safe fallback with `--raw` when exact output matters.
+## Bring Your Own Filter
 
-Typical fit:
-- build failures
-- search/listing output
-- container and cluster logs
+Own your compression logic: author filters in YAML, ship overridden behavior with your repo, share filters across your team, and fix your edge case today instead of waiting for upstream.
 
-`ccp` is conservative by design. It trims noisy output when safe and leaves structured, compact, or ambiguous cases closer to native output.
+Two filter scopes are built in:
+
+- project-local filters in `./.ccp/filters`
+- home-scoped filters in `~/.config/ccp/filters`
+
+Project scope overrides home scope. That gives you a clean model:
+
+- experiment in one repo without touching anything else
+- ship shared defaults across a team
+- keep repo-specific overrides without forks
+
+## Early Proof
+
+Two real `ccp gain` snapshots from day-to-day work:
+
+- Refactoring tests in a Java project with Gradle (Claude Code):
+
+```text
+- 88 commands proxied, 5,330,571 estimated input tokens -> 90,127 output tokens, ~98.31% saved
+- Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
+- Savings held down by: cd (23 cmds, no savings), jar (21 cmds, no savings), grep ~1.44% (4 cmds)
+- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back.
+```
+
+- Current repository snapshot from `ccp gain` (Codex):
+
+```text
+- 1,825 commands proxied, 2,461,959 estimated input tokens -> 2,160,427 output tokens, ~12.25% saved
+- Biggest gains: grep ~59.48% (210 cmds), go ~90.25% (92 cmds), git ~59.25% (40 cmds)
+- Savings held down by: sed (765 cmds, no savings), openspec (245 cmds, no savings)
+- Bottom line: 301,532 estimated tokens saved. It ain't much, but it's honest work.
+```
+
+That mix is the point. CCP can save a lot. It also knows when not to fake it.
+
+## Capability Matrix
+
+Benchmarked with each build across `24` tool families and `201` replay cases.
+
+| Area | Tools | Representative Savings |
+|---|---|---:|
+| Files/search | `find`, `grep`, `ls` | up to `95%+` |
+| Source control | `git` | `10–60%+` |
+| Java builds | `maven`, `gradle` | `50–95%+` |
+| JS/TS | `npm`, `pnpm`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `tsc` | `15–85%+` |
+| Python | `pip`, `pytest`, `mypy`, `ruff` | `25–85%+` |
+| Go/Rust | `go`, `golangci-lint`, `cargo` | `35–90%+` |
+| Containers | `docker` | `95%+` for build surfaces |
+| Other runtimes | `deno` | targeted, conservative wins |
+
+Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
+
+CCP also integrates with these coding agents and editors: `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, plus `costrict` as an alias for `roocode`.
 
 ## Quick Start
 
@@ -52,19 +100,19 @@ Install:
 curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
 ```
 
-Verify the installation:
+Check the install:
 
 ```bash
 ccp --help
 ```
 
-Initialize supported coding-agent integrations (automatically or with `--tools`):
+Initialize supported coding-agent integrations:
 
 ```bash
-ccp init
+ccp init # or: --tools claude,codex,opencode
 ```
 
-See what it saved in your own work:
+See what CCP saved in your own work:
 
 ```bash
 ccp gain
@@ -76,132 +124,20 @@ Want the detailed table instead of the short summary?
 ccp gain --table
 ```
 
-## Example Gains
+## Design Choices
 
-Two real `ccp gain` snapshots from day-to-day work:
+CCP takes a few strong stances on purpose.
 
-- Refactoring tests in a Java project with Gradle (Claude Code):
+- Native commands stay native. CCP adds only a small set of helper commands for filter authoring and gain inspection.
+- Exit codes and critical diagnostics matter. By default, CCP preserves them.
+- `--raw` is always there when exact output matters more than compression.
+- Ambiguous, structured, unsupported, and machine-oriented modes fall back to passthrough.
+- Generic log filters are intentionally not shipped. Your logs are domain-specific. Pretending otherwise is how tools become untrustworthy.
+- Agent integrations are convenience layers, not the center of the product. The clearest mental model is still explicit `ccp <command>`.
 
-```
-- 88 commands proxied, 5,330,571 estimated input tokens -> 90,127 output tokens, ~98.31% saved
-- Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
-- Savings held down by: cd (23 cmds, no savings), jar (21 cmds, no savings), grep ~1.44% (4 cmds)
-- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back.
-```
+## Inspired By RTK
 
-- Research task across 4 repositories (Claude Code):
-
-```
-- 96 commands proxied, 944,007 estimated input tokens -> 59,195 output tokens, ~93.73% saved
-- Biggest gains: find ~93.98% (57 cmds), grep ~42.56% (28 cmds), ls ~79.67% (2 cmds)
-- Savings held down by: wc (5 cmds, no savings)
-- Bottom line: 884,812 estimated tokens saved. Breathtaking results, with plenty of context back.
-```
-
-Short benchmark receipts from CI:
-
-| Command | Scenario | Native tokens | CCP tokens | Savings |
-|---|---|---:|---:|---:|
-| `./gradlew build` | large generated-build failure | 236 | 47 | 80.08% |
-| `./mvnw test` | successful test | 590 | 29 | 95.08% |
-| `cargo build` | failing build | 130 | 22 | 83.08% |
-
-## Where It Helps Less
-
-`ccp` is conservative by design. Some commands are already compact, structured, or not worth rewriting.
-
-Current repository snapshot from `ccp gain` (Codex):
-
-```
-- 1,825 commands proxied, 2,461,959 estimated input tokens -> 2,160,427 output tokens, ~12.25% saved
-- Biggest gains: grep ~59.48% (210 cmds), go ~90.25% (92 cmds), git ~59.25% (40 cmds)
-- Savings held down by: sed (765 cmds, no savings), openspec (245 cmds, no savings)
-- Bottom line: 301,532 estimated tokens saved. It ain't much, but it's honest work.
-```
-
-Short benchmark receipts where savings are limited on purpose:
-
-| Command | Scenario | Native tokens | CCP tokens | Savings |
-|---|---|---:|---:|---:|
-| `go test -count=1 -json ./...` | structured passthrough safety | 2114 | 2114 | 0.00% |
-| `find . -name *.go -type f` | small recursive code search | 176 | 147 | 16.48% |
-| `go test -count=1 ./...` | failing test run | 109 | 63 | 42.20% |
-
-Results depend on command mix. Run `ccp gain` after real work to see both the wins and the weak spots in your own repo.
-
----
-
-## Capability Matrix
-
-| Area | Supported |
-|---|---|
-| Files/search | `ls`, `find`, `grep` |
-| Source control | `git` |
-| Containers/cluster | `docker`, `kubectl` |
-| Java/build | `gradle`, `maven` |
-| JavaScript/TypeScript | `npm`, `pnpm`, `yarn`, `npx`, `node`, `deno` |
-| Python/Go/Rust | `pip`, `python`, `pytest`, `go`, `cargo` |
-| Agent integrations | `aider`, `antigravity`, `amazon-q`, `auggie`, `cline`, `claude`, `codebuddy`, `codex`, `continue`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `costrict` (alias of `roocode`), `trae`, `windsurf` |
-
-Excluded by design: abstracted meta-commands like `read`, `run`, `shell`, `build`, `test`, `sql`, `logs`, `discover`.
-
----
-
-## Support & Documentation
-
-Primary documentation:
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [FILTERS.md](./docs/agent-rules/FILTERS.md)
-- [CONTRIBUTING.md](./CONTRIBUTING.md)
-- [SECURITY.md](./SECURITY.md)
-
-For issues:
-
-- Open a GitHub issue for bugs or feature requests.
-- For vulnerabilities, follow the process in [SECURITY.md](./SECURITY.md).
-- For command-output bugs, include the exact command, native `stdout`, native `stderr`, CCP output, `ccp --version`, and OS/shell details.
-- One way to collect that information is:
-
-```bash
-ccp --version
-mkdir -p .artifacts/issue
-ccp capture --dir .artifacts/issue -- <command>
-ccp verify --dir .artifacts/issue
-```
-
-If the command output contains internal package names or other sensitive strings, redact them before sharing the artifacts.
-
-Attach or paste:
-- the exact command you ran
-- `stdout.txt`
-- `stderr.txt`
-- `output.txt`
-
----
-
-## Security & Stability
-
-Project status: incubating (0.y.z zerover).
-
-- Only the latest release is supported.
-- No backports or LTS branches.
-- Breaking changes may occur prior to 1.0.0.
-- Users must upgrade to receive security fixes.
-
-See [SECURITY.md](SECURITY.md) for reporting and scope details.
-
----
-
-## Inspired By
-
-`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, which explores agent-oriented command ergonomics from a higher-level task and helper CLI perspective.
-
-You might prefer `ccp` if you want to keep existing shell habits, CI commands, and agent-generated command lines mostly unchanged while still reducing noisy output rather than introducing a broad meta-command layer. The tradeoff is deliberate: less abstraction and fewer helper commands, in exchange for lower migration cost, clearer fallback behavior, and better composability with standard terminal workflows.
-
-That same design also makes `ccp` easier to use across a wider range of coding agents: because it wraps ordinary shell commands instead of introducing an agent-specific task layer, it fits agents that already know how to operate through standard terminal workflows.
-
----
+`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, but chose a different direction: explicit proxying over a broad helper-command layer, user-owned YAML filters over a mostly built-in command catalog, and easy overrides when needed.
 
 ## License
 

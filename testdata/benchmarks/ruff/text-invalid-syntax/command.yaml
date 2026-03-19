@@ -1,0 +1,1 @@
+argv: ["ruff", "check", "src/requests/_ruff_corpus_broken.py"]

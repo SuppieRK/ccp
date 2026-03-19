@@ -1,0 +1,1 @@
+argv: ["./.venv/bin/pytest", "-ra", "test_example.py"]

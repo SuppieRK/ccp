@@ -148,7 +148,6 @@ var _ = ginkgo.Describe("Family conformance", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Applied).To(BeNumerically(">", 0))
 			},
-			ginkgo.Entry("continue", continueHookSettingsSpec),
 			ginkgo.Entry("codebuddy", codebuddyHookSettingsSpec),
 		)
 	})
