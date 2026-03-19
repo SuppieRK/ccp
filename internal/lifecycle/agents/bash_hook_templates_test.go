@@ -16,9 +16,6 @@ var _ = ginkgo.Describe("bash hook templates", func() {
 			}
 		},
 		ginkgo.Entry("claude", "claude", claudeHookScriptContent()),
-		ginkgo.Entry("continue", "continue", continueHookScriptContent()),
 		ginkgo.Entry("codebuddy", "codebuddy", codebuddyHookScriptContent()),
-		ginkgo.Entry("cline", "cline", clineHookScriptContent()),
-		ginkgo.Entry("windsurf", "windsurf", windsurfHookScriptContent()),
 	)
 })

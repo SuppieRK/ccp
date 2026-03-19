@@ -43,9 +43,7 @@ const (
 	AgentAntigravity   ID = "antigravity"
 	AgentAmazonQ       ID = "amazon-q"
 	AgentCodeBuddy     ID = "codebuddy"
-	AgentCline         ID = "cline"
 	AgentClaude        ID = "claude"
-	AgentContinue      ID = "continue"
 	AgentCostrict      ID = "costrict"
 	AgentCodex         ID = "codex"
 	AgentCrush         ID = "crush"
@@ -62,7 +60,6 @@ const (
 	AgentQwen          ID = "qwen"
 	AgentRooCode       ID = "roocode"
 	AgentTrae          ID = "trae"
-	AgentWindsurf      ID = "windsurf"
 )
 
 var toolAliases = map[string]string{

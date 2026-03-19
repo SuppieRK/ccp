@@ -170,33 +170,6 @@ var _ = Describe("uninstall", func() {
 			setupDirs: []string{"{root}/.agent"},
 			removed:   []string{"{home}/.gemini/GEMINI.md"},
 		}),
-		Entry("windsurf", uninstallRemovalCase{
-			name:      "windsurf",
-			tool:      "windsurf",
-			scope:     "root",
-			setupDirs: []string{"{root}/.windsurf"},
-			removed: []string{
-				"{home}/.codeium/windsurf/hooks/ccp-block.sh",
-				"{home}/.codeium/windsurf/hooks.json",
-			},
-		}),
-		Entry("cline", uninstallRemovalCase{
-			name:      "cline",
-			tool:      "cline",
-			scope:     "root",
-			setupDirs: []string{"{root}/.clinerules"},
-			removed:   []string{"{home}/Documents/Cline/Hooks/PreToolUse"},
-		}),
-		Entry("continue", uninstallRemovalCase{
-			name:      "continue",
-			tool:      "continue",
-			scope:     "root",
-			setupDirs: []string{"{root}/.continue"},
-			removed: []string{
-				"{home}/.continue/hooks/ccp-rewrite.sh",
-				"{home}/.continue/settings.json",
-			},
-		}),
 		Entry("kiro", uninstallRemovalCase{
 			name:      "kiro",
 			tool:      "kiro",
@@ -450,33 +423,6 @@ var _ = Describe("uninstall", func() {
 				Expect(got).NotTo(ContainSubstring(strings.ReplaceAll(hookPath, "\\", "\\\\")))
 			},
 		}),
-		Entry("continue preserves unrelated settings", uninstallPreserveCase{
-			name:  "continue preserves unrelated settings",
-			tool:  "continue",
-			scope: "root",
-			setup: func(ws lifecycleWorkspace) {
-				Expect(os.MkdirAll(filepath.Join(ws.root, ".continue"), 0o755)).To(Succeed())
-				Expect(os.MkdirAll(filepath.Join(ws.home, ".continue"), 0o755)).To(Succeed())
-
-				settingsPath := filepath.Join(ws.home, ".continue", "settings.json")
-				hookPath := filepath.Join(ws.home, ".continue", "hooks", "ccp-rewrite.sh")
-				escapedHook := strings.ReplaceAll(hookPath, "\\", "\\\\")
-				settings := "{\n  \"model\": \"gpt-5\",\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"" + escapedHook + "\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
-				Expect(os.MkdirAll(filepath.Dir(hookPath), 0o755)).To(Succeed())
-				Expect(os.WriteFile(settingsPath, []byte(settings), 0o644)).To(Succeed())
-				Expect(os.WriteFile(hookPath, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755)).To(Succeed())
-			},
-			assert: func(ws lifecycleWorkspace) {
-				settingsPath := filepath.Join(ws.home, ".continue", "settings.json")
-				hookPath := filepath.Join(ws.home, ".continue", "hooks", "ccp-rewrite.sh")
-				b, err := os.ReadFile(settingsPath)
-				Expect(err).NotTo(HaveOccurred())
-
-				got := string(b)
-				Expect(got).To(ContainSubstring(`"model": "gpt-5"`))
-				Expect(got).NotTo(ContainSubstring(strings.ReplaceAll(hookPath, "\\", "\\\\")))
-			},
-		}),
 		Entry("cursor preserves other files and directories", preserveOtherFileCase("cursor", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.root, ".cursor", "rules"), 0o755)).To(Succeed())
 			return filepath.Join(ws.root, ".cursor", "rules", "team.mdc")
@@ -489,47 +435,6 @@ var _ = Describe("uninstall", func() {
 		}, func(ws lifecycleWorkspace) string {
 			return filepath.Join(ws.root, ".amazonq", "rules")
 		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("amazon-q"))).To(Succeed()) })),
-		Entry("windsurf preserves other files and directories", uninstallPreserveCase{
-			name:  "windsurf preserves other files and directories",
-			tool:  "windsurf",
-			scope: "root",
-			setup: func(ws lifecycleWorkspace) {
-				Expect(os.MkdirAll(filepath.Join(ws.root, ".windsurf"), 0o755)).To(Succeed())
-
-				hooksDir := filepath.Join(ws.home, ".codeium", "windsurf", "hooks")
-				Expect(os.MkdirAll(hooksDir, 0o755)).To(Succeed())
-
-				otherHook := filepath.Join(hooksDir, "other.sh")
-				Expect(os.WriteFile(otherHook, []byte("#!/usr/bin/env sh\nexit 0\n"), 0o755)).To(Succeed())
-
-				hooksPath := filepath.Join(ws.home, ".codeium", "windsurf", "hooks.json")
-				otherConfig := "{\n  \"pre_run_command\": [\n    {\n      \"name\": \"other\",\n      \"command\": \"" + strings.ReplaceAll(otherHook, "\\", "\\\\") + "\",\n      \"enabled\": true\n    }\n  ]\n}\n"
-				Expect(os.WriteFile(hooksPath, []byte(otherConfig), 0o644)).To(Succeed())
-				Expect(RunInit(toolsArgs("windsurf"))).To(Succeed())
-			},
-			assert: func(ws lifecycleWorkspace) {
-				otherHook := filepath.Join(ws.home, ".codeium", "windsurf", "hooks", "other.sh")
-				Expect(existingPath(otherHook)).To(BeTrue())
-
-				b, err := os.ReadFile(filepath.Join(ws.home, ".codeium", "windsurf", "hooks.json"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(b)).To(ContainSubstring("other"))
-				expectDir(filepath.Join(ws.home, ".codeium", "windsurf", "hooks"))
-			},
-		}),
-		Entry("cline preserves other files and directories", preserveOtherFileCase("cline", "root", func(ws lifecycleWorkspace) string {
-			hooksDir := filepath.Join(ws.home, "Documents", "Cline", "Hooks")
-			Expect(os.MkdirAll(hooksDir, 0o755)).To(Succeed())
-			return filepath.Join(hooksDir, "PostToolUse")
-		}, func(ws lifecycleWorkspace) string {
-			return filepath.Join(ws.home, "Documents", "Cline", "Hooks")
-		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("cline"))).To(Succeed()) })),
-		Entry("continue preserves other files and directories", preserveOtherFileCase("continue", "root", func(ws lifecycleWorkspace) string {
-			Expect(os.MkdirAll(filepath.Join(ws.root, ".continue", "rules"), 0o755)).To(Succeed())
-			return filepath.Join(ws.root, ".continue", "rules", "team.md")
-		}, func(ws lifecycleWorkspace) string {
-			return filepath.Join(ws.root, ".continue", "rules")
-		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("continue"))).To(Succeed()) })),
 		Entry("trae preserves other files and directories", preserveOtherFileCase("trae", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.root, ".trae", "rules"), 0o755)).To(Succeed())
 			return filepath.Join(ws.root, ".trae", "rules", "team.md")
@@ -600,7 +505,6 @@ var _ = Describe("uninstall", func() {
 		Entry("gemini", uninstallAutodetectCase{name: "gemini", tool: "gemini", scope: "root", setupDirs: []string{"{root}/.gemini"}, removed: "{home}/.gemini/GEMINI.md"}),
 		Entry("cursor", uninstallAutodetectCase{name: "cursor", tool: "cursor", scope: "root", setupDirs: []string{"{root}/.cursor"}, removed: "{root}/.cursor/rules/ccp.mdc"}),
 		Entry("amazon-q", uninstallAutodetectCase{name: "amazon-q", tool: "amazon-q", scope: "root", setupDirs: []string{"{root}/.amazonq"}, removed: "{root}/.amazonq/rules/ccp.md"}),
-		Entry("windsurf", uninstallAutodetectCase{name: "windsurf", tool: "windsurf", scope: "root", setupDirs: []string{"{root}/.windsurf"}, removed: "{home}/.codeium/windsurf/hooks/ccp-block.sh"}),
 		Entry("roocode", uninstallAutodetectCase{name: "roocode", tool: "roocode", scope: "root", setupDirs: []string{"{root}/.roo"}, removed: "{home}/.roo/rules/ccp.md"}),
 	)
 

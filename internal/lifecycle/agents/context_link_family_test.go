@@ -104,7 +104,6 @@ var _ = ginkgo.Describe("context link families", func() {
 				Expect(plan[1].Path).To(ContainSubstring(wantRoot))
 				Expect(plan[1].Path).To(HaveSuffix(wantSettings))
 			},
-			ginkgo.Entry("continue", continueHookSettingsSpec, ".continue", "settings.json"),
 			ginkgo.Entry("codebuddy", codebuddyHookSettingsSpec, ".codebuddy", "settings.json"),
 		)
 	})
