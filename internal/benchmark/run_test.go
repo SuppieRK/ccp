@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
+	"go-command-compression-proxy/internal/contracts"
 	"go-command-compression-proxy/internal/replay"
 )
 
@@ -128,6 +129,7 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(report.Results).To(HaveLen(1))
 			Expect(report.Results[0].Tool).To(Equal("grep"))
 			Expect(report.Results[0].Case).To(Equal("recursive-match"))
+			Expect(report.Results[0].InputHash).To(HaveLen(64))
 			Expect(report.Results[0].Success).To(BeTrue())
 			Expect(report.Results[0].NativeTokens).To(BeNumerically(">", 0))
 			Expect(report.Results[0].ProxyTokens).To(BeNumerically(">", 0))
@@ -249,6 +251,7 @@ var _ = Describe("benchmark replay runner", func() {
 				Results: []CaseResult{{
 					Tool:                 "grep",
 					Case:                 "recursive-match",
+					InputHash:            fixtureInputHash(replay.CommandSpec{Argv: []string{"grep", "-r", "needle", "./internal"}}, []replay.Event{{Sequence: 0, Line: "match one\n"}, {Sequence: 1, Line: "match two\n"}}),
 					TokenCompactionRatio: 10,
 				}},
 			})).To(Succeed())
@@ -266,6 +269,44 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(report.Results[0].Warnings).To(ContainElement("token compaction ratio dropped from 10.00 to 1.25"))
 			Expect(report.Results[0].Success).To(BeFalse())
 			Expect(report.Failed).To(BeTrue())
+		})
+
+		It("skips compaction-drop comparison for legacy previous reports without input hash", func() {
+			fixtureDir := filepath.Join(root, "grep", "recursive-match")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|match one\n00001|match two\n")
+			writeFixtureFile(fixtureDir, "output.txt", "grouped output\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("grouped output\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, "verify-decisions.txt"), []byte("<keep>    | match one\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			previousReportPath := filepath.Join(GinkgoT().TempDir(), "report.json")
+			Expect(writeReportJSON(filepath.Dir(previousReportPath), RunReport{
+				Results: []CaseResult{{
+					Tool:                 "grep",
+					Case:                 "recursive-match",
+					TokenCompactionRatio: 10,
+				}},
+			})).To(Succeed())
+
+			report, err := Run(RunOptions{
+				FixturesRoot:   root,
+				ArtifactsDir:   artifacts,
+				ProxyBinary:    "ccp",
+				Timeout:        time.Second,
+				PreviousReport: previousReportPath,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Results).To(HaveLen(1))
+			Expect(report.Results[0].Warnings).To(BeEmpty())
+			Expect(report.Results[0].Success).To(BeTrue())
+			Expect(report.Failed).To(BeFalse())
 		})
 	})
 
@@ -431,9 +472,11 @@ var _ = Describe("benchmark replay runner", func() {
 				Expect(current.Warnings).To(Equal(expectedWarnings))
 				Expect(current.Success).To(Equal(expectedSuccess))
 			},
-			Entry("ignores missing previous ratio", &CaseResult{Success: true}, CaseResult{}, nil, true),
-			Entry("ignores stable ratios", &CaseResult{TokenCompactionRatio: 1.9, Success: true}, CaseResult{TokenCompactionRatio: 2}, nil, true),
-			Entry("warns on material drop", &CaseResult{TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, false),
+			Entry("ignores missing previous ratio", &CaseResult{InputHash: "same", Success: true}, CaseResult{InputHash: "same"}, nil, true),
+			Entry("ignores legacy previous reports without input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, nil, true),
+			Entry("ignores changed input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "previous", TokenCompactionRatio: 10}, nil, true),
+			Entry("ignores stable ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
+			Entry("warns on material drop", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, false),
 		)
 
 		DescribeTable("computes token compaction ratio",
@@ -443,6 +486,22 @@ var _ = Describe("benchmark replay runner", func() {
 			Entry("uses native to proxy ratio", 10, 4, 2.5),
 			Entry("falls back to one for zero proxy tokens", 10, 0, 1.0),
 		)
+
+		It("hashes fixture input from command and replayed streams", func() {
+			command := replay.CommandSpec{Argv: []string{"grep", "-r", "needle", "."}, ExitCode: 2}
+			events := []replay.Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "match one\n"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "match two\n"},
+			}
+
+			hashA := fixtureInputHash(command, events)
+			hashB := fixtureInputHash(command, events)
+			hashC := fixtureInputHash(replay.CommandSpec{Argv: []string{"grep", "-r", "needle", "./internal"}, ExitCode: 2}, events)
+
+			Expect(hashA).To(HaveLen(64))
+			Expect(hashB).To(Equal(hashA))
+			Expect(hashC).NotTo(Equal(hashA))
+		})
 	})
 
 	Describe("file helpers", func() {
