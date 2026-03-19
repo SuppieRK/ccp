@@ -1,0 +1,20 @@
+warning: The following rules have been removed and ignoring them has no effect:
+    - UP038
+
+invalid-syntax: Expected a parameter or the end of the parameter list
+ --> src/requests/_ruff_corpus_broken.py:1:12
+  |
+1 | def broken(:
+  |            ^
+2 |     pass
+  |
+
+invalid-syntax: Expected `)`, found newline
+ --> src/requests/_ruff_corpus_broken.py:1:13
+  |
+1 | def broken(:
+  |             ^
+2 |     pass
+  |
+
+Found 2 errors.

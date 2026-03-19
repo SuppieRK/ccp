@@ -1,0 +1,2 @@
+00000|test-data/packages/typedpkg/typedpkg/sample.py:7: error: Incompatible return value type (got "list[str]", expected "tuple[str, ...]")  [return-value]
+00001|Found 1 error in 1 file (checked 1 source file)

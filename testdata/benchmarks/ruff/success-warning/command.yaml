@@ -1,0 +1,1 @@
+argv: ["ruff", "check", "src/requests/__init__.py"]

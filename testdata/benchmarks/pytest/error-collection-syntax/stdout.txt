@@ -1,0 +1,62 @@
+00000|==================================== ERRORS ====================================
+00001|___________________ ERROR collecting tests/test_packages.py ____________________
+00002|.venv/lib/python3.12/site-packages/_pytest/python.py:498: in importtestmodule
+00003|    mod = import_path(
+00004|.venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path
+00005|    importlib.import_module(module_name)
+00006|/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+00007|    return _bootstrap._gcd_import(name[level:], package, level)
+00008|           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00009|<frozen importlib._bootstrap>:1387: in _gcd_import
+00010|    ???
+00011|<frozen importlib._bootstrap>:1360: in _find_and_load
+00012|    ???
+00013|<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+00014|    ???
+00015|<frozen importlib._bootstrap>:935: in _load_unlocked
+00016|    ???
+00017|.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+00018|    source_stat, co = _rewrite_test(fn, self.config)
+00019|                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00020|.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+00021|    tree = ast.parse(source, filename=strfn)
+00022|           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00023|/usr/lib/python3.12/ast.py:52: in parse
+00024|    return compile(source, filename, mode, flags,
+00025|E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+00026|E       def test_can_access_urllib3_attribute(:
+00027|E                                             ^
+00028|E   SyntaxError: invalid syntax
+00029|___________________ ERROR collecting tests/test_packages.py ____________________
+00030|.venv/lib/python3.12/site-packages/_pytest/python.py:498: in importtestmodule
+00031|    mod = import_path(
+00032|.venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path
+00033|    importlib.import_module(module_name)
+00034|/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+00035|    return _bootstrap._gcd_import(name[level:], package, level)
+00036|           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00037|<frozen importlib._bootstrap>:1387: in _gcd_import
+00038|    ???
+00039|<frozen importlib._bootstrap>:1360: in _find_and_load
+00040|    ???
+00041|<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+00042|    ???
+00043|<frozen importlib._bootstrap>:935: in _load_unlocked
+00044|    ???
+00045|.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+00046|    source_stat, co = _rewrite_test(fn, self.config)
+00047|                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00048|.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+00049|    tree = ast.parse(source, filename=strfn)
+00050|           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+00051|/usr/lib/python3.12/ast.py:52: in parse
+00052|    return compile(source, filename, mode, flags,
+00053|E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+00054|E       def test_can_access_urllib3_attribute(:
+00055|E                                             ^
+00056|E   SyntaxError: invalid syntax
+00057|=========================== short test summary info ============================
+00058|ERROR tests/test_packages.py
+00059|ERROR tests/test_packages.py
+00060|!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+00061|2 errors in 0.10s

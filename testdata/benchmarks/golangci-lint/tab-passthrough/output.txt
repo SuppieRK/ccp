@@ -1,0 +1,6 @@
+main.go:6:12  errcheck  Error return value of `fmt.Errorf` is not checked
+util.go:6:12  errcheck  Error return value of `fmt.Errorf` is not checked
+main.go:7:14  govet     printf: fmt.Printf format %d has arg "wrong" of wrong type string
+3 issues:
+* errcheck: 2
+* govet: 1

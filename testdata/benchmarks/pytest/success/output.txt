@@ -1,2 +1,1 @@
-pytest: 1 passed
-.                                                                        [100%]
+1 passed

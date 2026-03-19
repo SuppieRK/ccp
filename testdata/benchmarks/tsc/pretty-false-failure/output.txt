@@ -1,0 +1,16 @@
+.artifacts/tsc-demo/src/fail.ts:
+1:7 TS2322 Type 'string' is not assignable to type 'number'.
+2:7 TS2322 Type 'string' is not assignable to type 'number'.
+3:7 TS2322 Type 'string' is not assignable to type 'number'.
+4:7 TS2322 Type 'string' is not assignable to type 'number'.
+.artifacts/tsc-demo/src/fail2.ts:
+1:22 TS2304 Cannot find name 'missingSymbol'.
+.artifacts/tsc-demo/src/overflow.ts:
+1:7 TS2322 Type 'string' is not assignable to type 'number'.
+2:7 TS2322 Type 'string' is not assignable to type 'number'.
+3:7 TS2322 Type 'string' is not assignable to type 'number'.
+4:7 TS2322 Type 'string' is not assignable to type 'number'.
+5:7 TS2322 Type 'string' is not assignable to type 'number'.
+6:7 TS2322 Type 'string' is not assignable to type 'number'.
+
++2

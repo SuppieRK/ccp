@@ -1,0 +1,210 @@
+00000|warning: unused import: `std::path::Path`
+00001|    --> src/init.rs:1408:9
+00002|     |
+00003|1408 |     use std::path::Path;
+00004|     |         ^^^^^^^^^^^^^^^
+00005|     |
+00006|     = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+00007|
+00008|warning: unused import: `regex::Regex`
+00009| --> src/lint_cmd.rs:6:5
+00010|  |
+00011|6 | use regex::Regex;
+00012|  |     ^^^^^^^^^^^^
+00013|
+00014|warning: unused variable: `start`
+00015|   --> src/init.rs:640:17
+00016|    |
+00017|640 |             let start = i;
+00018|    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
+00019|    |
+00020|    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+00021|
+00022|warning: unused variable: `original_keys`
+00023|    --> src/init.rs:1777:13
+00024|     |
+00025|1777 |         let original_keys: Vec<&str> = original.split("\"").filter(|s| s.contains(":")).collect();
+00026|     |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_original_keys`
+00027|
+00028|warning: unused variable: `serialized_keys`
+00029|    --> src/init.rs:1778:13
+00030|     |
+00031|1778 |         let serialized_keys: Vec<&str> =
+00032|     |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_serialized_keys`
+00033|
+00034|warning: constant `BILLION` is never used
+00035|  --> src/cc_economics.rs:17:7
+00036|   |
+00037|17 | const BILLION: f64 = 1e9;
+00038|   |       ^^^^^^^
+00039|   |
+00040|   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+00041|
+00042|warning: fields `line` and `column` are never read
+00043|  --> src/golangci_cmd.rs:13:5
+00044|   |
+00045| 9 | struct Position {
+00046|   |        -------- fields in this struct
+00047|...
+00048|13 |     line: usize,
+00049|   |     ^^^^
+00050|14 |     #[serde(rename = "Column")]
+00051|15 |     column: usize,
+00052|   |     ^^^^^^
+00053|   |
+00054|   = note: `Position` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00055|
+00056|warning: field `text` is never read
+00057|  --> src/golangci_cmd.rs:23:5
+00058|   |
+00059|19 | struct Issue {
+00060|   |        ----- field in this struct
+00061|...
+00062|23 |     text: String,
+00063|   |     ^^^^
+00064|   |
+00065|   = note: `Issue` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00066|
+00067|warning: fields `line` and `message` are never read
+00068|  --> src/lint_cmd.rs:40:5
+00069|   |
+00070|33 | struct PylintDiagnostic {
+00071|   |        ---------------- fields in this struct
+00072|...
+00073|40 |     line: usize,
+00074|   |     ^^^^
+00075|...
+00076|45 |     message: String,
+00077|   |     ^^^^^^^
+00078|   |
+00079|   = note: `PylintDiagnostic` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00080|
+00081|warning: associated function `parse_with_tier` is never used
+00082|  --> src/parser/mod.rs:88:8
+00083|   |
+00084|76 | pub trait OutputParser: Sized {
+00085|   |           ------------ associated function in this trait
+00086|...
+00087|88 |     fn parse_with_tier(input: &str, max_tier: u8) -> ParseResult<Self::Output> {
+00088|   |        ^^^^^^^^^^^^^^^
+00089|
+00090|warning: enum `ParseError` is never used
+00091| --> src/parser/error.rs:5:10
+00092|  |
+00093|5 | pub enum ParseError {
+00094|  |          ^^^^^^^^^^
+00095|
+00096|warning: struct `LintResult` is never constructed
+00097|  --> src/parser/types.rs:26:12
+00098|   |
+00099|26 | pub struct LintResult {
+00100|   |            ^^^^^^^^^^
+00101|
+00102|warning: struct `LintIssue` is never constructed
+00103|  --> src/parser/types.rs:36:12
+00104|   |
+00105|36 | pub struct LintIssue {
+00106|   |            ^^^^^^^^^
+00107|
+00108|warning: enum `LintSeverity` is never used
+00109|  --> src/parser/types.rs:46:10
+00110|   |
+00111|46 | pub enum LintSeverity {
+00112|   |          ^^^^^^^^^^^^
+00113|
+00114|warning: struct `BuildOutput` is never constructed
+00115|  --> src/parser/types.rs:71:12
+00116|   |
+00117|71 | pub struct BuildOutput {
+00118|   |            ^^^^^^^^^^^
+00119|
+00120|warning: struct `BundleInfo` is never constructed
+00121|  --> src/parser/types.rs:81:12
+00122|   |
+00123|81 | pub struct BundleInfo {
+00124|   |            ^^^^^^^^^^
+00125|
+00126|warning: struct `RouteInfo` is never constructed
+00127|  --> src/parser/types.rs:88:12
+00128|   |
+00129|88 | pub struct RouteInfo {
+00130|   |            ^^^^^^^^^
+00131|
+00132|warning: struct `GitResult` is never constructed
+00133|  --> src/parser/types.rs:96:12
+00134|   |
+00135|96 | pub struct GitResult {
+00136|   |            ^^^^^^^^^
+00137|
+00138|warning: struct `GitCommit` is never constructed
+00139|   --> src/parser/types.rs:105:12
+00140|    |
+00141|105 | pub struct GitCommit {
+00142|    |            ^^^^^^^^^
+00143|
+00144|warning: struct `GenericOutput` is never constructed
+00145|   --> src/parser/types.rs:114:12
+00146|    |
+00147|114 | pub struct GenericOutput {
+00148|    |            ^^^^^^^^^^^^^
+00149|
+00150|warning: fields `row` and `column` are never read
+00151|  --> src/ruff_cmd.rs:10:5
+00152|   |
+00153| 9 | struct RuffLocation {
+00154|   |        ------------ fields in this struct
+00155|10 |     row: usize,
+00156|   |     ^^^
+00157|11 |     column: usize,
+00158|   |     ^^^^^^
+00159|   |
+00160|   = note: `RuffLocation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00161|
+00162|warning: fields `message` and `location` are never read
+00163|  --> src/ruff_cmd.rs:23:5
+00164|   |
+00165|21 | struct RuffDiagnostic {
+00166|   |        -------------- fields in this struct
+00167|22 |     code: String,
+00168|23 |     message: String,
+00169|   |     ^^^^^^^
+00170|24 |     location: RuffLocation,
+00171|   |     ^^^^^^^^
+00172|   |
+00173|   = note: `RuffDiagnostic` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00174|
+00175|warning: method `get_summary` is never used
+00176|   --> src/tracking.rs:491:12
+00177|    |
+00178|224 | impl Tracker {
+00179|    | ------------ method in this implementation
+00180|...
+00181|491 |     pub fn get_summary(&self) -> Result<GainSummary> {
+00182|    |            ^^^^^^^^^^^
+00183|
+00184|warning: field `error_message` is never read
+00185|   --> src/tracking.rs:974:9
+00186|    |
+00187|971 | pub struct ParseFailureRecord {
+00188|    |            ------------------ field in this struct
+00189|...
+00190|974 |     pub error_message: String,
+00191|    |         ^^^^^^^^^^^^^
+00192|    |
+00193|    = note: `ParseFailureRecord` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+00194|
+00195|warning: function `track` is never used
+00196|    --> src/tracking.rs:1178:8
+00197|     |
+00198|1178 | pub fn track(original_cmd: &str, rtk_cmd: &str, input: &str, output: &str) {
+00199|     |        ^^^^^
+00200|
+00201|warning: `rtk` (bin "rtk" test) generated 25 warnings (run `cargo fix --bin "rtk" -p rtk --tests` to apply 5 suggestions)
+00202|    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+00203|     Running unittests src/main.rs (target/debug/deps/rtk-a6980cf2fdc7b3f3)
+00204|
+00205|running 1 test
+00206|test cargo_cmd::tests::test_filter_cargo_test_failures ... ok
+00207|
+00208|test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 892 filtered out; finished in 0.00s
+00209|

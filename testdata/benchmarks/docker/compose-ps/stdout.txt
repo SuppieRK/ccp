@@ -1,0 +1,3 @@
+00000|NAME                        IMAGE            COMMAND                  SERVICE   CREATED         STATUS         PORTS
+00001|ccp_corpus_docker-cache-1   redis:7-alpine   "docker-entrypoint.s…"   cache     6 seconds ago   Up 6 seconds   6379/tcp
+00002|ccp_corpus_docker-web-1     nginx:alpine     "/docker-entrypoint.…"   web       6 seconds ago   Up 6 seconds   0.0.0.0:18080->80/tcp, [::]:18080->80/tcp

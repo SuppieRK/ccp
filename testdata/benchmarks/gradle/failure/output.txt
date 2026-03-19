@@ -1,9 +1,3 @@
-:compileJava: ok
-:processResources: ok
-:classes: ok
-:compileTestJava: ok
-:processTestResources: ok
-:testClasses: ok
 1 test completed, 1 failed
 FAILURE: Build failed with an exception.
 * What went wrong:

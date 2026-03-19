@@ -1,0 +1,2 @@
+00000|test-data/packages/typedpkg/typedpkg/pkg/aaa.py:1: error: Expected ':'  [syntax]
+00001|Found 1 error in 1 file (errors prevented further checking)

@@ -1,0 +1,9 @@
+00000|[INFO] Scanning for projects...
+00001|[ERROR] [ERROR] Could not find the selected project in the reactor: definitely-missing-module @ 
+00002|[ERROR] Could not find the selected project in the reactor: definitely-missing-module -> [Help 1]
+00003|[ERROR] 
+00004|[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+00005|[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+00006|[ERROR] 
+00007|[ERROR] For more information about the errors and possible solutions, please read the following articles:
+00008|[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MavenExecutionException

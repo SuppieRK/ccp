@@ -1,0 +1,12 @@
+00003|F401 [*] `json` imported but unused
+00004| --> src/requests/_ruff_corpus_unused.py:1:8
+00005|  |
+00006|1 | import json
+00007|  |        ^^^^
+00008|2 |
+00009|3 | VALUE = 1
+00010|  |
+00011|help: Remove unused import: `json`
+00012|
+00013|Found 1 error.
+00014|[*] 1 fixable with the `--fix` option.

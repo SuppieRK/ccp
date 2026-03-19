@@ -1,0 +1,2 @@
+argv: ["npx", "-p", "definitely-missing-npx-corpus-package", "definitely-missing-npx-corpus-exec"]
+exit_code: 1

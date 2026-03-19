@@ -1,0 +1,1 @@
+argv: ["cargo", "test", "cargo_cmd::tests::test_filter_cargo_test_failures", "--color", "never"]

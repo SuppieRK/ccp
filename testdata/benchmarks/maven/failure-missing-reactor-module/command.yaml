@@ -1,0 +1,1 @@
+argv: ["./mvnw", "-DskipTests", "-pl", "definitely-missing-module", "compile"]

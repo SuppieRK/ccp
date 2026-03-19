@@ -1,0 +1,8 @@
+ ⨯ Failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error
+> Build error occurred
+[Error: Cannot find module '@next/definitely-missing-package'
+Require stack:
+- /tmp/repo-43a/next.config.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}

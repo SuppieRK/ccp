@@ -1,0 +1,17 @@
+   ▲ Next.js 15.5.12
+(node:127122) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Local search index generated...
+Generated 13 documents in .contentlayer
+Failed to compile.
+./app/page.tsx
+Error:   x Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+   ,-[/tmp/repo-43a/app/page.tsx:9:1]
+   : ^
+   `----
+  x Unexpected eof
+   ,-[/tmp/repo-43a/app/page.tsx:9:3]
+Caused by:
+    Syntax Error
+Import trace for requested module:
+> Build failed because of webpack errors

@@ -1,0 +1,23 @@
+5 actionable tasks: 5 up-to-date
+e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:9: Unresolved reference 'not'.
+e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:13: Unresolved reference 'valid'.
+e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:26: Function invocation 'build(...)' expected.
+e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:32: Unresolved reference 'script'.
+e: file:///tmp/ktlint-gradle-corpus/build.gradle.kts:28:39: Unresolved reference 'syntax'.
+FAILURE: Build failed with an exception.
+* Where:
+Build file '/tmp/ktlint-gradle-corpus/build.gradle.kts' line: 28
+* What went wrong:
+Script compilation errors:
+  Line 28: this is not valid kotlin build script syntax
+                   ^ Unresolved reference 'not'.
+                       ^ Unresolved reference 'valid'.
+                                    ^ Function invocation 'build(...)' expected.
+                                          ^ Unresolved reference 'script'.
+                                                 ^ Unresolved reference 'syntax'.
+5 errors
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Get more help at https://help.gradle.org.
+BUILD FAILED in 717ms

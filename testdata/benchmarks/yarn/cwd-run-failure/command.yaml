@@ -1,0 +1,2 @@
+argv: ["yarn", "--cwd", ".artifacts/yarn-demo", "run", "failure"]
+exit_code: 1

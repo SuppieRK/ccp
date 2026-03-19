@@ -1,1 +1,1 @@
-pytest: no tests collected
+no tests ran

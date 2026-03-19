@@ -14,6 +14,9 @@
 - Runtime artifacts MUST NOT be committed.
 - Use `ccp gain`, not just the harness summary, to judge compression results for a tool.
 - Highlight runs with no `gain.db` files or no meaningful compression result for the changed tool.
+- Corpus honesty matters as much as savings. Prefer widening fixtures with real output before making strong claims from tiny or toy scenarios.
+- `stdout.txt` and `stderr.txt` must start at `00000|` and remain contiguous; replay treats broken or one-based numbering as an error.
+- When a fixture drifts, prefer promoting the verified runtime output (`verify-output.txt`) or regenerating it with `ccp capture` instead of rewriting expected output from memory.
 
 ## Local Execution
 
@@ -22,3 +25,9 @@
 - MUST run the benchmark after changing a tool filter or benchmarked execution behavior.
 - Treat any non-zero benchmark exit as a failure.
 - Compare before/after `ccp gain` output when a baseline exists.
+
+## Fixture Strategy
+
+- Add boundary fixtures, not just winning fixtures. Passthrough cases are valuable when they prove a filter is intentionally conservative.
+- Prefer real warning-bearing success, rich failure, and machine-mode examples over duplicated clean-success variants.
+- If a command family has user-defined content such as logs, benchmark it only when CCP is truly expected to leave it native or when the tool itself provides a safe structured mode.

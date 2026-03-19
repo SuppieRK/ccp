@@ -1,0 +1,34 @@
+00000|   ▲ Next.js 15.5.12
+00001|
+00002|   Creating an optimized production build ...
+00003|(node:127122) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+00004|(Use `node --trace-deprecation ...` to show where the warning was created)
+00005|successCallback /tmp/repo-43a/.contentlayer
+00006|Local search index generated...
+00007|Generated 13 documents in .contentlayer
+00008|Failed to compile.
+00009|
+00010|./app/page.tsx
+00011|Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+00012|   ,-[[36;1;4m/tmp/repo-43a/app/page.tsx[0m:9:1]
+00013| [2m6[0m |   const sortedPosts = sortPosts(allBlogs)
+00014| [2m7[0m |   const posts = allCoreContent(sortedPosts)
+00015| [2m8[0m |   return <Main posts={posts} >
+00016| [2m9[0m | }
+00017|   : [35;1m^[0m
+00018|   `----
+00019|  [31mx[0m Unexpected eof
+00020|   ,-[[36;1;4m/tmp/repo-43a/app/page.tsx[0m:9:3]
+00021| [2m7[0m |   const posts = allCoreContent(sortedPosts)
+00022| [2m8[0m |   return <Main posts={posts} >
+00023| [2m9[0m | }
+00024|   `----
+00025|
+00026|Caused by:
+00027|    Syntax Error
+00028|
+00029|Import trace for requested module:
+00030|./app/page.tsx
+00031|
+00032|
+00033|> Build failed because of webpack errors

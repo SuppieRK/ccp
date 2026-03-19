@@ -1,0 +1,15 @@
+warning: The following rules have been removed and ignoring them has no effect:
+    - UP038
+
+F401 [*] `json` imported but unused
+ --> src/requests/_ruff_corpus_unused.py:1:8
+  |
+1 | import json
+  |        ^^^^
+2 |
+3 | VALUE = 1
+  |
+help: Remove unused import: `json`
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

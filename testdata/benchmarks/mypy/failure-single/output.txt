@@ -1,0 +1,2 @@
+test-data/packages/typedpkg/typedpkg/sample.py:
+  L7 [return-value] Incompatible return value type (got "list[str]", expected "tuple[str, ...]")

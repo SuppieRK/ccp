@@ -1,0 +1,1 @@
+argv: ["docker", "compose", "-p", "ccp_corpus_docker", "-f", ".artifacts/docker-demo/compose.yaml", "ps"]

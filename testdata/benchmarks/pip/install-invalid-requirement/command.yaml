@@ -1,0 +1,2 @@
+argv: ["./.venv/bin/pip", "install", "-r", "requirements-bad.txt"]
+exit_code: 1

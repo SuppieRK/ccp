@@ -1,0 +1,11 @@
+failure details:
+- test_fail
+E       AssertionError: assert {'ok': False} == {'ok': True}
+tests/test_app.py:10: AssertionError
+----------------------------- Captured stdout call -----------------------------
+  captured stdout call
+- test_can_access_urllib3_attribute
+tests/test_packages.py:5: AttributeError
+summary:
+FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
+FAILED tests/test_packages.py::test_can_access_urllib3_attribute - AttributeE...

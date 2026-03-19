@@ -1,0 +1,8 @@
+Ignored build scripts: esbuild@0.25.8.
+Run "pnpm approve-builds" to pick which dependencies should be allowed
+to run scripts.
+🔨 Building OpenSpec...
+Compiling TypeScript...
+Version 5.9.3
+✅ Build completed successfully!
+Done in 2.3s using pnpm v10.30.3

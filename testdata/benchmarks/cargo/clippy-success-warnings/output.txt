@@ -1,0 +1,629 @@
+cargo clippy: ok
+warning: can be more succinctly written as a byte str
+    |
+253 |             LineTerminatorImp::CRLF => &[b'\r', b'\n'],
+warning: this `map_or` can be simplified
+   |
+31 |         if replacement.get(1).map_or(false, |&b| b == b'$') {
+109 |     while replacement.get(cap_end).map_or(false, is_valid_cap_letter) {
+122 |         if !replacement.get(cap_end).map_or(false, |&b| b == b'}') {
+warning: match expression looks like `matches!` macro
+139 | /     match *b {
+140 | |         b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' => true,
+141 | |         _ => false,
+142 | |     }
+warning: name `CRLF` contains a capitalized acronym
+205 |     CRLF,
+264 |         slice.last().map_or(false, |&b| b == self.as_byte())
+warning: manual implementation of an assign operation
+26 |             self.0 = self.0 ^ u64::from(byte);
+warning: you should consider adding a `Default` implementation for `NoCaptures`
+473 | /     pub fn new() -> NoCaptures {
+474 | |         NoCaptures(())
+475 | |     }
+warning: the following explicit lifetimes could be elided: 'a
+     |
+1133 | impl<'a, M: Matcher> Matcher for &'a M {
+warning: accessing first element with `self.tokens.get(0)`
+357 |         let start = match *self.tokens.get(0)? {
+467 |         let (start, entire) = match *self.tokens.get(0)? {
+514 |         let start = match *self.tokens.get(0)? {
+warning: this expression creates a reference which is immediately dereferenced by the compiler
+581 |             glob: &self.glob,
+687 |         self.tokens_to_regex(options, &self, &mut re);
+warning: `grep-matcher` (lib) generated 9 warnings (run `cargo clippy --fix --lib -p grep-matcher` to apply 6 suggestions)
+warning: calling `push_str()` using a single-character string literal
+707 |                         re.push_str(".");
+747 |                         self.tokens_to_regex(options, &pat, &mut altre);
+warning: passing a unit value to a function
+857 |             return Ok(pat.push(tok));
+warning: this pattern creates a reference to a reference
+872 |             Some(ref pat) => Ok(!pat.is_empty()),
+883 |             Ok(self.branches.push(Tokens::default()))
+909 |             if !self.peek().map_or(true, is_separator) {
+914 |                 assert!(self.bump().map_or(true, is_separator));
+warning: this `if` statement can be collapsed
+919 | /         if !prev.map(is_separator).unwrap_or(false) {
+920 | |             if self.branches.len() <= 1
+921 | |                 || (prev != Some(',') && prev != Some('{'))
+927 | |         }
+922 |             {
+925 |                 return Ok(());
+warning: equality checks against true are unnecessary
+996 |                 return if self.opts.allow_unclosed_class == true {
+1022 |                         add_to_last_range(&self.glob, r, '-')?;
+1034 | ...                   &self.glob,
+warning: you are using an explicit closure for copying elements
+1061 |         self.chars.peek().map(|&ch| ch)
+warning: this `match` expression can be replaced with `?`
+50 |       let last_dot_at = match name.rfind_byte(b'.') {
+51 | |         None => return None,
+52 | |         Some(i) => i,
+53 | |     };
+warning: called `.as_ref().map(|s| &**s)` on an `Option` value
+207 |         self.glob.as_ref().map(|s| &**s)
+warning: you should consider adding a `Default` implementation for `GlobSetBuilder`
+574 | /     pub fn new() -> GlobSetBuilder {
+575 | |         GlobSetBuilder { pats: vec![] }
+576 | |     }
+warning: deref which would be done by auto-deref
+641 |         if self.path.len() <= max { &*self.path } else { &self.path[..max] }
+646 |             &*self.path
+warning: dereferencing a tuple pattern where every element takes a reference
+867 |                 for &(_, ref re) in regexes {
+warning: `globset` (lib) generated 24 warnings (run `cargo clippy --fix --lib -p globset` to apply 23 suggestions)
+warning: this `impl` can be derived
+29 | / impl Default for BufferAllocation {
+30 | |     fn default() -> BufferAllocation {
+31 | |         BufferAllocation::Eager
+32 | |     }
+33 | | }
+18 | pub(crate) enum BufferAllocation {
+19 |     /// Attempt to expand the size of the buffer until either at least the next
+22 |     /// This is the default.
+warning: this can be `std::io::Error::other(_)`
+39 |     io::Error::new(io::ErrorKind::Other, msg)
+66 | / impl Default for BinaryDetection {
+67 | |     fn default() -> BinaryDetection {
+68 | |         BinaryDetection::None
+69 | |     }
+70 | | }
+52 | pub(crate) enum BinaryDetection {
+53 |     /// No binary detection is performed. Data reported by the line buffer may
+54 |     /// contain arbitrary bytes.
+76 | /         match *self {
+77 | |             BinaryDetection::Quit(_) => true,
+78 | |             _ => false,
+79 | |         }
+warning: accessing first element with `bytes.get(0)`
+546 |         while bytes.get(0) == Some(&src) {
+111 |         self.sink.binary_data(&self.searcher, binary_byte_offset)
+warning: unneeded `return` statement
+149 |             Err(err) => return Err(S::Error::error_message(err)),
+150 |             Ok(None) => return Ok(None),
+156 |         self.sink.begin(&self.searcher)
+165 |             &self.searcher,
+warning: returning the result of a `let` binding from a block
+203 | /             let consumed =
+204 | |                 std::cmp::max(context_start, self.last_line_visited);
+205 |               consumed
+373 |               } else if self.config.passthru {
+374 | |                 if !self.sink_other_context(buf, &line)? {
+375 | |                     return Ok(false);
+376 | |                 }
+377 | |             }
+375 |                     return Ok(false);
+537 |             &self.searcher,
+567 |             &self.searcher,
+598 |             &self.searcher,
+628 |             &self.searcher,
+657 |             self.sink.context_break(&self.searcher)
+711 |         self.config.max_matches.map_or(false, |limit| self.count() >= limit)
+69 | /         if !already_binary {
+70 | |             if let Some(offset) = self.rdr.binary_byte_offset() {
+71 | |                 if !self.core.binary_data(offset)? {
+72 | |                     return Ok(false);
+75 | |         }
+71 |                 if !self.core.binary_data(offset)? {
+72 |                     return Ok(false);
+73 |                 }
+70 | /             if let Some(offset) = self.rdr.binary_byte_offset() {
+73 | |                 }
+74 | |             }
+warning: you should consider adding a `Default` implementation for `Searcher`
+632 | /     pub fn new() -> Searcher {
+633 | |         SearcherBuilder::new().build()
+634 | |     }
+706 |                 &*self.multi_line_buffer.borrow(),
+755 |                 &*self.multi_line_buffer.borrow(),
+761 |             let rdr = LineBufferReader::new(decoder, &mut *line_buffer);
+900 | /         if let Some(line_term) = matcher.line_terminator() {
+901 | |             if line_term == self.line_terminator() {
+902 | |                 return false;
+903 | |             }
+904 | |         }
+902 |                 return false;
+965 |             read_from.read_to_end(&mut *buf).map_err(S::Error::error_io)?;
+990 |                     .read_to_end(&mut *buf)
+44 |         io::Error::new(io::ErrorKind::Other, message.to_string())
+225 | impl<'a, S: Sink> Sink for &'a mut S {
+566 |             (self.0)(line_number, &matched)
+warning: methods called `from_*` usually take no `self`
+56 |     fn from_ast_impl(&mut self, ast: &Ast) {
+92 |     fn from_ast_class_set(&mut self, ast: &ast::ClassSet) {
+107 |     fn from_ast_class_set_item(&mut self, ast: &ast::ClassSetItem) {
+warning: `grep-searcher` (lib) generated 30 warnings (run `cargo clippy --fix --lib -p grep-searcher` to apply 28 suggestions)
+134 |     fn from_ast_literal(&mut self, ast: &ast::Literal) {
+60 |                 CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+66 |             CommandError::io(io::Error::new(io::ErrorKind::Other, err))
+warning: called `is_some()` after searching an `Iterator` with `find`
+15 |             if lit.iter().find(|&&b| b == byte).is_some() {
+23 |                 if cls.ranges().iter().find(contains).is_some() {
+33 |                 if cls.ranges().iter().find(contains).is_some() {
+warning: statics have by default a `'static` lifetime
+483 |         static MSG: &'static str = "adding a default type should never fail";
+136 | /             if let Some(lineterm) = self.line_terminator {
+137 | |                 if has_line_terminator(lineterm, p) {
+138 | |                     return false;
+139 | |                 }
+140 | |             }
+138 |                     return false;
+179 |             let hir = Hir::alternation(alts);
+180 |             hir
+487 |     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
+464 |           return Err(CommandError::io(io::Error::new(
+465 | |             io::ErrorKind::Other,
+466 | |             msg,
+467 | |         )));
+warning: this operation has no effect
+253 |             .dfa_size_limit(Some(1 * (1 << 20)))
+72 | /         if re.is_accelerated() {
+73 | |             if !chir.hir().properties().look_set().contains_word_unicode() {
+74 | |                 log::trace!(
+75 | |                     "skipping inner literal extraction, \
+80 | |         }
+74 |                 log::trace!(
+78 |                 return InnerLiterals::none();
+52 |         return Err(io::Error::new(io::ErrorKind::Other, msg));
+70 |         return Err(io::Error::new(io::ErrorKind::Other, msg));
+67 |         std::io::Error::new(std::io::ErrorKind::Other, size_err)
+383 |           if seq1
+384 | |             .max_cross_len(&seq2)
+385 | |             .map_or(false, |len| len > self.limit_total)
+390 |         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+41 |         io::Error::new(io::ErrorKind::Other, paterr)
+399 |         if seq1.max_union_len(seq2).map_or(false, |len| len > self.limit_total)
+419 |               if seq1
+420 | |                 .max_union_len(seq2)
+421 | |                 .map_or(false, |len| len > self.limit_total)
+427 |         assert!(seq1.len().map_or(true, |x| x <= self.limit_total));
+85 | /         io::Error::new(
+86 | |             io::ErrorKind::Other,
+87 | |             format!("{}: {}", path.display(), err),
+88 | |         )
+91 | /         io::Error::new(
+92 | |             io::ErrorKind::Other,
+93 | |             format!("{}:{}", path.display(), err),
+94 | |         )
+108 |         io::Error::new(io::ErrorKind::Other, format!("<stdin>:{}", err))
+151 |               Err(err) => Err(io::Error::new(
+152 | |                 io::ErrorKind::Other,
+153 | |                 format!("{}: {}", line_number, err),
+154 | |             )),
+76 |                 io::Error::new(io::ErrorKind::Other, cmderr)
+215 | /             if let Some(weak) = compiled.get(parent.as_os_str()) {
+216 | |                 if let Some(prebuilt) = weak.upgrade() {
+217 | |                     ig = Ignore(prebuilt);
+218 | |                     continue;
+219 | |                 }
+220 | |             }
+217 |                     ig = Ignore(prebuilt);
+218 |                     continue;
+64 |             if lit.iter().find(|&&b| b == byte).is_some() {
+274 |                 &dir,
+275 |                 &dir,
+286 |                 &dir,
+287 |                 &dir,
+298 |                 &dir,
+299 |                 &dir,
+313 |                         &dir,
+473 | /         if self.0.opts.parents {
+474 | |             if let Some(abs_parent_path) = self.absolute_base() {
+534 | |         }
+475 |                 // What we want to do here is take the absolute base path of
+532 |                 }
+warning: the borrowed expression implements the required traits
+539 |             m_explicit = gi.matched(&path, is_dir).map(IgnoreMatch::gitignore);
+544 |                 .matched(&path, is_dir)
+warning: `grep-regex` (lib) generated 17 warnings (run `cargo clippy --fix --lib -p grep-regex` to apply 13 suggestions)
+warning: `grep-cli` (lib) generated 14 warnings (run `cargo clippy --fix --lib -p grep-cli` to apply 14 suggestions)
+898 |     if !git_type.map_or(false, |ft| ft.is_file()) {
+warning: called `.as_ref().map(|p| &**p)` on an `Option` value
+48 |         self.from.as_ref().map(|p| &**p)
+155 |         &*self.root
+259 |         self.set.matches_candidate_into(&candidate, &mut *matches);
+294 | /         if self.root != Path::new(".") && !is_file_name(path) {
+295 | |             if let Some(p) = strip_prefix(&self.root, path) {
+296 | |                 path = p;
+302 | |         }
+296 |                 path = p;
+300 |                 }
+warning: redundant closure
+351 |             matches: Some(Arc::new(Pool::new(|| vec![]))),
+416 |             if let Err(err) = self.add_line(Some(path.to_path_buf()), &line) {
+warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+575 | /     match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
+576 | |         Some(path) => return Some(path),
+577 | |         None => {}
+578 | |     }
+579 | /     match gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)) {
+580 | |         Some(path) => return Some(path),
+581 | |         None => {}
+582 | |     }
+589 |       let home = match home_dir() {
+590 | |         None => return None,
+591 | |         Some(home) => home,
+592 | |     };
+warning: accessing first element with `name.as_bytes().get(0)`
+15 |         name.as_bytes().get(0) == Some(&b'.')
+74 |         Some(&Path::new(OsStr::from_bytes(&path[prefix.len()..])))
+113 | pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
+114 |     path: &'a P,
+115 | ) -> Option<&'a OsStr> {
+warning: this `if` has identical blocks
+120 |       if path.is_empty() {
+121 | |         return None;
+122 | |     } else if path.len() == 1 && path[0] == b'.' {
+122 |       } else if path.len() == 1 && path[0] == b'.' {
+123 | |         return None;
+124 | |     } else if path.last() == Some(&b'.') {
+124 |       } else if path.last() == Some(&b'.') {
+125 | |         return None;
+126 | |     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+126 |       } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+127 | |         return None;
+128 | |     }
+warning: needlessly taken reference of both operands
+126 |     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
+234 |             matches: Arc::new(Pool::new(|| vec![])),
+283 |         self.set.matches_into(name, &mut *matches);
+warning: you should consider adding a `Default` implementation for `TypesBuilder`
+316 | /     pub fn new() -> TypesBuilder {
+317 | |         TypesBuilder { types: HashMap::new(), selections: vec![] }
+318 | |     }
+360 |             matches: Arc::new(Pool::new(|| vec![])),
+warning: doc list item overindented
+436 |     ///     given name with the given glob.
+438 |     ///     This defines an 'include' definition that associates the given name
+439 |     ///     with the definitions of the given existing types.
+warning: doc list item without indentation
+440 |     /// Names may not include any characters that are not
+440 |     ///    Names may not include any characters that are not
+441 |     /// Unicode letters or numbers.
+441 |     ///    Unicode letters or numbers.
+165 | /         match *self {
+166 | |             DirEntryInner::Stdin => true,
+167 | |             _ => false,
+168 | |         }
+175 |                   let err = Error::Io(io::Error::new(
+176 | |                     io::ErrorKind::Other,
+177 | |                     "<stdin> has no metadata",
+178 | |                 ));
+warning: useless conversion to the same type: `std::io::Error`
+302 |         .map_err(|err| Error::Io(io::Error::from(err)).with_path(&self.path))
+327 |             let err = Error::Io(io::Error::from(err)).with_path(ent.path());
+456 | /// then matching stops. The path is then only skipped if the glob that matched
+456 | ///   then matching stops. The path is then only skipped if the glob that matched
+457 | /// the path is an ignore glob. (An override glob is a whitelist glob unless it
+457 | ///   the path is an ignore glob. (An override glob is a whitelist glob unless it
+458 | /// starts with a `!`, in which case it is an ignore glob.)
+458 | ///   starts with a `!`, in which case it is an ignore glob.)
+460 | /// git ignore files (`.gitignore`, `.git/info/exclude` and the configured
+460 | ///   git ignore files (`.gitignore`, `.git/info/exclude` and the configured
+461 | /// global gitignore file), plain `.ignore` files, which have the same format
+461 | ///   global gitignore file), plain `.ignore` files, which have the same format
+462 | /// as gitignore files, or explicitly added ignore files. The precedence order
+462 | ///   as gitignore files, or explicitly added ignore files. The precedence order
+463 | /// is: `.ignore`, `.gitignore`, `.git/info/exclude`, global gitignore and
+463 | ///   is: `.ignore`, `.gitignore`, `.git/info/exclude`, global gitignore and
+464 | /// finally explicitly added ignore files. Note that precedence between
+464 | ///   finally explicitly added ignore files. Note that precedence between
+465 | /// different types of ignore files is not impacted by the directory hierarchy;
+465 | ///   different types of ignore files is not impacted by the directory hierarchy;
+466 | /// any `.ignore` file overrides all `.gitignore` files. Within each precedence
+466 | ///   any `.ignore` file overrides all `.gitignore` files. Within each precedence
+467 | /// level, more nested ignore files have a higher precedence than less nested
+467 | ///   level, more nested ignore files have a higher precedence than less nested
+468 | /// ignore files.
+468 | ///   ignore files.
+470 | /// is stopped and the path is skipped. If it yields a whitelist match, then
+470 | ///   is stopped and the path is skipped. If it yields a whitelist match, then
+471 | /// matching continues. A whitelist match can be overridden by a later matcher.
+471 | ///   matching continues. A whitelist match can be overridden by a later matcher.
+473 | /// the path. As above, if it yields an ignore match, then all matching is
+473 | ///   the path. As above, if it yields an ignore match, then all matching is
+474 | /// stopped and the path is skipped. If it yields a whitelist match, then
+474 | ///   stopped and the path is skipped. If it yields a whitelist match, then
+475 | /// matching continues.
+475 | ///   matching continues.
+477 | /// path is skipped.
+477 | ///   path is skipped.
+479 | /// against the max filesize limit. If it exceeds the limit, it is skipped.
+479 | ///   against the max filesize limit. If it exceeds the limit, it is skipped.
+481 | /// iterator.
+481 | ///   iterator.
+warning: very complex type used. Consider factoring parts into `type` definitions
+511 |     ByName(Arc<dyn Fn(&OsStr, &OsStr) -> Ordering + Send + Sync + 'static>),
+512 |     ByPath(Arc<dyn Fn(&Path, &Path) -> Ordering + Send + Sync + 'static>),
+warning: called `unwrap` on `self.max_filesize` after checking its variant with `is_some`
+1078 |         if self.max_filesize.is_some() && !ent.is_dir() {
+1079 |             return Ok(skip_filesize(
+1080 |                 self.max_filesize.unwrap(),
+1073 | /         if let Some(ref stdout) = self.skip {
+1074 | |             if path_equals(ent, stdout)? {
+1075 | |                 return Ok(true);
+1076 | |             }
+1077 | |         }
+1075 |                 return Ok(true);
+1085 | /         if let Some(Filter(filter)) = &self.filter {
+1086 | |             if !filter(ent) {
+1087 | |                 return Ok(true);
+1088 | |             }
+1089 | |         }
+1087 |                 return Ok(true);
+1261 | impl<'a, 's, P: ParallelVisitorBuilder<'s>> ParallelVisitorBuilder<'s>
+1262 |     for &'a mut P
+1474 |         self.dent.file_type().map_or(false, |ft| ft.is_symlink())
+1701 |         if self.max_depth.map_or(false, |max| depth >= max) {
+1782 |             if self.max_filesize.is_some() && !dent.is_dir() {
+1783 |                 skip_filesize(
+1784 |                     self.max_filesize.unwrap(),
+1752 |         let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
+1761 | /             if dent.is_dir() {
+1762 | |                 if let Err(err) = check_symlink_loop(ig, dent.path(), depth) {
+1763 | |                     return self.visitor.visit(Err(err));
+1764 | |                 }
+1765 | |             }
+1763 |                     return self.visitor.visit(Err(err));
+warning: manual implementation of `Option::map`
+1922 |       let filesize = match *ent {
+1923 | |         Some(ref md) => Some(md.len()),
+1924 | |         None => None,
+1925 | |     };
+2013 |     dent.path().metadata().ok().map_or(false, |md| md.file_type().is_dir())
+warning: `ignore` (lib) generated 75 warnings (run `cargo clippy --fix --lib -p ignore` to apply 41 suggestions)
+warning: using `clone` on type `Color` which implements the `Copy` trait
+276 |                 cspec.set_fg(Some(color.clone()));
+279 |                 cspec.set_bg(Some(color.clone()));
+495 |           let is_valid_scheme_char = |byte| match byte {
+496 | |             b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' | b'+' | b'-' | b'.' => {
+497 | |                 true
+500 | |         };
+warning: called `iter().cloned().collect()` on a slice to create a `Vec`. Calling `to_vec()` is both faster and more readable
+947 |     HYPERLINK_PATTERN_ALIASES.iter().cloned().collect()
+warning: you should consider adding a `Default` implementation for `JSONBuilder`
+60 | /     pub fn new() -> JSONBuilder {
+61 | |         JSONBuilder { config: Config::default() }
+62 | |     }
+588 | /// no file path is given, then this is `'static`.
+588 | ///   no file path is given, then this is `'static`.
+590 | /// borrows.
+590 | ///   borrows.
+592 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+592 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+594 | /// output to.
+594 | ///   output to.
+warning: deref on an immutable reference
+695 |                 (*self.json.config.replacement).as_ref().map(|r| &*r).unwrap();
+695 |                 (*self.json.config.replacement).as_ref().map(|r| &**r).unwrap();
+790 | /         if searcher.binary_detection().quit_byte().is_some() {
+791 | |             if let Some(ref path) = self.path {
+792 | |                 log::debug!(
+793 | |                     "ignoring {path}: found binary data at \
+798 | |         }
+792 |                 log::debug!(
+796 |                 );
+791 |             if let Some(ref path) = self.path {
+warning: this loop could be written as a `for` loop
+237 |     while let Some(chunk) = it.next() {
+244 |         let index4 = (group24 >> 0) & 0b111_111;
+warning: you don't need to add `&` to all patterns
+250 | /     match it.remainder() {
+251 | |         &[] => {}
+252 | |         &[byte0] => {
+253 | |             let group8 = usize::from(byte0);
+271 | |         _ => unreachable!("remainder must have length < 3"),
+272 | |     }
+253 |             let group8 = usize::from(byte0);
+260 |         }
+warning: you should consider adding a `Default` implementation for `PathPrinterBuilder`
+39 | /     pub fn new() -> PathPrinterBuilder {
+40 | |         PathPrinterBuilder { config: Config::default() }
+41 | |     }
+138 | /// with the other printers in this crate.
+138 | ///   with the other printers in this crate.
+140 | /// with the other printers in this crate.
+140 | ///   with the other printers in this crate.
+warning: this call to `as_ref` does nothing
+151 |         let ppath = PrinterPath::new(path.as_ref())
+warning: you should consider adding a `Default` implementation for `StandardBuilder`
+105 | /     pub fn new() -> StandardBuilder {
+106 | |         StandardBuilder { config: Config::default() }
+107 | |     }
+631 | /// no file path is given, then this is `'static`.
+631 | ///   no file path is given, then this is `'static`.
+633 | /// borrows.
+633 | ///   borrows.
+635 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+635 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+637 | /// output to.
+637 | ///   output to.
+784 | /         if searcher.binary_detection().convert_byte().is_some() {
+785 | |             if self.binary_byte_offset.is_some() {
+786 | |                 return Ok(false);
+787 | |             }
+788 | |         }
+786 |                 return Ok(false);
+805 | /         if searcher.binary_detection().convert_byte().is_some() {
+806 | |             if self.binary_byte_offset.is_some() {
+807 | |                 return Ok(false);
+808 | |             }
+809 | |         }
+807 |                 return Ok(false);
+828 | /         if searcher.binary_detection().quit_byte().is_some() {
+829 | |             if let Some(ref path) = self.path {
+830 | |                 log::debug!(
+831 | |                     "ignoring {path}: found binary data at \
+836 | |         }
+830 |                 log::debug!(
+834 |                 );
+warning: this `else { if .. }` block can be collapsed
+936 |           } else {
+937 | |             if self.multi_line() && !self.is_context() {
+938 | |                 self.sink_slow_multi_line()
+939 | |             } else {
+942 | |         }
+1335 |           } else {
+1336 | |             if self.config().only_matching {
+1337 | |                 if self.is_context() {
+1338 | |                     self.write(b"[Omitted long context line]")?;
+1349 | |         }
+1524 |         trim_line_terminator(&self.searcher, buf, line);
+1563 |         self.config().max_columns.map_or(false, |m| line.len() as u64 > m)
+warning: you should consider adding a `Default` implementation for `SummaryBuilder`
+153 | /     pub fn new() -> SummaryBuilder {
+154 | |         SummaryBuilder { config: Config::default() }
+155 | |     }
+476 | /// no file path is given, then this is `'static`.
+476 | ///   no file path is given, then this is `'static`.
+478 | /// borrows.
+478 | ///   borrows.
+480 | /// `grep_searcher::Searcher` that is reporting results to this sink.
+480 | ///   `grep_searcher::Searcher` that is reporting results to this sink.
+482 | /// output to.
+482 | ///   output to.
+684 | /         if searcher.binary_detection().quit_byte().is_some() {
+685 | |             if let Some(ref path) = self.path {
+686 | |                 log::debug!(
+687 | |                     "ignoring {path}: found binary data at \
+692 | |         }
+686 |                 log::debug!(
+690 |                 );
+51 |     pub(crate) fn replace_all<'a>(
+52 |         &'a mut self,
+61 |         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
+115 |     pub(crate) fn replacement<'a>(
+116 |         &'a self,
+117 |     ) -> Option<(&'a [u8], &'a [Match])> {
+458 | /         match b {
+459 | |             b'\t' | b'\n' | b'\x0B' | b'\x0C' | b'\r' | b' ' => true,
+460 | |             _ => false,
+461 | |         }
+warning: `grep-printer` (lib) generated 41 warnings (run `cargo clippy --fix --lib -p grep-printer` to apply 21 suggestions)
+warning: `crate` references the macro call's crate
+73 |         if crate::messages::messages() {
+84 |         crate::messages::set_errored();
+94 |         if crate::messages::messages() && crate::messages::ignore_messages() {
+ --> crates/core/flags/complete/mod.rs:5:20
+  |
+5 | static ENCODINGS: &'static str = include_str!("encodings.sh");
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_static_lifetimes
+  = note: `#[warn(clippy::redundant_static_lifetimes)]` on by default
+warning: constants have by default a `'static` lifetime
+ --> crates/core/flags/complete/bash.rs:7:23
+7 | const TEMPLATE_FULL: &'static str = "
+45 | const TEMPLATE_CASE: &'static str = "
+52 | const TEMPLATE_CASE_CHOICES: &'static str = "
+ --> crates/core/flags/complete/fish.rs:7:18
+7 | const TEMPLATE: &'static str = "complete -c rg !SHORT! -l !LONG! -d '!DOC!'";
+ --> crates/core/flags/complete/fish.rs:8:26
+8 | const TEMPLATE_NEGATED: &'static str = "complete -c rg -l !NEGATED! -n '__rg_contains_opt !LONG! !SHORT!' -d '!DOC!'\n";
+ --> crates/core/flags/complete/powershell.rs:7:18
+7 | const TEMPLATE: &'static str = "
+37 | const TEMPLATE_FLAG: &'static str = "[CompletionResult]::new('!DASH_NAME!', '!NAME!', [CompletionResultType]::ParameterName, '!DOC!')";
+13 | const TEMPLATE_SHORT: &'static str = include_str!("template.short.help");
+14 | const TEMPLATE_LONG: &'static str = include_str!("template.long.help");
+ --> crates/core/flags/doc/man.rs:9:18
+9 | const TEMPLATE: &'static str = include_str!("template.rg.1");
+19 | const LOGGER: &'static Logger = &Logger(());
+26 |             .replace("!LONG!", &long)
+44 |                 completion.push_str("'");
+49 |                 completion.push_str("'");
+67 |                     .replace("!NEGATED!", &negated)
+69 |                     .replace("!LONG!", &long)
+57 |                 .replace("!NAME!", &name)
+79 |                     .replace("!NAME!", &negated)
+ --> crates/core/flags/complete/zsh.rs:9:1
+9 | Namely, the zsh completions take application level context about flag
+  = help: if this is supposed to be its own paragraph, add a blank line
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#doc_lazy_continuation
+  = note: `#[warn(clippy::doc_lazy_continuation)]` on by default
+9 |    Namely, the zsh completions take application level context about flag
+10 | compatibility into account.
+10 |    compatibility into account.
+12 | isn't included in the zsh completions.
+12 |    isn't included in the zsh completions.
+14 | works and how it can be extended.
+14 |    works and how it can be extended.
+67 |     match std::fs::File::open(&path) {
+3038 |         &*BORROWED
+warning: name `JSON` contains a capitalized acronym
+3436 | struct JSON;
+118 |         generate_long_flag(flag, &mut cat);
+warning: useless use of `format!`
+229 |                 lines.push(format!("{item_label}"));
+236 |                 lines.push(format!("{pieces}"));
+34 |         generate_flag(flag, &mut cat);
+127 | /         match low.mode {
+128 | |             Mode::Search(ref mut mode) => match *mode {
+129 | |                 // treat `-v --count-matches` as `-v --count`
+130 | |                 SearchMode::CountMatches if low.invert_match => {
+139 | |             _ => {}
+140 | |         }
+warning: unnecessary closure used to substitute value for `Option::None`
+176 |           let with_filename = low
+177 | |             .with_filename
+178 | |             .unwrap_or_else(|| low.vimgrep || !paths.is_one_file);
+207 |                 | SearchMode::CountMatches => return false,
+208 |                 SearchMode::JSON => return true,
+warning: using `clone` on type `Option<u8>` which implements the `Copy` trait
+552 |             .separator(self.path_separator.clone())
+623 |             .path_terminator(self.path_terminator.clone())
+634 |             .separator_path(self.path_separator.clone())
+661 |             .path_terminator(self.path_terminator.clone())
+663 |             .separator_path(self.path_separator.clone())
+786 |                 haystacks.sort_by(|ref h1, ref h2| {
+1228 |         builder.add(&glob)?;
+213 |     JSON,
+warning: explicit call to `.into_iter()` in function argument accepting `IntoIterator`
+107 |     if let Err(err) = parser.parse(final_args.into_iter(), &mut low) {
+223 |         I: IntoIterator<Item = O>,
+warning: redundant guard
+233 |                 lexopt::Arg::Short(ch) if ch == 'h' => {
+239 |                 lexopt::Arg::Short(ch) if ch == 'V' => {
+246 |                 lexopt::Arg::Long(name) if name == "help" => {
+252 |                 lexopt::Arg::Long(name) if name == "version" => {
+158 |         self.dent.file_type().map_or(false, |ft| ft.is_file())
+210 |     JSON(grep::printer::JSON<W>),
+warning: this boolean expression can be simplified
+285 |         if !self.config.preprocessor.is_some() {
+307 | /             io::Error::new(
+308 | |                 io::ErrorKind::Other,
+309 | |                 format!(
+310 | |                     "preprocessor command could not start: '{cmd:?}': {err}",
+311 | |                 ),
+312 | |             )
+315 | /             io::Error::new(
+316 | |                 io::ErrorKind::Other,
+317 | |                 format!("preprocessor command failed: '{cmd:?}': {err}"),
+318 | |             )
+warning: you are using an explicit closure for cloning elements
+392 |                 stats: sink.stats().map(|s| s.clone()),
+400 |                 stats: sink.stats().map(|s| s.clone()),
+429 |                 stats: sink.stats().map(|s| s.clone()),
+437 |                 stats: sink.stats().map(|s| s.clone()),
+warning: the method `print` doesn't need a mutable reference
+226 |         let _ = bufwtr.print(&mut wtr);
+warning: using `write!()` with a format string that ends in a single newline
+459 |         write!(wtr, "\n")
+warning: `ripgrep` (bin "rg") generated 63 warnings (run `cargo clippy --fix --bin "rg" -p ripgrep` to apply 52 suggestions)

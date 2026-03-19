@@ -1,0 +1,5 @@
+00001|[error] data/repro-broken.js: SyntaxError: Unexpected token (4:1)
+00002|[error]   2 |   title: 'oops',
+00003|[error]   3 |
+00004|[error] > 4 |
+00005|[error]     | ^

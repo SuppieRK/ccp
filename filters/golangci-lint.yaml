@@ -1,22 +1,46 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: golangci-lint
-about: Compact golangci-lint diagnostics conservatively.
+about: Group default text-mode golangci-lint diagnostics by file, keep exact file and line identity, and leave explicit structured or tabular output modes native.
 
 cases:
-  - id: diagnostics
+  - id: structured_passthrough
+    when_arguments:
+      have_any:
+        - --output.json.path
+        - --output.tab.path
+        - --output.html.path
+        - --output.checkstyle.path
+        - --output.code-climate.path
+        - --output.junit-xml.path
+        - --output.teamcity.path
+        - --output.sarif.path
+    passthrough: true
+
+  - id: diagnostics_text
+    when_arguments:
+      first_is: run
+      lack_any:
+        - --output.json.path
+        - --output.tab.path
+        - --output.html.path
+        - --output.checkstyle.path
+        - --output.code-climate.path
+        - --output.junit-xml.path
+        - --output.teamcity.path
+        - --output.sarif.path
     compress_output:
       combined:
+        lines:
+          skip:
+            - regex: '^\t.*$'
+            - regex: '^\s*\^+\s*$'
+            - regex: '^\d+ issues?:$'
+            - regex: '^\* .*$'
         groups:
           - id: file
-            matches_regex: '\{"FromLinter":"(?P<linter>[^"]+)","Text":"(?P<text>[^"]+)","Pos":\{"Filename":"(?P<filename>[^"]+)","Line":(?P<line>\d+),"Column":(?P<column>\d+)\}\}'
+            matches_regex: '^(?P<filename>.+):(?P<line>\d+):(?P<column>\d+): (?P<text>.+?) \((?P<linter>[^)]+)\)$'
             variables:
-              - name: linter
-                type: string
-                regex_group: linter
-              - name: text
-                type: string
-                regex_group: text
               - name: filename
                 type: string
                 regex_group: filename
@@ -26,6 +50,12 @@ cases:
               - name: column
                 type: string
                 regex_group: column
+              - name: text
+                type: string
+                regex_group: text
+              - name: linter
+                type: string
+                regex_group: linter
             group_by: '{{filename}}'
             initially:
               print: '{{filename}}:'

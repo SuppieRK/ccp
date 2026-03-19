@@ -11,12 +11,10 @@
 :processResources: ok
 :classes: ok
 :resolveMainClassName: ok
-:bootJar: ok
 :jar: ok
 :javadoc: ok
 :javadocJar: ok
 :sourceJar: ok
-:sourcesJar: ok
 :assemble: ok
 :spotlessGroovyGradleCheck: ok
 :spotlessCheck: ok

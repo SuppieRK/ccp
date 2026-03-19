@@ -94,6 +94,8 @@ When adding or modifying command filters:
 - Extend shared runtime behavior under `internal/contracts`, `internal/engine`, `internal/filters`, or `internal/filters/yaml` before adding bespoke tool-specific Go behavior.
 - Keep filters small, focused, and responsibility-scoped.
 - Use [docs/agent-rules/FILTERS.md](./docs/agent-rules/FILTERS.md) as the canonical authoring workflow reference.
+- Widen corpus before widening claims. Real warning-bearing success paths, rich failures, and passthrough boundaries are often more important than squeezing a tiny clean fixture harder.
+- Be cautious with table rewrites and log compression. If a native table is already compact, or if output is user-defined application logging, forcing a rewrite often harms utility more than it helps token count.
 
 Local scope and precedence:
 
@@ -186,6 +188,7 @@ Requirements:
 - Proxy overhead must be tracked.
 - Runtime benchmark artifacts must not be committed to Git.
 - Routing-only parent filters are benchmark-exempt unless they own benchmarked output behavior directly; cover them through unit, planner, runner, or fixture tests instead.
+- Realistic corpus selection matters. Prefer fixtures sourced from real command runs or checked-in research output over synthetic toy examples when evaluating safety boundaries.
 
 ---
 

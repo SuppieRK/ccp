@@ -161,6 +161,18 @@ It does not touch project-local `./.ccp/filters`.
 5. compare `output.txt` with `verify-output.txt`
 6. inspect `verify-decisions.txt` when behavior is unclear
 
+## Authoring Heuristics
+
+- Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously unrepresentative.
+- Prefer one hypothesis at a time. Add the smallest fixture or filter change that proves or disproves the idea before moving on.
+- Use real command output whenever feasible, ideally from `ccp capture` or from an existing research corpus that already reflects native tool output.
+- Treat warning-bearing success paths as first-class behavior. Clean success fixtures alone are often misleading.
+- Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the filter contract already defines normalization.
+- Be skeptical of table rewrites. Many native tables are already close to the token floor, and reintroducing labels in rewritten rows often destroys the savings.
+- Be skeptical of log compression. Tool-defined build/test progress is often compressible; user application logs usually are not.
+- Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably not worth it.
+- Prefer promoting verified output from `verify-output.txt` or fresh `ccp capture` output instead of hand-editing expectations by guesswork.
+
 ## Spec Alignment
 
 - Family tools require one spec that covers the shared entity behavior.

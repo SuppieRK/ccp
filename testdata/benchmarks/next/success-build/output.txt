@@ -1,0 +1,26 @@
+next build: compiled
+next build: static pages ready
+   ▲ Next.js 15.5.12
+(node:125847) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Local search index generated...
+Generated 13 documents in .contentlayer
+ ⚠ TypeScript project references are not fully supported. Attempting to build in incremental mode.
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    1.12 kB         107 kB
+├ ○ /_not-found                            134 B         102 kB
+├ ○ /about                                 483 B         108 kB
+├ ƒ /api/newsletter                        134 B         102 kB
+├ ○ /blog                                  124 B         112 kB
+├ ● /blog/[...slug]                      4.08 kB         115 kB
+├ ● /blog/page/[page]                      124 B         112 kB
+├ ○ /projects                              173 B         111 kB
+├ ○ /robots.txt                            134 B         102 kB
+├ ○ /sitemap.xml                           134 B         102 kB
+├ ○ /tags                                  161 B         106 kB
+├ ● /tags/[tag]                            124 B         112 kB
+└ ● /tags/[tag]/page/[page]                124 B         112 kB
++ First Load JS shared by all             102 kB
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand

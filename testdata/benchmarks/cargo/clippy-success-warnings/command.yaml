@@ -1,0 +1,1 @@
+argv: ["cargo", "clippy", "--bin", "rg", "--color", "never"]

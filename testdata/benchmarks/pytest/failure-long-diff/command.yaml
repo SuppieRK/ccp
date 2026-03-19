@@ -1,0 +1,1 @@
+argv: ["./.venv/bin/pytest", "-q", "test_verbosity_example.py::test_numbers_fail"]

@@ -1,0 +1,25 @@
+repo-41 : enforce
+repo-41 : validate
+repo-41 : check
+repo-41 : prepare-agent
+repo-41 : revision
+repo-41 : build-info
+repo-41 : makeAggregateBom
+repo-41 : resources
+repo-41 : compile
+BUILD FAILURE
+[WARNING] Unknown keyword meta:enum - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+[WARNING] Unknown keyword deprecated - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+[ERROR] COMPILATION ERROR : 
+[ERROR] /workspace/src/repo-41/src/main/java/org/springframework/samples/petclinic/owner/Owner.java:[70,24] cannot find symbol
+  symbol:   variable missingAddressSymbol
+  location: class org.springframework.samples.petclinic.owner.Owner
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project repo-41: Compilation failure
+[ERROR]   symbol:   variable missingAddressSymbol
+[ERROR]   location: class org.springframework.samples.petclinic.owner.Owner
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

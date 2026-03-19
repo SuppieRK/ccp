@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: npx
-about: Compact supported npx wrapper subcommands through one family filter.
+about: Compact routed npx subcommands conservatively, keep unsupported and package-injection forms native, and preserve wrapper behavior instead of turning npx into a semantic rewrite layer.
 
 cases:
   - id: eslint
@@ -29,6 +29,7 @@ cases:
       combined:
         lines:
           skip:
+            - starts_with: 'Loaded Prisma config from '
             - starts_with: 'Prisma schema loaded from '
           replace:
             - regex: '^The schema at .+ is valid .+$'
@@ -43,6 +44,7 @@ cases:
       combined:
         lines:
           skip:
+            - starts_with: 'Loaded Prisma config from '
             - starts_with: 'Prisma schema loaded from '
           replace:
             - regex: '^Formatted (.+) in \d+(?:\.\d+)?ms .+$'
@@ -68,6 +70,18 @@ cases:
             - regex: '^\[warn\] (.+)$'
               to: '- $1'
 
+  - id: prettier_write
+    when_arguments:
+      first_is: prettier
+      have_any:
+        - --write
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^(.+?)\s+\d+(?:\.\d+)?ms$'
+              to: '$1'
+
   - id: node_warning_dedupe
     when_arguments:
       first_is: node
@@ -81,10 +95,53 @@ cases:
             - starts_with: "(Use `node --trace-warnings"
             - regex: '^application payload$'
 
+  - id: tsc_diagnostics_pretty_false
+    when_arguments:
+      first_is: tsc
+      have_sequence:
+        - --pretty
+        - "false"
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '^(?P<path>.+?)\((?P<line>\d+),(?P<column>\d+)\):\s+error\s+(?P<code>TS\d+):\s+(?P<message>.+)$'
+            variables:
+              - name: path
+                type: string
+                regex_group: path
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+              - name: code
+                type: string
+                regex_group: code
+              - name: message
+                type: string
+                regex_group: message
+            group_by: '{{path}}'
+            initially:
+              print: '{{path}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '{{line}}:{{column}} {{code}} {{message}}'
+              max:
+                count: 6
+                print: "\n+{{value}}"
+        lines:
+          max:
+            count: 40
+            print: "\n{{value}} lines"
+
   - id: tsc_passthrough_unsupported
     when_arguments:
       first_is: tsc
       have_any:
+        - --pretty
         - -w
         - --watch
         - --preserveWatchOutput
@@ -134,10 +191,10 @@ cases:
             lines:
               replace:
                 - regex: '^.*$'
-                  to: '- {{line}}:{{column}} error {{code}} {{message}}'
+                  to: '{{line}}:{{column}} {{code}} {{message}}'
               max:
                 count: 6
-                print: "\n{{value}} lines"
+                print: "\n+{{value}}"
         lines:
           max:
             count: 40

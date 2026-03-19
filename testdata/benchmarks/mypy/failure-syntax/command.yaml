@@ -1,0 +1,1 @@
+argv: ["mypy", "test-data/packages/typedpkg/typedpkg/pkg/aaa.py"]

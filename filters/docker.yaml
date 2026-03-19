@@ -1,9 +1,51 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: docker
-about: Compact Docker and Docker Compose family output through one family filter.
+about: Compact BuildKit-heavy Docker build output where the end state is tool-defined, keep inventory tables and logs native, and leave machine-oriented build modes untouched.
 
 cases:
+  - id: build_passthrough_machine
+    when_arguments:
+      first_is: build
+      have_any:
+        - -q
+        - --quiet
+        - --progress
+        - --progress=plain
+        - --iidfile
+        - --metadata-file
+        - --push
+        - --load
+    passthrough: true
+
+  - id: build_tagged_short
+    when_arguments:
+      first_is: build
+      have_any:
+        - -t
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^.*$'
+          replace:
+            - regex: '^#\d+ naming to (?:docker\.io/library/)?(\S+?)(?: \S+)?(?: done)?$'
+              to: '[ok] $1 built'
+
+  - id: build_tagged_long
+    when_arguments:
+      first_is: build
+      have_any:
+        - --tag
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^.*$'
+          replace:
+            - regex: '^#\d+ naming to (?:docker\.io/library/)?(\S+?)(?: \S+)?(?: done)?$'
+              to: '[ok] $1 built'
+
   - id: compose_build
     when_arguments:
       have_sequence:

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: playwright
-about: Compact Playwright output conservatively.
+about: Compact native Playwright test summaries conservatively, preserve failed spec selectors and startup parser guidance, and keep reporter modes passthrough.
 
 cases:
   - id: reporter_passthrough
@@ -16,8 +16,16 @@ cases:
       combined:
         lines:
           keep:
+            - starts_with: 'SyntaxError:'
+            - regex: '^\s+\d+\s+\|\s+.+$'
+            - regex: '^>\s*\d+\s+\|\s+.+$'
+            - regex: '^\s+\|\s+\^$'
+            - regex: '^\s+at .+$'
             - regex: '^\s*[×✗✘]\s+.+$'
             - regex: '^\s+Error: .+$'
+            - starts_with: 'Error: No tests found.'
+            - starts_with: 'Make sure that arguments are regular expressions matching test files.'
+            - starts_with: 'You may need to escape symbols like "$" or "*" and quote the arguments.'
             - regex: '^\s+screenshot: .+$'
           replace:
             - regex: '^\s*(\d+) passed \(([^)]+)\)$'

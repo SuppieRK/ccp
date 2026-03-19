@@ -1,0 +1,6 @@
+error details:
+_____________________ ERROR at setup of test_error ______________________
+E       assert 0
+test_example.py:6: AssertionError
+summary:
+ERROR test_example.py::test_error - assert 0

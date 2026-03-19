@@ -1,0 +1,7 @@
+/tmp/repo-44a/data/siteMetadata.js:103
+module.exports = missingSiteMetadata
+                 ^
+ReferenceError: missingSiteMetadata is not defined
+    at Object.<anonymous> (/tmp/repo-44a/data/siteMetadata.js:103:18)
+    at [eval]:1:1
+Node.js v22.22.1

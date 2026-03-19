@@ -1,11 +1,54 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
 version: 1
 filter: tsc
-about: Compact TypeScript diagnostics by file path.
+about: Compact plain TypeScript diagnostics by file path, keep explicit pretty output native, and preserve watch/build-style modes as passthrough.
+
 cases:
+  - id: diagnostics_pretty_false
+    when_arguments:
+      have_sequence:
+        - --pretty
+        - "false"
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '^(?P<path>.+?)\((?P<line>\d+),(?P<column>\d+)\):\s+error\s+(?P<code>TS\d+):\s+(?P<message>.+)$'
+            variables:
+              - name: path
+                type: string
+                regex_group: path
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+              - name: code
+                type: string
+                regex_group: code
+              - name: message
+                type: string
+                regex_group: message
+            group_by: '{{path}}'
+            initially:
+              print: '{{path}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '{{line}}:{{column}} {{code}} {{message}}'
+              max:
+                count: 6
+                print: "\n+{{value}}"
+        lines:
+          max:
+            count: 40
+            print: "\n{{value}} lines"
+
   - id: passthrough_unsupported
     when_arguments:
       have_any:
+        - --pretty
         - -w
         - --watch
         - --preserveWatchOutput
@@ -56,7 +99,7 @@ cases:
                   to: '{{line}}:{{column}} {{code}} {{message}}'
               max:
                 count: 6
-                print: "\n{{value}} lines"
+                print: "\n+{{value}}"
         lines:
           max:
             count: 40
