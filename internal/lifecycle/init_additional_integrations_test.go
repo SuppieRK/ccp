@@ -64,6 +64,12 @@ var _ = Describe("init additional integration coverage", func() {
 			artifactRoot: "root",
 			artifactRel:  filepath.Join(initTraeDir, "rules", initTraeRuleName),
 		}),
+		Entry("windsurf", additionalDetectionCase{
+			tool:         "windsurf",
+			markerPath:   initWindsurfDir,
+			artifactRoot: "root",
+			artifactRel:  filepath.Join(initWindsurfDir, "rules", initWindsurfRuleName),
+		}),
 	)
 
 	It("maps the costrict alias to roocode", func() {

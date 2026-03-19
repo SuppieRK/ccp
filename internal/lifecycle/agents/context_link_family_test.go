@@ -25,6 +25,10 @@ var _ = ginkgo.Describe("context link families", func() {
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "description:", ccpManagedBlockStart}),
+			ginkgo.Entry("cline", clineRuleContent, []string{
+				"## CCP Integration (Managed)",
+				ccpRawEscapeHatch,
+			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
 			ginkgo.Entry("cursor", cursorRuleContent, []string{
 				"alwaysApply: true",
 				"description: Route shell commands through ccp",
@@ -36,6 +40,10 @@ var _ = ginkgo.Describe("context link families", func() {
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "trigger: always_on", ccpManagedBlockStart}),
+			ginkgo.Entry("windsurf", windsurfRuleContent, []string{
+				"## CCP Integration (Managed)",
+				ccpRawEscapeHatch,
+			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
 		)
 	})
 

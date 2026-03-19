@@ -156,6 +156,13 @@ var _ = Describe("uninstall", func() {
 			setupDirs: []string{"{root}/.cursor"},
 			removed:   []string{"{root}/.cursor/rules/ccp.mdc"},
 		}),
+		Entry("cline", uninstallRemovalCase{
+			name:      "cline",
+			tool:      "cline",
+			scope:     "root",
+			setupDirs: []string{"{root}/.clinerules"},
+			removed:   []string{"{root}/.clinerules/ccp.md"},
+		}),
 		Entry("amazon-q", uninstallRemovalCase{
 			name:      "amazon-q",
 			tool:      "amazon-q",
@@ -204,6 +211,13 @@ var _ = Describe("uninstall", func() {
 			scope:     "root",
 			setupDirs: []string{"{root}/.trae"},
 			removed:   []string{"{root}/.trae/rules/ccp.md"},
+		}),
+		Entry("windsurf", uninstallRemovalCase{
+			name:      "windsurf",
+			tool:      "windsurf",
+			scope:     "root",
+			setupDirs: []string{"{root}/.windsurf"},
+			removed:   []string{"{root}/.windsurf/rules/ccp.md"},
 		}),
 		Entry("opencode", uninstallRemovalCase{
 			name:    "opencode",
@@ -429,6 +443,12 @@ var _ = Describe("uninstall", func() {
 		}, func(ws lifecycleWorkspace) string {
 			return filepath.Join(ws.root, ".cursor", "rules")
 		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("cursor"))).To(Succeed()) })),
+		Entry("cline preserves other files and directories", preserveOtherFileCase("cline", "root", func(ws lifecycleWorkspace) string {
+			Expect(os.MkdirAll(filepath.Join(ws.root, ".clinerules"), 0o755)).To(Succeed())
+			return filepath.Join(ws.root, ".clinerules", "team.md")
+		}, func(ws lifecycleWorkspace) string {
+			return filepath.Join(ws.root, ".clinerules")
+		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("cline"))).To(Succeed()) })),
 		Entry("amazon-q preserves other files and directories", preserveOtherFileCase("amazon-q", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.root, ".amazonq", "rules"), 0o755)).To(Succeed())
 			return filepath.Join(ws.root, ".amazonq", "rules", "team.md")
@@ -441,6 +461,12 @@ var _ = Describe("uninstall", func() {
 		}, func(ws lifecycleWorkspace) string {
 			return filepath.Join(ws.root, ".trae", "rules")
 		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("trae"))).To(Succeed()) })),
+		Entry("windsurf preserves other files and directories", preserveOtherFileCase("windsurf", "root", func(ws lifecycleWorkspace) string {
+			Expect(os.MkdirAll(filepath.Join(ws.root, ".windsurf", "rules"), 0o755)).To(Succeed())
+			return filepath.Join(ws.root, ".windsurf", "rules", "team.md")
+		}, func(ws lifecycleWorkspace) string {
+			return filepath.Join(ws.root, ".windsurf", "rules")
+		}, func(ws lifecycleWorkspace) { Expect(RunInit(toolsArgs("windsurf"))).To(Succeed()) })),
 		Entry("kiro preserves other files and directories", preserveOtherFileCase("kiro", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.home, ".kiro", "steering"), 0o755)).To(Succeed())
 			return filepath.Join(ws.home, ".kiro", "steering", "team.md")
@@ -504,8 +530,10 @@ var _ = Describe("uninstall", func() {
 		Entry("github-copilot", uninstallAutodetectCase{name: "github-copilot", tool: "github-copilot", scope: "root", setupDirs: []string{"{root}/.github"}, removed: "{home}/.copilot/copilot-instructions.md"}),
 		Entry("gemini", uninstallAutodetectCase{name: "gemini", tool: "gemini", scope: "root", setupDirs: []string{"{root}/.gemini"}, removed: "{home}/.gemini/GEMINI.md"}),
 		Entry("cursor", uninstallAutodetectCase{name: "cursor", tool: "cursor", scope: "root", setupDirs: []string{"{root}/.cursor"}, removed: "{root}/.cursor/rules/ccp.mdc"}),
+		Entry("cline", uninstallAutodetectCase{name: "cline", tool: "cline", scope: "root", setupDirs: []string{"{root}/.clinerules"}, removed: "{root}/.clinerules/ccp.md"}),
 		Entry("amazon-q", uninstallAutodetectCase{name: "amazon-q", tool: "amazon-q", scope: "root", setupDirs: []string{"{root}/.amazonq"}, removed: "{root}/.amazonq/rules/ccp.md"}),
 		Entry("roocode", uninstallAutodetectCase{name: "roocode", tool: "roocode", scope: "root", setupDirs: []string{"{root}/.roo"}, removed: "{home}/.roo/rules/ccp.md"}),
+		Entry("windsurf", uninstallAutodetectCase{name: "windsurf", tool: "windsurf", scope: "root", setupDirs: []string{"{root}/.windsurf"}, removed: "{root}/.windsurf/rules/ccp.md"}),
 	)
 
 	It("returns an error when no tools are detected", func() {
