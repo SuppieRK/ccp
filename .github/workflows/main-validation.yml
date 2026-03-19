@@ -117,9 +117,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
-          key: benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}
+          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}
           restore-keys: |
-            benchmark-report-main-${{ matrix.tool }}-v1-
+            benchmark-report-main-${{ matrix.tool }}-v2-
 
       - name: Run benchmark harness for tool
         id: run-benchmark
@@ -159,7 +159,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          key="benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}"
+          key="benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}"
           curl --silent --show-error --fail-with-body \
             -X DELETE \
             -H "Accept: application/vnd.github+json" \
@@ -171,7 +171,7 @@ jobs:
         if: always() && steps.run-benchmark.outcome == 'success' && github.event_name == 'push' && github.ref_name == 'main'
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
-          key: benchmark-report-main-${{ matrix.tool }}-v1-${{ needs.benchmark-discover.outputs.cache_epoch }}
+          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}
 
       - name: Upload benchmark artifacts
         if: always()

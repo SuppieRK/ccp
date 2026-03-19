@@ -112,9 +112,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
-          key: benchmark-report-main-${{ matrix.tool }}-v1-
+          key: benchmark-report-main-${{ matrix.tool }}-v2-
           restore-keys: |
-            benchmark-report-main-${{ matrix.tool }}-v1-
+            benchmark-report-main-${{ matrix.tool }}-v2-
 
       - name: Run benchmark harness for tool
         id: run-benchmark

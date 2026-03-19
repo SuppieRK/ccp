@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ type CaseResult struct {
 	Tool                 string   `json:"tool"`
 	Case                 string   `json:"case"`
 	Command              string   `json:"command"`
+	InputHash            string   `json:"input_hash,omitempty"`
 	NativeTokens         int      `json:"native_tokens"`
 	ProxyTokens          int      `json:"proxy_tokens"`
 	TokenCompactionRatio float64  `json:"token_compaction_ratio"`
@@ -178,6 +180,7 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 		result.Warnings = append(result.Warnings, err.Error())
 		return result
 	}
+	result.InputHash = fixtureInputHash(fixture.Command, events)
 	result.NativeTokens = estimateTokens(replay.CombinedInput(events))
 
 	if err := runVerifyFixture(opts.ProxyBinary, artifactDir, opts.Timeout); err != nil {
@@ -403,6 +406,12 @@ func loadPreviousResults(path string) (map[string]CaseResult, error) {
 }
 
 func maybeWarnCompactionDrop(curr *CaseResult, prev CaseResult) {
+	if strings.TrimSpace(curr.InputHash) == "" || strings.TrimSpace(prev.InputHash) == "" {
+		return
+	}
+	if curr.InputHash != prev.InputHash {
+		return
+	}
 	if prev.TokenCompactionRatio <= 0 {
 		return
 	}
@@ -441,5 +450,18 @@ func tokenCompactionRatio(nativeTokens, proxyTokens int) float64 {
 
 func HashInput(events []replay.Event) string {
 	sum := sha256.Sum256([]byte(replay.CombinedInput(events)))
+	return fmt.Sprintf("%x", sum[:])
+}
+
+func fixtureInputHash(command replay.CommandSpec, events []replay.Event) string {
+	var b strings.Builder
+	for _, arg := range command.Argv {
+		b.WriteString(arg)
+		b.WriteByte(0)
+	}
+	b.WriteString(strconv.Itoa(command.ExitCode))
+	b.WriteByte(0)
+	b.WriteString(replay.CombinedInput(events))
+	sum := sha256.Sum256([]byte(b.String()))
 	return fmt.Sprintf("%x", sum[:])
 }
