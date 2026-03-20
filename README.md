@@ -139,10 +139,6 @@ CCP takes a few strong stances on purpose.
 - Generic log filters are intentionally not shipped. Your logs are domain-specific. Pretending otherwise is how tools become untrustworthy.
 - Agent integrations are convenience layers, not the center of the product. The clearest mental model is still explicit `ccp <command>`.
 
-## Acknowledgements
-
-`ccp` was inspired in part by the [rtk](https://github.com/rtk-ai/rtk) project, but chose a different direction: explicit proxying over a broad helper-command layer, user-owned YAML filters over a mostly built-in command catalog, and easy overrides when needed.
-
 ## License
 
 See [LICENSE](LICENSE).
