@@ -1,0 +1,10 @@
+00000|No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+00001|Loading composer repositories with package information
+00002|
+00003|In PathRepository.php line 163:
+00004|                                                                               
+00005|  The `url` supplied for the path (./definitely-missing-package) repository d  
+00006|  oes not exist                                                                
+00007|                                                                               
+00008|
+00009|install [--prefer-source] [--prefer-dist] [--prefer-install PREFER-INSTALL] [--dry-run] [--download-only] [--dev] [--no-suggest] [--no-dev] [--no-autoloader] [--no-progress] [--no-install] [--audit] [--audit-format AUDIT-FORMAT] [-v|vv|vvv|--verbose] [-o|--optimize-autoloader] [-a|--classmap-authoritative] [--apcu-autoloader] [--apcu-autoloader-prefix APCU-AUTOLOADER-PREFIX] [--ignore-platform-req IGNORE-PLATFORM-REQ] [--ignore-platform-reqs] [--] [<packages>...]

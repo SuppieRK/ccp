@@ -1,0 +1,10 @@
+.artifacts/biome_demo/parse.js:1:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  × Expected an expression, or an assignment but instead found ';'.
+  > 1 │ export const broken = ;
+      │                       ^
+    2 │ 
+  i Expected an expression, or an assignment here.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  × Some errors were emitted while running checks.
+Checked 1 file in 24ms. No fixes applied.
+Found 1 error.

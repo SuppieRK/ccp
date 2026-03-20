@@ -1,0 +1,4 @@
+src/lint_fail.js
+1:7 error no-unused-vars 'unused' is assigned a value but never used
+1:17 error semi Missing semicolon
+4:15 error semi Missing semicolon

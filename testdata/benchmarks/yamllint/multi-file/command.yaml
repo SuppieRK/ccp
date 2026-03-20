@@ -1,0 +1,2 @@
+argv: ["yamllint", ".goreleaser.yaml", ".github/workflows/main-validation.yml"]
+exit_code: 1

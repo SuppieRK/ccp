@@ -1,0 +1,2 @@
+argv: ["terraform", "plan", "-detailed-exitcode", "-input=false", "-refresh=false", "-no-color"]
+exit_code: 2

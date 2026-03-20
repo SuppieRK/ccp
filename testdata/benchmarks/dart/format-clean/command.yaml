@@ -1,0 +1,1 @@
+argv: ["dart", "format", "--set-exit-if-changed", ".artifacts/dart-demo-clean"]

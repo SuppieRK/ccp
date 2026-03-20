@@ -1,0 +1,1 @@
+argv: ["composer", "install", "--no-interaction", "--no-progress"]

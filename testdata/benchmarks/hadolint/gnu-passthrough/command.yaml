@@ -1,0 +1,2 @@
+argv: ["hadolint", "-f", "gnu", "/tmp/tmp.DDWRay5cJ5/Dockerfile"]
+exit_code: 1

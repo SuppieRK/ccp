@@ -1,0 +1,2 @@
+argv: ["shellcheck", "-f", "json", "/tmp/tmp.oOGHNqCWnr"]
+exit_code: 1

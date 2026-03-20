@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: terraform
+about: Compact terraform plan output by trimming generic legend, note, and no-change explanation lines while keeping the action block, summary, and parse failures reusable. Explicit JSON plan output stays native.
+
+cases:
+  - id: plan_json_passthrough
+    when_arguments:
+      first_is: plan
+      have_any:
+        - -json
+    passthrough: true
+
+  - id: plan
+    when_arguments:
+      first_is: plan
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Acquiring state lock\. This may take a few moments\.\.\.$'
+            - regex: '^Releasing state lock\. This may take a few moments\.\.\.$'
+            - regex: '^Refreshing state\.\.\..+$'
+            - regex: '^Terraform used the selected providers to generate the following execution$'
+            - regex: '^plan\. Resource actions are indicated with the following symbols:$'
+            - regex: '^  \+ create$'
+            - regex: '^─────────────────────────────────────────────────────────────────────────────$'
+            - regex: "^Note: You didn't use the -out option to save this plan, so Terraform can't$"
+            - regex: '^guarantee to take exactly these actions if you run "terraform apply" now\.$'
+            - regex: '^Terraform has compared your real infrastructure against your configuration$'
+            - regex: '^and found no differences, so no changes are needed\.$'

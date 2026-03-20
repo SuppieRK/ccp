@@ -1,0 +1,6 @@
+dart test: failed (1 failed)
+00:00 +0 -1: shows failure details [E]
+  Expected: {'left': 2}
+    Actual: {'left': 1}
+     Which: at location ['left'] is <1> instead of <2>
+  test/failure_test.dart 5:5  main.<fn>

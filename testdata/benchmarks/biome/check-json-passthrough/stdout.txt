@@ -1,0 +1,6 @@
+00000|The --json option is unstable/experimental and its output might change between patches/minor releases.
+00001|check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00002|
+00003|  × Some errors were emitted while running checks.
+00004|  
+00005|{"summary":{"changed":0,"unchanged":1,"matches":0,"duration":41635123,"errors":1,"warnings":0,"infos":0,"skipped":0,"suggestedFixesSkipped":0,"diagnosticsNotPrinted":0,"scannerDuration":4247484},"diagnostics":[{"severity":"error","message":"Formatter would have printed the following content:","category":"format","location":{"path":".artifacts/biome_demo/bad.js","start":{"line":0,"column":0},"end":{"line":0,"column":0}},"advices":[]}],"command":"check"}

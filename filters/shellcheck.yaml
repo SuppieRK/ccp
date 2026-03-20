@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: shellcheck
+about: Compact default ShellCheck output conservatively by trimming blank lines and wiki-link footers while preserving the diagnostic block, source line, carets, and suggested fix text; leave explicit alternate formats native.
+
+cases:
+  - id: passthrough_alt_formats
+    when_arguments:
+      have_any:
+        - -f
+        - --format
+        - --list-optional
+        - -V
+        - --version
+        - --help
+    passthrough: true
+
+  - id: diagnostics
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - starts_with: 'For more information:'
+            - regex: '^  https://www\.shellcheck\.net/wiki/SC[0-9]+ .*$'

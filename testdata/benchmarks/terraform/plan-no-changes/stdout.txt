@@ -1,0 +1,5 @@
+00000|
+00001|No changes. Your infrastructure matches the configuration.
+00002|
+00003|Terraform has compared your real infrastructure against your configuration
+00004|and found no differences, so no changes are needed.

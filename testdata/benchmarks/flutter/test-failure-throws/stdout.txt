@@ -1,0 +1,24 @@
+00001|00:04 +0: throws state error                                                                                                                                                                           
+00002|══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+00003|The following StateError was thrown running a test:
+00004|Bad state: boom
+00005|
+00006|When the exception was thrown, this was the stack:
+00007|#0      main.<anonymous closure> (file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_extra_demo/test/throws_test.dart:5:5)
+00008|#1      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:29)
+00009|<asynchronous suspension>
+00010|#2      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+00011|<asynchronous suspension>
+00012|<asynchronous suspension>
+00013|(elided one frame from package:stack_trace)
+00014|
+00015|The test description was:
+00016|  throws state error
+00017|════════════════════════════════════════════════════════════════════════════════════════════════════
+00018|00:04 +0 -1: throws state error [E]                                                                                                                                                                    
+00019|  Test failed. See exception logs above.
+00020|  The test description was: throws state error
+00021|  
+00022|
+00023|To run this test again: /home/suppie/flutter/bin/cache/dart-sdk/bin/dart test /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_extra_demo/test/throws_test.dart -p vm --plain-name 'throws state error'
+00024|00:04 +0 -1: Some tests failed.                                                                                                                                                                        

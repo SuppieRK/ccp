@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: eslint
+about: Compact plain ESLint text diagnostics into path-first line-oriented output while keeping exact file, line, rule, and severity identity.
+
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          skip:
+            - regex: '^$'
+            - regex: '^✖ .+$'
+            - regex: '^\s+\d+ errors? and \d+ warnings? potentially fixable .+$'
+          replace:
+            - regex: '^.+/(src/.+)$'
+              to: '$1'
+            - regex: '^\s*(\d+):(\d+)\s+(error|warning)\s+(.+?)\s{2,}(\S+)$'
+              to: '$1:$2 $3 $5 $4'

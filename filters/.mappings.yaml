@@ -1,13 +1,21 @@
 version: 1
 map:
+  basedpyright: basedpyright
+  biome: biome
   cargo: cargo
+  composer: composer
+  dart: dart
   deno: deno
   docker: docker
+  eslint: eslint
   find: find
+  flutter: flutter
   gradle: gradle
   gradlew: gradle
   git: git
   grep: grep
+  hadolint: hadolint
+  helm: helm
   go: go
   golangci-lint: golangci-lint
   ls: ls
@@ -21,10 +29,16 @@ map:
   npm: npm
   playwright: playwright
   pip: pip
+  poetry: poetry
   prettier: prettier
+  prisma: prisma
   pnpm: pnpm
   pytest: pytest
   ruff: ruff
+  shellcheck: shellcheck
   tsc: tsc
+  terraform: terraform
+  tofu: tofu
   yarn: yarn
   yarnpkg: yarn
+  yamllint: yamllint

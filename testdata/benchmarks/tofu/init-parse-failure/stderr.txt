@@ -1,0 +1,14 @@
+00002|OpenTofu encountered problems during initialization, including problems
+00003|with the configuration, described below.
+00004|
+00005|The OpenTofu configuration must be valid before initialization so that
+00006|OpenTofu can determine which modules and providers need to be installed.
+00007|
+00008|Error: Unclosed configuration block
+00009|
+00010|  on main.tf line 1, in terraform:
+00011|   1: terraform {
+00012|
+00013|There is no closing brace for this block before the end of the file. This may
+00014|be caused by incorrect brace nesting elsewhere in this file.
+00015|

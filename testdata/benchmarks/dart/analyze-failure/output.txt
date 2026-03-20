@@ -1,0 +1,3 @@
+  main.dart:3:10 error return_of_invalid_type A value of type 'String' can't be returned from the function 'answer' because it has a return type of 'int'.
+  main.dart:2:7 warning unused_local_variable The value of the local variable 'unused' isn't used. Try removing the variable or using it.
+dart analyze: 2 issues

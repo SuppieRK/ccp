@@ -1,0 +1,1 @@
+{"path":".artifacts/dart-demo-clean/main.dart","source":"void main() {\n  print('ok');\n}\n","selection":{"offset":-1,"length":-1}}

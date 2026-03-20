@@ -1,0 +1,2 @@
+00000|{"@level":"info","@message":"Terraform 1.14.7","@module":"terraform.ui","@timestamp":"2026-03-20T19:03:32.090219+01:00","terraform":"1.14.7","type":"version","ui":"1.2"}
+00001|{"@level":"info","@message":"Plan: 0 to add, 0 to change, 0 to destroy.","@module":"terraform.ui","@timestamp":"2026-03-20T19:03:32.091204+01:00","changes":{"add":0,"change":0,"import":0,"remove":0,"action_invocation":0,"operation":"plan"},"type":"change_summary"}

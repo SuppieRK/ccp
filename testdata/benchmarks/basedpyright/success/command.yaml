@@ -1,0 +1,1 @@
+argv: ["basedpyright", "testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/__init__.py"]

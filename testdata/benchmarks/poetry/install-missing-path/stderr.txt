@@ -1,0 +1,3 @@
+00000|Path /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/poetry_path_fail/missing-local for missing-local does not exist
+00003|
+00004|Path /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/poetry_path_fail/missing-local for missing-local does not exist

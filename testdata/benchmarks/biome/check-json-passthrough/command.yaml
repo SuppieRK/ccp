@@ -1,0 +1,2 @@
+argv: ["biome", "check", "--reporter=json", ".artifacts/biome_demo/bad.js"]
+exit_code: 1

@@ -1,0 +1,5 @@
+argv:
+  - basedpyright
+  - testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py
+  - testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py
+exit_code: 1

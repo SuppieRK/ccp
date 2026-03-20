@@ -1,0 +1,6 @@
+00000|Analyzing dart-demo-bad...
+00001|
+00002|  error - main.dart:3:10 - A value of type 'String' can't be returned from the function 'answer' because it has a return type of 'int'. - return_of_invalid_type
+00003|warning - main.dart:2:7 - The value of the local variable 'unused' isn't used. Try removing the variable or using it. - unused_local_variable
+00004|
+00005|2 issues found.

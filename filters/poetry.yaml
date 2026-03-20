@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: poetry
+about: Compact Poetry install, lock, and update progress noise while preserving package-operation summaries, lock drift, current-project warnings, and parse failures.
+
+cases:
+  - id: install
+    when_arguments:
+      first_is: install
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - starts_with: 'Resolving dependencies...'
+            - regex: '^  [-•] Downloading .+$'
+            - regex: '^  [-•] Installing .+ \(.+\)$'
+            - starts_with: 'Creating virtualenv '
+
+  - id: lock
+    when_arguments:
+      first_is: lock
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - starts_with: 'Resolving dependencies...'
+            - regex: '^  [-•] Downloading .+$'
+            - regex: '^  [-•] Installing .+ \(.+\)$'
+            - starts_with: 'Creating virtualenv '
+
+  - id: update
+    when_arguments:
+      first_is: update
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - starts_with: 'Resolving dependencies...'
+            - regex: '^  [-•] Downloading .+$'
+            - regex: '^  [-•] Installing .+ \(.+\)$'
+            - starts_with: 'Creating virtualenv '

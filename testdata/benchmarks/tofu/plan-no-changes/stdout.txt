@@ -1,0 +1,5 @@
+00000|
+00001|No changes. Your infrastructure matches the configuration.
+00002|
+00003|OpenTofu has compared your real infrastructure against your configuration and
+00004|found no differences, so no changes are needed.

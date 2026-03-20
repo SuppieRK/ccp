@@ -1,0 +1,1 @@
+argv: ["tofu", "plan", "-input=false", "-refresh=false", "-no-color"]

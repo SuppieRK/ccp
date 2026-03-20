@@ -1,0 +1,10 @@
+ at tmp-biome-parse.js:1:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  × Expected an expression, or an assignment but instead found ';'.
+  > 1 │ export const broken = ;
+      │                       ^
+    2 │ 
+  i Expected an expression, or an assignment here.
+ at tmp-biome-parse.js format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  × Code formatting aborted due to parsing errors. To format code with errors, enable the 'formatter.formatWithErrors' option.
+Checked 1 file in 2ms. No fixes applied.
+Found 3 errors.

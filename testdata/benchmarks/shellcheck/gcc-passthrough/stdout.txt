@@ -1,0 +1,4 @@
+00000|/tmp/tmp.uppvqdlzJn:1:1: note: The mentioned syntax error was in this if expression. [SC1009]
+00001|/tmp/tmp.uppvqdlzJn:1:4: error: Couldn't parse this test expression. Fix to allow more checks. [SC1073]
+00002|/tmp/tmp.uppvqdlzJn:1:11: error: Expected another argument for this operator. [SC1027]
+00003|/tmp/tmp.uppvqdlzJn:1:14: error: Unexpected . Fix any mentioned problems and try again. [SC1072]

@@ -1,0 +1,4 @@
+00000|Analyzing flutter_extra_demo...                                 
+00001|
+00002|  error • The name 'MissingWidget' isn't a class • .artifacts/flutter_extra_demo/lib/issues.dart:9:48 • creation_with_non_type
+00003|

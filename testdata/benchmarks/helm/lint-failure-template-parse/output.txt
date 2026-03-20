@@ -1,0 +1,4 @@
+samplechart:
+[INFO] Chart.yaml: icon is recommended
+[ERROR] templates/: parse error at (samplechart/templates/deployment.yaml:1): unexpected "}" in operand
+Error: 1 chart(s) linted, 1 chart(s) failed

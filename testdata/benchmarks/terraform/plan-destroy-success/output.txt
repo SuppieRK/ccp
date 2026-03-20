@@ -1,0 +1,9 @@
+  - destroy
+Terraform will perform the following actions:
+  # terraform_data.example will be destroyed
+  - resource "terraform_data" "example" {
+      - id     = "430c6d4b-b87e-1585-fe96-9030bab041a2" -> null
+      - input  = "hello" -> null
+      - output = "hello" -> null
+    }
+Plan: 0 to add, 0 to change, 1 to destroy.

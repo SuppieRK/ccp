@@ -75,18 +75,22 @@ That mix is the point. CCP can save a lot. It also knows when not to fake it.
 
 ## Capability Matrix
 
-Benchmarked with each build across `24` tool families and `201` replay cases.
+Benchmarked with each build across `39` tool families and `291` replay cases.
 
 | Area | Tools | Representative Savings |
 |---|---|---:|
 | Files/search | `find`, `grep`, `ls` | up to `95%+` |
 | Source control | `git` | `10–60%+` |
 | Java builds | `maven`, `gradle` | `50–95%+` |
-| JS/TS | `npm`, `pnpm`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `tsc` | `15–85%+` |
-| Python | `pip`, `pytest`, `mypy`, `ruff` | `25–85%+` |
+| JS/TS | `biome`, `eslint`, `npm`, `pnpm`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc` | `15–85%+` |
+| PHP | `composer` | `10–30%+` |
+| Python | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff` | `25–85%+` |
+| Config lint | `yamllint`, `shellcheck`, `hadolint` | `10–40%+` |
+| Infra & IaC | `helm`, `terraform`, `tofu` | `5–90%+` |
 | Go/Rust | `go`, `golangci-lint`, `cargo` | `35–90%+` |
+| Dart/Flutter | `dart`, `flutter` | `35–85%+` |
 | Containers | `docker` | `95%+` for build surfaces |
-| Other runtimes | `deno` | targeted, conservative wins |
+| Other runtimes | `deno` | `0–80%+` |
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 

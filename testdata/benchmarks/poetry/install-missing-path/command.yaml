@@ -1,0 +1,2 @@
+argv: ["poetry", "install", "--no-interaction", "--no-root"]
+exit_code: 1

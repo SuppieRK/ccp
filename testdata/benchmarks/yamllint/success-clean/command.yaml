@@ -1,0 +1,1 @@
+argv: ["yamllint", "-d", "{extends: default, rules: {document-start: disable}}", ".goreleaser.yaml"]

@@ -1,0 +1,8 @@
+00000|
+00001|Error: Unclosed configuration block
+00002|
+00003|  on main.tf line 1, in terraform:
+00004|   1: terraform {
+00005|
+00006|There is no closing brace for this block before the end of the file. This may
+00007|be caused by incorrect brace nesting elsewhere in this file.

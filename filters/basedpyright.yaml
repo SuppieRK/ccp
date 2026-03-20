@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: basedpyright
+about: Compact default text-mode basedpyright diagnostics by removing repeated file prefixes while preserving exact line, column, severity, and rule identity, and leave explicit structured output native.
+
+cases:
+  - id: structured_passthrough
+    when_arguments:
+      have_any:
+        - --outputjson
+    passthrough: true
+
+  - id: diagnostics
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+)\s+-\s+(?P<kind>error|warning|information|note):\s+(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: column
+                type: string
+                regex_group: column
+              - name: kind
+                type: string
+                regex_group: kind
+              - name: message
+                type: string
+                regex_group: message
+              - name: code
+                type: string
+                regex_group: code
+                default_value: error
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}}:{{column}} {{kind}} [{{code}}] {{message}}'

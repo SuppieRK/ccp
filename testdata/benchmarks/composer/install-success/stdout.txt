@@ -1,0 +1,11 @@
+00000|No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+00001|Loading composer repositories with package information
+00002|Updating dependencies
+00003|Lock file operations: 1 install, 0 updates, 0 removals
+00004|  - Locking psr/log (3.0.2)
+00005|Writing lock file
+00006|Installing dependencies from lock file (including require-dev)
+00007|Package operations: 1 install, 0 updates, 0 removals
+00008|  - Downloading psr/log (3.0.2)
+00009|  - Installing psr/log (3.0.2): Extracting archive
+00010|Generating autoload files

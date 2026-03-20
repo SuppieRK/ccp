@@ -1,0 +1,2 @@
+00000|Formatted .artifacts/dart-demo-format/main.dart
+00001|Formatted 1 file (1 changed) in 0.02 seconds.

@@ -1,0 +1,1 @@
+argv: ["tofu", "plan", "-json", "-input=false", "-refresh=false"]

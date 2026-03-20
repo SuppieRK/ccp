@@ -1,0 +1,4 @@
+00000|Loaded Prisma config from prisma.config.ts.
+00001|
+00002|Prisma schema loaded from prisma/schema.prisma
+00003|The schema at prisma/schema.prisma is valid 🚀

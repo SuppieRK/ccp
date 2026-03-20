@@ -1,0 +1,9 @@
+00000|/workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py
+00001|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:1:11 - error: "(" was not closed
+00002|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:1:12 - error: Expected parameter name
+00003|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:1:12 - error: Position-only parameter separator not allowed as first parameter
+00004|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:2:5 - error: Expected expression
+00005|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:3:1 - error: Expected ":"
+00006|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:3:1 - error: Expected expression
+00007|  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:3:1 - error: Statements must be separated by newlines or semicolons
+00008|7 errors, 0 warnings, 0 notes
