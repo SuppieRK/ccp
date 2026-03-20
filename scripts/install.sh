@@ -237,10 +237,10 @@ fi
 
 PREVIOUS_VERSION=""
 if [ -x "$DST" ]; then
-  PREVIOUS_VERSION="$(probe_installed_version "$DST")"
+  PREVIOUS_VERSION="$(probe_installed_version "$DST" || true)"
 else
   EXISTING_BIN="$(command -v "$BIN_NAME" 2>/dev/null || true)"
-  PREVIOUS_VERSION="$(probe_installed_version "$EXISTING_BIN")"
+  PREVIOUS_VERSION="$(probe_installed_version "$EXISTING_BIN" || true)"
 fi
 
 if [ ! -f "$SRC" ]; then
