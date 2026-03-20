@@ -134,7 +134,6 @@ var _ = Describe("RunUpgrade", func() {
 			func() string { return "linux" },
 			func() string { return "amd64" },
 			client,
-			func(string) (string, error) { return "0.5.0", nil },
 			func(string) error { return nil },
 		)
 		DeferCleanup(restore)
@@ -164,7 +163,6 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) (string, error) { return "0.5.0", nil },
 				func(string) error { return nil },
 			)
 			DeferCleanup(restore)
@@ -183,7 +181,6 @@ var _ = Describe("RunUpgrade", func() {
 					func() string { return "linux" },
 					func() string { return "amd64" },
 					mockUpgradeClientWithFailures(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), failAPI, failDownload),
-					func(string) (string, error) { return "0.5.0", nil },
 					func(string) error { return nil },
 				)
 				DeferCleanup(restore)
@@ -228,7 +225,6 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) (string, error) { return "0.5.0", nil },
 				func(string) error { return nil },
 			)
 			DeferCleanup(restore)
@@ -262,20 +258,21 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) (string, error) { return "0.5.0", nil },
 				func(string) error { return errors.New("repair failed") },
 			)
 			DeferCleanup(restore)
 		})
 
-		It("restores the previous binary and returns an error", func() {
+		It("keeps the new binary installed and returns a post-upgrade repair error", func() {
 			err := RunUpgrade(args)
 			Expect(err).To(MatchError(ContainSubstring("repair failed")))
-			Expect(err).To(MatchError(ContainSubstring("restored previous binary")))
+			Expect(err).To(MatchError(ContainSubstring("post-upgrade repair failed after installing the new binary")))
+			Expect(err).To(MatchError(ContainSubstring("the new binary remains installed")))
+			Expect(err).To(MatchError(ContainSubstring("ccp repair --yes")))
 
 			b, readErr := os.ReadFile(dest)
 			Expect(readErr).NotTo(HaveOccurred())
-			Expect(string(b)).To(Equal("old"))
+			Expect(string(b)).To(Equal(newBinaryContent))
 		})
 	})
 
@@ -298,13 +295,12 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) (string, error) { return "0.6.0", nil },
-				func(string) error { return errors.New("repair should not run") },
+				func(string) error { return nil },
 			)
 			DeferCleanup(restore)
 		})
 
-		It("skips repair", func() {
+		It("still runs repair through the new binary", func() {
 			Expect(RunUpgrade(args)).To(Succeed())
 
 			b, err := os.ReadFile(dest)
@@ -312,23 +308,6 @@ var _ = Describe("RunUpgrade", func() {
 			Expect(string(b)).To(Equal(newBinaryContent))
 		})
 	})
-})
-
-var _ = Describe("shouldRunLegacyRepair", func() {
-	DescribeTable("applying the 0.5.1 cutoff",
-		func(version string, want bool) {
-			Expect(shouldRunLegacyRepair(version)).To(Equal(want))
-		},
-		Entry("older release", "0.5.0", true),
-		Entry("older release with v prefix", "v0.5.0", true),
-		Entry("cutoff release", "0.5.1", false),
-		Entry("newer release", "0.5.2", false),
-		Entry("newer minor release", "0.6.0", false),
-		Entry("newer major release", "1.0.0", false),
-		Entry("prerelease at cutoff", "0.5.1-beta.1", false),
-		Entry("invalid version", "dev", false),
-		Entry("empty version", "", false),
-	)
 })
 
 func mockUpgradeClient(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool) *http.Client {
@@ -396,27 +375,23 @@ func stubUpgradeRuntimeDeps(
 	osFn func() string,
 	archFn func() string,
 	httpClient *http.Client,
-	versionFn func(string) (string, error),
 	repairFn func(string) error,
 ) func() {
 	prevExec := upgradeExecutablePath
 	prevOS := upgradeRuntimeOS
 	prevArch := upgradeRuntimeArch
 	prevHTTP := upgradeHTTPClient
-	prevVersion := upgradeInstalledVer
 	prevRepair := upgradeRunRepair
 	upgradeExecutablePath = execFn
 	upgradeRuntimeOS = osFn
 	upgradeRuntimeArch = archFn
 	upgradeHTTPClient = httpClient
-	upgradeInstalledVer = versionFn
 	upgradeRunRepair = repairFn
 	return func() {
 		upgradeExecutablePath = prevExec
 		upgradeRuntimeOS = prevOS
 		upgradeRuntimeArch = prevArch
 		upgradeHTTPClient = prevHTTP
-		upgradeInstalledVer = prevVersion
 		upgradeRunRepair = prevRepair
 	}
 }

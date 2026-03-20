@@ -22,6 +22,7 @@ import (
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/version"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 type Options struct {
@@ -33,6 +34,7 @@ type Options struct {
 type Runner struct {
 	sources     []corefilters.FilterSource
 	metricsPath string
+	workingDir  string
 	opts        Options
 }
 
@@ -61,6 +63,7 @@ func NewRunnerWithOptions(opts Options) *Runner {
 	return &Runner{
 		sources:     defaultFilterSources(),
 		metricsPath: metricsPath,
+		workingDir:  currentWorkingDir(),
 		opts:        opts,
 	}
 }
@@ -627,7 +630,7 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 	if !shouldRecordMetrics(command) {
 		return
 	}
-	_ = metrics.Append(r.metricsPath, metrics.RunMetric{
+	if err := metrics.Append(r.metricsPath, metrics.RunMetric{
 		Timestamp:   time.Now().UTC(),
 		Command:     command.RawInput,
 		Tool:        command.Tool,
@@ -637,11 +640,25 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 		ExitCode:    exitCode,
 		DurationMS:  durationMS,
 		Passthrough: passthrough,
-	})
+	}); err != nil {
+		return
+	}
+	if strings.TrimSpace(r.workingDir) == "" {
+		return
+	}
+	_ = workspaces.Upsert(r.workingDir, r.metricsPath)
 }
 
 func shouldRecordMetrics(command contracts.Command) bool {
 	return !cli.ShouldSkipMetrics(command.Tool, command.Args)
+}
+
+func currentWorkingDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return cwd
 }
 
 func (r *Runner) writeRedacted(dst *os.File, line string) int {

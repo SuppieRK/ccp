@@ -144,12 +144,13 @@ var _ = Describe("lifecycle help", func() {
 		Entry("uninstall", helpCase{
 			command: "uninstall",
 			parts: []string{
-				"ccp uninstall - remove supported agent integrations",
+				"ccp uninstall - remove ccp integrations or fully uninstall ccp",
 				"Usage:",
 				"Flags:",
 				"Notes:",
 				"--tools",
-				"auto-detection from the current repository",
+				"complete uninstall",
+				"removing the executable",
 			},
 		}),
 	)

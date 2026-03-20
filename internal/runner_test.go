@@ -20,6 +20,7 @@ import (
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/version"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 var _ = Describe("Runner", func() {
@@ -364,6 +365,37 @@ var _ = Describe("Runner", func() {
 		history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(history).To(BeEmpty())
+	})
+
+	It("registers the current working directory after writing normal gain metrics", func() {
+		tmpDir, err := os.MkdirTemp("", "core-runner-workspaces-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+		restore := workspaces.WithTestConfig(tmpDir, nil)
+		DeferCleanup(restore)
+
+		runner := &Runner{
+			sources:     []corefilters.FilterSource{},
+			metricsPath: filepath.Join(tmpDir, "repo", ".ccp", "gain.db"),
+			workingDir:  filepath.Join(tmpDir, "repo"),
+		}
+
+		command := contracts.Command{
+			RawInput: "go test ./...",
+			Args:     []string{"go", "test", "./..."},
+			Tool:     "go",
+			Dispatch: "go",
+		}
+
+		runner.appendMetrics(command, false, 0, 1, 32, 16)
+
+		entries, err := workspaces.List()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+		Expect(entries[0].CWD).To(Equal(filepath.Join(tmpDir, "repo")))
+		Expect(entries[0].MetricsPath).To(Equal(filepath.Join(tmpDir, "repo", ".ccp", "gain.db")))
 	})
 
 	It("creates subprocess pipes with stdin attached to os.Stdin", func() {

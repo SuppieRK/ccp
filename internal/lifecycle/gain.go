@@ -22,6 +22,7 @@ type reportFlags struct {
 	tool   string
 	failed bool
 	table  bool
+	global bool
 }
 
 type filtersEnvelope struct {
@@ -76,6 +77,9 @@ func RunGain(args []string, metricsPath string) error {
 		Tool:   flags.tool,
 		Failed: flags.failed,
 	}
+	if flags.global {
+		return runGlobalGain(flags, opts, filters, metricsPath)
+	}
 	if shouldRenderPeriodDataset(flags, opts) {
 		return renderPeriodDataset(metricsPath, flags, opts, filters)
 	}
@@ -101,6 +105,9 @@ func RunHistory(args []string, metricsPath string) error {
 		Since:  flags.since,
 		Tool:   flags.tool,
 		Failed: flags.failed,
+	}
+	if flags.global {
+		return runGlobalHistory(flags, opts, filters, metricsPath)
 	}
 	rows, err := metrics.QueryHistory(metricsPath, opts)
 	if err != nil {
@@ -129,6 +136,7 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 	tool := fs.String("tool", "", "filter by tool")
 	failed := fs.Bool("failed", false, "include only failed runs")
 	table := fs.Bool("table", false, "render detailed text table output (gain only)")
+	global := fs.Bool("global", false, "aggregate across registered workspace metrics databases")
 	legacyJSON := fs.Bool("json", false, "emit JSON (deprecated alias for --format json)")
 	setReportUsage(fs, name)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -145,6 +153,7 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 		tool:   strings.TrimSpace(*tool),
 		failed: *failed,
 		table:  *table,
+		global: *global,
 	}
 	if *legacyJSON {
 		out.format = "json"
@@ -245,18 +254,20 @@ func renderTextSummaryDataset(metricsPath string, flags reportFlags, opts, summa
 
 func setReportUsage(fs *flag.FlagSet, name string) {
 	summary := "show token savings history"
-	usage := []string{"ccp gain [--format text|json|csv] [--table] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed]"}
+	usage := []string{"ccp gain [--format text|json|csv] [--table] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
 	notes := []string{
 		"Use --period only with ccp gain.",
 		"Run ccp gain after install or init to verify savings on real work.",
+		"Use --global to aggregate across registered workspace metrics databases.",
 		"Default text output is a short shareable summary; use --table for detailed text tables.",
 		"Legacy --json remains available as an alias for --format json.",
 	}
 	if name == "history" {
 		summary = "show recorded command history"
-		usage = []string{"ccp history [--format text|json|csv] [--since <duration>] [--tool <tool>] [--failed]"}
+		usage = []string{"ccp history [--format text|json|csv] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
 		notes = []string{
 			"ccp history does not support --period.",
+			"Use --global to merge history from registered workspace metrics databases; global rows include a source field.",
 			"Legacy --json remains available as an alias for --format json.",
 		}
 	}

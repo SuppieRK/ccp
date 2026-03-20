@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/workspaces"
 	"os"
 	"path/filepath"
 	"sort"
@@ -64,6 +65,9 @@ func RunInit(args []string) error {
 	)
 	if err != nil {
 		return err
+	}
+	if err := workspaces.Upsert(scopeRoot, ""); err != nil {
+		writeLifecycleWarning("ccp init: warning: could not update workspace registry: %v\n", err)
 	}
 	if allToolStatesNoop(states) {
 		fmt.Printf("ccp init: already configured\n")

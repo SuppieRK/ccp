@@ -8,6 +8,7 @@ import (
 	"time"
 
 	shippedfilters "go-command-compression-proxy/filters"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 const (
@@ -133,7 +134,8 @@ func syncCanonicalHomeLayout() error {
 
 func cleanupManagedConfigDir(homeDir string) error {
 	configDir := filepath.Join(homeDir, configDirName, "ccp")
-	if err := removeAllChildrenExcept(configDir, "repair.lock"); err != nil {
+	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
+	if err := removeAllChildrenExcept(configDir, "repair.lock", workspacesPath); err != nil {
 		return err
 	}
 

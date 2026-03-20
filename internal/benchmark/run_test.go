@@ -15,6 +15,7 @@ import (
 
 	"go-command-compression-proxy/internal/contracts"
 	"go-command-compression-proxy/internal/replay"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 var _ = Describe("benchmark replay runner", func() {
@@ -136,6 +137,39 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(filepath.Join(artifacts, "grep", "recursive-match", "command.yaml")).To(BeAnExistingFile())
 			Expect(filepath.Join(artifacts, "grep", "recursive-match", "verify-output.txt")).To(BeAnExistingFile())
 			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".ccp", "gain.db")).To(BeAnExistingFile())
+		})
+
+		It("keeps benchmark metrics local to the artifact gain database", func() {
+			fixtureDir := filepath.Join(root, "grep", "recursive-match")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|match one\n")
+			writeFixtureFile(fixtureDir, "output.txt", "grouped output\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("grouped output\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, "verify-decisions.txt"), []byte("<keep>    | match one\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			_, err := Run(RunOptions{
+				FixturesRoot: root,
+				ArtifactsDir: artifacts,
+				ProxyBinary:  "ccp",
+				Timeout:      time.Second,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".ccp", "gain.db")).To(BeAnExistingFile())
+			registryPath, pathErr := workspaces.DefaultPath()
+			Expect(pathErr).NotTo(HaveOccurred())
+			_, statErr := os.Stat(registryPath)
+			Expect(statErr).To(MatchError(os.ErrNotExist))
 		})
 
 		DescribeTable("surfaces replay failures as warnings",
