@@ -1,0 +1,4 @@
+00000|==> Linting samplechart
+00001|[INFO] Chart.yaml: icon is recommended
+00002|
+00003|1 chart(s) linted, 0 chart(s) failed

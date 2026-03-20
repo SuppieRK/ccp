@@ -1,0 +1,101 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: dart
+about: Compact dart analyze diagnostics, dart test text output, and dart format drift summaries while keeping runtime output and machine-oriented test or format modes native.
+
+cases:
+  - id: format_json_passthrough
+    when_arguments:
+      first_is: format
+      have_any:
+        - json
+        - --output=json
+      have_sequence:
+        - -o
+        - json
+    passthrough: true
+
+  - id: format_check
+    variables:
+      - name: changed
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: format
+      have_any:
+        - --set-exit-if-changed
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^Formatted (.+\.dart)$'
+              to: '  $1'
+              on_match:
+                - variable: changed
+                  increment: 1
+            - regex: '^Formatted \d+ file(?:s)? \((\d+) changed\) in .+$'
+              to: 'dart format: $1 changed'
+
+  - id: test_reporter_short_json_passthrough
+    when_arguments:
+      first_is: test
+      have_sequence:
+        - -r
+        - json
+    passthrough: true
+
+  - id: test_reporter_long_json_passthrough
+    when_arguments:
+      first_is: test
+      have_sequence:
+        - --reporter
+        - json
+    passthrough: true
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^\d\d:\d\d \+\d+ -\d+: .+ \[E\]$'
+            - regex: '^  Expected: .+$'
+            - regex: '^    Actual: .+$'
+            - regex: '^     Which: .+$'
+            - regex: '^  test/.+$'
+          replace:
+            - regex: '^\d\d:\d\d \+(\d+): All tests passed!$'
+              to: 'dart test: ok ($1 passed)'
+            - regex: '^\d\d:\d\d \+\d+ -(\d+): Some tests failed\.$'
+              to: 'dart test: failed ($1 failed)'
+          skip:
+            - regex: '^\d\d:\d\d \+\d+: loading .+$'
+            - regex: '^\d\d:\d\d \+\d+: .+$'
+            - regex: '^$'
+            - regex: '^Consider enabling the flag chain-stack-traces to receive more detailed exceptions\.$'
+            - regex: "^For example, 'dart test --chain-stack-traces'\\.$"
+
+  - id: analyze
+    variables:
+      - name: issues
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: analyze
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^\s*(error|warning|info) - (.+?):(\d+):(\d+) - (.+) - ([a-z0-9_]+)$'
+              to: '  $2:$3:$4 $1 $6 $5'
+              on_match:
+                - variable: issues
+                  increment: 1
+            - regex: '^No issues found!$'
+              to: 'dart analyze: ok'
+            - regex: '^\d+ issues found\.$'
+              to: 'dart analyze: {{issues}} issues'
+          skip:
+            - regex: '^Analyzing .+\.\.\.$'
+            - regex: '^[[:space:]]*$'

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: prisma
+about: Compact low-value Prisma config and schema-load banners for validate and format while preserving real schema paths, success state, and failure text.
+
+cases:
+  - id: validate
+    when_arguments:
+      first_is: validate
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'Loaded Prisma config from '
+            - starts_with: 'Prisma schema loaded from '
+          replace:
+            - regex: '^The schema at .+ is valid .+$'
+              to: 'prisma validate: ok'
+
+  - id: format
+    when_arguments:
+      first_is: format
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: 'Loaded Prisma config from '
+            - starts_with: 'Prisma schema loaded from '
+          replace:
+            - regex: '^Formatted (.+) in \d+(?:\.\d+)?ms .+$'
+              to: 'prisma format: ok $1'

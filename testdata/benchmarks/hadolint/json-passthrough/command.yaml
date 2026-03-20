@@ -1,0 +1,2 @@
+argv: ["hadolint", "-f", "json", "/tmp/tmp.4NqaZkGVxy/Dockerfile"]
+exit_code: 1

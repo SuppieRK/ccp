@@ -1,0 +1,8 @@
+00000|No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+00001|Loading composer repositories with package information
+00002|Updating dependencies
+00003|Nothing to modify in lock file
+00004|Writing lock file
+00005|Installing dependencies from lock file (including require-dev)
+00006|Nothing to install, update or remove
+00007|Generating autoload files

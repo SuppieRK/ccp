@@ -1,0 +1,7 @@
+  1:11 error [error] "(" was not closed
+  1:12 error [error] Expected parameter name
+  1:12 error [error] Position-only parameter separator not allowed as first parameter
+  2:5 error [error] Expected expression
+  3:1 error [error] Expected ":"
+  3:1 error [error] Expected expression
+  3:1 error [error] Statements must be separated by newlines or semicolons

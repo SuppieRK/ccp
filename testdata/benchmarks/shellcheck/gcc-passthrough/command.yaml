@@ -1,0 +1,2 @@
+argv: ["shellcheck", "-f", "gcc", "/tmp/tmp.uppvqdlzJn"]
+exit_code: 1

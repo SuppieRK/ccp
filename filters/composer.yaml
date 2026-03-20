@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: composer
+about: Compact `composer install` repository and download churn while preserving lock and package-operation summaries, meaningful dependency failures, and parse errors.
+
+cases:
+  - id: install
+    when_arguments:
+      first_is: install
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - starts_with: 'Loading composer repositories with package information'
+            - starts_with: 'Updating dependencies'
+            - starts_with: 'Verifying lock file contents can be installed on current platform.'
+            - regex: '^  - Downloading .+$'
+            - regex: '^  - Installing .+$'

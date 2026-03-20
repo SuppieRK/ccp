@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: yamllint
+about: Compact default yamllint diagnostics by normalizing file-local warning and error rows while leaving explicit alternate formats and file-listing modes native.
+
+cases:
+  - id: passthrough_alt_formats
+    when_arguments:
+      have_any:
+        - -f
+        - --format
+        - --list-files
+        - -v
+        - --version
+    passthrough: true
+
+  - id: diagnostics
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+          replace:
+            - regex: '^  (\d+):(\d+)\s+(warning|error)\s+(.+?)\s+\(([^)]+)\)$'
+              to: '  $1:$2 $3 [$5] $4'

@@ -1,0 +1,2 @@
+  .artifacts/flutter_demo/lib/bad.dart:8:18 error creation_with_non_type The name 'MissingWidget' isn't a class
+flutter analyze: 1 issue(s)

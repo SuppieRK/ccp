@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: helm
+about: Compact `helm lint` output by shortening the linting banner and normalizing indented continuation lines while preserving chart-local INFO and ERROR diagnostics plus the final lint summary.
+
+cases:
+  - id: lint
+    when_arguments:
+      first_is: lint
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+          replace:
+            - regex: '^==> Linting (.+)$'
+              to: '$1:'
+            - regex: '^\t(.+)$'
+              to: '  $1'

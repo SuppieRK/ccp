@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: biome
+about: Compact plain Biome lint and check output by trimming decorative separators and generic summaries while preserving file paths, diff hunks, parser carets, and explicit reporter modes.
+
+cases:
+  - id: reporter_passthrough_inline
+    when_arguments:
+      have_any:
+        - --reporter=json
+        - --reporter=json-pretty
+        - --reporter=junit
+        - --reporter=github
+        - --reporter=gitlab
+        - --reporter=checkstyle
+        - --reporter=rdjson
+    passthrough: true
+
+  - id: reporter_passthrough_sequence
+    when_arguments:
+      have_sequence:
+        - --reporter
+        - json
+    passthrough: true
+
+  - id: lint
+    when_arguments:
+      first_is: lint
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+
+  - id: check
+    when_arguments:
+      first_is: check
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^check ━+$'
+            - regex: '^  × Some errors were emitted while running checks\.$'

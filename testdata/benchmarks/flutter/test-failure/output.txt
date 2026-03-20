@@ -1,0 +1,7 @@
+flutter test: failed (1 failed)
+The following TestFailure was thrown running a test:
+Expected: no matching candidates
+  Actual: _TextWidgetFinder:<Found 1 widget with text "0": [
+   Which: means one was found but none were expected
+  file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart line 10
+00:01 +0 -1: counter stays at zero [E]                                                                                                                                                                 

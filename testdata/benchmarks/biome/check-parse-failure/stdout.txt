@@ -1,0 +1,41 @@
+00000| at tmp-biome-parse.js:1:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00001|
+00002|  × Expected an expression, or an assignment but instead found ';'.
+00003|  
+00004|  > 1 │ export const broken = ;
+00005|      │                       ^
+00006|    2 │ 
+00007|  
+00008|  i Expected an expression, or an assignment here.
+00009|  
+00010|  > 1 │ export const broken = ;
+00011|      │                       ^
+00012|    2 │ 
+00013|  
+00014|
+00015| at tmp-biome-parse.js:1:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00016|
+00017|  × Expected an expression, or an assignment but instead found ';'.
+00018|  
+00019|  > 1 │ export const broken = ;
+00020|      │                       ^
+00021|    2 │ 
+00022|  
+00023|  i Expected an expression, or an assignment here.
+00024|  
+00025|  > 1 │ export const broken = ;
+00026|      │                       ^
+00027|    2 │ 
+00028|  
+00029|
+00030| at tmp-biome-parse.js format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00031|
+00032|  × Code formatting aborted due to parsing errors. To format code with errors, enable the 'formatter.formatWithErrors' option.
+00033|  
+00034|
+00035|Checked 1 file in 2ms. No fixes applied.
+00036|Found 3 errors.
+00037|check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00038|
+00039|  × Some errors were emitted while running checks.
+00040|  

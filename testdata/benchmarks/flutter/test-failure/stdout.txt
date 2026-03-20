@@ -1,0 +1,36 @@
+00000|00:01 +0: counter stays at zero                                                                                                                                                                        
+00001|══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+00002|The following TestFailure was thrown running a test:
+00003|Expected: no matching candidates
+00004|  Actual: _TextWidgetFinder:<Found 1 widget with text "0": [
+00005|            Text("0", debugLabel: (englishLike headlineMedium 2021).merge((blackMountainView
+00006|headlineMedium).apply), inherit: false, color: Color(alpha: 1.0000, red: 0.1137, green: 0.1059,
+00007|blue: 0.1255, colorSpace: ColorSpace.sRGB), family: Roboto, size: 28.0, weight: 400, letterSpacing:
+00008|0.0, baseline: alphabetic, height: 1.3x, leadingDistribution: even, decoration: Color(alpha: 1.0000,
+00009|red: 0.1137, green: 0.1059, blue: 0.1255, colorSpace: ColorSpace.sRGB) TextDecoration.none,
+00010|dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+00011|          ]>
+00012|   Which: means one was found but none were expected
+00013|
+00014|When the exception was thrown, this was the stack:
+00015|#4      main.<anonymous closure> (file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart:10:5)
+00016|<asynchronous suspension>
+00017|#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+00018|<asynchronous suspension>
+00019|#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+00020|<asynchronous suspension>
+00021|<asynchronous suspension>
+00022|(elided one frame from package:stack_trace)
+00023|
+00024|This was caught by the test expectation on the following line:
+00025|  file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart line 10
+00026|The test description was:
+00027|  counter stays at zero
+00028|════════════════════════════════════════════════════════════════════════════════════════════════════
+00029|00:01 +0 -1: counter stays at zero [E]                                                                                                                                                                 
+00030|  Test failed. See exception logs above.
+00031|  The test description was: counter stays at zero
+00032|  
+00033|
+00034|To run this test again: /home/suppie/flutter/bin/cache/dart-sdk/bin/dart test /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart -p vm --plain-name 'counter stays at zero'
+00035|00:01 +0 -1: Some tests failed.                                                                                                                                                                        

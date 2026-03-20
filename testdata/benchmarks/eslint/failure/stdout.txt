@@ -1,0 +1,9 @@
+00000|
+00001|/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/npx-eslint/projects/basic/src/lint_fail.js
+00002|  1:7   error  'unused' is assigned a value but never used  no-unused-vars
+00003|  1:17  error  Missing semicolon                            semi
+00004|  4:15  error  Missing semicolon                            semi
+00005|
+00006|✖ 3 problems (3 errors, 0 warnings)
+00007|  2 errors and 0 warnings potentially fixable with the `--fix` option.
+00008|

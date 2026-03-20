@@ -1,0 +1,8 @@
+00000|samplechart:
+00001|  validation: chart.metadata.version is required
+00002|Error: 1 chart(s) linted, 1 chart(s) failed
+00003|[ERROR] Chart.yaml: version should be of type string but it's of type <nil>
+00004|[ERROR] Chart.yaml: version is required
+00005|[WARNING] Chart.yaml: version '' is not a valid SemVerV2
+00006|[ERROR] templates/: validation: chart.metadata.version is required
+00007|[ERROR] : unable to load chart

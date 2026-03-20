@@ -1,0 +1,2 @@
+argv: ["biome", "lint", ".artifacts/biome_demo/parse.js"]
+exit_code: 1

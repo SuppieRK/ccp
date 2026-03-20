@@ -1,0 +1,10 @@
+00000|
+00001|In scripts/validate.sh line 94:
+00002|for f in $FILES; do echo $f; done
+00003|                         ^-- SC2086 (info): Double quote to prevent globbing and word splitting.
+00004|
+00005|Did you mean: 
+00006|for f in $FILES; do echo "$f"; done
+00007|
+00008|For more information:
+00009|  https://www.shellcheck.net/wiki/SC2086 -- Double quote to prevent globbing ...

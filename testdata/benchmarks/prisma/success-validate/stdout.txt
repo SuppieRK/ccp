@@ -1,0 +1,2 @@
+00000|Prisma schema loaded from prisma/schema.prisma
+00001|The schema at prisma/schema.prisma is valid 🚀

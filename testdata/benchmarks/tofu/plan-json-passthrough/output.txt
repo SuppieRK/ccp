@@ -1,0 +1,2 @@
+{"@level":"info","@message":"OpenTofu 1.11.5","@module":"tofu.ui","@timestamp":"2026-03-20T20:29:26.499522+01:00","tofu":"1.11.5","type":"version","ui":"1.2"}
+{"@level":"info","@message":"Plan: 0 to add, 0 to change, 0 to destroy.","@module":"tofu.ui","@timestamp":"2026-03-20T20:29:26.500753+01:00","changes":{"add":0,"change":0,"import":0,"remove":0,"forget":0,"operation":"plan"},"type":"change_summary"}

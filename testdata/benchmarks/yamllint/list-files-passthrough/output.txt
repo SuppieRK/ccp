@@ -1,0 +1,2 @@
+.goreleaser.yaml
+filters/.mappings.yaml

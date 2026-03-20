@@ -1,0 +1,1 @@
+argv: ["eslint", "src/lint_fail.js"]

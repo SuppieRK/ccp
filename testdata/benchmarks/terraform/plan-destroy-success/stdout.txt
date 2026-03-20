@@ -1,0 +1,20 @@
+00000|
+00001|Terraform used the selected providers to generate the following execution
+00002|plan. Resource actions are indicated with the following symbols:
+00003|  - destroy
+00004|
+00005|Terraform will perform the following actions:
+00006|
+00007|  # terraform_data.example will be destroyed
+00008|  - resource "terraform_data" "example" {
+00009|      - id     = "430c6d4b-b87e-1585-fe96-9030bab041a2" -> null
+00010|      - input  = "hello" -> null
+00011|      - output = "hello" -> null
+00012|    }
+00013|
+00014|Plan: 0 to add, 0 to change, 1 to destroy.
+00015|
+00016|─────────────────────────────────────────────────────────────────────────────
+00017|
+00018|Note: You didn't use the -out option to save this plan, so Terraform can't
+00019|guarantee to take exactly these actions if you run "terraform apply" now.

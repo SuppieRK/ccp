@@ -1,0 +1,12 @@
+00000|
+00001|In scripts/validate.sh line 2:
+00002|if [ "$x" = ]; then
+00003|^-- SC1009 (info): The mentioned syntax error was in this if expression.
+00004|   ^-- SC1073 (error): Couldn't parse this test expression. Fix to allow more checks.
+00005|          ^-- SC1027 (error): Expected another argument for this operator.
+00006|             ^-- SC1072 (error): Unexpected . Fix any mentioned problems and try again.
+00007|
+00008|For more information:
+00009|  https://www.shellcheck.net/wiki/SC1027 -- Expected another argument for thi...
+00010|  https://www.shellcheck.net/wiki/SC1072 -- Unexpected . Fix any mentioned pr...
+00011|  https://www.shellcheck.net/wiki/SC1073 -- Couldn't parse this test expressi...

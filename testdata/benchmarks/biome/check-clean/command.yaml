@@ -1,0 +1,1 @@
+argv: ["biome", "check", ".artifacts/biome_demo/check_ok.js"]

@@ -1,0 +1,8 @@
+Updating dependencies
+Package operations: 5 installs, 0 updates, 0 removals
+Writing lock file
+Installing the current project: poetry-corpus-example (0.1.0)
+Warning: The current project could not be installed: No file/folder found for package poetry-corpus-example
+If you do not want to install the current project use --no-root.
+If you want to use Poetry only for dependency management but not for packaging, you can disable package mode by setting package-mode = false in your pyproject.toml file.
+In a future version of Poetry this warning will become an error!

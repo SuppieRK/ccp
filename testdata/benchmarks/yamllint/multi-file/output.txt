@@ -1,0 +1,21 @@
+  1:1 warning [document-start] missing document start "---"
+  1:1 warning [document-start] missing document start "---"
+  3:1 warning [truthy] truthy value should be one of [false, true]
+  36:81 error [line-length] line too long (190 > 80 characters)
+  48:81 error [line-length] line too long (117 > 80 characters)
+  59:81 error [line-length] line too long (91 > 80 characters)
+  98:81 error [line-length] line too long (83 > 80 characters)
+  120:81 error [line-length] line too long (110 > 80 characters)
+  128:81 error [line-length] line too long (88 > 80 characters)
+  129:81 error [line-length] line too long (90 > 80 characters)
+  130:81 error [line-length] line too long (84 > 80 characters)
+  149:81 error [line-length] line too long (82 > 80 characters)
+  155:81 error [line-length] line too long (124 > 80 characters)
+  162:81 error [line-length] line too long (111 > 80 characters)
+  171:81 error [line-length] line too long (124 > 80 characters)
+  174:81 error [line-length] line too long (110 > 80 characters)
+  207:81 error [line-length] line too long (124 > 80 characters)
+  216:81 error [line-length] line too long (126 > 80 characters)
+  224:81 error [line-length] line too long (86 > 80 characters)
+.goreleaser.yaml
+.github/workflows/main-validation.yml

@@ -1,0 +1,1 @@
+argv: ["yamllint", "--list-files", ".goreleaser.yaml", "filters/.mappings.yaml"]

@@ -1,0 +1,14 @@
+00000|
+00001|Initializing the backend...
+00002|
+00003|Initializing provider plugins...
+00004|
+00005|OpenTofu has been successfully initialized!
+00006|
+00007|You may now begin working with OpenTofu. Try running "tofu plan" to see
+00008|any changes that are required for your infrastructure. All OpenTofu commands
+00009|should now work.
+00010|
+00011|If you ever set or change modules or backend configuration for OpenTofu,
+00012|rerun this command to reinitialize your working directory. If you forget, other
+00013|commands will detect it and remind you to do so if necessary.

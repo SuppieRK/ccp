@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: flutter
+about: Compact plain flutter analyze diagnostics and flutter test summaries while preserving actionable failure loci and leaving explicit machine-oriented output native.
+
+cases:
+  - id: analyze_machine_passthrough
+    when_arguments:
+      first_is: analyze
+      have_any:
+        - --machine
+    passthrough: true
+
+  - id: analyze
+    variables:
+      - name: issues
+        type: number
+        initial_value: '0'
+    when_arguments:
+      first_is: analyze
+      lack_any:
+        - --machine
+    compress_output:
+      combined:
+        lines:
+          replace:
+            - regex: '^\s*(error|warning|info) • (.+) • (.+?):(\d+):(\d+) • ([a-z0-9_]+)$'
+              to: '  $3:$4:$5 $1 $6 $2'
+              on_match:
+                - variable: issues
+                  increment: 1
+            - regex: '^No issues found! \(ran in .+\)$'
+              to: 'flutter analyze: ok'
+            - regex: '^\d+ issues? found\. \(ran in .+\)$'
+              to: 'flutter analyze: {{issues}} issue(s)'
+          skip:
+            - regex: '^Analyzing .+\.\.\.\s*$'
+            - regex: '^Waiting for another flutter command to release the startup lock\.\.\.$'
+            - regex: '^[[:space:]]*$'
+
+  - id: test_machine_passthrough
+    when_arguments:
+      first_is: test
+      have_any:
+        - --machine
+    passthrough: true
+
+  - id: test
+    when_arguments:
+      first_is: test
+      lack_any:
+        - --machine
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^\d\d:\d\d \+\d+ -\d+: .+ \[E\]\s*$'
+            - regex: '^The following .+ was thrown running a test:$'
+            - regex: '^Expected: .+$'
+            - regex: '^\s+Actual: .+$'
+            - regex: '^\s+Which: .+$'
+            - regex: '^\s+file:///.+ line \d+$'
+          replace:
+            - regex: '^\d\d:\d\d \+(\d+): All tests passed!\s*$'
+              to: 'flutter test: ok ($1 passed)'
+            - regex: '^\d\d:\d\d \+\d+ -(\d+): Some tests failed\.\s*$'
+              to: 'flutter test: failed ($1 failed)'
+          skip:
+            - regex: '^\d\d:\d\d \+\d+: .+$'
+            - regex: '^══╡ .+$'
+            - regex: '^When the exception was thrown, this was the stack:$'
+            - regex: '^#\d+ .+$'
+            - regex: '^<asynchronous suspension>$'
+            - regex: '^\(elided .+\)$'
+            - regex: '^This was caught by the test expectation on the following line:$'
+            - regex: '^The test description was:$'
+            - regex: '^  The test description was: .+$'
+            - regex: '^  Test failed\. See exception logs above\.$'
+            - regex: '^To run this test again: .+$'
+            - regex: '^Waiting for another flutter command to release the startup lock\.\.\.$'
+            - regex: '^[[:space:]]*$'

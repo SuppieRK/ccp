@@ -1,0 +1,19 @@
+00000| at testdata/tool-fixtures/npx-prettier/projects/basic/src/bad.js format ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00001|
+00002|  × Formatter would have printed the following content:
+00003|  
+00004|    1   │ - function··sum(a,b){return·a+b}
+00005|    2   │ - module.exports={sum}
+00006|      1 │ + function·sum(a,·b)·{
+00007|      2 │ + → return·a·+·b;
+00008|      3 │ + }
+00009|      4 │ + module.exports·=·{·sum·};
+00010|    3 5 │   
+00011|  
+00012|
+00013|Checked 1 file in 2ms. No fixes applied.
+00014|Found 1 error.
+00015|check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+00016|
+00017|  × Some errors were emitted while running checks.
+00018|  

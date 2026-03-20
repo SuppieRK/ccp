@@ -1,0 +1,2 @@
+  1:1 warning [reportUnknownVariableType] Type of "value" is unknown
+  1:9 error [reportUndefinedVariable] "missing_name" is not defined

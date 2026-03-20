@@ -1,0 +1,2 @@
+  1:1 warning [document-start] missing document start "---"
+.goreleaser.yaml

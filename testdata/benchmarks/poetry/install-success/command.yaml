@@ -1,0 +1,1 @@
+argv: ["poetry", "install", "--no-interaction"]

@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: hadolint
+about: Compact default no-color hadolint diagnostics by shortening repeated file prefixes while preserving line, rule code, severity, and message identity, and leave explicit alternate formats native.
+
+cases:
+  - id: passthrough_alt_formats
+    when_arguments:
+      have_any:
+        - -f
+        - --format
+        - -v
+        - --version
+        - -h
+        - --help
+    passthrough: true
+
+  - id: diagnostics
+    compress_output:
+      combined:
+        groups:
+          - id: file
+            matches_regex: '^(?P<file>.+?):(?P<line>\d+)\s+(?P<code>[A-Z]{2}[0-9]{4}|SC[0-9]{4})\s+(?P<level>error|warning|info|style):\s+(?P<message>.+)$'
+            variables:
+              - name: file
+                type: string
+                regex_group: file
+              - name: line
+                type: string
+                regex_group: line
+              - name: code
+                type: string
+                regex_group: code
+              - name: level
+                type: string
+                regex_group: level
+              - name: message
+                type: string
+                regex_group: message
+            group_by: '{{file}}'
+            initially:
+              print: '{{file}}:'
+            lines:
+              replace:
+                - regex: '^.*$'
+                  to: '  {{line}} {{code}} {{level}} {{message}}'

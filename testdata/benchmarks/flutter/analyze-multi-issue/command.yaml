@@ -1,0 +1,2 @@
+argv: ["flutter", "analyze", ".artifacts/flutter_extra_demo"]
+exit_code: 1

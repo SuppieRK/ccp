@@ -1,0 +1,5 @@
+Waiting for another flutter command to release the startup lock...
+
+  error • The name 'MissingWidget' isn't a class • .artifacts/flutter_demo/lib/bad.dart:8:18 • creation_with_non_type
+
+1 issue found. (ran in 2.8s)

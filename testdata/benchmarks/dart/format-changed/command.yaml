@@ -1,0 +1,2 @@
+argv: ["dart", "format", "--set-exit-if-changed", ".artifacts/dart-demo-format"]
+exit_code: 1

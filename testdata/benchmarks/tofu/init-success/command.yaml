@@ -1,0 +1,1 @@
+argv: ["tofu", "init", "-input=false", "-no-color"]

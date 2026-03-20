@@ -1,0 +1,4 @@
+00000|/tmp/tmp.yqsNRvCEpP/Dockerfile:1 DL3007 warning: Using latest is prone to errors if the image will ever update. Pin the version explicitly to a release tag
+00001|/tmp/tmp.yqsNRvCEpP/Dockerfile:2 DL3008 warning: Pin versions in apt get install. Instead of `apt-get install <package>` use `apt-get install <package>=<version>`
+00002|/tmp/tmp.yqsNRvCEpP/Dockerfile:2 DL3015 info: Avoid additional packages by specifying `--no-install-recommends`
+00003|/tmp/tmp.yqsNRvCEpP/Dockerfile:2 DL3009 info: Delete the apt lists (/var/lib/apt/lists) after installing something

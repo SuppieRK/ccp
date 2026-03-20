@@ -1,0 +1,2 @@
+00000|Prisma schema loaded from prisma/format.prisma
+00001|Formatted prisma/format.prisma in 17ms 🚀

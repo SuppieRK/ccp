@@ -1,0 +1,2 @@
+argv: ["flutter", "test", "test/failure_test.dart"]
+exit_code: 1

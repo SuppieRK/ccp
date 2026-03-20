@@ -1,0 +1,18 @@
+00000|
+00001|In /tmp/tmp.mUu4ej6Uhv line 2:
+00002|for f in $FILES; do echo $f; done
+00003|                         ^-- SC2086 (info): Double quote to prevent globbing and word splitting.
+00004|
+00005|Did you mean: 
+00006|for f in $FILES; do echo "$f"; done
+00007|
+00008|
+00009|In /tmp/tmp.mUu4ej6Uhv line 3:
+00010|echo $UNQUOTED
+00011|     ^-------^ SC2086 (info): Double quote to prevent globbing and word splitting.
+00012|
+00013|Did you mean: 
+00014|echo "$UNQUOTED"
+00015|
+00016|For more information:
+00017|  https://www.shellcheck.net/wiki/SC2086 -- Double quote to prevent globbing ...

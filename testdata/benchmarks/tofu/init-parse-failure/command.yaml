@@ -1,0 +1,2 @@
+argv: ["tofu", "init", "-input=false", "-no-color"]
+exit_code: 1
