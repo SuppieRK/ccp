@@ -190,6 +190,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Wait for release asset to become available
+        env:
+          VERSION: ${{ needs.preflight.outputs.tag }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ runner.os }}" in
+            Windows) asset="ccp_${VERSION}_windows_amd64.zip" ;;
+            *) asset="ccp_${VERSION}_linux_amd64.zip" ;;
+          esac
+          url="https://github.com/${REPO}/releases/download/${VERSION}/${asset}"
+          echo "Waiting for ${url}"
+          for attempt in $(seq 1 24); do
+            status="$(curl --proto '=https' --tlsv1.2 -sS -L -o /dev/null -w "%{http_code}" "$url" || true)"
+            if [[ "$status" == "200" ]]; then
+              echo "Release asset is available"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/24: asset not ready yet (HTTP ${status:-error})"
+            sleep 5
+          done
+          echo "release asset did not become available: ${url}" >&2
+          exit 1
+
       - name: Run install script smoke test (Unix)
         if: runner.os != 'Windows'
         env:
