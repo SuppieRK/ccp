@@ -1,0 +1,2 @@
+00000|Using Python 3.11.15 environment at: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv
+00001|error: Distribution not found at: file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-missing

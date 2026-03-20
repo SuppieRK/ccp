@@ -157,6 +157,8 @@ ccp repair --yes
 
 `ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`. It does not touch project-local `./.ccp/filters`.
 
+When the interactive prompt is declined, `ccp repair` falls back to additive sync: it adds only missing shipped filters and missing shipped `.mappings.yaml` entries.
+
 ## Authoring Guardrails
 
 - Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously unrepresentative.

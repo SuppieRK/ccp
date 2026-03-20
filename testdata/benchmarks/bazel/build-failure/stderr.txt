@@ -1,0 +1,18 @@
+00000|Computing main repo mapping: 
+00001|Computing main repo mapping: 
+00002|Computing main repo mapping: 
+00003|Loading: 
+00004|Loading: 0 packages loaded
+00005|Analyzing: target //:broken (5 packages loaded, 6 targets configured)
+00006|Analyzing: target //:broken (5 packages loaded, 6 targets configured)
+00007|
+00008|INFO: Analyzed target //:broken (77 packages loaded, 433 targets configured).
+00009|ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: Creating symlink broken failed: missing input file '//:missing.sh'
+00010|ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: Creating symlink broken failed: 1 input file(s) do not exist
+00011|ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: //:broken: missing input file '//:missing.sh'
+00012|Target //:broken failed to build
+00013|Use --verbose_failures to see the command lines of failed build steps.
+00014|ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10 Creating symlink broken failed: 1 input file(s) do not exist
+00015|INFO: Elapsed time: 3.429s, Critical Path: 0.02s
+00016|INFO: 4 processes: 4 internal.
+00017|ERROR: Build did NOT complete successfully

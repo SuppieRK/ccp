@@ -1,7 +1,9 @@
 version: 1
 map:
   basedpyright: basedpyright
+  bazel: bazel
   biome: biome
+  bun: bun
   cargo: cargo
   composer: composer
   dart: dart
@@ -20,6 +22,7 @@ map:
   golangci-lint: golangci-lint
   ls: ls
   maven: maven
+  mix: mix
   mypy: mypy
   mvn: maven
   mvnw: maven
@@ -27,18 +30,25 @@ map:
   npx: npx
   node: node
   npm: npm
+  oxlint: oxlint
   playwright: playwright
   pip: pip
+  pio: pio
   poetry: poetry
   prettier: prettier
   prisma: prisma
   pnpm: pnpm
   pytest: pytest
   ruff: ruff
+  sbt: sbt
   shellcheck: shellcheck
   tsc: tsc
   terraform: terraform
   tofu: tofu
+  ty: ty
+  trunk: trunk
+  platformio: pio
+  uv: uv
   yarn: yarn
   yarnpkg: yarn
   yamllint: yamllint

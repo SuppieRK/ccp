@@ -1,0 +1,5 @@
+00000|** (Mix) mix format failed due to --check-formatted.
+00001|The following files are not formatted:
+00002|
+00003|  * test/ccpmixdemo_test.exs
+00004|

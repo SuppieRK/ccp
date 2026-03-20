@@ -1,0 +1,11 @@
+00000|ty 0.1.0
+00001|Checking 15 files
+00002|
+00003|error[unresolved-reference]: Name `foo` used when not defined
+00004|  --> app/main.py:10:5
+00005|   |
+00006|10 |     foo()
+00007|   |     ^^^
+00008|   |
+00009|
+00010|Found 1 error

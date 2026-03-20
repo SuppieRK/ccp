@@ -1,0 +1,7 @@
+00001|The following filters did not match any test files:
+00002| does-not-exist
+00003|4 files were searched [10.00ms]
+00004|
+00005|note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "MyApp.test.ts")
+00006|
+00007|Learn more about bun test: https://bun.com/docs/cli/test

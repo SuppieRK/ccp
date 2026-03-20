@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: uv
+about: Compact human `uv sync` and `uv pip` install or inventory output while keeping structured, freeze, and metadata-oriented modes native.
+
+cases:
+  - id: sync_json_passthrough_inline
+    when_arguments:
+      first_is: sync
+      have_any:
+        - --output-format=json
+    passthrough: true
+
+  - id: sync_json_passthrough_split
+    when_arguments:
+      first_is: sync
+      have_sequence:
+        - --output-format
+        - json
+    passthrough: true
+
+  - id: pip_show_passthrough
+    when_arguments:
+      have_sequence:
+        - pip
+        - show
+    passthrough: true
+
+  - id: pip_freeze_passthrough
+    when_arguments:
+      have_sequence:
+        - pip
+        - freeze
+    passthrough: true
+
+  - id: pip_list_json_passthrough_inline
+    when_arguments:
+      have_sequence:
+        - pip
+        - list
+      have_any:
+        - --format=json
+    passthrough: true
+
+  - id: pip_list_json_passthrough_split
+    when_arguments:
+      have_sequence:
+        - pip
+        - list
+        - --format
+        - json
+    passthrough: true
+
+  - id: sync
+    when_arguments:
+      first_is: sync
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Using CPython .+$'
+            - regex: '^\s+Building .+$'
+            - regex: '^\s+Built .+$'
+            - regex: '^Prepared \d+ packages? in .+$'
+
+  - id: pip_install
+    when_arguments:
+      have_sequence:
+        - pip
+        - install
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Using Python .+ environment at: .+$'
+            - regex: '^Resolved \d+ packages? in .+$'
+            - regex: '^\s+Building .+$'
+            - regex: '^\s+Built .+$'
+            - regex: '^Prepared \d+ packages? in .+$'
+
+  - id: pip_list
+    variables:
+      - name: packages
+        type: number
+        initial_value: '0'
+    when_arguments:
+      have_sequence:
+        - pip
+        - list
+      lack_any:
+        - --outdated
+        - --format
+        - --format=json
+        - --format=freeze
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Using Python .+ environment at: .+$'
+            - regex: '^Package\s+Version$'
+            - regex: '^-+\s+-+$'
+          replace:
+            - regex: '^(\S+)\s+([0-9][^\s]*)$'
+              to: '  $1 ($2)'
+              on_match:
+                - variable: packages
+                  increment: 1
+    finally:
+      print: 'uv pip list: {{packages}} packages'

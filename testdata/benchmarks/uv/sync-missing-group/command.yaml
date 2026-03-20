@@ -1,0 +1,2 @@
+argv: ["uv", "sync", "--frozen", "--group", "definitely-missing-group"]
+exit_code: 2

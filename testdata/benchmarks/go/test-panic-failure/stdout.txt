@@ -1,0 +1,18 @@
+00000|--- FAIL: TestPanics (0.00s)
+00001|panic: boom [recovered, repanicked]
+00002|
+00003|goroutine 7 [running]:
+00004|testing.tRunner.func1.2({0x550fc0, 0x594560})
+00005|	/usr/local/go/src/testing/testing.go:1974 +0x232
+00006|testing.tRunner.func1()
+00007|	/usr/local/go/src/testing/testing.go:1977 +0x349
+00008|panic({0x550fc0?, 0x594560?})
+00009|	/usr/local/go/src/runtime/panic.go:860 +0x13a
+00010|fixture-go-panic.TestPanics(0x28e38921a248?)
+00011|	/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/go-corpus/panic/main_test.go:6 +0x25
+00012|testing.tRunner(0x28e38921a248, 0x592e10)
+00013|	/usr/local/go/src/testing/testing.go:2036 +0xea
+00014|created by testing.(*T).Run in goroutine 1
+00015|	/usr/local/go/src/testing/testing.go:2101 +0x4c5
+00016|FAIL	fixture-go-panic	0.004s
+00017|FAIL

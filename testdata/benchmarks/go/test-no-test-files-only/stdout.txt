@@ -1,0 +1,1 @@
+00000|?   	fixture-go-notest/pkg	[no test files]

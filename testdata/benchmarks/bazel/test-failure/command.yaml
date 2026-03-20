@@ -1,0 +1,2 @@
+argv: ["bazel", "test", "//:fail_test"]
+exit_code: 3

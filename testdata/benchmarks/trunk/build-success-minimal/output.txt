@@ -1,0 +1,1 @@
+   Finished release [optimized] target(s) in 12.01s

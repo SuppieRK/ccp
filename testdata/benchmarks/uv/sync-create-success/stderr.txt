@@ -1,0 +1,10 @@
+00000|Using CPython 3.11.15
+00001|Creating virtual environment at: .venv
+00002|   Building uv-sync-demo @ file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-create
+00003|      Built uv-sync-demo @ file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-create
+00004|Prepared 1 package in 364ms
+00005|warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+00006|         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+00007|         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+00008|Installed 1 package in 126ms
+00009| + uv-sync-demo==0.1.0 (from file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-create)

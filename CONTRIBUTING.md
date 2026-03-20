@@ -110,7 +110,8 @@ Current YAML scope and precedence:
 - project-local filter definitions override home-scoped definitions with the same canonical filter id
 - project-local `.mappings.yaml` aliases override home-scoped aliases with the same key
 - shipped filters in `filters/` are reference material while developing in-repo and are the source embedded into release builds
-- `ccp repair` rewrites the managed home-scoped filter state under `~/.config/ccp/filters`
+- `ccp repair --yes` rewrites the managed home-scoped filter state under `~/.config/ccp/filters`
+- interactive `ccp repair` falls back to adding only missing shipped filters and missing shipped `.mappings.yaml` entries when the rewrite prompt is declined
 - project-local filters remain user-managed and are not recreated automatically
 
 Recommended local iteration loop:
@@ -204,6 +205,7 @@ Requirements:
 - Replay fixture outputs are derived from `ccp verify`; benchmarks do not execute copied project trees anymore.
 - Token-oriented metrics are the primary KPI.
 - Proxy overhead must be tracked.
+- Benchmark metrics are written only to artifact-local `.ccp/gain.db` files and must never feed normal local metrics stores or `--global` reports.
 - Realistic corpus selection matters. Prefer fixtures sourced from real command runs or checked-in research output over synthetic toy examples when evaluating safety boundaries.
 
 ---

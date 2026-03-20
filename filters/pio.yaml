@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: pio
+about: Compact default `pio run` build chatter by dropping repetitive PlatformIO setup and object-build noise while preserving compiler failures and keeping verbose mode native.
+
+cases:
+  - id: run_verbose_passthrough
+    when_arguments:
+      first_is: run
+      have_any:
+        - -v
+        - --verbose
+    passthrough: true
+
+  - id: run
+    when_arguments:
+      first_is: run
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Verbose mode can be enabled via `-v, --verbose` option$'
+            - regex: '^CONFIGURATION: .+$'
+            - regex: '^LDF: .+$'
+            - regex: '^Library Manager: .+$'
+            - regex: '^Compiling .+$'
+            - regex: '^Linking .+$'
+            - regex: '^Building .+$'
+            - regex: '^Checking size .+$'

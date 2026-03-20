@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: bun
+about: Compact default `bun install` and `bun test` output by dropping Bun's version banner and spacer lines while preserving package changes, failure loci, and summary lines. Explicit reporter modes stay native.
+
+cases:
+  - id: test_reporter_passthrough_inline
+    when_arguments:
+      first_is: test
+      have_any:
+        - --dots
+        - --reporter=dots
+        - --reporter=junit
+        - --reporter
+        - --reporter-outfile
+    passthrough: true
+
+  - id: install_machineish_passthrough
+    when_arguments:
+      first_is: install
+      have_any:
+        - --silent
+        - --quiet
+        - --verbose
+        - --no-summary
+    passthrough: true
+
+  - id: install
+    when_arguments:
+      first_is: install
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^bun install v[0-9].+$'
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^bun test v[0-9].+$'

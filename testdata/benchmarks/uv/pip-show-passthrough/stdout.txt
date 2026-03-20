@@ -1,0 +1,5 @@
+00001|Name: uv-demo-pkg
+00002|Version: 0.1.0
+00003|Location: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv/lib/python3.11/site-packages
+00004|Requires:
+00005|Required-by:

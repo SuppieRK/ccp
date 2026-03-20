@@ -1,0 +1,16 @@
+00000|Computing main repo mapping: 
+00001|Computing main repo mapping: 
+00002|Computing main repo mapping: 
+00003|Computing main repo mapping: 
+00004|Loading: 
+00005|Loading: 0 packages loaded
+00006|Analyzing: target //:hello (5 packages loaded, 6 targets configured)
+00007|Analyzing: target //:hello (5 packages loaded, 6 targets configured)
+00008|
+00009|INFO: Analyzed target //:hello (77 packages loaded, 433 targets configured).
+00010|INFO: Found 1 target...
+00011|Target //:hello up-to-date:
+00012|  bazel-bin/hello
+00013|INFO: Elapsed time: 4.192s, Critical Path: 0.01s
+00014|INFO: 6 processes: 6 internal.
+00015|INFO: Build completed successfully, 6 total actions

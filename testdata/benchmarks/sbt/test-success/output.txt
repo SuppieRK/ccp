@@ -1,0 +1,8 @@
+sbt: ok
+[info] ExampleSpec:
+[info] - adds numbers
+[info] Run completed in 241 milliseconds.
+[info] Total number of tests run: 1
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.

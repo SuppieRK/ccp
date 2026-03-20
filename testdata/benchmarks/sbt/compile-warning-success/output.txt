@@ -1,0 +1,5 @@
+sbt: ok
+[warn] /work/demo/src/main/scala/Main.scala:8:24: method oldApi in object Helpers is deprecated
+[warn]   println(Helpers.oldApi())
+[warn]                        ^
+[warn] one warning found

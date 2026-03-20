@@ -1,0 +1,5 @@
+00000|bun install v1.3.11 (af24e281)
+00001|
+00002|+ bun-local-pkg@../bun-local-pkg
+00003|
+00004|1 package installed [16.00ms]

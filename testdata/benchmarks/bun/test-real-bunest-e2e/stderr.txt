@@ -1,0 +1,7 @@
+00001|
+00002|test/app.e2e-spec.ts:
+00003|(pass) AppController (e2e) > / (GET) [566.65ms]
+00004|
+00005| 1 pass
+00006| 0 fail
+00007|Ran 1 test across 1 file. [1.90s]

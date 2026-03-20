@@ -21,6 +21,7 @@ cases:
       first_is: test
       have_any:
         - -json
+        - -v
     passthrough: true
 
   - id: test
@@ -29,8 +30,6 @@ cases:
     compress_output:
       stdout:
         lines:
-          keep:
-            - regex: '^\s+.+context: .+$'
           replace:
             - regex: '^\?\s+(\S+)\s+\[no test files\]$'
               to: '? $1'
@@ -40,6 +39,10 @@ cases:
               to: 'ok $1'
             - regex: '^--- FAIL: ([^(]+) \([^)]+\)$'
               to: '--- FAIL: $1'
+            - regex: '^(\s+\S+\.go:\d+:\s+.+)$'
+              to: '$1'
+            - regex: '^(\s+(?:expected|actual|got|want):\s+.+)$'
+              to: '$1'
           skip:
             - regex: '^FAIL$'
             - regex: '^FAIL\s+\S+.*$'

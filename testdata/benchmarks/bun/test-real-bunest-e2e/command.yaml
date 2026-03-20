@@ -1,0 +1,2 @@
+argv: ["bun", "test", "./test/app.e2e-spec.ts"]
+exit_code: 0

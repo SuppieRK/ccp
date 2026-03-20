@@ -1,0 +1,2 @@
+argv: ["bun", "test", "test/failure.test.ts"]
+exit_code: 1

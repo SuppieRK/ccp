@@ -1,0 +1,12 @@
+00000|[info] welcome to sbt 1.10.1 (Eclipse Adoptium Java 21.0.6)
+00001|[info] loading settings for project root-build from plugins.sbt ...
+00002|[info] loading project definition from /work/demo/project
+00003|[info] set current project to demo (in build file:/work/demo/)
+00004|[info] ExampleSpec:
+00005|[info] - adds numbers
+00006|[info] Run completed in 241 milliseconds.
+00007|[info] Total number of tests run: 1
+00008|[info] Suites: completed 1, aborted 0
+00009|[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
+00010|[info] All tests passed.
+00011|[success] Total time: 5 s, completed Mar 20, 2026, 9:18:02 AM

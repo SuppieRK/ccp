@@ -1,0 +1,11 @@
+00000|
+00001|  x eslint(no-debugger): `debugger` statement is not allowed
+00002|   ,-[file:///workspace/src/repo-51/src/index.ts:1:1]
+00003| 1 | debugger;
+00004|   : ^^^^^^^^^
+00005| 2 | export * from './cli/index.js';
+00006|   `----
+00007|  help: Remove the debugger statement
+00008|
+00009|Found 0 warnings and 1 error.
+00010|Finished in 34ms on 1 file with 93 rules using 16 threads.

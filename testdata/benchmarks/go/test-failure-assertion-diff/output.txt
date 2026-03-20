@@ -1,0 +1,5 @@
+--- FAIL: TestGlobalHistorySource
+    gain_test.go:405: source field mismatch
+        expected: /tmp/lifecycle/repo-one
+        actual: /tmp/lifecycle/repo
+    gain_test.go:406: source field should include repo tail

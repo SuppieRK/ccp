@@ -1,0 +1,15 @@
+00000|Computing main repo mapping: 
+00001|Loading: 
+00002|Loading: 0 packages loaded
+00003|Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+00004|Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+00005|
+00006|INFO: Analyzed target //:fail_test (0 packages loaded, 0 targets configured).
+00007|FAIL: //:fail_test (Exit 1) (see /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log)
+00008|INFO: From Testing //:fail_test:
+00012|INFO: Found 1 test target...
+00013|Target //:fail_test up-to-date:
+00014|  bazel-bin/fail_test
+00015|INFO: Elapsed time: 0.131s, Critical Path: 0.03s
+00016|INFO: 2 processes: 1 internal, 2 linux-sandbox.
+00017|INFO: Build completed, 1 test FAILED, 2 total actions

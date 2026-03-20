@@ -1,0 +1,3 @@
+bazel: ok
+Target //:hello up-to-date:
+  bazel-bin/hello

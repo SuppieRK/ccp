@@ -1,0 +1,10 @@
+=== RUN   TestVerbosePass
+    main_test.go:6: running verbose pass
+--- PASS: TestVerbosePass (0.00s)
+=== RUN   TestVerboseFail
+    main_test.go:10: before failure
+    main_test.go:11: intentional verbose failure
+--- FAIL: TestVerboseFail (0.00s)
+FAIL
+FAIL	fixture-go-verbose	0.002s
+FAIL

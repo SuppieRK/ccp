@@ -1,0 +1,8 @@
+00000|   Compiling my-crate v0.1.0
+00001|   Checking tokio v1.35.0
+00002|error[E0425]: cannot find value `foo` in this scope
+00003| --> src/main.rs:10:5
+00004|  |
+00005|10 |     foo();
+00006|  |     ^^^ not found in this scope
+00007|  |

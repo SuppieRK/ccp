@@ -1,0 +1,27 @@
+00001|
+00002|test/failure.test.ts:
+00003|1 | import { expect, test } from "bun:test";
+00004|2 | 
+00005|3 | test("shows failure", () => {
+00006|4 |   expect({ left: 1 }).toEqual({ left: 2 });
+00007|                          ^
+00008|error: expect(received).toEqual(expected)
+00009|
+00010|  {
+00011|-   "left": 2,
+00012|+   "left": 1,
+00013|  }
+00014|
+00015|- Expected  - 1
+00016|+ Received  + 1
+00017|
+00018|      at <anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-test-demo/test/failure.test.ts:4:23)
+00019|(fail) shows failure [1.60ms]
+00020|
+00021|test/success.test.ts:
+00022|(pass) adds numbers [0.02ms]
+00023|
+00024| 1 pass
+00025| 1 fail
+00026| 2 expect() calls
+00027|Ran 2 tests across 2 files. [20.00ms]

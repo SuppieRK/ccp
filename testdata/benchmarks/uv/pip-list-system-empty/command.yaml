@@ -1,0 +1,2 @@
+argv: ["uv", "pip", "list", "--system"]
+exit_code: 0

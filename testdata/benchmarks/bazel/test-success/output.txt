@@ -1,0 +1,5 @@
+bazel: ok
+Target //:ok_test up-to-date:
+  bazel-bin/ok_test
+//:ok_test                                                               PASSED in 0.0s
+Executed 1 out of 1 test: 1 test passes.

@@ -1,0 +1,2 @@
+argv: ["uv", "pip", "list", "--python", "./.artifacts/uv-demo-venv/bin/python3.11"]
+exit_code: 0

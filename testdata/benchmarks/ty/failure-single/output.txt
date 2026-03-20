@@ -1,0 +1,6 @@
+error[unresolved-reference]: Name `foo` used when not defined
+  --> app/main.py:10:5
+   |
+10 |     foo()
+   |     ^^^
+Found 1 error

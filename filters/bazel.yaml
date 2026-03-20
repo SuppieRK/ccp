@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: bazel
+about: Trim Bazel progress and startup chatter for direct `build` and `test` runs while preserving target results, error blocks, and explicit precision modes like `--test_output=errors`.
+
+cases:
+  - id: precision_passthrough
+    when_arguments:
+      have_any:
+        - --build_event_json_file
+        - --profile
+        - --noshow_progress
+        - --show_progress_rate_limit
+        - --test_output=all
+        - --test_output=streamed
+        - --test_output=errors
+    passthrough: true
+
+  - id: build
+    when_arguments:
+      first_is: build
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Computing main repo mapping: ?$'
+            - regex: '^INFO: Invocation ID: .+$'
+            - regex: '^Loading:.*$'
+            - regex: '^Analyzing:.*$'
+            - regex: '^INFO: Analyzed target .+$'
+            - regex: '^INFO: Found [0-9]+ target.*$'
+            - regex: '^\[[0-9 ,/]+\] .+$'
+            - regex: '^INFO: Elapsed time: .+$'
+            - regex: '^INFO: [0-9]+ process(?:es)?: .+$'
+          replace:
+            - regex: '^INFO: Build completed successfully, .+$'
+              to: 'bazel: ok'
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Computing main repo mapping: ?$'
+            - regex: '^INFO: Invocation ID: .+$'
+            - regex: '^Loading:.*$'
+            - regex: '^Analyzing:.*$'
+            - regex: '^INFO: Analyzed target .+$'
+            - regex: '^INFO: Found [0-9]+ test target.*$'
+            - regex: '^\[[0-9 ,/]+\] .+$'
+            - regex: '^INFO: Elapsed time: .+$'
+            - regex: '^INFO: [0-9]+ process(?:es)?: .+$'
+            - regex: '^There were tests whose specified size is too big\..+$'
+          replace:
+            - regex: '^INFO: Build completed successfully, .+$'
+              to: 'bazel: ok'

@@ -1,0 +1,3 @@
+Saved lockfile
++ bun-local-pkg@../bun-local-pkg
+1 package installed [16.00ms]

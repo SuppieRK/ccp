@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: oxlint
+about: Compact default oxlint text output by dropping blank lines and trailing timing chatter while preserving rule diagnostics, parser failures, code frames, help text, and the final warning/error summary.
+
+cases:
+  - id: default
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Finished in .+$'
