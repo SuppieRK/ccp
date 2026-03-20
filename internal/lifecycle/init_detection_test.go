@@ -63,6 +63,13 @@ var _ = Describe("init auto-detection", func() {
 			artifactRoot: "root",
 			artifactRel:  filepath.Join(initCursorDir, "rules", initCursorRuleName),
 		}),
+		Entry("cline", initDetectionCase{
+			name:         "cline",
+			markerPath:   initClineDir,
+			expectedTool: "cline",
+			artifactRoot: "root",
+			artifactRel:  filepath.Join(initClineDir, initClineRuleName),
+		}),
 		Entry("gemini", initDetectionCase{
 			name:         "gemini",
 			markerPath:   initGeminiDir,
@@ -124,6 +131,13 @@ var _ = Describe("init auto-detection", func() {
 			markerPath:   initCrushDir,
 			expectedTool: "crush",
 			artifactRel:  filepath.Join(".config", "crush", "CRUSH.md"),
+		}),
+		Entry("windsurf", initDetectionCase{
+			name:         "windsurf",
+			markerPath:   initWindsurfDir,
+			expectedTool: "windsurf",
+			artifactRoot: "root",
+			artifactRel:  filepath.Join(initWindsurfDir, "rules", initWindsurfRuleName),
 		}),
 	)
 

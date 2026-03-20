@@ -81,9 +81,11 @@ var _ = ginkgo.Describe("Family conformance", func() {
 				Expect(res.Applied).To(Equal(1))
 			},
 			ginkgo.Entry("amazon-q", managedRuleFileAdapterSpecs[0]),
-			ginkgo.Entry("cursor", managedRuleFileAdapterSpecs[1]),
-			ginkgo.Entry("roocode", managedRuleFileAdapterSpecs[2]),
-			ginkgo.Entry("trae", managedRuleFileAdapterSpecs[3]),
+			ginkgo.Entry("cline", managedRuleFileAdapterSpecs[1]),
+			ginkgo.Entry("cursor", managedRuleFileAdapterSpecs[2]),
+			ginkgo.Entry("roocode", managedRuleFileAdapterSpecs[3]),
+			ginkgo.Entry("trae", managedRuleFileAdapterSpecs[4]),
+			ginkgo.Entry("windsurf", managedRuleFileAdapterSpecs[5]),
 		)
 	})
 

@@ -53,6 +53,16 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetScope:    managedRuleFileTargetRepo,
 	},
 	{
+		ID:             AgentCline,
+		DetectRootPath: ".clinerules",
+		TargetRelPath:  ".clinerules/ccp.md",
+		MissingFmt:     "missing cline rule file: %s",
+		GuidanceFmt:    "missing cline managed guidance in %s",
+		Render:         clineRuleContent,
+		VerifyRequired: canonicalRuleVerificationSnippets(),
+		TargetScope:    managedRuleFileTargetRepo,
+	},
+	{
 		ID:             AgentCursor,
 		DetectRootPath: ".cursor",
 		TargetRelPath:  ".cursor/rules/ccp.mdc",
@@ -84,6 +94,16 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		MissingFmt:     "missing trae rule file: %s",
 		GuidanceFmt:    "missing trae managed guidance in %s",
 		Render:         traeRuleContent,
+		VerifyRequired: canonicalRuleVerificationSnippets(),
+		TargetScope:    managedRuleFileTargetRepo,
+	},
+	{
+		ID:             AgentWindsurf,
+		DetectRootPath: ".windsurf",
+		TargetRelPath:  ".windsurf/rules/ccp.md",
+		MissingFmt:     "missing windsurf rule file: %s",
+		GuidanceFmt:    "missing windsurf managed guidance in %s",
+		Render:         windsurfRuleContent,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -459,6 +479,10 @@ func amazonQRuleContent() string {
 	return ccpManagedGuidanceMarkdown()
 }
 
+func clineRuleContent() string {
+	return ccpManagedGuidanceMarkdown()
+}
+
 func cursorRuleContent() string {
 	return "---\n" +
 		"description: Route shell commands through ccp\n" +
@@ -472,6 +496,10 @@ func roocodeRuleContent() string {
 }
 
 func traeRuleContent() string {
+	return ccpManagedGuidanceMarkdown()
+}
+
+func windsurfRuleContent() string {
 	return ccpManagedGuidanceMarkdown()
 }
 

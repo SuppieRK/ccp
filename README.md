@@ -90,7 +90,7 @@ Benchmarked with each build across `24` tool families and `201` replay cases.
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 
-CCP also integrates with these coding agents and editors: `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, plus `costrict` as an alias for `roocode`.
+CCP also integrates with these coding agents and editors: `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `cline`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf`, plus `costrict` as an alias for `roocode`.
 
 ## Quick Start
 

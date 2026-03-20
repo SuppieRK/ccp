@@ -178,6 +178,25 @@ var _ = Describe("init managed content and integrations", func() {
 		})
 	})
 
+	DescribeTable("when managing repo-scoped plain rule files",
+		func(tool, markerPath, relPath string) {
+			ws := newInitManagedWorkspace()
+			Expect(os.MkdirAll(filepath.Join(ws.work, markerPath), 0o755)).To(Succeed())
+
+			Expect(RunInit([]string{initToolsFlag, tool})).To(Succeed())
+
+			body, err := os.ReadFile(filepath.Join(ws.work, relPath))
+			Expect(err).NotTo(HaveOccurred())
+
+			text := string(body)
+			Expect(text).To(ContainSubstring("## CCP Integration (Managed)"))
+			Expect(text).To(ContainSubstring(initRawEscapeHatch))
+			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
+		},
+		Entry("cline", "cline", initClineDir, filepath.Join(initClineDir, initClineRuleName)),
+		Entry("windsurf", "windsurf", initWindsurfDir, filepath.Join(initWindsurfDir, "rules", initWindsurfRuleName)),
+	)
+
 	It("preserves unrelated CodeBuddy settings", func() {
 		ws := newInitManagedWorkspace()
 		Expect(os.MkdirAll(filepath.Join(ws.work, initCodeBuddyDir), 0o755)).To(Succeed())
