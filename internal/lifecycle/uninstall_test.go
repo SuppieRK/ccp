@@ -617,7 +617,8 @@ var _ = Describe("uninstall", func() {
 		Expect(filepath.Join(ws.root, ".ccp", "gain.db")).To(BeAnExistingFile())
 		entries, err := workspaces.ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(entries).To(HaveLen(1))
+		Expect(entries).NotTo(BeEmpty())
+		Expect(entries).To(ContainElement(HaveField("MetricsPath", filepath.Join(ws.root, ".ccp", "gain.db"))))
 	})
 
 	It("fully uninstalls managed state even when no integrations are detected", func() {
