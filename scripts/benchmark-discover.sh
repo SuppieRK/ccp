@@ -105,6 +105,9 @@ append_lines_to_array() {
 selected_contains() {
   local expected="$1"
   local existing
+  if [[ ${#selected_tools[*]} -eq 0 ]]; then
+    return 1
+  fi
   for existing in "${selected_tools[@]}"; do
     if [[ "$existing" == "$expected" ]]; then
       return 0
