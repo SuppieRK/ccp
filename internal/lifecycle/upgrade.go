@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"archive/zip"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +18,8 @@ import (
 )
 
 const (
-	defaultUpgradeRepo = "SuppieRK/ccp"
+	defaultUpgradeRepo    = "SuppieRK/ccp"
+	releaseChecksumsAsset = "ccp_checksums.txt"
 )
 
 var (
@@ -82,13 +84,17 @@ func RunUpgrade(args []string) error {
 	if err != nil {
 		return fmt.Errorf("resolve asset %s: %w; manual download: %s", assetName, err, manualURL)
 	}
+	checksumURL, err := selectAssetURL(rel, releaseChecksumsAsset)
+	if err != nil {
+		return fmt.Errorf("resolve checksum asset %s: %w; manual download: %s", releaseChecksumsAsset, err, manualURL)
+	}
 
-	srcPath, cleanup, err := downloadAndExtractUpgradeBinary(assetURL, binaryName)
+	srcPath, cleanup, err := downloadAndExtractUpgradeBinary(assetURL, checksumURL, assetName, binaryName)
 	if cleanup != nil {
 		defer cleanup()
 	}
 	if err != nil {
-		return fmt.Errorf("download/extract upgrade asset: %w; manual download: %s", err, manualURL)
+		return fmt.Errorf("download/verify/extract upgrade asset: %w; manual download: %s", err, manualURL)
 	}
 
 	return installUpgradeBinary(srcPath, assetName, tag)
@@ -201,7 +207,7 @@ func selectAssetURL(rel githubRelease, assetName string) (string, error) {
 	return "", fmt.Errorf("asset %q not found", assetName)
 }
 
-func downloadAndExtractUpgradeBinary(assetURL, binaryName string) (srcPath string, cleanup func(), err error) {
+func downloadAndExtractUpgradeBinary(assetURL, checksumURL, assetName, binaryName string) (srcPath string, cleanup func(), err error) {
 	tmpDir, err := os.MkdirTemp("", "ccp-upgrade-*")
 	if err != nil {
 		return "", nil, err
@@ -210,6 +216,13 @@ func downloadAndExtractUpgradeBinary(assetURL, binaryName string) (srcPath strin
 
 	zipPath := filepath.Join(tmpDir, "asset.zip")
 	if err := downloadFile(assetURL, zipPath); err != nil {
+		return "", cleanup, err
+	}
+	checksumsPath := filepath.Join(tmpDir, releaseChecksumsAsset)
+	if err := downloadFile(checksumURL, checksumsPath); err != nil {
+		return "", cleanup, err
+	}
+	if err := verifyDownloadedAssetChecksum(checksumsPath, zipPath, assetName); err != nil {
 		return "", cleanup, err
 	}
 
@@ -226,6 +239,54 @@ func downloadAndExtractUpgradeBinary(assetURL, binaryName string) (srcPath strin
 		return "", cleanup, closeErr
 	}
 	return dstPath, cleanup, nil
+}
+
+func verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName string) error {
+	body, err := os.ReadFile(checksumsPath)
+	if err != nil {
+		return err
+	}
+	expected, err := checksumForAsset(string(body), assetName)
+	if err != nil {
+		return err
+	}
+	actual, err := fileSHA256(assetPath)
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(expected, actual) {
+		return fmt.Errorf("checksum mismatch for %s", assetName)
+	}
+	return nil
+}
+
+func checksumForAsset(contents, assetName string) (string, error) {
+	for _, line := range strings.Split(contents, "\n") {
+		fields := strings.Fields(strings.TrimSpace(line))
+		if len(fields) < 2 {
+			continue
+		}
+		name := strings.TrimPrefix(fields[1], "*")
+		name = strings.TrimPrefix(name, "./")
+		if filepath.Base(name) != assetName {
+			continue
+		}
+		return fields[0], nil
+	}
+	return "", fmt.Errorf("checksum for asset %q not found", assetName)
+}
+
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func downloadFile(url, dst string) (err error) {

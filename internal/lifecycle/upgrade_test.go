@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -198,6 +200,30 @@ var _ = Describe("RunUpgrade", func() {
 		)
 	})
 
+	Context("when the release does not publish checksums", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "1.2.3"}
+			restore := stubUpgradeRuntimeDeps(
+				func() (string, error) { return dest, nil },
+				func() string { return "linux" },
+				func() string { return "amd64" },
+				mockUpgradeClientWithoutChecksums(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent)),
+				func(string) error { return nil },
+			)
+			DeferCleanup(restore)
+		})
+
+		It("refuses to install the binary", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("checksum")))
+
+			b, readErr := os.ReadFile(dest)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(b)).To(Equal("old"))
+		})
+	})
+
 	Context("when running on unix", func() {
 		BeforeEach(func() {
 			if runtime.GOOS == "windows" {
@@ -311,18 +337,28 @@ var _ = Describe("RunUpgrade", func() {
 })
 
 func mockUpgradeClient(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool) *http.Client {
-	return mockUpgradeClientWithFailures(repo, tag, goos, goarch, binary, failAPI, false)
+	return mockUpgradeClientWithOptions(repo, tag, goos, goarch, binary, failAPI, false, true, false)
 }
 
 func mockUpgradeClientWithFailures(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool, failDownload bool) *http.Client {
+	return mockUpgradeClientWithOptions(repo, tag, goos, goarch, binary, failAPI, failDownload, true, false)
+}
+
+func mockUpgradeClientWithoutChecksums(repo string, tag string, goos string, goarch string, binary []byte) *http.Client {
+	return mockUpgradeClientWithOptions(repo, tag, goos, goarch, binary, false, false, false, false)
+}
+
+func mockUpgradeClientWithOptions(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool, failDownload bool, includeChecksums bool, mismatchChecksum bool) *http.Client {
 	asset := fmt.Sprintf("ccp_%s_%s_%s.zip", tag, goos, goarch)
 	zipBody := makeZipArchive("ccp", binary)
+	checksumBody := checksumFixtureBody(asset, zipBody, mismatchChecksum)
 
 	return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		u := req.URL.String()
 		latestURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 		tagURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, tag)
 		downloadURL := fmt.Sprintf("https://downloads.example/%s/%s", tag, asset)
+		checksumURL := fmt.Sprintf("https://downloads.example/%s/%s", tag, releaseChecksumsAsset)
 
 		if failAPI && (u == latestURL || u == tagURL) {
 			return jsonHTTPResponse(http.StatusForbidden, `{"message":"forbidden"}`), nil
@@ -331,16 +367,31 @@ func mockUpgradeClientWithFailures(repo string, tag string, goos string, goarch 
 		case latestURL:
 			return jsonHTTPResponse(http.StatusOK, fmt.Sprintf(`{"tag_name":"%s"}`, tag)), nil
 		case tagURL:
-			return jsonHTTPResponse(http.StatusOK, fmt.Sprintf(`{"tag_name":"%s","assets":[{"name":"%s","browser_download_url":"%s"}]}`, tag, asset, downloadURL)), nil
+			assets := fmt.Sprintf(`[{"name":"%s","browser_download_url":"%s"}]`, asset, downloadURL)
+			if includeChecksums {
+				assets = fmt.Sprintf(`[{"name":"%s","browser_download_url":"%s"},{"name":"%s","browser_download_url":"%s"}]`, asset, downloadURL, releaseChecksumsAsset, checksumURL)
+			}
+			return jsonHTTPResponse(http.StatusOK, fmt.Sprintf(`{"tag_name":"%s","assets":%s}`, tag, assets)), nil
 		case downloadURL:
 			if failDownload {
 				return jsonHTTPResponse(http.StatusBadGateway, `{"message":"bad gateway"}`), nil
 			}
 			return bytesHTTPResponse(http.StatusOK, "application/zip", zipBody), nil
+		case checksumURL:
+			return bytesHTTPResponse(http.StatusOK, "text/plain", checksumBody), nil
 		default:
 			return jsonHTTPResponse(http.StatusNotFound, `{"message":"not found"}`), nil
 		}
 	})}
+}
+
+func checksumFixtureBody(asset string, zipBody []byte, mismatch bool) []byte {
+	sum := sha256.Sum256(zipBody)
+	value := fmt.Sprintf("%x", sum[:])
+	if mismatch {
+		value = strings.Repeat("0", 64)
+	}
+	return []byte(fmt.Sprintf("%s  ./%s\n", value, asset))
 }
 
 func makeZipArchive(name string, content []byte) []byte {
