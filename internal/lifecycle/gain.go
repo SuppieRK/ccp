@@ -212,7 +212,7 @@ func renderPeriodDataset(metricsPath string, flags reportFlags, opts metrics.Que
 	case "csv":
 		return writePeriodCSV(rows, opts.Period, filters)
 	default:
-		return printPeriodText(rows, opts.Period, filters)
+		return printPeriodText(rows, opts.Period, filters, flags.limit)
 	}
 }
 
@@ -270,6 +270,7 @@ func setReportUsage(fs *flag.FlagSet, name string) {
 		"Use --global to aggregate across registered workspace metrics databases.",
 		"Default text output is a short shareable summary; use --table for detailed text tables.",
 		"--limit applies to text output only; detailed text views default to 15 rows.",
+		"Use --limit 0 for unlimited text rows; negative values are invalid except -1 (default behavior).",
 		"Legacy --json remains available as an alias for --format json.",
 	}
 	if name == "history" {
@@ -279,6 +280,7 @@ func setReportUsage(fs *flag.FlagSet, name string) {
 			"ccp history does not support --period.",
 			"Use --global to merge history from registered workspace metrics databases; global rows include a source field.",
 			"--limit applies to text output only; ccp history defaults to 15 rows.",
+			"Use --limit 0 for unlimited text rows; negative values are invalid except -1 (default behavior).",
 			"Legacy --json remains available as an alias for --format json.",
 		}
 	}
@@ -356,15 +358,19 @@ func writeJSON(v any) error {
 	return enc.Encode(v)
 }
 
-func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnvelope) error {
+func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnvelope, limit int) error {
 	fmt.Println(gainHeaderText)
 	fmt.Printf("filters: since=%s tool=%s failed=%t period=%s\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed, period)
 	if len(rows) == 0 {
 		fmt.Println(noResultsMsg)
 		return nil
 	}
+
+	limitedRows, totalRows := limitRows(rows, limit)
+	fmt.Println(tableSummaryLine(len(limitedRows), totalRows, "buckets"))
+	fmt.Println()
 	fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n", "BUCKET", "START", "END", "COUNT", "SAVINGS")
-	for _, r := range rows {
+	for _, r := range limitedRows {
 		fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n",
 			r.Bucket,
 			r.BucketStart,

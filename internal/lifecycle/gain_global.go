@@ -54,7 +54,7 @@ func renderGlobalPeriodGain(flags reportFlags, opts metrics.QueryOptions, filter
 	case "csv":
 		return writePeriodCSV(rows, opts.Period, filters)
 	default:
-		return printPeriodText(rows, opts.Period, filters)
+		return printPeriodText(rows, opts.Period, filters, flags.limit)
 	}
 }
 

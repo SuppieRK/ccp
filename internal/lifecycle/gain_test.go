@@ -367,6 +367,63 @@ var _ = Describe("RunGain", func() {
 			Expect(periodCSV).To(ContainSubstring("dataset,period,since,tool_filter,failed_filter,bucket"))
 			Expect(periodCSV).To(ContainSubstring("period,week"))
 		})
+
+		It("applies the text limit to local period tables", func() {
+			Expect(os.Remove(path)).To(Succeed())
+			now := time.Now().UTC()
+			rows := make([]metrics.RunMetric, 0, 20)
+			for i := range 20 {
+				rows = append(rows, metrics.RunMetric{
+					Timestamp: now.Add(-time.Duration(i) * 24 * time.Hour),
+					Tool:      "go",
+					Command:   fmt.Sprintf("go test ./pkg/%02d", i),
+					RawBytes:  1200,
+					KeptBytes: 400,
+				})
+			}
+			appendGainMetrics(path, rows)
+
+			newestBucket := now.Format("2006-01-02")
+			oldestBucket := now.Add(-19 * 24 * time.Hour).Format("2006-01-02")
+
+			limitedOut := runGain(flagPeriod, "day", flagTable, flagLimit, "5")
+			Expect(limitedOut).To(ContainSubstring("showing 5 of 20 buckets, use --limit N to see more"))
+			Expect(limitedOut).To(ContainSubstring(newestBucket))
+			Expect(limitedOut).NotTo(ContainSubstring(oldestBucket))
+
+			unlimitedOut := runGain(flagPeriod, "day", flagTable, flagLimit, "0")
+			Expect(unlimitedOut).To(ContainSubstring("showing 20 of 20 buckets"))
+			Expect(unlimitedOut).NotTo(ContainSubstring(", use --limit N to see more"))
+			Expect(unlimitedOut).To(ContainSubstring(oldestBucket))
+			Expect(unlimitedOut).To(ContainSubstring(newestBucket))
+		})
+
+		It("applies the text limit to global period tables", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repo := filepath.Join(tmpDir, "repo")
+			now := time.Now().UTC()
+			rows := make([]metrics.RunMetric, 0, 20)
+			for i := range 20 {
+				rows = append(rows, metrics.RunMetric{
+					Timestamp: now.Add(-time.Duration(i) * 24 * time.Hour),
+					Tool:      "go",
+					Command:   fmt.Sprintf("go test ./pkg/%02d", i),
+					RawBytes:  1200,
+					KeptBytes: 400,
+				})
+			}
+			Expect(os.Remove(path)).To(Succeed())
+			appendGlobalWorkspaceMetrics(home, repo, rows)
+
+			periodText := runGain(flagGlobal, flagPeriod, "day", flagTable, flagLimit, "5")
+			Expect(periodText).To(ContainSubstring("showing 5 of 20 buckets, use --limit N to see more"))
+			Expect(periodText).To(ContainSubstring("filters: since=all tool=* failed=false period=day"))
+			Expect(periodText).To(ContainSubstring(now.Add(-19 * 24 * time.Hour).Format("2006-01-02")))
+			Expect(periodText).NotTo(ContainSubstring(now.Format("2006-01-02")))
+		})
 	})
 
 	Context("when the gain database is empty", func() {
@@ -395,6 +452,7 @@ var _ = Describe("RunGain", func() {
 			Expect(RunGain([]string{flagSince, "2d"}, path)).To(Succeed())
 			Expect(RunGain([]string{flagSince, "1w"}, path)).To(Succeed())
 			Expect(RunGain([]string{flagFormat, "json", flagTable}, path)).To(HaveOccurred())
+			Expect(RunGain([]string{flagLimit, "-2"}, path)).To(MatchError(ContainSubstring("invalid --limit -2")))
 		})
 	})
 })
@@ -573,6 +631,37 @@ var _ = Describe("RunHistory", func() {
 			Expect(out).NotTo(ContainSubstring("go test ./pkg/19"))
 		})
 
+		It("applies the text limit to global history output", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repo := filepath.Join(tmpDir, "repo")
+			now := time.Now().UTC()
+			rows := make([]metrics.RunMetric, 0, 20)
+			for i := range 20 {
+				rows = append(rows, metrics.RunMetric{
+					Timestamp: now.Add(time.Duration(-i) * time.Minute),
+					Tool:      "go",
+					Command:   fmt.Sprintf("go test ./pkg/%02d", i),
+					RawBytes:  1200,
+					KeptBytes: 400,
+				})
+			}
+			Expect(os.Remove(path)).To(Succeed())
+			appendGlobalWorkspaceMetrics(home, repo, rows)
+
+			globalOut := runHistory(flagGlobal, flagLimit, "5")
+			Expect(globalOut).To(ContainSubstring("showing 5 of 20 rows, use --limit N to see more"))
+			Expect(globalOut).To(ContainSubstring("ccp history [global]"))
+			Expect(globalOut).To(ContainSubstring("go test ./pkg/00"))
+			Expect(globalOut).NotTo(ContainSubstring("go test ./pkg/19"))
+
+			unlimitedOut := runHistory(flagGlobal, flagLimit, "0")
+			Expect(unlimitedOut).To(ContainSubstring("showing 20 of 20 rows"))
+			Expect(unlimitedOut).NotTo(ContainSubstring(", use --limit N to see more"))
+		})
+
 		It("ignores --limit for non-text history output", func() {
 			jsonOut := runHistory(flagFormat, "json", flagLimit, "1")
 			var env historyEnvelope
@@ -669,6 +758,7 @@ var _ = Describe("RunHistory", func() {
 		It("rejects gain-only flags", func() {
 			Expect(RunHistory([]string{flagPeriod, "day"}, path)).To(MatchError(ContainSubstring("--period is only valid for gain")))
 			Expect(RunHistory([]string{flagTable}, path)).To(MatchError(ContainSubstring("--table is only valid for gain")))
+			Expect(RunHistory([]string{flagLimit, "-2"}, path)).To(MatchError(ContainSubstring("invalid --limit -2")))
 		})
 	})
 })

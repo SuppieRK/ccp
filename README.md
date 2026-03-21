@@ -131,12 +131,14 @@ Drag  : sed (765 cmds) · openspec (245 cmds)
 Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
 ```
 
-Detailed views:
+Detailed views stay bounded by default so they do not take over the terminal:
 
 ```bash
 ccp gain --table
 ccp history
 ```
+
+Use `--limit 0` when you want the full text table. JSON and CSV exports ignore `--limit`.
 
 That mix is the point. CCP can save a lot, and it also knows when not to fake it.
 
