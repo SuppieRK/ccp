@@ -48,7 +48,7 @@ func (b *OrderedBuffer) RemoveLast(stream contracts.Stream, count int) int {
 	removed := 0
 	for i := len(b.entries) - 1; i >= 0 && removed < count; i-- {
 		entry := b.entries[i]
-		if entry.Stream != stream {
+		if stream != contracts.StreamCombined && entry.Stream != stream {
 			continue
 		}
 		delete(b.seen, string(entry.Stream)+"\x00"+entry.Line)
@@ -61,7 +61,7 @@ func (b *OrderedBuffer) RemoveLast(stream contracts.Stream, count int) int {
 func (b *OrderedBuffer) Lines(stream contracts.Stream) []string {
 	lines := make([]string, 0, len(b.entries))
 	for _, entry := range b.entries {
-		if entry.Stream == stream {
+		if stream == contracts.StreamCombined || entry.Stream == stream {
 			lines = append(lines, entry.Line)
 		}
 	}
@@ -75,6 +75,9 @@ func (b *OrderedBuffer) Entries() []BufferEntry {
 }
 
 func (b *OrderedBuffer) Count(stream contracts.Stream) int {
+	if stream == contracts.StreamCombined {
+		return len(b.entries)
+	}
 	count := 0
 	for _, entry := range b.entries {
 		if entry.Stream == stream {
@@ -87,7 +90,7 @@ func (b *OrderedBuffer) Count(stream contracts.Stream) int {
 func (b *OrderedBuffer) Joined(stream contracts.Stream) string {
 	var sb strings.Builder
 	for _, entry := range b.entries {
-		if entry.Stream == stream {
+		if stream == contracts.StreamCombined || entry.Stream == stream {
 			sb.WriteString(entry.Line)
 		}
 	}

@@ -81,16 +81,20 @@ func (s *State) ExitAction(exitCode int) (contracts.Action, []BufferEntry) {
 }
 
 func (s *State) applyExit(action contracts.Action) {
+	targetStream := action.Stream
+	if targetStream == "" {
+		targetStream = contracts.StreamStdout
+	}
 	switch action.Kind {
 	case contracts.ActionKeep, "":
 		return
 	case contracts.ActionEmit:
 		return
 	case contracts.ActionIgnore:
-		s.buffer.RemoveLast(contracts.StreamStdout, s.buffer.Count(contracts.StreamStdout))
+		s.buffer.RemoveLast(targetStream, s.buffer.Count(targetStream))
 		return
 	case contracts.ActionReplace:
-		s.buffer.RemoveLast(contracts.StreamStdout, exitReplaceCount(s.buffer, contracts.StreamStdout, action.ReplaceCount))
+		s.buffer.RemoveLast(targetStream, exitReplaceCount(s.buffer, targetStream, action.ReplaceCount))
 		s.buffer.Add(contracts.StreamStdout, action.Output)
 		return
 	default:
