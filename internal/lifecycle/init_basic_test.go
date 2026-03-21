@@ -52,7 +52,7 @@ var _ = Describe("init basic behavior", func() {
 			entries, err := workspaces.ListPath(workspaces.PathForHome(ws.home))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].CWD).To(Equal(ws.work))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(ws.work)))
 			Expect(entries[0].MetricsPath).To(BeEmpty())
 		})
 
@@ -114,7 +114,7 @@ var _ = Describe("init basic behavior", func() {
 			entries, err := workspaces.ListPath(workspaces.PathForHome(ws.home))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].CWD).To(Equal(ws.work))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(ws.work)))
 		})
 	})
 

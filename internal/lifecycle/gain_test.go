@@ -163,7 +163,7 @@ var _ = Describe("RunGain", func() {
 			entries, err := workspaces.ListPath(workspaces.PathForHome(home))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].CWD).To(Equal(repoRoot))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(repoRoot)))
 			Expect(entries[0].MetricsPath).To(Equal(repoMetricsPath))
 		})
 

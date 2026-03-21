@@ -608,7 +608,7 @@ var _ = Describe("uninstall", func() {
 		Expect(os.MkdirAll(filepath.Join(ws.root, ".ccp"), 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(ws.root, ".ccp", "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
 		registryPath := workspaces.PathForHome(ws.home)
-		Expect(workspaces.UpsertPath(registryPath, ws.root, filepath.Join(ws.root, ".ccp", "gain.db"))).To(Succeed())
+		Expect(workspaces.UpsertPath(registryPath, resolvedPath(ws.root), filepath.Join(ws.root, ".ccp", "gain.db"))).To(Succeed())
 		Expect(RunInit(toolsArgs("opencode"))).To(Succeed())
 
 		Expect(RunUninstall(toolsArgs("opencode"))).To(Succeed())
