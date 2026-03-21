@@ -45,6 +45,7 @@ var _ = Describe("LoadRegistryFiltersFromSources", func() {
 	var (
 		root      string
 		filterDir string
+		auditHome string
 	)
 
 	BeforeEach(func() {
@@ -57,6 +58,12 @@ var _ = Describe("LoadRegistryFiltersFromSources", func() {
 
 		filterDir = filepath.Join(root, "filters")
 		Expect(os.MkdirAll(filterDir, 0o755)).To(Succeed())
+
+		auditHome, err = os.MkdirTemp("", "yaml-loader-audit-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(os.RemoveAll(auditHome)).To(Succeed())
+		})
 	})
 
 	It("builds generic operations-backed filters from authored YAML", func() {
@@ -105,7 +112,6 @@ about: Placeholder npm filter scaffold for YAML migration.
 	})
 
 	It("records invalid definitions in the audit log", func() {
-		auditHome := GinkgoT().TempDir()
 		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
 		DeferCleanup(restoreAudit)
 		DeferCleanup(audit.Reset)

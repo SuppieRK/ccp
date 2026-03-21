@@ -9,30 +9,148 @@
 
 <p align="center">
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" /></a>
-  <a href="#design-choices"><img alt="Status: incubating" src="https://img.shields.io/badge/status-incubating-orange?style=flat-square" /></a>
   <a href="https://github.com/SuppieRK/ccp/releases"><img alt="Release" src="https://img.shields.io/github/v/release/SuppieRK/ccp?style=flat-square" /></a>
-</p>
-
-<p align="center">
   <a href="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml"><img alt="CI" src="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml/badge.svg" /></a>
-  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Reliability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=reliability_rating" /></a>
-  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Security Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=security_rating" /></a>
   <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
-</p>
-
-<p align="center">
-  <a href="#bring-your-own-filter">Bring Your Own Filter</a> &bull;
-  <a href="#early-proof">Early Proof</a> &bull;
-  <a href="#capability-matrix">Capability Matrix</a> &bull;
-  <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#design-choices">Design Choices</a>
 </p>
 
 ## Command Compression Proxy for coding agents
 
-- Run the same shell commands. Keep native exit codes and critical diagnostics.
-- Save context when output is genuinely compressible. More room for code, requirements, and reasoning.
-- Native output when trust matters more than squeezing tokens. Drop back to `--raw` when exact output matters.
+CCP shrinks noisy terminal output without breaking command behavior or stripping the context coding agents need to act correctly.
+
+Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
+
+Benchmarked with each build across `52` tool families and `382` replay cases.
+
+## See It Work
+
+If you only read one thing, read this.
+
+<table>
+  <tr>
+    <td valign="top">
+      <strong><code>git status</code></strong>
+      <pre lang="text"><code>On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  ...
+        modified:   README.md
+        modified:   internal/lifecycle/gain.go
+        ...
+
+Untracked files:
+  ...
+        internal/lifecycle/report_text.go</code></pre>
+    </td>
+    <td valign="top">
+      <strong><code>ccp git status</code></strong>
+      <pre lang="text"><code>## main...origin/main
+ M README.md
+ M internal/lifecycle/gain.go
+ M internal/lifecycle/gain_global.go
+ M internal/lifecycle/gain_test.go
+?? internal/lifecycle/report_text.go</code></pre>
+    </td>
+  </tr>
+</table>
+
+Same command. Same result. Less ceremony.
+
+## Output Contract
+
+If output gets compacted too aggressively, the model ends up reconstructing missing context from hints. That is where confusion, extra follow-up commands, and wasted tokens tend to come from. CCP is designed to avoid that failure mode.
+
+- Preserve exit codes and critical diagnostics.
+- Compact output into a shorter view that still looks like the command it came from.
+- Fall back to native output for ambiguous, structured, precision-sensitive, or machine-oriented cases.
+- Leave `--raw` available when exact output matters.
+- Let teams tune domain-specific logs with YAML instead of relying on guessed summaries.
+
+The goal is not maximum compression. The goal is smaller output you can still use.
+
+## Quick Start
+
+Install CCP:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
+```
+
+Try it on a normal command:
+
+```bash
+ccp git status
+```
+
+Want it wired into supported tools too?
+
+```bash
+ccp init --tools claude,codex,opencode
+# or: ccp init
+```
+
+`ccp init` installs or refreshes integrations in their normal locations. You do not need to run it in every repo. Use `--tools` when you want an explicit one-time setup; omit it when you want CCP to auto-detect supported tools from the current repository.
+
+After `ccp init`, supported tools can keep the normal command shape for you.
+
+Want a quick check after using it for a bit?
+
+```bash
+ccp gain
+```
+
+Need exact native output for a comparison or edge case?
+
+```bash
+ccp --raw git status
+```
+
+## Reporting And Real-World Proof
+
+Two real `ccp gain` snapshots from day-to-day work:
+
+- Refactoring tests in a Java project with Gradle (Claude Code):
+
+```text
+88 cmds · 5,330,571 → 90,127 tokens (98.3% saved)
+
+Wins  : find 98.7% · gradle 87.1% · grep 1.4%
+Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
+Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
+```
+
+- Current repository snapshot from `ccp gain` (Codex):
+
+```text
+1,825 cmds · 2,461,959 → 2,160,427 tokens (12.3% saved)
+
+Wins  : grep 59.5% · go 90.3% · git 59.3%
+Drag  : sed (765 cmds) · openspec (245 cmds)
+Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
+```
+
+Detailed views stay bounded by default so they do not take over the terminal:
+
+```bash
+ccp gain --table
+ccp history
+```
+
+Use `--limit 0` when you want the full text table. JSON and CSV exports ignore `--limit`.
+
+That mix is the point. CCP can save a lot, and it also knows when not to fake it.
+
+Useful commands:
+
+```bash
+ccp gain --global
+ccp history --global
+ccp repair
+ccp uninstall --tools codex
+ccp uninstall
+```
 
 ## Bring Your Own Filter
 
@@ -48,125 +166,30 @@ Project scope overrides home scope. That gives you a clean model:
 - experiment in one repo without touching anything else
 - ship shared defaults across a team
 - keep repo-specific overrides without forks
-
-## Early Proof
-
-Two real `ccp gain` snapshots from day-to-day work:
-
-- Refactoring tests in a Java project with Gradle (Claude Code):
-
-```text
-- 88 commands proxied, 5,330,571 estimated input tokens -> 90,127 output tokens, ~98.31% saved
-- Biggest gains: find ~98.66% (24 cmds), gradle ~87.07% (5 cmds), grep ~1.44% (4 cmds)
-- Savings held down by: cd (23 cmds, no savings), jar (21 cmds, no savings), grep ~1.44% (4 cmds)
-- Bottom line: 5,240,444 estimated tokens saved. Breathtaking results, with plenty of context back.
-```
-
-- Current repository snapshot from `ccp gain` (Codex):
-
-```text
-- 1,825 commands proxied, 2,461,959 estimated input tokens -> 2,160,427 output tokens, ~12.25% saved
-- Biggest gains: grep ~59.48% (210 cmds), go ~90.25% (92 cmds), git ~59.25% (40 cmds)
-- Savings held down by: sed (765 cmds, no savings), openspec (245 cmds, no savings)
-- Bottom line: 301,532 estimated tokens saved. It ain't much, but it's honest work.
-```
-
-That mix is the point. CCP can save a lot. It also knows when not to fake it.
+- handle domain-specific logs without pretending one generic filter fits every project
 
 ## Capability Matrix
-
-Benchmarked with each build across `52` tool families and `382` replay cases.
 
 | Area | Tools | Representative Savings |
 |---|---|---:|
 | Files/search | `find`, `grep`, `ls` | up to `95%+` |
-| Source control | `git` | `10–60%+` |
-| Build systems | `maven`, `gradle`, `sbt`, `bazel` | `50–95%+` |
-| JS/TS | `biome`, `bun`, `eslint`, `jest`, `npm`, `nx`, `oxlint`, `pnpm`, `turbo`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc`, `vitest` | `15–85%+` |
-| PHP | `composer` | `10–30%+` |
-| Python | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff`, `ty`, `uv` | `25–85%+` |
-| Config lint | `yamllint`, `shellcheck`, `hadolint` | `10–40%+` |
-| Infra & IaC | `helm`, `terraform`, `tofu`, `tflint` | `5–90%+` |
-| Go/Rust | `go`, `golangci-lint`, `cargo`, `trunk` | `35–90%+` |
-| Dart/Flutter | `dart`, `flutter` | `35–85%+` |
+| Source control | `git` | `10-60%+` |
+| Build systems | `maven`, `gradle`, `sbt`, `bazel` | `50-95%+` |
+| JS/TS | `biome`, `bun`, `eslint`, `jest`, `npm`, `nx`, `oxlint`, `pnpm`, `turbo`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc`, `vitest` | `15-85%+` |
+| PHP | `composer` | `10-30%+` |
+| Python | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff`, `ty`, `uv` | `25-85%+` |
+| Config lint | `yamllint`, `shellcheck`, `hadolint` | `10-40%+` |
+| Infra and IaC | `helm`, `terraform`, `tofu`, `tflint` | `5-90%+` |
+| Go/Rust | `go`, `golangci-lint`, `cargo`, `trunk` | `35-90%+` |
+| Dart/Flutter | `dart`, `flutter` | `35-85%+` |
 | Containers | `docker` | `95%+` for build surfaces |
-| Embedded / Firmware | `pio` | `10–40%+` |
-| Elixir | `mix` | `5–80%+` |
-| Other runtimes | `deno` | `5–80%+` |
+| Embedded/Firmware | `pio` | `10-40%+` |
+| Elixir | `mix` | `5-80%+` |
+| Other runtimes | `deno` | `5-80%+` |
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 
-CCP also integrates with these coding agents and editors: `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `cline`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf`, plus `costrict` as an alias for `roocode`.
-
-## Quick Start
-
-Install:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
-```
-
-Check the install:
-
-```bash
-ccp --help
-```
-
-Initialize supported coding-agent integrations:
-
-```bash
-ccp init # or: --tools claude,codex,opencode
-```
-
-See what CCP saved in your own work:
-
-```bash
-ccp gain
-```
-
-Aggregate across every registered workspace on this machine:
-
-```bash
-ccp gain --global
-ccp history --global
-```
-
-Want the detailed table instead of the short summary?
-
-```bash
-ccp gain --table
-```
-
-Repair shipped home filters without forcing a full rewrite:
-
-```bash
-ccp repair
-```
-
-Choose `No` at the prompt to add only missing shipped filters and `.mappings.yaml` entries.
-
-Remove one integration without touching metrics:
-
-```bash
-ccp uninstall --tools codex
-```
-
-Fully uninstall CCP from the machine, including managed global state and recorded workspace state:
-
-```bash
-ccp uninstall
-```
-
-## Design Choices
-
-CCP takes a few strong stances on purpose.
-
-- Native commands stay native. CCP adds only a small set of helper commands for filter authoring and gain inspection.
-- Exit codes and critical diagnostics matter. By default, CCP preserves them.
-- `--raw` is always there when exact output matters more than compression.
-- Ambiguous, structured, unsupported, and machine-oriented modes fall back to passthrough.
-- Generic log filters are intentionally not shipped. Your logs are domain-specific. Pretending otherwise is how tools become untrustworthy.
-- Agent integrations are convenience layers, not the center of the product. The clearest mental model is still explicit `ccp <command>`.
+CCP also integrates with `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `cline`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `iflow`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf`, plus `costrict` as an alias for `roocode`.
 
 ## License
 

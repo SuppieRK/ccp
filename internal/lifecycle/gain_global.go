@@ -54,7 +54,7 @@ func renderGlobalPeriodGain(flags reportFlags, opts metrics.QueryOptions, filter
 	case "csv":
 		return writePeriodCSV(rows, opts.Period, filters)
 	default:
-		return printPeriodText(rows, opts.Period, filters)
+		return printPeriodText(rows, opts.Period, filters, flags.limit)
 	}
 }
 
@@ -88,16 +88,14 @@ func renderGlobalSummaryText(flags reportFlags, opts metrics.QueryOptions, filte
 		return err
 	}
 	if flags.table {
-		return printSummaryText(toolRows, total, filters)
+		return printSummaryTableText(filters, total, toolRows, flags.limit, opts.Period, true)
 	}
-	if opts.Period == "" {
-		return printShareableSummaryText(filters, toolRows, total)
-	}
-	dayRows, err := queryGlobalPeriodRows(windowDayQueryOptions(summaryOpts, opts.Period), currentMetricsPath)
+	trendPeriod := defaultGainTrendPeriod(opts.Period)
+	dayRows, err := queryGlobalPeriodRows(windowDayQueryOptions(summaryOpts, trendPeriod), currentMetricsPath)
 	if err != nil {
 		return err
 	}
-	return printGlobalWindowSummaryText(dayRows, filters, toolRows, total, opts.Period)
+	return printCompactGainSummary(filters, total, toolRows, dayRows, trendPeriod, opts.Period, true)
 }
 
 func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
@@ -117,7 +115,7 @@ func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filt
 	case "csv":
 		return writeGlobalHistoryCSV(rows, filters)
 	default:
-		return printGlobalHistoryText(rows, filters)
+		return printGlobalHistoryTable(rows, filters, flags.limit)
 	}
 }
 
@@ -394,39 +392,6 @@ func localTokensFromBytes(v int64) int64 {
 	return (v + 3) / 4
 }
 
-func printGlobalHistoryText(rows []globalHistoryRow, filters filtersEnvelope) error {
-	fmt.Println("ccp history (estimated tokens: 4B/token)")
-	fmt.Printf("filters: since=%s tool=%s failed=%t global=true\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed)
-	fmt.Printf("rows: %d\n\n", len(rows))
-	if len(rows) == 0 {
-		fmt.Println(noResultsMsg)
-		return nil
-	}
-	cmdW := len("COMMAND")
-	sourceW := len("SOURCE")
-	for _, row := range rows {
-		cmdW = max(cmdW, len(row.Command))
-		sourceW = max(sourceW, len(row.Source))
-	}
-	if cmdW > 32 {
-		cmdW = 32
-	}
-	if sourceW > 28 {
-		sourceW = 28
-	}
-	fmt.Printf("%-20s  %-*s  %-*s  %-11s  %s\n", "TIMESTAMP", sourceW, "SOURCE", cmdW, "COMMAND", "STATUS", "SAVINGS")
-	for _, row := range rows {
-		fmt.Printf("%-20s  %-*s  %-*s  %-11s  %s\n",
-			row.Timestamp.Format(time.RFC3339),
-			sourceW, truncateTailForDisplay(row.Source, sourceW),
-			cmdW, truncateForDisplay(row.Command, cmdW),
-			historyStatus(row.HistoryRow),
-			fmt.Sprintf(savingsPctFormat, row.EstimatedSavingsPct),
-		)
-	}
-	return nil
-}
-
 func writeGlobalHistoryCSV(rows []globalHistoryRow, filters filtersEnvelope) error {
 	w := csv.NewWriter(os.Stdout)
 	defer w.Flush()
@@ -458,43 +423,6 @@ func writeGlobalHistoryCSV(rows []globalHistoryRow, filters filtersEnvelope) err
 			return err
 		}
 	}
-	return nil
-}
-
-func printGlobalWindowSummaryText(dayRows []metrics.PeriodRow, filters filtersEnvelope, toolRows []metrics.SummaryToolRow, total metrics.SummaryTotal, period string) error {
-	fmt.Println(gainHeaderText)
-	fmt.Printf("filters: since=%s tool=%s failed=%t period=%s global=true\n\n", displayFilter(filters.Since, "all"), displayFilter(filters.Tool, "*"), filters.Failed, period)
-	if total.Commands == 0 {
-		fmt.Println(noResultsMsg)
-		return nil
-	}
-
-	windowLabel := map[string]string{
-		"day":   "Last 24h",
-		"week":  "Last 7d",
-		"month": "Last 30d",
-	}[period]
-	if windowLabel == "" {
-		windowLabel = "Selected window"
-	}
-	fmt.Printf("- %s: %s commands, %s estimated input tokens -> %s output tokens, %s saved\n",
-		windowLabel,
-		formatInt(total.Commands),
-		formatInt(total.EstimatedInputTokens),
-		formatInt(total.EstimatedOutputTokens),
-		formatPercent(total.EstimatedSavingsPct),
-	)
-	fmt.Printf("- Biggest gains: %s\n", strongestGainsText(toolRows))
-	if busiest := busiestDayText(dayRows); busiest != "" {
-		fmt.Printf("- Busiest day: %s\n", busiest)
-	}
-	if best := bestDayText(dayRows); best != "" {
-		fmt.Printf("- Best day: %s\n", best)
-	}
-	if trend := recentTrendText(dayRows, period); trend != "" {
-		fmt.Printf("- Recent trend: %s\n", trend)
-	}
-	fmt.Printf("- Savings held down by: %s\n", detractorsText(toolRows))
 	return nil
 }
 
