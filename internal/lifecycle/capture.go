@@ -202,41 +202,26 @@ func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, record fun
 	defer func() { _ = src.Close() }()
 	reader := bufio.NewReader(src)
 	var currentLine []byte
-	pendingCR := false
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
-			finishSequencedCaptureLine(&currentLine, pendingCR, stream, record)
+			finishSequencedCaptureLine(&currentLine, stream, record)
 			return
 		}
-		pendingCR = appendSequencedCaptureByte(&currentLine, b, pendingCR, stream, record)
+		appendSequencedCaptureByte(&currentLine, b, stream, record)
 	}
 }
 
-func appendSequencedCaptureByte(currentLine *[]byte, b byte, pendingCR bool, stream contracts.Stream, record func(contracts.Stream, string)) bool {
-	if pendingCR {
-		if b == '\n' {
-			emitSequencedCaptureLine(currentLine, true, stream, record)
-			return false
-		}
-		*currentLine = (*currentLine)[:0]
-	}
-
+func appendSequencedCaptureByte(currentLine *[]byte, b byte, stream contracts.Stream, record func(contracts.Stream, string)) {
 	switch b {
-	case '\r':
-		return true
 	case '\n':
 		emitSequencedCaptureLine(currentLine, true, stream, record)
 	default:
 		*currentLine = append(*currentLine, b)
 	}
-	return false
 }
 
-func finishSequencedCaptureLine(currentLine *[]byte, pendingCR bool, stream contracts.Stream, record func(contracts.Stream, string)) {
-	if pendingCR {
-		*currentLine = (*currentLine)[:0]
-	}
+func finishSequencedCaptureLine(currentLine *[]byte, stream contracts.Stream, record func(contracts.Stream, string)) {
 	if len(*currentLine) == 0 {
 		return
 	}

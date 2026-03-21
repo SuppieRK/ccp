@@ -122,6 +122,23 @@ var _ = Describe("capture", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"command_path":` + strconv.Quote(filepath.Join(tmp, replay.CommandFileName))))
 		Expect(string(auditData)).To(ContainSubstring(`"output_path":` + strconv.Quote(filepath.Join(tmp, captureOutputFileName))))
 	})
+
+	It("preserves carriage-return progress output in captured events", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		events, exitCode, err := runNativeCapture([]string{"sh", "-c", "printf '\rstep 1\rstep 2\rdone\n'"})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exitCode).To(BeZero())
+		Expect(replay.CombinedInput(events)).To(Equal("\rstep 1\rstep 2\rdone\n"))
+		Expect(events).To(ContainElement(replay.Event{
+			Sequence: 0,
+			Stream:   contracts.StreamStdout,
+			Line:     "\rstep 1\rstep 2\rdone\n",
+		}))
+	})
 })
 
 func captureSuccessCommand() ([]string, string, string) {
