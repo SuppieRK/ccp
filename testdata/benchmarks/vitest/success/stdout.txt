@@ -1,0 +1,7 @@
+00000| ✓ test/example-1.test.ts (5 tests | 1 skipped) 306ms
+00001| ✓ test/example-2.test.ts (5 tests | 1 skipped) 307ms
+00002|
+00003| Test Files  2 passed (2)
+00004|      Tests  10 passed | 2 skipped (12)
+00005|   Start at  12:34:32
+00006|   Duration  1.26s (transform 35ms, setup 1ms, collect 90ms, tests 1.47s, environment 0ms, prepare 267ms)

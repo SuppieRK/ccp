@@ -1,0 +1,9 @@
+jest: 2 suites passed (2 total)
+tests: 4 passed (4 total)
+PASS src/lib/slugify.test.ts
+    ✓ lowercases labels (2 ms)
+    ✓ collapses duplicate separators
+PASS src/lib/todo-count.test.ts
+    ✓ counts active todos
+    ✓ ignores completed todos
+Ran all test suites.

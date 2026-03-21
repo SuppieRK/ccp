@@ -1,0 +1,21 @@
+00000|
+00001| NX   Running target build for 2 projects:
+00002|
+00003|- web
+00004|- shared-ui
+00005|
+00006|> nx run shared-ui:build
+00007|
+00008|vite v6.3.1 building for production...
+00009|✓ 4 modules transformed.
+00010|
+00011|> nx run web:build
+00012|
+00013|ERROR in src/app/app.ts:17:12
+00014|Error: Cannot find module './missing'
+00015|
+00016|Running target build for project web failed
+00017|
+00018|Failed tasks:
+00019|
+00020|- web:build

@@ -1,0 +1,11 @@
+00000|2 issue(s) found:
+00001|
+00002|Warning: terraform "required_version" attribute is required (terraform_required_version)
+00003|  on providers.tf line 1:
+00004|   1: terraform {
+00005|Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_required_version.md
+00006|
+00007|Warning: Missing version constraint for provider "aws" in `required_providers` (terraform_required_providers)
+00008|  on main.tf line 32:
+00009|  32: resource "aws_internet_gateway" "igw" {
+00010|Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_required_providers.md

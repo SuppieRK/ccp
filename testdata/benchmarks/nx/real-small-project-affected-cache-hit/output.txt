@@ -1,0 +1,5 @@
+cache: 2/3 tasks
+nx: target lint succeeded for 3 projects
+> nx run shared-ui:lint
+> nx run web:lint
+> nx run shared-data:lint

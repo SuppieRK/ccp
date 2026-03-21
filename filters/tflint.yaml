@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: tflint
+about: Compact default TFLint diagnostics conservatively by dropping counts and reference URLs while preserving file, line, rule, fixability, and config-load failures. Structured and workflow-changing modes stay native.
+
+cases:
+  - id: passthrough_alt_formats_and_modes
+    when_arguments:
+      have_any:
+        - -f
+        - --format
+        - -f=json
+        - --format=json
+        - --init
+        - --fix
+        - --langserver
+        - --recursive
+        - -v
+        - --version
+        - -h
+        - --help
+    passthrough: true
+
+  - id: default
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^\d+ issue\(s\) found:$'
+            - regex: '^Reference: https://.+$'
+          keep:
+            - regex: '^(Warning|Error|Notice): .+$'
+            - regex: '^Failed to load TFLint config; .+$'
+            - regex: '^\s*on .+ line \d+:$'
+            - regex: '^\s*\d+:\s+.+$'
+            - regex: '^\s*\(source code not available\)$'
+          replace:
+            - regex: '^No issues found!?$'
+              to: 'tflint: ok'

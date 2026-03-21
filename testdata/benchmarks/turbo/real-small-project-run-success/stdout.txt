@@ -1,0 +1,14 @@
+00000|turbo 2.0.6
+00001|
+00002|• Packages in scope: web, shared-ui
+00003|• Running test in 2 packages
+00004|• Remote caching disabled
+00005|
+00006|shared-ui:test: cache miss, executing 83b4c9ef
+00007|shared-ui:test: PASS src/lib/slugify.spec.ts
+00008|web:test: cache miss, executing aa17f9e1
+00009|web:test: PASS src/app/app.spec.ts
+00010|
+00011| Tasks:    2 successful, 2 total
+00012| Cached:   0 cached, 2 total
+00013| Time:     1.122s

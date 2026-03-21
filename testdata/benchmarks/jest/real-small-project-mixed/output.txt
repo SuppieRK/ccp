@@ -1,0 +1,21 @@
+jest: 2 suites passed, 1 failed (3 total)
+tests: 6 passed | 1 failed | 1 skipped (8 total)
+PASS src/lib/slugify.test.ts
+    ✓ lowercases labels (2 ms)
+    ✓ collapses duplicate separators
+    ✓ trims edge separators
+    ✓ keeps unicode words
+FAIL src/lib/todo-service.test.ts
+    ✓ creates a todo (1 ms)
+    ✕ rejects empty title (4 ms)
+    ✓ trims completed items
+PASS src/ui/filters.test.ts
+    ✓ shows the available filters (3 ms)
+  ● todo service › rejects empty title
+    expect(received).toThrow(expected)
+      16 |   it('rejects empty title', () => {
+      17 |     const subject = () => createTodo({ title: '' })
+    > 18 |     expect(subject).toThrow('title')
+         |                     ^
+      19 |   })
+Ran all test suites matching /src\\/lib\\/todo-service.test.ts|src\\/lib\\/slugify.test.ts|src\\/ui\\/filters.test.ts/i.

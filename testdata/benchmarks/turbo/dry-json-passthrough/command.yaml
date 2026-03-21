@@ -1,0 +1,1 @@
+argv: ["turbo", "run", "build", "--dry=json"]

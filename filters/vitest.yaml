@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: vitest
+about: Compact default text-mode Vitest summaries conservatively, preserve failed selectors and code-frame detail, and leave reporter, watch, UI, and coverage modes native.
+
+cases:
+  - id: passthrough_interactive_and_reporters
+    when_arguments:
+      have_any:
+        - --reporter
+        - --reporter=json
+        - --outputFile
+        - --watch
+        - watch
+        - --ui
+        - --coverage
+        - bench
+    passthrough: true
+
+  - id: default
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^\s*$'
+            - regex: '^\s*(RUN|DEV)\s+v?\S+ .*$'
+            - regex: '^\s*Start at\s+.+$'
+            - regex: '^\s*Duration\s+.+$'
+            - regex: '^\s*⎯{3,}.+⎯{3,}\s*$'
+          keep:
+            - regex: '^\s*[✓❯×]\s+.+$'
+            - regex: '^\s*FAIL\s+.+$'
+            - regex: '^\s*No test files found.*$'
+            - regex: '^\s*(AssertionError|Error|TypeError|ReferenceError|SyntaxError): .+$'
+            - regex: '^\s*→ .+$'
+            - regex: '^\s*❯ .+:\d+:\d+.*$'
+            - regex: '^\s*at .+:\d+(?::\d+)?\s*$'
+            - regex: '^\s*\d+\s+\|.*$'
+            - regex: '^\s*>\s*\d+\s+\|.*$'
+            - regex: '^\s*\|\s+\^$'
+            - regex: '^\s*Expected: .+$'
+            - regex: '^\s*Received: .+$'
+            - regex: '^\s*[-+]\s.*$'
+          replace:
+            - regex: '^\s*Test Files\s+(\d+)\s+passed\s+\((\d+)\)\s*$'
+              to: 'vitest: $1 files passed ($2 total)'
+            - regex: '^\s*Test Files\s+(\d+)\s+failed\s+\((\d+)\)\s*$'
+              to: 'vitest: $1 files failed ($2 total)'
+            - regex: '^\s*Test Files\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\((\d+)\)\s*$'
+              to: 'vitest: $2 files passed, $1 failed ($3 total)'
+            - regex: '^\s*Tests\s+(\d+)\s+passed\s+\((\d+)\)\s*$'
+              to: 'tests: $1 passed ($2 total)'
+            - regex: '^\s*Tests\s+(\d+)\s+passed\s+\|\s+(\d+)\s+skipped\s+\((\d+)\)\s*$'
+              to: 'tests: $1 passed | $2 skipped ($3 total)'
+            - regex: '^\s*Tests\s+(\d+)\s+failed\s+\((\d+)\)\s*$'
+              to: 'tests: $1 failed ($2 total)'
+            - regex: '^\s*Tests\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\((\d+)\)\s*$'
+              to: 'tests: $2 passed | $1 failed ($3 total)'
+            - regex: '^\s*Tests\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\|\s+(\d+)\s+skipped\s+\((\d+)\)\s*$'
+              to: 'tests: $2 passed | $1 failed | $3 skipped ($4 total)'

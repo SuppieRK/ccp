@@ -125,6 +125,37 @@ filter: broken
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_definition_invalid"`))
 		Expect(string(auditData)).To(ContainSubstring(`broken.yaml`))
 	})
+
+	It("registers mapped aliases for shipped-compatible filters", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, ".mappings.yaml"), []byte(`
+version: 1
+map:
+  pyright: basedpyright
+`), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "basedpyright.yaml"), []byte(`
+version: 1
+filter: basedpyright
+cases:
+  - id: diagnostics
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: 'error:'
+`), 0o644)).To(Succeed())
+
+		filters, err := LoadRegistryFiltersFromSources([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("basedpyright"))
+		Expect(filters).To(HaveKey("pyright"))
+
+		action := filters["pyright"].OnStdout("main.py:1:1 - error: boom\n", yamlFilterContext{
+			args: []string{"pyright", "main.py"},
+		})
+		Expect(action.Kind).To(Equal(contracts.ActionKeep))
+	})
 })
 
 var _ = Describe("Shipped repository filters", func() {

@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: nx
+about: Compact default Nx orchestration chatter for `run-many` and `affected` while leaving graph and other precision or discovery surfaces native, and preserving underlying task output verbatim.
+
+cases:
+  - id: passthrough_graph_and_discovery
+    when_arguments:
+      have_any:
+        - graph
+        - show
+        - --graph
+        - --graph=stdout
+        - --json
+        - --help
+        - --version
+    passthrough: true
+
+  - id: run_many
+    when_arguments:
+      first_is: run-many
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^ NX .+$'
+            - regex: '^$'
+            - regex: '^-\s+[a-zA-Z0-9._:-]+$'
+          keep:
+            - regex: '^>\s+nx run .+$'
+            - regex: '^>\s+.+$'
+            - regex: '^PASS .+$'
+            - regex: '^FAIL .+$'
+            - regex: '^ERROR .+$'
+            - regex: '^warning .+$'
+            - regex: '^Warning: .+$'
+            - regex: '^Error: .+$'
+            - regex: '^Failed tasks:$'
+            - regex: '^-\s+[a-zA-Z0-9._:-]+:[a-zA-Z0-9._:-]+$'
+          replace:
+            - regex: '^Nx read the output from the cache for (\d+) out of (\d+) tasks\.$'
+              to: 'cache: $1/$2 tasks'
+            - regex: '^Successfully ran target ([a-zA-Z0-9._:-]+) for (\d+) projects?.*$'
+              to: 'nx: target $1 succeeded for $2 projects'
+            - regex: '^Running target ([a-zA-Z0-9._:-]+) for project ([a-zA-Z0-9._:-]+).+failed$'
+              to: 'nx: target $1 failed for project $2'
+            - regex: '^No projects matched the filters\.$'
+              to: 'nx: no projects matched'
+
+  - id: affected
+    when_arguments:
+      first_is: affected
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^ NX .+$'
+            - regex: '^$'
+            - regex: '^-\s+[a-zA-Z0-9._:-]+$'
+          keep:
+            - regex: '^>\s+nx run .+$'
+            - regex: '^>\s+.+$'
+            - regex: '^PASS .+$'
+            - regex: '^FAIL .+$'
+            - regex: '^ERROR .+$'
+            - regex: '^warning .+$'
+            - regex: '^Warning: .+$'
+            - regex: '^Error: .+$'
+            - regex: '^Failed tasks:$'
+            - regex: '^-\s+[a-zA-Z0-9._:-]+:[a-zA-Z0-9._:-]+$'
+          replace:
+            - regex: '^Nx read the output from the cache for (\d+) out of (\d+) tasks\.$'
+              to: 'cache: $1/$2 tasks'
+            - regex: '^Successfully ran target ([a-zA-Z0-9._:-]+) for (\d+) projects?.*$'
+              to: 'nx: target $1 succeeded for $2 projects'
+            - regex: '^Running target ([a-zA-Z0-9._:-]+) for project ([a-zA-Z0-9._:-]+).+failed$'
+              to: 'nx: target $1 failed for project $2'
+            - regex: '^No projects matched the filters\.$'
+              to: 'nx: no projects matched'

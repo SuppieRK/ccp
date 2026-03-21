@@ -1,0 +1,6 @@
+00000|1 issue(s) found:
+00001|
+00002|Warning: [Fixed] variable "aws_region" is declared but not used (terraform_unused_declarations)
+00003|  on variables.tf line 6:
+00004|   6: variable "aws_region" {
+00005|Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_unused_declarations.md

@@ -18,6 +18,7 @@ map:
   grep: grep
   hadolint: hadolint
   helm: helm
+  jest: jest
   go: go
   golangci-lint: golangci-lint
   ls: ls
@@ -30,6 +31,7 @@ map:
   npx: npx
   node: node
   npm: npm
+  nx: nx
   oxlint: oxlint
   playwright: playwright
   pip: pip
@@ -38,6 +40,7 @@ map:
   prettier: prettier
   prisma: prisma
   pnpm: pnpm
+  pyright: basedpyright
   pytest: pytest
   ruff: ruff
   sbt: sbt
@@ -45,10 +48,13 @@ map:
   tsc: tsc
   terraform: terraform
   tofu: tofu
+  tflint: tflint
   ty: ty
   trunk: trunk
+  turbo: turbo
   platformio: pio
   uv: uv
+  vitest: vitest
   yarn: yarn
   yarnpkg: yarn
   yamllint: yamllint

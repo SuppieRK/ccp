@@ -1,0 +1,15 @@
+vitest: 1 files failed (1 total)
+tests: 1 passed | 1 failed (2 total)
+ ❯ src/ui/filter-bar.test.ts (2 tests | 1 failed) 14ms
+   × keeps "all" selected by default 7ms
+     → expected "completed" to be "all" // Object.is equality
+   ✓ renders the remaining filters 2ms
+  FAIL  src/ui/filter-bar.test.ts > filter bar > keeps "all" selected by default
+ AssertionError: expected "completed" to be "all" // Object.is equality
+ Expected: "all"
+ Received: "completed"
+   ❯ src/ui/filter-bar.test.ts:27:29
+     25 |   renderFilterBar({ selected: 'completed' })
+     26 |   const active = screen.getByRole('button', { name: 'All' })
+     27 |   expect(active.dataset.state).toBe('all')
+        |                             ^

@@ -1,0 +1,13 @@
+00000|PASS src/lib/slugify.test.ts
+00001|  slugify
+00002|    ✓ lowercases labels (2 ms)
+00003|    ✓ collapses duplicate separators
+00004|PASS src/lib/todo-count.test.ts
+00005|  todo count
+00006|    ✓ counts active todos
+00007|    ✓ ignores completed todos
+00008|
+00009|Test Suites: 2 passed, 2 total
+00010|Tests:       4 passed, 4 total
+00011|Time:        0.892 s
+00012|Ran all test suites.

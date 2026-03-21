@@ -1,0 +1,12 @@
+vitest: 1 files failed (1 total)
+tests: 1 failed (1 total)
+ ❯ test/example.test.ts (1 test | 1 failed) 8ms
+   × an example of a test with annotation 8ms
+     → expected 1 to be 2
+  FAIL  test/example.test.ts > an example of a test with annotation
+ AssertionError: expected 1 to be 2
+   ❯ test/example.test.ts:11:21
+     9 |   expect(1).toBe(1)
+    10 | })
+    11 |   expect(1).toBe(2)
+       |            ^

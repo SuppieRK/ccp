@@ -1,0 +1,7 @@
+nx: target build failed for project web
+> nx run shared-ui:build
+> nx run web:build
+ERROR in src/app/app.ts:17:12
+Error: Cannot find module './missing'
+Failed tasks:
+- web:build
