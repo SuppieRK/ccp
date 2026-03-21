@@ -182,17 +182,18 @@ func readSequencedFromReader(r io.Reader, stream contracts.Stream, path string) 
 			}
 			return nil, fmt.Errorf("read sequenced stream %s: %w", path, err)
 		}
-		if len(line) < 6 || line[5] != '|' {
+		sep := strings.IndexByte(line, '|')
+		if sep <= 0 {
 			return nil, fmt.Errorf("read sequenced stream %s: invalid prefix %q", path, line)
 		}
-		sequence, err := strconv.Atoi(line[:5])
+		sequence, err := strconv.Atoi(line[:sep])
 		if err != nil {
-			return nil, fmt.Errorf("read sequenced stream %s: invalid sequence %q: %w", path, line[:5], err)
+			return nil, fmt.Errorf("read sequenced stream %s: invalid sequence %q: %w", path, line[:sep], err)
 		}
 		events = append(events, Event{
 			Sequence: sequence,
 			Stream:   stream,
-			Line:     line[6:],
+			Line:     line[sep+1:],
 		})
 	}
 }
