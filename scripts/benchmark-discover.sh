@@ -51,9 +51,12 @@ if [[ -z "$mode" || -z "$output_file" ]]; then
   exit 1
 fi
 
-mapfile -t all_tools < <(
-  find testdata/benchmarks -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -u
-)
+all_tools=()
+for tool_dir in testdata/benchmarks/*; do
+  if [[ -d "$tool_dir" ]]; then
+    all_tools+=("$(basename "$tool_dir")")
+  fi
+done
 if [[ ${#all_tools[@]} -eq 0 ]]; then
   echo "No benchmark tools found under benchmark roots" >&2
   exit 1
@@ -82,19 +85,48 @@ if [[ "$mode" != "main" && "$mode" != "pr" ]]; then
   exit 1
 fi
 
-declare -A selected=()
+selected_tools=()
 run_all=0
 changed=()
 run_validate=false
 run_benchmarks=false
 change_class="none"
 
+append_lines_to_array() {
+  local __var_name="$1"
+  shift
+  local line
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    eval "$__var_name+=(\"\$line\")"
+  done < <("$@")
+}
+
+selected_contains() {
+  local expected="$1"
+  local existing
+  for existing in "${selected_tools[@]}"; do
+    if [[ "$existing" == "$expected" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+add_selected_tool() {
+  local tool="$1"
+  if ! selected_contains "$tool"; then
+    selected_tools+=("$tool")
+  fi
+  return 0
+}
+
 add_prefix() {
   local prefix="$1"
   local t
   for t in "${all_tools[@]}"; do
     if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
-      selected["$t"]=1
+      add_selected_tool "$t"
     fi
   done
   return 0
@@ -105,7 +137,7 @@ add_exact_if_exists() {
   local t
   for t in "${all_tools[@]}"; do
     if [[ "$t" == "$exact" ]]; then
-      selected["$t"]=1
+      add_selected_tool "$t"
       return
     fi
   done
@@ -118,7 +150,8 @@ load_changed_files() {
   fi
 
   if [[ -n "$base_sha" && -n "$head_sha" ]]; then
-    mapfile -t changed < <(git diff --name-only "$base_sha" "$head_sha")
+    changed=()
+    append_lines_to_array changed git diff --name-only "$base_sha" "$head_sha"
     return 0
   fi
 
@@ -176,8 +209,9 @@ done
 if [[ "$run_all" -eq 1 ]]; then
   benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
   has_tools=true
-elif [[ ${#selected[@]} -gt 0 ]]; then
-  mapfile -t selected_tools < <(printf "%s\n" "${!selected[@]}" | sort)
+elif [[ ${#selected_tools[@]} -gt 0 ]]; then
+  IFS=$'\n' selected_tools=($(printf "%s\n" "${selected_tools[@]}" | sort))
+  unset IFS
   benchmark_matrix=$(build_matrix_json "${selected_tools[@]}")
   has_tools=true
 else
