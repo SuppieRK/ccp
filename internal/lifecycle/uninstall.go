@@ -180,14 +180,28 @@ func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error
 		}
 	}
 	for _, entry := range entries {
-		if strings.TrimSpace(entry.MetricsPath) == "" {
+		metricsPath, ok := managedWorkspaceMetricsPath(entry)
+		if !ok {
 			continue
 		}
-		if err := os.Remove(filepath.Clean(entry.MetricsPath)); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(metricsPath); err != nil && !os.IsNotExist(err) {
 			errs = append(errs, fmt.Errorf("remove metrics path %q: %w", entry.MetricsPath, err))
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
+	if strings.TrimSpace(entry.CWD) == "" || strings.TrimSpace(entry.MetricsPath) == "" {
+		return "", false
+	}
+	workspaceRoot := filepath.Clean(entry.CWD)
+	metricsPath := filepath.Clean(entry.MetricsPath)
+	canonical := filepath.Join(workspaceRoot, ".ccp", "gain.db")
+	if metricsPath != canonical {
+		return "", false
+	}
+	return metricsPath, true
 }
 
 func removeGlobalCCPState(homeDir string) error {
