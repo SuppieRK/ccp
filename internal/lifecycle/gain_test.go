@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ const (
 	flagSince  = "--since"
 	flagTable  = "--table"
 	flagGlobal = "--global"
+	flagLimit  = "--limit"
 )
 
 var _ = Describe("RunGain", func() {
@@ -84,22 +86,25 @@ var _ = Describe("RunGain", func() {
 
 		It("renders default gain output as text", func() {
 			out := runGain()
-			Expect(out).To(ContainSubstring("ccp gain (estimated tokens: 4B/token)"))
-			Expect(out).To(ContainSubstring("Biggest gains:"))
-			Expect(out).To(ContainSubstring("Bottom line:"))
+			Expect(out).To(ContainSubstring("2 cmds · 425 → 225 tokens (47.1% saved)"))
+			Expect(out).To(ContainSubstring("Wins  : go 66.7%"))
+			Expect(out).To(ContainSubstring("Drag  : git (1 cmds)"))
+			Expect(out).To(ContainSubstring("Trend : insufficient data"))
 		})
 
 		It("renders the compact gain table", func() {
 			out := runGain(flagTable)
+			Expect(out).To(ContainSubstring("2 cmds · 425 → 225 tokens (47.1% saved)"))
+			Expect(out).To(ContainSubstring("showing 2 of 2 tools"))
+			Expect(out).To(ContainSubstring("+------+"))
 			Expect(out).To(ContainSubstring("TOOL"))
 			Expect(out).To(ContainSubstring("NATIVE"))
 			Expect(out).To(ContainSubstring("PROXIED"))
 			Expect(out).To(ContainSubstring("SAVINGS"))
-			Expect(out).To(ContainSubstring("TOTAL"))
+			Expect(out).NotTo(ContainSubstring("TOTAL"))
 			Expect(out).NotTo(ContainSubstring("COMMAND"))
 			Expect(out).To(ContainSubstring("go"))
 			Expect(out).To(ContainSubstring("git"))
-			Expect(out).NotTo(ContainSubstring("Missed opportunities"))
 		})
 
 		It("aggregates registered workspaces for global gain output", func() {
@@ -117,7 +122,9 @@ var _ = Describe("RunGain", func() {
 			})
 
 			out := runGain(flagGlobal)
-			Expect(out).To(ContainSubstring("Biggest gains:"))
+			Expect(out).To(ContainSubstring("4 cmds · 850 → 450 tokens (47.1% saved) [global]"))
+			Expect(out).To(ContainSubstring("Wins  : go 66.7%"))
+			Expect(out).To(ContainSubstring("Drag  : git (2 cmds)"))
 			Expect(out).To(ContainSubstring("go"))
 			Expect(out).To(ContainSubstring("git"))
 		})
@@ -242,11 +249,10 @@ var _ = Describe("RunGain", func() {
 			})
 
 			textOut := runGain(flagGlobal, flagPeriod, "week")
-			Expect(textOut).To(ContainSubstring("period=week global=true"))
-			Expect(textOut).To(ContainSubstring("Last 7d:"))
-			Expect(textOut).To(ContainSubstring("Busiest day:"))
-			Expect(textOut).To(ContainSubstring("Best day:"))
-			Expect(textOut).To(ContainSubstring("Recent trend:"))
+			Expect(textOut).To(ContainSubstring("[period=week global]"))
+			Expect(textOut).To(ContainSubstring("Wins  :"))
+			Expect(textOut).To(ContainSubstring("Drag  :"))
+			Expect(textOut).To(ContainSubstring("Trend :"))
 
 			jsonOut := runGain(flagGlobal, flagPeriod, "day", flagFormat, "json")
 			Expect(jsonOut).To(ContainSubstring(`"dataset": "period"`))
@@ -272,7 +278,8 @@ var _ = Describe("RunGain", func() {
 			out := runGain()
 			Expect(out).To(ContainSubstring("5,002,000"))
 			Expect(out).To(ContainSubstring("27,000"))
-			Expect(out).To(ContainSubstring("jar (1 cmds, no savings)"))
+			Expect(out).To(ContainSubstring("Wins  : gradle 99.5%"))
+			Expect(out).To(ContainSubstring("Drag  : jar (1 cmds)"))
 		})
 
 		It("formats grouped numbers in the table output", func() {
@@ -283,42 +290,14 @@ var _ = Describe("RunGain", func() {
 	})
 
 	Context("when rendering the gain table", func() {
-		It("aligns the total row count column", func() {
-			out := runGain(flagTable)
-
-			lines := strings.Split(out, "\n")
-			firstDataCountCol := -1
-			totalCountCol := -1
-
-			for _, line := range lines {
-				trimmed := strings.TrimSpace(line)
-				if trimmed == "" || strings.HasPrefix(trimmed, "ccp gain") || strings.HasPrefix(trimmed, "filters:") || strings.HasPrefix(trimmed, "TOOL") {
-					continue
-				}
-				countCol := strings.IndexFunc(line, func(r rune) bool { return r >= '0' && r <= '9' })
-				if countCol < 0 {
-					continue
-				}
-				if strings.HasPrefix(strings.TrimLeft(line, " "), "TOTAL") {
-					totalCountCol = countCol
-					continue
-				}
-				if firstDataCountCol < 0 {
-					firstDataCountCol = countCol
-				}
-			}
-
-			Expect(firstDataCountCol).NotTo(Equal(-1), out)
-			Expect(totalCountCol).NotTo(Equal(-1), out)
-			Expect(firstDataCountCol).To(Equal(totalCountCol), out)
-		})
-
 		It("orders tied rows by native bytes and tool name", func() {
+			Expect(os.Remove(path)).To(Succeed())
 			now := time.Now().UTC()
 			appendGainMetrics(path, []metrics.RunMetric{
-				{Timestamp: now.Add(-3 * time.Minute), Tool: "alpha", Command: "alpha cmd", RawBytes: 200, KeptBytes: 100},
-				{Timestamp: now.Add(-2 * time.Minute), Tool: "zeta", Command: "zeta cmd", RawBytes: 200, KeptBytes: 100},
-				{Timestamp: now.Add(-1 * time.Minute), Tool: "middle", Command: "middle cmd", RawBytes: 120, KeptBytes: 60},
+				{Timestamp: now.Add(-4 * time.Minute), Tool: "alpha", Command: "alpha cmd", RawBytes: 200, KeptBytes: 100},
+				{Timestamp: now.Add(-3 * time.Minute), Tool: "zeta", Command: "zeta cmd", RawBytes: 200, KeptBytes: 100},
+				{Timestamp: now.Add(-2 * time.Minute), Tool: "middle", Command: "middle cmd", RawBytes: 120, KeptBytes: 60},
+				{Timestamp: now.Add(-1 * time.Minute), Tool: "zero", Command: "zero cmd", RawBytes: 80, KeptBytes: 80},
 			})
 
 			out := runGain(flagTable)
@@ -326,12 +305,44 @@ var _ = Describe("RunGain", func() {
 			alphaIdx := strings.Index(out, "alpha")
 			zetaIdx := strings.Index(out, "zeta")
 			middleIdx := strings.Index(out, "middle")
+			zeroIdx := strings.Index(out, "zero")
 			Expect(alphaIdx).To(BeNumerically(">=", 0), out)
 			Expect(zetaIdx).To(BeNumerically(">=", 0), out)
 			Expect(middleIdx).To(BeNumerically(">=", 0), out)
+			Expect(zeroIdx).To(BeNumerically(">=", 0), out)
 			Expect(alphaIdx).To(BeNumerically("<", middleIdx), out)
 			Expect(zetaIdx).To(BeNumerically("<", middleIdx), out)
 			Expect(alphaIdx).To(BeNumerically("<", zetaIdx), out)
+			Expect(middleIdx).To(BeNumerically("<", zeroIdx), out)
+		})
+
+		It("applies the text limit to table output", func() {
+			Expect(os.Remove(path)).To(Succeed())
+			now := time.Now().UTC()
+			for i := range 20 {
+				appendGainMetrics(path, []metrics.RunMetric{{
+					Timestamp: now.Add(time.Duration(-i) * time.Minute),
+					Tool:      fmt.Sprintf("tool-%02d", i),
+					Command:   fmt.Sprintf("tool-%02d cmd", i),
+					RawBytes:  400,
+					KeptBytes: 200,
+				}})
+			}
+
+			out := runGain(flagTable)
+			Expect(out).To(ContainSubstring("showing 15 of 20 tools, use --limit N to see more"))
+			Expect(out).To(ContainSubstring("tool-00"))
+			Expect(out).NotTo(ContainSubstring("tool-19"))
+		})
+
+		It("ignores --limit for non-text gain output", func() {
+			jsonOut := runGain(flagFormat, "json", flagLimit, "1")
+			var env summaryEnvelope
+			Expect(json.Unmarshal([]byte(jsonOut), &env)).To(Succeed())
+			Expect(env.Rows).To(HaveLen(2))
+
+			csvOut := runGain(flagFormat, "csv", flagLimit, "1")
+			Expect(strings.Count(strings.TrimSpace(csvOut), "\n")).To(Equal(3))
 		})
 	})
 
@@ -342,38 +353,19 @@ var _ = Describe("RunGain", func() {
 			Expect(csvOut).To(ContainSubstring("summary"))
 
 			periodText := runGain(flagPeriod, "day")
-			Expect(periodText).To(ContainSubstring("period=day"))
-			Expect(periodText).To(ContainSubstring("Last 24h:"))
-			Expect(periodText).To(ContainSubstring("Biggest gains:"))
+			Expect(periodText).To(ContainSubstring("[period=day]"))
+			Expect(periodText).To(ContainSubstring("Wins  :"))
+			Expect(periodText).To(ContainSubstring("Drag  :"))
+			Expect(periodText).To(ContainSubstring("Trend :"))
 
 			periodTable := runGain(flagPeriod, "day", flagTable)
+			Expect(periodTable).To(ContainSubstring("ccp gain (estimated tokens: 4B/token)"))
 			Expect(periodTable).To(ContainSubstring("BUCKET"))
 			Expect(periodTable).To(ContainSubstring("period=day"))
 
 			periodCSV := runGain(flagPeriod, "week", flagFormat, "csv")
 			Expect(periodCSV).To(ContainSubstring("dataset,period,since,tool_filter,failed_filter,bucket"))
 			Expect(periodCSV).To(ContainSubstring("period,week"))
-		})
-
-		It("highlights the best and busiest days in week summaries", func() {
-			Expect(os.Remove(path)).To(Succeed())
-			nowUTC := time.Now().UTC()
-			now := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 0, 0, 0, 0, time.UTC)
-			bestDay := now.Add(-6*24*time.Hour + 9*time.Hour).Format("2006-01-02")
-			busiestDay := now.Add(-4*24*time.Hour + 9*time.Hour).Format("2006-01-02")
-			appendGainMetrics(path, []metrics.RunMetric{
-				{Timestamp: now.Add(-6*24*time.Hour + 9*time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 200},
-				{Timestamp: now.Add(-6*24*time.Hour + 10*time.Hour), Tool: "git", Command: "git status", RawBytes: 400, KeptBytes: 300},
-				{Timestamp: now.Add(-4*24*time.Hour + 9*time.Hour), Tool: "grep", Command: "grep -r needle .", RawBytes: 800, KeptBytes: 200},
-				{Timestamp: now.Add(-4*24*time.Hour + 10*time.Hour), Tool: "sed", Command: "sed -n 1,20p file", RawBytes: 100, KeptBytes: 100},
-				{Timestamp: now.Add(-4*24*time.Hour + 11*time.Hour), Tool: "git", Command: "git diff", RawBytes: 600, KeptBytes: 500},
-			})
-
-			out := runGain(flagPeriod, "week")
-			Expect(out).To(ContainSubstring("Last 7d:"))
-			Expect(out).To(ContainSubstring("Busiest day: " + busiestDay))
-			Expect(out).To(ContainSubstring("Best day: " + bestDay))
-			Expect(out).To(ContainSubstring("Recent trend:"))
 		})
 	})
 
@@ -390,7 +382,8 @@ var _ = Describe("RunGain", func() {
 
 		It("includes filters and no-results markers in empty text output", func() {
 			gainOut := runGain(flagFormat, "text")
-			Expect(gainOut).To(ContainSubstring("filters:"))
+			Expect(gainOut).To(ContainSubstring("0 cmds · 0 → 0 tokens (0.0% saved)"))
+			Expect(gainOut).NotTo(ContainSubstring("filters:"))
 			Expect(gainOut).To(ContainSubstring(noResultsMsg))
 		})
 	})
@@ -466,6 +459,8 @@ var _ = Describe("RunHistory", func() {
 
 		It("omits the tool column in history text", func() {
 			out := runHistory(flagFormat, "text")
+			Expect(out).To(ContainSubstring("ccp history"))
+			Expect(out).To(ContainSubstring("showing 2 of 2 rows"))
 			Expect(out).To(ContainSubstring("TIMESTAMP"))
 			Expect(out).To(ContainSubstring("STATUS"))
 			Expect(out).To(ContainSubstring("SAVINGS"))
@@ -492,6 +487,7 @@ var _ = Describe("RunHistory", func() {
 			})
 
 			textOut := runHistory(flagGlobal, flagFormat, "text")
+			Expect(textOut).To(ContainSubstring("ccp history [global]"))
 			Expect(textOut).To(ContainSubstring("SOURCE"))
 			Expect(textOut).To(ContainSubstring("repo-one"))
 			Expect(textOut).To(ContainSubstring("repo-two"))
@@ -556,6 +552,35 @@ var _ = Describe("RunHistory", func() {
 
 			Expect(out).To(ContainSubstring(`"source"`))
 			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
+
+		It("applies the text limit to history output", func() {
+			Expect(os.Remove(path)).To(Succeed())
+			now := time.Now().UTC()
+			for i := range 20 {
+				appendGainMetrics(path, []metrics.RunMetric{{
+					Timestamp: now.Add(time.Duration(-i) * time.Minute),
+					Tool:      "go",
+					Command:   fmt.Sprintf("go test ./pkg/%02d", i),
+					RawBytes:  1200,
+					KeptBytes: 400,
+				}})
+			}
+
+			out := runHistory(flagFormat, "text")
+			Expect(out).To(ContainSubstring("showing 15 of 20 rows, use --limit N to see more"))
+			Expect(out).To(ContainSubstring("go test ./pkg/00"))
+			Expect(out).NotTo(ContainSubstring("go test ./pkg/19"))
+		})
+
+		It("ignores --limit for non-text history output", func() {
+			jsonOut := runHistory(flagFormat, "json", flagLimit, "1")
+			var env historyEnvelope
+			Expect(json.Unmarshal([]byte(jsonOut), &env)).To(Succeed())
+			Expect(env.Rows).To(HaveLen(2))
+
+			csvOut := runHistory(flagFormat, "csv", flagLimit, "1")
+			Expect(strings.Count(strings.TrimSpace(csvOut), "\n")).To(Equal(2))
 		})
 	})
 
@@ -636,7 +661,8 @@ var _ = Describe("RunHistory", func() {
 
 		It("includes filters and no-results markers in text output", func() {
 			out := runHistory(flagFormat, "text")
-			Expect(out).To(ContainSubstring("filters:"))
+			Expect(out).To(ContainSubstring("ccp history"))
+			Expect(out).NotTo(ContainSubstring("filters:"))
 			Expect(out).To(ContainSubstring(noResultsMsg))
 		})
 
@@ -648,17 +674,55 @@ var _ = Describe("RunHistory", func() {
 })
 
 var _ = Describe("gain formatting helpers", func() {
-	DescribeTable("rendering bottom line messages",
-		func(pct float64, want string) {
-			Expect(bottomLineMessage(pct)).To(Equal(want))
+	DescribeTable("splitting wins and drags only for meaningful contrast",
+		func(rows []metrics.SummaryToolRow, want bool) {
+			Expect(shouldSplitWinsDrags(rows)).To(Equal(want))
 		},
-		Entry("zero", 0.0, "This is fine, better opportunities will come."),
-		Entry("low", 10.0, "It ain't much, but it's honest work."),
-		Entry("decent", 30.0, "Pretty decent for the noise that adds up all day."),
-		Entry("solid", 50.0, "A solid result, and less noise to drag around."),
-		Entry("great", 70.0, "Now we're talking - much less noise to drag around."),
-		Entry("breathtaking", 90.0, "Breathtaking results, with plenty of context back."),
+		Entry("single tool", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 42, EstimatedSavedTokens: 100},
+		}, false),
+		Entry("two close tools", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 42, EstimatedSavedTokens: 100},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 38, EstimatedSavedTokens: 80},
+		}, false),
+		Entry("two far-apart tools", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 78, EstimatedSavedTokens: 100},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 4, EstimatedSavedTokens: 5},
+		}, true),
+		Entry("three mixed tools", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 81, EstimatedSavedTokens: 100},
+			{Tool: "grep", Commands: 8, EstimatedSavingsPct: 63, EstimatedSavedTokens: 80},
+			{Tool: "git", Commands: 7, EstimatedSavingsPct: 12, EstimatedSavedTokens: 10},
+		}, true),
 	)
+
+	It("formats trend summaries with one decimal precision", func() {
+		rows := []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 31.4},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 31.4},
+			{BucketStart: "2026-03-03", EstimatedSavingsPct: 37.6},
+			{BucketStart: "2026-03-04", EstimatedSavingsPct: 37.6},
+		}
+		Expect(trendSummaryText(rows, "week")).To(Equal("↑ +6.2 pts WoW (31.4% → 37.6%) · clear gain"))
+	})
+
+	It("uses richer deterministic suffixes for flat and downward trends", func() {
+		flatRows := []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 52.0},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 52.0},
+			{BucketStart: "2026-03-03", EstimatedSavingsPct: 52.0},
+			{BucketStart: "2026-03-04", EstimatedSavingsPct: 52.0},
+		}
+		downRows := []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 13.0},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 13.0},
+			{BucketStart: "2026-03-03", EstimatedSavingsPct: 10.9},
+			{BucketStart: "2026-03-04", EstimatedSavingsPct: 10.9},
+		}
+
+		Expect(trendSummaryText(flatRows, "week")).To(Equal("→ flat WoW (52.0% → 52.0%) · holding high"))
+		Expect(trendSummaryText(downRows, "week")).To(Equal("↓ -2.1 pts WoW (13.0% → 10.9%) · slipping"))
+	})
 
 	DescribeTable("truncateForDisplay branches",
 		func(input string, max int, want string) {
