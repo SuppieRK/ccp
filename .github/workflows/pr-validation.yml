@@ -7,7 +7,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  plan:
+    name: Plan Validation
+    runs-on: ubuntu-latest
+    outputs:
+      benchmark_matrix: ${{ steps.plan.outputs.benchmark_matrix }}
+      has_tools: ${{ steps.plan.outputs.has_tools }}
+      run_validate: ${{ steps.plan.outputs.run_validate }}
+      run_benchmarks: ${{ steps.plan.outputs.run_benchmarks }}
+      change_class: ${{ steps.plan.outputs.change_class }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build validation plan
+        id: plan
+        shell: bash
+        run: |
+          bash ./scripts/benchmark-discover.sh \
+            --mode pr \
+            --event-name "${{ github.event_name }}" \
+            --base-sha "${{ github.event.pull_request.base.sha || '' }}" \
+            --head-sha "${{ github.event.pull_request.head.sha || '' }}" \
+            --output-file "$GITHUB_OUTPUT" \
+            --summary-file "${GITHUB_STEP_SUMMARY:-}"
+
   validate:
+    needs: plan
+    if: needs.plan.outputs.run_validate == 'true'
     permissions:
       contents: read
     strategy:
@@ -58,40 +87,16 @@ jobs:
             cat .artifacts/coverage/summary.md >> "${GITHUB_STEP_SUMMARY}"
           fi
 
-  benchmark-discover:
-    name: Benchmark Discover (PR)
-    runs-on: ubuntu-latest
-    outputs:
-      benchmark_matrix: ${{ steps.select-tools.outputs.benchmark_matrix }}
-      has_tools: ${{ steps.select-tools.outputs.has_tools }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Select benchmark tools from changed files
-        id: select-tools
-        shell: bash
-        run: |
-          bash ./scripts/benchmark-discover.sh \
-            --mode pr \
-            --event-name "${{ github.event_name }}" \
-            --base-sha "${{ github.event.pull_request.base.sha || '' }}" \
-            --head-sha "${{ github.event.pull_request.head.sha || '' }}" \
-            --output-file "$GITHUB_OUTPUT" \
-            --summary-file "${GITHUB_STEP_SUMMARY:-}"
-
   benchmark-tool:
     name: Benchmark (PR informational) / ${{ matrix.tool }}
-    needs: [validate, benchmark-discover]
-    if: needs.benchmark-discover.outputs.has_tools == 'true'
+    needs: plan
+    if: needs.plan.outputs.run_benchmarks == 'true' && needs.plan.outputs.has_tools == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.benchmark-discover.outputs.benchmark_matrix) }}
+        include: ${{ fromJson(needs.plan.outputs.benchmark_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -145,7 +150,8 @@ jobs:
 
   sonarqube-scan:
     name: SonarQube Scan (informational)
-    needs: validate
+    needs: [plan, validate]
+    if: needs.plan.outputs.run_validate == 'true' && needs.validate.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read

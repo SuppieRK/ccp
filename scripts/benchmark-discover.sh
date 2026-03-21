@@ -7,6 +7,7 @@ base_sha=""
 head_sha=""
 output_file=""
 summary_file=""
+declare -a changed_override=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
       summary_file="${2:-}"
       shift 2
       ;;
+    --changed-file)
+      changed_override+=("${2:-}")
+      shift 2
+      ;;
     *)
       echo "unknown argument: $1" >&2
       exit 1
@@ -42,13 +47,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$mode" || -z "$output_file" ]]; then
-  echo "usage: benchmark-discover.sh --mode <main|pr> --output-file <path> [--event-name <name>] [--base-sha <sha>] [--head-sha <sha>] [--summary-file <path>]" >&2
+  echo "usage: benchmark-discover.sh --mode <main|pr> --output-file <path> [--event-name <name>] [--base-sha <sha>] [--head-sha <sha>] [--summary-file <path>] [--changed-file <path>]" >&2
   exit 1
 fi
 
-mapfile -t all_tools < <(
-  find testdata/benchmarks -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -u
-)
+all_tools=()
+for tool_dir in testdata/benchmarks/*; do
+  if [[ -d "$tool_dir" ]]; then
+    all_tools+=("$(basename "$tool_dir")")
+  fi
+done
 if [[ ${#all_tools[@]} -eq 0 ]]; then
   echo "No benchmark tools found under benchmark roots" >&2
   exit 1
@@ -72,29 +80,56 @@ build_matrix_json() {
   return 0
 }
 
-if [[ "$mode" == "main" ]]; then
-  benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
-  {
-    echo "benchmark_matrix=${benchmark_matrix}"
-  } >> "$output_file"
-  exit 0
-fi
-
-if [[ "$mode" != "pr" ]]; then
+if [[ "$mode" != "main" && "$mode" != "pr" ]]; then
   echo "unsupported mode: $mode" >&2
   exit 1
 fi
 
-declare -A selected=()
+selected_tools=()
 run_all=0
 changed=()
+run_validate=false
+run_benchmarks=false
+change_class="none"
+
+append_lines_to_array() {
+  local __var_name="$1"
+  shift
+  local line
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    eval "$__var_name+=(\"\$line\")"
+  done < <("$@")
+}
+
+selected_contains() {
+  local expected="$1"
+  local existing
+  if [[ ${#selected_tools[*]} -eq 0 ]]; then
+    return 1
+  fi
+  for existing in "${selected_tools[@]}"; do
+    if [[ "$existing" == "$expected" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+add_selected_tool() {
+  local tool="$1"
+  if ! selected_contains "$tool"; then
+    selected_tools+=("$tool")
+  fi
+  return 0
+}
 
 add_prefix() {
   local prefix="$1"
   local t
   for t in "${all_tools[@]}"; do
     if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
-      selected["$t"]=1
+      add_selected_tool "$t"
     fi
   done
   return 0
@@ -105,22 +140,43 @@ add_exact_if_exists() {
   local t
   for t in "${all_tools[@]}"; do
     if [[ "$t" == "$exact" ]]; then
-      selected["$t"]=1
+      add_selected_tool "$t"
       return
     fi
   done
 }
 
-if [[ "$event_name" == "pull_request" ]]; then
-  if [[ -z "$base_sha" || -z "$head_sha" ]]; then
+load_changed_files() {
+  if [[ ${#changed_override[@]} -gt 0 ]]; then
+    changed=("${changed_override[@]}")
+    return 0
+  fi
+
+  if [[ -n "$base_sha" && -n "$head_sha" ]]; then
+    changed=()
+    append_lines_to_array changed git diff --name-only "$base_sha" "$head_sha"
+    return 0
+  fi
+
+  if [[ "$event_name" == "pull_request" ]]; then
     echo "pull_request mode requires --base-sha and --head-sha" >&2
     exit 1
   fi
-  mapfile -t changed < <(git diff --name-only "$base_sha" "$head_sha")
-fi
 
-if [[ ${#changed[@]} -eq 0 && "$event_name" != "pull_request" ]]; then
+  changed=()
+  return 0
+}
+
+mark_full_ci() {
+  run_validate=true
   run_all=1
+  return 0
+}
+
+load_changed_files
+
+if [[ ${#changed[@]} -eq 0 ]]; then
+  mark_full_ci
 fi
 
 for path in "${changed[@]}"; do
@@ -145,8 +201,8 @@ for path in "${changed[@]}"; do
       cap="${cap%%/*}"
       add_exact_if_exists "$cap"
       ;;
-    cmd/ccp/*|cmd/ccp-ci/*|internal/*|go.mod|go.sum)
-      run_all=1
+    cmd/*|internal/*|go.mod|go.sum|.github/workflows/main-validation.yml|.github/workflows/pr-validation.yml|scripts/validate.sh|scripts/benchmark-discover.sh)
+      mark_full_ci
       ;;
     *)
       ;;
@@ -156,8 +212,9 @@ done
 if [[ "$run_all" -eq 1 ]]; then
   benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
   has_tools=true
-elif [[ ${#selected[@]} -gt 0 ]]; then
-  mapfile -t selected_tools < <(printf "%s\n" "${!selected[@]}" | sort)
+elif [[ ${#selected_tools[@]} -gt 0 ]]; then
+  IFS=$'\n' selected_tools=($(printf "%s\n" "${selected_tools[@]}" | sort))
+  unset IFS
   benchmark_matrix=$(build_matrix_json "${selected_tools[@]}")
   has_tools=true
 else
@@ -165,16 +222,32 @@ else
   has_tools=false
 fi
 
+if [[ "$run_validate" == "true" ]]; then
+  change_class="full_ci"
+elif [[ "$has_tools" == "true" ]]; then
+  change_class="benchmark_only"
+fi
+
+if [[ "$has_tools" == "true" ]]; then
+  run_benchmarks=true
+fi
+
 {
   echo "benchmark_matrix=${benchmark_matrix}"
   echo "has_tools=${has_tools}"
+  echo "run_validate=${run_validate}"
+  echo "run_benchmarks=${run_benchmarks}"
+  echo "change_class=${change_class}"
 } >> "$output_file"
 
 if [[ -n "$summary_file" ]]; then
   {
-    echo "## PR Benchmark Tool Selection"
+    echo "## Validation Plan"
     echo ""
     echo "- Changed files analyzed: ${#changed[@]}"
+    echo "- Change class: \`${change_class}\`"
+    echo "- Run validate: \`${run_validate}\`"
+    echo "- Run benchmarks: \`${run_benchmarks}\`"
     echo "- Selected tools: \`$(jq -c 'map(.tool)' <<< "${benchmark_matrix}")\`"
   } >> "$summary_file"
 fi

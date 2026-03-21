@@ -82,6 +82,9 @@ fi
 echo "[validate] go mod tidy"
 go mod tidy
 
+echo "[validate] bash ./scripts/test-benchmark-discover.sh"
+bash ./scripts/test-benchmark-discover.sh
+
 run_in_background "go vet ./..." go vet ./...
 run_in_background "go test -count=1 -race ./..." go test -count=1 -race ./...
 

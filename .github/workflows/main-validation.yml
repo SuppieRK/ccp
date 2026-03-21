@@ -9,7 +9,43 @@ on:
   workflow_dispatch:
 
 jobs:
+  plan:
+    name: Plan Validation
+    runs-on: ubuntu-latest
+    outputs:
+      benchmark_matrix: ${{ steps.plan.outputs.benchmark_matrix }}
+      has_tools: ${{ steps.plan.outputs.has_tools }}
+      run_validate: ${{ steps.plan.outputs.run_validate }}
+      run_benchmarks: ${{ steps.plan.outputs.run_benchmarks }}
+      change_class: ${{ steps.plan.outputs.change_class }}
+      cache_epoch: ${{ steps.cache-epoch.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compute benchmark cache epoch
+        id: cache-epoch
+        shell: bash
+        run: |
+          echo "value=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Build validation plan
+        id: plan
+        shell: bash
+        run: |
+          bash ./scripts/benchmark-discover.sh \
+            --mode main \
+            --event-name "${{ github.event_name }}" \
+            --base-sha "${{ github.event.before || '' }}" \
+            --head-sha "${{ github.sha }}" \
+            --output-file "$GITHUB_OUTPUT" \
+            --summary-file "${GITHUB_STEP_SUMMARY:-}"
+
   validate:
+    needs: plan
+    if: needs.plan.outputs.run_validate == 'true'
     permissions:
       contents: read
     strategy:
@@ -60,33 +96,10 @@ jobs:
             cat .artifacts/coverage/summary.md >> "${GITHUB_STEP_SUMMARY}"
           fi
 
-  benchmark-discover:
-    name: Benchmark Discover
-    runs-on: ubuntu-latest
-    outputs:
-      benchmark_matrix: ${{ steps.tools.outputs.benchmark_matrix }}
-      cache_epoch: ${{ steps.cache-epoch.outputs.value }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Compute benchmark cache epoch
-        id: cache-epoch
-        shell: bash
-        run: |
-          echo "value=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      - name: Discover benchmark tools
-        id: tools
-        shell: bash
-        run: |
-          bash ./scripts/benchmark-discover.sh \
-            --mode main \
-            --output-file "$GITHUB_OUTPUT"
-
   benchmark-tool:
     name: Benchmark (informational) / ${{ matrix.tool }}
-    needs: [validate, benchmark-discover]
+    needs: plan
+    if: needs.plan.outputs.run_benchmarks == 'true' && needs.plan.outputs.has_tools == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -95,7 +108,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.benchmark-discover.outputs.benchmark_matrix) }}
+        include: ${{ fromJson(needs.plan.outputs.benchmark_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -117,7 +130,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
-          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}
+          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.plan.outputs.cache_epoch }}
           restore-keys: |
             benchmark-report-main-${{ matrix.tool }}-v2-
 
@@ -159,7 +172,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          key="benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}"
+          key="benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.plan.outputs.cache_epoch }}"
           curl --silent --show-error --fail-with-body \
             -X DELETE \
             -H "Accept: application/vnd.github+json" \
@@ -171,7 +184,7 @@ jobs:
         if: always() && steps.run-benchmark.outcome == 'success' && github.event_name == 'push' && github.ref_name == 'main'
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
-          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.benchmark-discover.outputs.cache_epoch }}
+          key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.plan.outputs.cache_epoch }}
 
       - name: Upload benchmark artifacts
         if: always()
@@ -183,7 +196,8 @@ jobs:
 
   sonarqube-scan:
     name: SonarQube Scan (informational)
-    needs: validate
+    needs: [plan, validate]
+    if: needs.plan.outputs.run_validate == 'true' && needs.validate.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
