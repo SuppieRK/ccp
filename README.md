@@ -63,13 +63,10 @@ Same command. Same result. Less ceremony.
 If output gets compacted too aggressively, the model ends up reconstructing missing context from hints. That is where confusion, extra follow-up commands, and wasted tokens tend to come from. CCP is designed to avoid that failure mode.
 
 - Preserve exit codes and critical diagnostics.
-- Keep familiar output shape when a safe filter exists.
-- Fall back to native output on ambiguity, structured modes, and unsupported cases.
-- Leave `--raw` available whenever exact output matters more than savings.
-- Keep native commands native. CCP only adds helper commands for filter authoring and gain inspection.
-- Keep structured, precision-sensitive, and machine-oriented output native when compaction would make it less usable.
-- Avoid generic log filters by default. Logs are domain-specific, so teams can tune them with YAML instead of relying on guessed summaries.
-- Treat integrations as convenience layers. The clearest mental model is still explicit `ccp <command>`.
+- Compact output into a shorter view that still looks like the command it came from.
+- Fall back to native output for ambiguous, structured, precision-sensitive, or machine-oriented cases.
+- Leave `--raw` available when exact output matters.
+- Let teams tune domain-specific logs with YAML instead of relying on guessed summaries.
 
 The goal is not maximum compression. The goal is smaller output you can still use.
 
