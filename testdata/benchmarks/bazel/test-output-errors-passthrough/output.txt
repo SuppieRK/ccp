@@ -1,0 +1,22 @@
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //:fail_test (0 packages loaded, 0 targets configured).
+FAIL: //:fail_test (Exit 1) (see /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log)
+INFO: From Testing //:fail_test:
+==================== Test output for //:fail_test:
+intentional bazel test failure
+================================================================================
+INFO: Found 1 test target...
+Target //:fail_test up-to-date:
+  bazel-bin/fail_test
+INFO: Elapsed time: 0.131s, Critical Path: 0.03s
+INFO: 2 processes: 1 internal, 2 linux-sandbox.
+INFO: Build completed, 1 test FAILED, 2 total actions
+//:fail_test                                                             FAILED in 0.0s
+  /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log
+
+Executed 1 out of 1 test: 1 fails locally.

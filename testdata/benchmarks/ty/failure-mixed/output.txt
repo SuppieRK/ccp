@@ -1,0 +1,10 @@
+error[unresolved-reference]: Name `foo` used when not defined
+  --> app/main.py:10:5
+   |
+10 |     foo()
+   |     ^^^
+warning[unused-variable]: Variable `x` is not used
+  --> app/utils.py:8:9
+ 8 |     x = 42
+   |     ^
+Found 1 error, 1 warning

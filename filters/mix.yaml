@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: mix
+about: Compact `mix compile` and `mix format --check-formatted` output by dropping repetitive compile churn and formatting boilerplate while preserving warnings, parse failures, and shell-usable file paths.
+
+cases:
+  - id: compile
+    when_arguments:
+      first_is: compile
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^Compiling [0-9]+ file(s)? \(.+\)$'
+
+  - id: format_check
+    when_arguments:
+      first_is: format
+      have_any:
+        - --check-formatted
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^\*\* \(Mix\) mix format failed due to --check-formatted\.$'
+            - regex: '^The following files are not formatted:$'
+          replace:
+            - regex: '^  \* (.+)$'
+              to: '$1'

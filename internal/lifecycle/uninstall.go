@@ -1,22 +1,31 @@
 package lifecycle
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/workspaces"
+)
+
+var (
+	uninstallExecutablePath      = os.Executable
+	uninstallScheduleSelfRemoval = scheduleExecutableRemoval
 )
 
 func RunUninstall(args []string) error {
 	fs := newLifecycleFlagSet("uninstall")
-	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: auto-detect when omitted)")
+	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: limit uninstall to selected integrations)")
 	setLifecycleUsage(
 		fs,
-		"remove supported agent integrations",
+		"remove ccp integrations or fully uninstall ccp",
 		[]string{"ccp uninstall [--tools <tool,tool,...>]"},
-		"When --tools is omitted, ccp uses auto-detection from the current repository.",
-		"Each integration removes managed artifacts from the same canonical install target used during init.",
+		"When --tools is provided, ccp removes only the selected integrations from their canonical install targets.",
+		"When --tools is omitted, ccp performs a complete uninstall of managed integrations, recorded workspace state, and global CCP files before removing the executable.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -30,14 +39,16 @@ func RunUninstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	tools, err := resolveUninstallTools(*toolsArg, adapters)
-	if err != nil {
-		return err
+	if tools := parseTools(*toolsArg); len(tools) > 0 {
+		return runToolScopedUninstall(tools, adapters)
 	}
+	return runCompleteUninstall(adapters)
+}
+
+func runToolScopedUninstall(tools []string, adapters map[string]agents.Adapter) error {
 	if err := agents.ValidateSelectedTools(tools, adapters); err != nil {
 		return err
 	}
-
 	scopeRoot, err := initDetectRoot()
 	if err != nil {
 		return err
@@ -46,9 +57,50 @@ func RunUninstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := applyUninstallAdapters(agents.Context{ScopeRoot: scopeRoot, HomeDir: homeDir}, tools, adapters); err != nil {
+	_, err = applyUninstallAdapters(agents.Context{ScopeRoot: scopeRoot, HomeDir: homeDir}, tools, adapters)
+	return err
+}
+
+func runCompleteUninstall(adapters map[string]agents.Adapter) error {
+	scopeRoot, err := initDetectRoot()
+	if err != nil {
 		return err
 	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	entries, err := workspaces.ListPath(workspaces.PathForHome(homeDir))
+	if err != nil {
+		writeLifecycleWarning("ccp uninstall: warning: could not read workspace registry: %v\n", err)
+		writeLifecycleWarning("ccp uninstall: warning: repo-scoped CCP files in other workspaces may remain; manual repo cleanup example:\n  %s\n", manualRepoUninstallCommand())
+		writeLifecycleWarning("ccp uninstall: warning: review mixed-content files like AGENTS.md in other repos for remaining CCP managed blocks\n")
+		entries = nil
+	}
+	scopes := uninstallScopes(scopeRoot, entries)
+	tools := canonicalUninstallTools(adapters)
+	for _, scope := range scopes {
+		if _, err := applyUninstallAdapters(agents.Context{ScopeRoot: scope, HomeDir: homeDir}, tools, adapters); err != nil {
+			return err
+		}
+	}
+
+	if err := removeWorkspaceState(scopes, entries); err != nil {
+		return err
+	}
+	if err := removeGlobalCCPState(homeDir); err != nil {
+		return err
+	}
+
+	exePath, err := uninstallExecutablePath()
+	if err != nil {
+		return err
+	}
+	if err := uninstallScheduleSelfRemoval(exePath); err != nil {
+		return err
+	}
+	fmt.Printf("ccp uninstall: scheduled executable removal (%s)\n", exePath)
 	return nil
 }
 
@@ -82,19 +134,79 @@ func joinTools(adapters map[string]agents.Adapter) string {
 	return strings.Join(agents.SupportedTools(adapters), ", ")
 }
 
-func resolveUninstallTools(toolsArg string, adapters map[string]agents.Adapter) ([]string, error) {
-	tools := parseTools(toolsArg)
-	if len(tools) > 0 {
-		return tools, nil
+func canonicalUninstallTools(adapters map[string]agents.Adapter) []string {
+	tools := make([]string, 0, len(adapters))
+	for id := range adapters {
+		tools = append(tools, id)
 	}
-	scopeRoot, err := initDetectRoot()
-	if err != nil {
-		return nil, err
+	slices.Sort(tools)
+	return tools
+}
+
+func uninstallScopes(currentScope string, entries []workspaces.Workspace) []string {
+	scopes := make([]string, 0, len(entries)+1)
+	seen := make(map[string]struct{}, len(entries)+1)
+	add := func(path string) {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			return
+		}
+		path = filepath.Clean(path)
+		if abs, err := filepath.Abs(path); err == nil {
+			path = abs
+		}
+		if _, ok := seen[path]; ok {
+			return
+		}
+		seen[path] = struct{}{}
+		scopes = append(scopes, path)
 	}
-	tools = agents.DetectTools(scopeRoot, adapters)
-	if len(tools) == 0 {
-		return nil, fmt.Errorf("no tools detected; specify --tools (%s)", joinTools(adapters))
+	add(currentScope)
+	for _, entry := range entries {
+		add(entry.CWD)
 	}
-	fmt.Printf("ccp uninstall: detected tools: %v\n", tools)
-	return tools, nil
+	return scopes
+}
+
+func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error {
+	var errs []error
+	for _, scope := range scopes {
+		if scope == "" {
+			continue
+		}
+		ccpDir := filepath.Join(scope, ".ccp")
+		if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("remove workspace state %q: %w", ccpDir, err))
+		}
+	}
+	for _, entry := range entries {
+		if strings.TrimSpace(entry.MetricsPath) == "" {
+			continue
+		}
+		if err := os.Remove(filepath.Clean(entry.MetricsPath)); err != nil && !os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("remove metrics path %q: %w", entry.MetricsPath, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func removeGlobalCCPState(homeDir string) error {
+	var errs []error
+	for _, path := range []string{
+		filepath.Join(homeDir, configDirName, "ccp"),
+		filepath.Join(homeDir, ".ccp"),
+	} {
+		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("remove %q: %w", path, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func manualRepoUninstallCommand() string {
+	return `REPO=/path/to/repo && rm -rf "$REPO/.ccp" "$REPO/.cursor/rules/ccp.mdc" "$REPO/.clinerules/ccp.md" "$REPO/.amazonq/rules/ccp.md" "$REPO/.trae/rules/ccp.md" "$REPO/.windsurf/rules/ccp.md"`
+}
+
+func writeLifecycleWarning(format string, args ...any) {
+	_, _ = fmt.Fprintf(os.Stderr, format, args...)
 }

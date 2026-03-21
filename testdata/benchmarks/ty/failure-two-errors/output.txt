@@ -1,0 +1,10 @@
+error[unresolved-reference]: Name `foo` used when not defined
+  --> app/main.py:10:5
+   |
+10 |     foo()
+   |     ^^^
+error[invalid-return-type]: Expression of type `str` cannot be returned as type `int`
+  --> app/utils.py:4:12
+ 4 |     return "oops"
+   |            ^^^^^^
+Found 2 errors

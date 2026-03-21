@@ -1,0 +1,2 @@
+argv: ["pio", "run"]
+exit_code: 1

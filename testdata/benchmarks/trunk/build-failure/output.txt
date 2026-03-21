@@ -1,0 +1,5 @@
+error[E0425]: cannot find value `foo` in this scope
+ --> src/main.rs:10:5
+  |
+10 |     foo();
+  |     ^^^ not found in this scope

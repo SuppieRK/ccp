@@ -1,0 +1,6 @@
+Creating virtual environment at: .venv
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 1 package in 126ms
+ + uv-sync-demo==0.1.0 (from file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-create)

@@ -137,13 +137,13 @@ Execution flags:
 Lifecycle commands:
   capture               Write command.yaml, sequenced streams, and replay output artifacts
   init                  Install or update supported agent integrations
-  gain                  Show token savings summary and recent proof output
+  gain                  Show token savings summary and recent proof output (--global supported)
   filter                YAML filter authoring helpers
-  history               Show recorded command history
+  history               Show recorded command history (--global supported)
   repair                Rewrite managed CCP home state to canonical shipped content
   verify                Replay one fixture directory through the current filter
   upgrade               Upgrade ccp
-  uninstall             Remove ccp integrations
+  uninstall             Remove selected integrations or fully uninstall ccp
 
 Notes:
   - Run ccp gain after install or init to verify savings on real work.

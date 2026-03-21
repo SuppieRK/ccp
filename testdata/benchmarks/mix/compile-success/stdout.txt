@@ -1,0 +1,2 @@
+00000|Compiling 2 files (.ex)
+00001|Generated ccpmixdemo app

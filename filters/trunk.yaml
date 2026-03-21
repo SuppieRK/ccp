@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: trunk
+about: Compact default `trunk build` output by dropping repetitive Rust compile and fetch noise while preserving final build summaries and compiler failures.
+
+cases:
+  - id: build
+    when_arguments:
+      first_is: build
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^[[:space:]]*Compiling .+$'
+            - regex: '^[[:space:]]*Downloading .+$'
+            - regex: '^[[:space:]]*Fetching .+$'
+            - regex: '^[[:space:]]*Fresh .+$'
+            - regex: '^[[:space:]]*Checking .+$'

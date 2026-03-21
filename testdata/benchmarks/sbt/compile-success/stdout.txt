@@ -1,0 +1,7 @@
+00000|[info] welcome to sbt 1.10.1 (Eclipse Adoptium Java 21.0.6)
+00001|[info] loading settings for project root-build from plugins.sbt ...
+00002|[info] loading project definition from /work/demo/project
+00003|[info] set current project to demo (in build file:/work/demo/)
+00004|[info] compiling 3 Scala sources to /work/demo/target/scala-3.3.3/classes ...
+00005|[info] done compiling
+00006|[success] Total time: 4 s, completed Mar 20, 2026, 9:15:01 AM

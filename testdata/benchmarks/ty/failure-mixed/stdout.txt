@@ -1,0 +1,18 @@
+00000|ty 0.1.0
+00001|Checking 15 files
+00002|
+00003|error[unresolved-reference]: Name `foo` used when not defined
+00004|  --> app/main.py:10:5
+00005|   |
+00006|10 |     foo()
+00007|   |     ^^^
+00008|   |
+00009|
+00010|warning[unused-variable]: Variable `x` is not used
+00011|  --> app/utils.py:8:9
+00012|   |
+00013| 8 |     x = 42
+00014|   |     ^
+00015|   |
+00016|
+00017|Found 1 error, 1 warning

@@ -1,0 +1,18 @@
+00000|ty 0.1.2
+00001|Checking 2 files
+00002|
+00003|error[unresolved-reference]: Name `foo` used when not defined
+00004|  --> app/main.py:10:5
+00005|   |
+00006|10 |     foo()
+00007|   |     ^^^
+00008|   |
+00009|
+00010|error[invalid-return-type]: Expression of type `str` cannot be returned as type `int`
+00011|  --> app/utils.py:4:12
+00012|   |
+00013| 4 |     return "oops"
+00014|   |            ^^^^^^
+00015|   |
+00016|
+00017|Found 2 errors

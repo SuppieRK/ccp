@@ -4,7 +4,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
+
+	"go-command-compression-proxy/internal/workspaces"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,14 +36,6 @@ type uninstallPreserveCase struct {
 	scope  string
 	setup  func(lifecycleWorkspace)
 	assert func(lifecycleWorkspace)
-}
-
-type uninstallAutodetectCase struct {
-	name      string
-	tool      string
-	scope     string
-	setupDirs []string
-	removed   string
 }
 
 var _ = Describe("uninstall", func() {
@@ -515,39 +511,180 @@ var _ = Describe("uninstall", func() {
 		Expect(joinTools(adapters)).To(Equal("alpha, beta"))
 	})
 
-	DescribeTable("detecting tools automatically on uninstall",
-		func(tc uninstallAutodetectCase) {
-			ws := newUninstallWorkspace(tc.scope)
-			for _, dir := range tc.setupDirs {
-				Expect(os.MkdirAll(expandUninstallPath(ws, dir), 0o755)).To(Succeed())
-			}
-
-			Expect(RunInit(toolsArgs(tc.tool))).To(Succeed())
-			Expect(RunUninstall(nil)).To(Succeed())
-			expectMissingPath(expandUninstallPath(ws, tc.removed))
-		},
-		Entry("opencode", uninstallAutodetectCase{name: "opencode", tool: "opencode", scope: "root", setupDirs: []string{"{root}/.opencode"}, removed: "{home}/.config/opencode/plugins/ccp-rewrite.js"}),
-		Entry("github-copilot", uninstallAutodetectCase{name: "github-copilot", tool: "github-copilot", scope: "root", setupDirs: []string{"{root}/.github"}, removed: "{home}/.copilot/copilot-instructions.md"}),
-		Entry("gemini", uninstallAutodetectCase{name: "gemini", tool: "gemini", scope: "root", setupDirs: []string{"{root}/.gemini"}, removed: "{home}/.gemini/GEMINI.md"}),
-		Entry("cursor", uninstallAutodetectCase{name: "cursor", tool: "cursor", scope: "root", setupDirs: []string{"{root}/.cursor"}, removed: "{root}/.cursor/rules/ccp.mdc"}),
-		Entry("cline", uninstallAutodetectCase{name: "cline", tool: "cline", scope: "root", setupDirs: []string{"{root}/.clinerules"}, removed: "{root}/.clinerules/ccp.md"}),
-		Entry("amazon-q", uninstallAutodetectCase{name: "amazon-q", tool: "amazon-q", scope: "root", setupDirs: []string{"{root}/.amazonq"}, removed: "{root}/.amazonq/rules/ccp.md"}),
-		Entry("roocode", uninstallAutodetectCase{name: "roocode", tool: "roocode", scope: "root", setupDirs: []string{"{root}/.roo"}, removed: "{home}/.roo/rules/ccp.md"}),
-		Entry("windsurf", uninstallAutodetectCase{name: "windsurf", tool: "windsurf", scope: "root", setupDirs: []string{"{root}/.windsurf"}, removed: "{root}/.windsurf/rules/ccp.md"}),
-	)
-
-	It("returns an error when no tools are detected", func() {
-		_ = newUninstallWorkspace("root")
-		err := RunUninstall(nil)
-		Expect(err).To(MatchError(ContainSubstring("no tools detected")))
+	It("sorts canonical uninstall tool ids", func() {
+		tools := canonicalUninstallTools(map[string]agents.Adapter{
+			"beta":  uninstallStubAdapter{id: "beta"},
+			"alpha": uninstallStubAdapter{id: "alpha"},
+		})
+		Expect(tools).To(Equal([]string{"alpha", "beta"}))
 	})
 
-	It("uses configured tools when the flag is omitted", func() {
+	It("normalizes and deduplicates uninstall scopes", func() {
+		base := GinkgoT().TempDir()
+		scopes := uninstallScopes(filepath.Join(base, "repo", "."), []workspaces.Workspace{
+			{CWD: filepath.Join(base, "repo")},
+			{CWD: filepath.Join(base, "repo", "sub")},
+			{CWD: filepath.Join(base, "repo", "sub", ".")},
+		})
+		Expect(scopes).To(Equal([]string{
+			filepath.Join(base, "repo"),
+			filepath.Join(base, "repo", "sub"),
+		}))
+	})
+
+	It("removes workspace and global CCP state helpers", func() {
+		ws := newUninstallWorkspace("root")
+		currentCCP := filepath.Join(ws.root, ".ccp")
+		otherScope := filepath.Join(ws.root, "other")
+		otherCCP := filepath.Join(otherScope, ".ccp")
+		externalMetrics := filepath.Join(ws.root, "external", "gain.db")
+
+		Expect(os.MkdirAll(filepath.Join(currentCCP, "filters"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(otherCCP, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Dir(externalMetrics), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(ws.home, ".config", "ccp", "audit"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(currentCCP, "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(otherCCP, "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(externalMetrics, []byte("metrics"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".config", "ccp", "audit", "audit.log"), []byte("audit"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "legacy.txt"), []byte("legacy"), 0o644)).To(Succeed())
+
+		Expect(removeWorkspaceState([]string{ws.root, otherScope}, []workspaces.Workspace{
+			{MetricsPath: externalMetrics},
+		})).To(Succeed())
+		expectMissingPath(currentCCP)
+		expectMissingPath(otherCCP)
+		expectMissingPath(externalMetrics)
+
+		Expect(removeGlobalCCPState(ws.home)).To(Succeed())
+		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
+		expectMissingPath(filepath.Join(ws.home, ".ccp"))
+	})
+
+	It("builds a detached uninstall removal script for the current platform", func() {
+		scriptPath, body, err := uninstallRemovalScript(filepath.Join(GinkgoT().TempDir(), `ccp "bin"`))
+		Expect(err).NotTo(HaveOccurred())
+		if runtime.GOOS == "windows" {
+			Expect(scriptPath).To(HaveSuffix(".cmd"))
+			Expect(body).To(ContainSubstring(`del /f /q "`))
+			return
+		}
+		Expect(scriptPath).To(HaveSuffix(".sh"))
+		Expect(body).To(ContainSubstring("rm -f -- '"))
+	})
+
+	It("uses a fixed safe PATH for self-removal commands", func() {
+		cmd := uninstallRemovalCommand(filepath.Join(GinkgoT().TempDir(), "cleanup"))
+		Expect(cmd.Env).NotTo(BeEmpty())
+		if runtime.GOOS == "windows" {
+			Expect(cmd.Path).To(Equal(windowsCmdPath()))
+			Expect(cmd.Env).To(ContainElement("PATH=" + filepath.Join(windowsSystemRoot(), "System32")))
+			return
+		}
+		Expect(cmd.Path).To(Equal("/bin/sh"))
+		Expect(cmd.Env).To(ContainElement("PATH=/usr/bin:/bin"))
+	})
+
+	It("rejects self-removal when the executable path is empty", func() {
+		Expect(scheduleExecutableRemoval("")).To(MatchError(ContainSubstring("resolve executable path for uninstall")))
+	})
+
+	It("schedules detached executable cleanup for a temporary binary", func() {
+		tmpDir := GinkgoT().TempDir()
+		exePath := filepath.Join(tmpDir, "ccp-temp")
+		Expect(os.WriteFile(exePath, []byte("temp"), 0o755)).To(Succeed())
+
+		Expect(scheduleExecutableRemoval(exePath)).To(Succeed())
+		Eventually(func() bool {
+			_, err := os.Stat(exePath)
+			return os.IsNotExist(err)
+		}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
+	})
+
+	It("keeps workspace metrics and the global registry for tool-scoped uninstall", func() {
 		ws := newUninstallWorkspace("root")
 		Expect(os.MkdirAll(filepath.Join(ws.root, ".opencode"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(ws.root, ".ccp"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.root, ".ccp", "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
+		registryPath := workspaces.PathForHome(ws.home)
+		Expect(workspaces.UpsertPath(registryPath, resolvedPath(ws.root), filepath.Join(ws.root, ".ccp", "gain.db"))).To(Succeed())
 		Expect(RunInit(toolsArgs("opencode"))).To(Succeed())
-		Expect(RunUninstall(nil)).To(Succeed())
+
+		Expect(RunUninstall(toolsArgs("opencode"))).To(Succeed())
+
 		expectMissingPath(filepath.Join(ws.home, ".config", "opencode", "plugins", "ccp-rewrite.js"))
+		Expect(filepath.Join(ws.root, ".ccp", "gain.db")).To(BeAnExistingFile())
+		entries, err := workspaces.ListPath(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty())
+		Expect(entries).To(ContainElement(HaveField("MetricsPath", filepath.Join(ws.root, ".ccp", "gain.db"))))
+	})
+
+	It("fully uninstalls managed state even when no integrations are detected", func() {
+		ws := newUninstallWorkspace("root")
+		scheduled := stubSelfRemoval(filepath.Join(ws.root, "bin", "ccp"))
+
+		Expect(os.MkdirAll(filepath.Join(ws.home, ".config", "ccp", "audit"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".config", "ccp", "audit", "audit.log"), []byte("audit"), 0o644)).To(Succeed())
+
+		Expect(RunUninstall(nil)).To(Succeed())
+
+		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
+		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "ccp")}))
+	})
+
+	It("keeps full uninstall working when the workspace registry is unreadable", func() {
+		ws := newUninstallWorkspace("root")
+		scheduled := stubSelfRemoval(filepath.Join(ws.root, "bin", "ccp"))
+		Expect(os.MkdirAll(filepath.Join(ws.root, ".cursor"), 0o755)).To(Succeed())
+		Expect(RunInit(toolsArgs("cursor"))).To(Succeed())
+
+		registryPath := workspaces.PathForHome(ws.home)
+		Expect(os.Remove(registryPath)).To(Succeed())
+		Expect(os.MkdirAll(registryPath, 0o755)).To(Succeed())
+
+		stderr, err := captureStderrOutput(func() error {
+			return RunUninstall(nil)
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stderr).To(ContainSubstring("ccp uninstall: warning: could not read workspace registry"))
+		Expect(stderr).To(ContainSubstring("manual repo cleanup example"))
+		Expect(stderr).To(ContainSubstring(`REPO=/path/to/repo && rm -rf "$REPO/.ccp"`))
+		Expect(stderr).To(ContainSubstring("AGENTS.md"))
+		expectMissingPath(filepath.Join(ws.root, ".cursor", "rules", "ccp.mdc"))
+		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
+		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "ccp")}))
+	})
+
+	It("removes integrations, recorded workspaces, and global state on full uninstall", func() {
+		ws := newUninstallWorkspace("root")
+		scheduled := stubSelfRemoval(filepath.Join(ws.root, "bin", "ccp"))
+		Expect(os.MkdirAll(filepath.Join(ws.root, ".cursor"), 0o755)).To(Succeed())
+		Expect(RunInit(toolsArgs("codex,cursor"))).To(Succeed())
+
+		Expect(os.MkdirAll(filepath.Join(ws.root, ".ccp", "filters"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.root, ".ccp", "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.root, ".ccp", "filters", "local.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+
+		otherScope := filepath.Join(ws.root, "other")
+		Expect(os.MkdirAll(filepath.Join(otherScope, ".cursor"), 0o755)).To(Succeed())
+		Expect(runInDir(otherScope, func() error {
+			return RunInit(toolsArgs("cursor"))
+		})).To(Succeed())
+
+		registryPath := workspaces.PathForHome(ws.home)
+		Expect(workspaces.UpsertPath(registryPath, ws.root, filepath.Join(ws.root, ".ccp", "gain.db"))).To(Succeed())
+
+		Expect(RunUninstall(nil)).To(Succeed())
+
+		expectMissingPath(filepath.Join(ws.home, ".codex", "AGENTS.md"))
+		expectMissingPath(filepath.Join(ws.root, ".cursor", "rules", "ccp.mdc"))
+		expectMissingPath(filepath.Join(otherScope, ".cursor", "rules", "ccp.mdc"))
+		expectMissingPath(filepath.Join(ws.root, ".ccp"))
+		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
+		expectMissingPath(filepath.Join(ws.home, ".ccp"))
+		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "ccp")}))
 	})
 })
 
@@ -563,6 +700,30 @@ func newUninstallWorkspace(scope string) lifecycleWorkspace {
 	}
 	withWorkingDir(ws.work)
 	return ws
+}
+
+func runInDir(dir string, fn func() error) error {
+	oldWd, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(os.Chdir(dir)).To(Succeed())
+	defer func() { _ = os.Chdir(oldWd) }()
+	return fn()
+}
+
+func stubSelfRemoval(exePath string) *[]string {
+	prevPath := uninstallExecutablePath
+	prevRemove := uninstallScheduleSelfRemoval
+	calls := make([]string, 0, 1)
+	uninstallExecutablePath = func() (string, error) { return exePath, nil }
+	uninstallScheduleSelfRemoval = func(path string) error {
+		calls = append(calls, path)
+		return nil
+	}
+	DeferCleanup(func() {
+		uninstallExecutablePath = prevPath
+		uninstallScheduleSelfRemoval = prevRemove
+	})
+	return &calls
 }
 
 func expandUninstallPath(ws lifecycleWorkspace, value string) string {

@@ -1,0 +1,11 @@
+00000|
+00001|  x Unexpected token
+00002|   ,-[file:///workspace/src/repo-51/src/index.ts:2:1]
+00003| 1 | export const broken =
+00004| 2 | export * from './cli/index.js';
+00005|   : ^^^^^^
+00006| 3 | export * from './core/index.js';
+00007|   `----
+00008|
+00009|Found 0 warnings and 1 error.
+00010|Finished in 23ms on 1 file with 93 rules using 16 threads.

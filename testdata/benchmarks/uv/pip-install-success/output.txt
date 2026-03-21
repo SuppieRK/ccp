@@ -1,0 +1,6 @@
+Uninstalled 1 package in 35ms
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 1 package in 127ms
+ ~ uv-demo-pkg==0.1.0 (from file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-pkg)

@@ -1,0 +1,2 @@
+argv: ["mix", "compile"]
+exit_code: 1

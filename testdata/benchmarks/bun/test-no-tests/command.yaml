@@ -1,0 +1,2 @@
+argv: ["bun", "test", "--pass-with-no-tests", "does-not-exist"]
+exit_code: 0

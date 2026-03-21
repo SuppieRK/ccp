@@ -1,0 +1,4 @@
+00013|//:ok_test                                                               PASSED in 0.0s
+00014|
+00015|Executed 1 out of 1 test: 1 test passes.
+00016|There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

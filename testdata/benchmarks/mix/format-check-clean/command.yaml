@@ -1,0 +1,1 @@
+argv: ["mix", "format", "--check-formatted"]

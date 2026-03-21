@@ -1,6 +1,12 @@
 ? fixture-go-test/no-test
 --- FAIL: TestByteCompare
---- FAIL: TestStructField
-ok fixture-go-test/test
     main_test.go:65: context: byte compare baseline=ccp expected=cxp
+        expected: cxp
+        actual: ccp
+    main_test.go:68: intentional mismatch at index 1
+--- FAIL: TestStructField
     main_test.go:78: context: struct field expected=fixture-bad actual=fixture
+        expected: fixture-bad
+        actual: fixture
+    main_test.go:80: intentional struct mismatch
+ok fixture-go-test/test

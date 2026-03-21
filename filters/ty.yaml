@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: ty
+about: Compact default `ty` type-checker output by dropping version, file-count, and blank-line boilerplate while preserving diagnostics, code frames, and final summaries.
+
+cases:
+  - id: ty
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^ty [0-9]+\.[0-9]+(\.[0-9]+)?$'
+            - regex: '^Checking [0-9]+ file(s)?$'

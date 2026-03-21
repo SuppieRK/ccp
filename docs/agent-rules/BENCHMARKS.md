@@ -21,6 +21,7 @@
 - Native token count comes from merged sequenced `stdout.txt` + `stderr.txt`.
 - Proxy token count comes from `verify-output.txt`.
 - Per-case metrics are written to `<artifact-dir>/.ccp/gain.db`.
+- Benchmark metrics are local to each artifact and must not be written into normal workspace metrics stores or the global workspace registry.
 - Read `ccp gain` from the case artifact directory, not from the parent benchmark directory.
 
 ## Working Rules

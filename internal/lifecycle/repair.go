@@ -23,7 +23,8 @@ func RunRepair(args []string) error {
 		[]string{"ccp repair [--yes]"},
 		"Repair rewrites the fully managed ~/.config/ccp directory and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
 		"Repair also removes obsolete managed ~/.ccp remnants.",
-		"Repair is interactive by default; use --yes for upgrade or installer automation.",
+		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings.",
+		"Use --yes for upgrade or installer automation.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -32,17 +33,35 @@ func RunRepair(args []string) error {
 	if handled {
 		return nil
 	}
+	return executeRepair(*yes)
+}
 
-	if !*yes {
+func executeRepair(yes bool) error {
+	if !yes {
 		ok, err := confirmRepair()
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("repair aborted")
+			return addMissingPackagedFilters()
 		}
 	}
+	return rewriteManagedRepairState()
+}
 
+func addMissingPackagedFilters() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	if err := syncMissingPackagedFilters(homeDir); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(repairStdout, "ccp repair: added missing shipped filters and mappings")
+	return err
+}
+
+func rewriteManagedRepairState() error {
 	lockPath, err := startupMaintenanceLockPath()
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"go-command-compression-proxy/internal/metrics"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 	flagPeriod = "--period"
 	flagSince  = "--since"
 	flagTable  = "--table"
+	flagGlobal = "--global"
 )
 
 var _ = Describe("RunGain", func() {
@@ -98,6 +100,161 @@ var _ = Describe("RunGain", func() {
 			Expect(out).To(ContainSubstring("go"))
 			Expect(out).To(ContainSubstring("git"))
 			Expect(out).NotTo(ContainSubstring("Missed opportunities"))
+		})
+
+		It("aggregates registered workspaces for global gain output", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoOne := filepath.Join(tmpDir, "repo-one")
+			repoTwo := filepath.Join(tmpDir, "repo-two")
+			appendGlobalWorkspaceMetrics(home, repoOne, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+			appendGlobalWorkspaceMetrics(home, repoTwo, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "git", Command: "git status", RawBytes: 500, KeptBytes: 500},
+			})
+
+			out := runGain(flagGlobal)
+			Expect(out).To(ContainSubstring("Biggest gains:"))
+			Expect(out).To(ContainSubstring("go"))
+			Expect(out).To(ContainSubstring("git"))
+		})
+
+		It("ignores unreadable registered workspaces during global gain aggregation", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoOne := filepath.Join(tmpDir, "repo-one")
+			appendGlobalWorkspaceMetrics(home, repoOne, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+			Expect(workspaces.Upsert(filepath.Join(tmpDir, "missing-repo"), filepath.Join(tmpDir, "missing-repo", ".ccp", "gain.db"))).To(Succeed())
+
+			out := runGain(flagGlobal, flagFormat, "json")
+			Expect(out).To(ContainSubstring(`"dataset": "summary"`))
+			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
+
+		It("includes the current repo legacy gain database even when the registry is empty", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoRoot := filepath.Join(tmpDir, "legacy-repo")
+			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
+			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+
+			var out string
+			Expect(runInDir(repoRoot, func() error {
+				var err error
+				out, err = captureStdout(func() error {
+					return RunGain([]string{flagGlobal, flagFormat, "json"}, repoMetricsPath)
+				})
+				return err
+			})).To(Succeed())
+
+			Expect(out).To(ContainSubstring(`"go test ./..."`))
+			entries, err := workspaces.ListPath(workspaces.PathForHome(home))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(1))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(repoRoot)))
+			Expect(entries[0].MetricsPath).To(Equal(repoMetricsPath))
+		})
+
+		It("does not double count the current repo when it is already registered", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoRoot := filepath.Join(tmpDir, "current-repo")
+			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
+			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), repoRoot, repoMetricsPath)).To(Succeed())
+
+			var out string
+			Expect(runInDir(repoRoot, func() error {
+				var err error
+				out, err = captureStdout(func() error {
+					return RunGain([]string{flagGlobal, flagFormat, "json"}, repoMetricsPath)
+				})
+				return err
+			})).To(Succeed())
+
+			var env summaryEnvelope
+			Expect(json.Unmarshal([]byte(out), &env)).To(Succeed())
+			Expect(env.Total.Commands).To(Equal(int64(1)))
+			Expect(env.Rows).To(HaveLen(1))
+		})
+
+		It("falls back to current repo metrics when the workspace registry is unreadable", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			registryPath := workspaces.PathForHome(home)
+			Expect(os.MkdirAll(filepath.Dir(registryPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(registryPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
+
+			repoRoot := filepath.Join(tmpDir, "broken-registry-repo")
+			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
+			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+
+			var out string
+			Expect(runInDir(repoRoot, func() error {
+				var err error
+				out, err = captureStdout(func() error {
+					return RunGain([]string{flagGlobal, flagFormat, "json"}, repoMetricsPath)
+				})
+				return err
+			})).To(Succeed())
+
+			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
+
+		It("renders global period summaries and datasets", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			nowUTC := time.Now().UTC()
+			now := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 0, 0, 0, 0, time.UTC)
+			repoOne := filepath.Join(tmpDir, "repo-one")
+			repoTwo := filepath.Join(tmpDir, "repo-two")
+			appendGlobalWorkspaceMetrics(home, repoOne, []metrics.RunMetric{
+				{Timestamp: now.Add(-6*24*time.Hour + 9*time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 200},
+				{Timestamp: now.Add(-4*24*time.Hour + 9*time.Hour), Tool: "git", Command: "git status", RawBytes: 400, KeptBytes: 400},
+			})
+			appendGlobalWorkspaceMetrics(home, repoTwo, []metrics.RunMetric{
+				{Timestamp: now.Add(-5*24*time.Hour + 9*time.Hour), Tool: "grep", Command: "grep -r needle .", RawBytes: 800, KeptBytes: 200},
+				{Timestamp: now.Add(-4*24*time.Hour + 10*time.Hour), Tool: "sed", Command: "sed -n 1,20p file", RawBytes: 100, KeptBytes: 100},
+			})
+
+			textOut := runGain(flagGlobal, flagPeriod, "week")
+			Expect(textOut).To(ContainSubstring("period=week global=true"))
+			Expect(textOut).To(ContainSubstring("Last 7d:"))
+			Expect(textOut).To(ContainSubstring("Busiest day:"))
+			Expect(textOut).To(ContainSubstring("Best day:"))
+			Expect(textOut).To(ContainSubstring("Recent trend:"))
+
+			jsonOut := runGain(flagGlobal, flagPeriod, "day", flagFormat, "json")
+			Expect(jsonOut).To(ContainSubstring(`"dataset": "period"`))
+			Expect(jsonOut).To(ContainSubstring(`"bucket"`))
+
+			csvOut := runGain(flagGlobal, flagPeriod, "day", flagFormat, "csv")
+			Expect(csvOut).To(ContainSubstring("dataset,period,since,tool_filter,failed_filter,bucket"))
+			Expect(csvOut).To(ContainSubstring("period,day"))
 		})
 	})
 
@@ -319,6 +476,87 @@ var _ = Describe("RunHistory", func() {
 				}
 			}
 		})
+
+		It("includes source attribution in global history text, json, and csv output", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoOne := filepath.Join(tmpDir, "repo-one")
+			repoTwo := filepath.Join(tmpDir, "repo-two")
+			appendGlobalWorkspaceMetrics(home, repoOne, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+			appendGlobalWorkspaceMetrics(home, repoTwo, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "git", Command: "git status", RawBytes: 500, KeptBytes: 500},
+			})
+
+			textOut := runHistory(flagGlobal, flagFormat, "text")
+			Expect(textOut).To(ContainSubstring("SOURCE"))
+			Expect(textOut).To(ContainSubstring("repo-one"))
+			Expect(textOut).To(ContainSubstring("repo-two"))
+
+			jsonOut := runHistory(flagGlobal, flagFormat, "json")
+			Expect(jsonOut).To(ContainSubstring(`"source"`))
+
+			csvOut := runHistory(flagGlobal, flagFormat, "csv")
+			Expect(csvOut).To(ContainSubstring("timestamp,source,command"))
+		})
+
+		It("includes current repo history when the registry entry exists without metrics", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repoRoot := filepath.Join(tmpDir, "legacy-repo")
+			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
+			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), repoRoot, "")).To(Succeed())
+
+			var out string
+			Expect(runInDir(repoRoot, func() error {
+				var err error
+				out, err = captureStdout(func() error {
+					return RunHistory([]string{flagGlobal, flagFormat, "json"}, repoMetricsPath)
+				})
+				return err
+			})).To(Succeed())
+
+			Expect(out).To(ContainSubstring(`"source"`))
+			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
+
+		It("falls back to current repo history when the workspace registry is unreadable", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			registryPath := workspaces.PathForHome(home)
+			Expect(os.MkdirAll(filepath.Dir(registryPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(registryPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
+
+			repoRoot := filepath.Join(tmpDir, "broken-history-registry-repo")
+			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
+			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+
+			var out string
+			Expect(runInDir(repoRoot, func() error {
+				var err error
+				out, err = captureStdout(func() error {
+					return RunHistory([]string{flagGlobal, flagFormat, "json"}, repoMetricsPath)
+				})
+				return err
+			})).To(Succeed())
+
+			Expect(out).To(ContainSubstring(`"source"`))
+			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
 	})
 
 	Context("when applying shared history filters", func() {
@@ -436,4 +674,31 @@ func appendGainMetrics(path string, seed []metrics.RunMetric) {
 	for _, m := range seed {
 		Expect(metrics.Append(path, m)).To(Succeed())
 	}
+}
+
+func appendGlobalWorkspaceMetrics(home, cwd string, seed []metrics.RunMetric) {
+	path := filepath.Join(cwd, ".ccp", "gain.db")
+	appendGainMetrics(path, seed)
+	Expect(workspaces.UpsertPath(workspaces.PathForHome(home), cwd, path)).To(Succeed())
+}
+
+func captureStdout(run func() error) (string, error) {
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", err
+	}
+	os.Stdout = w
+	defer func() {
+		os.Stdout = orig
+	}()
+
+	runErr := run()
+	closeErr := w.Close()
+
+	var buf bytes.Buffer
+	_, copyErr := io.Copy(&buf, r)
+	readCloseErr := r.Close()
+
+	return buf.String(), errors.Join(runErr, closeErr, copyErr, readCloseErr)
 }

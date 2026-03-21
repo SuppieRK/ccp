@@ -1,0 +1,29 @@
+00000|{
+00001|  "schema": {
+00002|    "version": "preview"
+00003|  },
+00004|  "target": "project",
+00005|  "project": {
+00006|    "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo",
+00007|    "workspace": {
+00008|      "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo"
+00009|    }
+00010|  },
+00011|  "sync": {
+00012|    "environment": {
+00013|      "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/.venv",
+00014|      "python": {
+00015|        "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/.venv/bin/python3",
+00016|        "version": "3.11.15",
+00017|        "implementation": "cpython"
+00018|      }
+00019|    },
+00020|    "action": "check",
+00021|    "changes": []
+00022|  },
+00023|  "lock": {
+00024|    "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/uv.lock",
+00025|    "action": "use"
+00026|  },
+00027|  "dry_run": false
+00028|}

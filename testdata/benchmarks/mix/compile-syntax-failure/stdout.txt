@@ -1,0 +1,5 @@
+00000|Compiling 2 files (.ex)
+00001|
+00002|== Compilation error in file lib/ccpmixdemo.ex ==
+00003|** (SyntaxError) lib/ccpmixdemo.ex:21:1: unexpected reserved word: end. The "(" at line 19 is missing terminator ")"
+00004|    (elixir 1.14.0) lib/kernel/parallel_compiler.ex:346: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/7

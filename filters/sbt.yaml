@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: sbt
+about: Trim sbt startup and loading boilerplate for direct `compile` and `test` runs while preserving warnings, errors, and framework-owned test output. Precision and debug modes stay native.
+
+cases:
+  - id: precision_passthrough
+    when_arguments:
+      have_any:
+        - -error
+        - --error
+        - -debug
+        - --debug
+        - -v
+        - --verbose
+    passthrough: true
+
+  - id: compile
+    when_arguments:
+      first_is: compile
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^\[info\] welcome to sbt .+$'
+            - regex: '^\[info\] loading settings for project .+$'
+            - regex: '^\[info\] loading project definition from .+$'
+            - regex: '^\[info\] set current project to .+$'
+            - regex: '^\[info\] compiling [0-9]+ (Scala|Java) sources? to .+$'
+            - regex: '^\[info\] done compiling$'
+          replace:
+            - regex: '^\[success\] Total time: .+$'
+              to: 'sbt: ok'
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^[[:space:]]*$'
+            - regex: '^\[info\] welcome to sbt .+$'
+            - regex: '^\[info\] loading settings for project .+$'
+            - regex: '^\[info\] loading project definition from .+$'
+            - regex: '^\[info\] set current project to .+$'
+            - regex: '^\[info\] compiling [0-9]+ (Scala|Java) sources? to .+$'
+            - regex: '^\[info\] done compiling$'
+          replace:
+            - regex: '^\[success\] Total time: .+$'
+              to: 'sbt: ok'

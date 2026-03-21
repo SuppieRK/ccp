@@ -1,0 +1,4 @@
+00000|ty 0.1.0
+00001|Checking 10 files
+00002|
+00003|All checks passed!

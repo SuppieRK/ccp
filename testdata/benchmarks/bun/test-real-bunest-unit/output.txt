@@ -1,0 +1,6 @@
+src/app.controller.spec.ts:
+(pass) AppController > root > should return "Hello World!" [7.39ms]
+ 1 pass
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [1069.00ms]

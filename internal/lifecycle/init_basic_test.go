@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/workspaces"
 )
 
 func newInitSpecWorkspace() lifecycleWorkspace {
@@ -45,6 +46,14 @@ var _ = Describe("init basic behavior", func() {
 		It("does not persist an init manifest", func() {
 			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
+		})
+
+		It("registers the current workspace even before metrics exist", func() {
+			entries, err := workspaces.ListPath(workspaces.PathForHome(ws.home))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(1))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(ws.work)))
+			Expect(entries[0].MetricsPath).To(BeEmpty())
 		})
 
 		It("keeps reruns idempotent without writing backup artifacts", func() {
@@ -99,6 +108,26 @@ var _ = Describe("init basic behavior", func() {
 			_, err := os.Stat(filepath.Join(ws.home, ".config", "opencode", "plugins", initOpenCodeRewriteJS))
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("creates the workspace registry for noop reruns too", func() {
+			Expect(RunInit([]string{initToolsFlag, "cursor"})).To(Succeed())
+			entries, err := workspaces.ListPath(workspaces.PathForHome(ws.home))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(1))
+			Expect(resolvedPath(entries[0].CWD)).To(Equal(resolvedPath(ws.work)))
+		})
+	})
+
+	It("keeps init successful when the workspace registry cannot be updated", func() {
+		registryPath := workspaces.PathForHome(ws.home)
+		Expect(os.MkdirAll(registryPath, 0o755)).To(Succeed())
+
+		stderr, err := captureStderrOutput(func() error {
+			return RunInit(args)
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stderr).To(ContainSubstring("ccp init: warning: could not update workspace registry"))
+		Expect(filepath.Join(ws.home, ".config", "opencode", "plugins", initOpenCodeRewriteJS)).To(BeAnExistingFile())
 	})
 
 	Context("when repository detection would find codex", func() {

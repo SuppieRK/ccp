@@ -1,0 +1,6 @@
+00000|   Compiling my-crate v0.1.0
+00001|   Checking tokio v1.35.0
+00002|error: linking with `cc` failed: exit status: 1
+00003|  |
+00004|  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+00005|  = note: collect2: error: ld returned 1 exit status

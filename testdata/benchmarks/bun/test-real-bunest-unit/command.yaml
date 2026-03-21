@@ -1,0 +1,2 @@
+argv: ["bun", "test", "src/app.controller.spec.ts"]
+exit_code: 0

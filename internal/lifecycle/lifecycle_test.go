@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/workspaces"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -268,6 +269,24 @@ var _ = Describe("Startup maintenance", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 		})
+
+		It("preserves the global workspace registry during sync", func() {
+			configDir := filepath.Join(ws.home, ".config", "ccp")
+			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+			registryPath := workspaces.PathForHome(ws.home)
+			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".ccp", "gain.db"))).To(Succeed())
+
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "version: 1\nmap:\n  npm: npm\n",
+				"npm.yaml":       "version: 1\nfilter: npm\nabout: test\n",
+			})
+
+			Expect(syncCanonicalHomeLayout()).To(Succeed())
+
+			entries, err := workspaces.ListPath(registryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(1))
+		})
 	})
 
 	It("builds the real binary and materializes embedded filters on repair", func() {
@@ -330,7 +349,22 @@ var _ = Describe("repair", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("aborts when the interactive prompt is declined", func() {
+	It("preserves the global workspace registry when rewriting state", func() {
+		registryPath := workspaces.PathForHome(ws.home)
+		Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".ccp", "gain.db"))).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+		})
+
+		Expect(RunRepair([]string{"--yes"})).To(Succeed())
+
+		entries, err := workspaces.ListPath(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+	})
+
+	It("adds missing filters and mappings when the interactive prompt is declined", func() {
 		prevIn := repairStdin
 		prevOut := repairStdout
 		repairStdin = strings.NewReader("n\n")
@@ -340,8 +374,69 @@ var _ = Describe("repair", func() {
 			repairStdout = prevOut
 		})
 
-		err := RunRepair(nil)
-		Expect(err).To(MatchError("repair aborted"))
+		configDir := filepath.Join(ws.home, ".config", "ccp")
+		filtersDir := filepath.Join(configDir, "filters")
+		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("keep"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filtersDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  custom: custom\n"), 0o644)).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+		})
+
+		Expect(RunRepair(nil)).To(Succeed())
+
+		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
+		Expect(err).NotTo(HaveOccurred())
+		_, err = os.Stat(filepath.Join(filtersDir, "git.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		body, err := os.ReadFile(filepath.Join(filtersDir, ".mappings.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(ContainSubstring("custom: custom"))
+		Expect(string(body)).To(ContainSubstring("git: git"))
+	})
+
+	It("syncs missing shipped filters without overwriting existing user files", func() {
+		filtersDir := filepath.Join(ws.home, ".config", "ccp", "filters")
+		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filtersDir, "git.yaml"), []byte("user override\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filtersDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  custom: custom\n"), 0o644)).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n  npm: npm\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: shipped\n",
+			"npm.yaml":       "version: 1\nfilter: npm\nabout: shipped\n",
+		})
+
+		Expect(syncMissingPackagedFilters(ws.home)).To(Succeed())
+
+		gitBody, err := os.ReadFile(filepath.Join(filtersDir, "git.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(gitBody)).To(Equal("user override\n"))
+
+		npmBody, err := os.ReadFile(filepath.Join(filtersDir, "npm.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(npmBody)).To(ContainSubstring("filter: npm"))
+
+		mappingsBody, err := os.ReadFile(filepath.Join(filtersDir, ".mappings.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(mappingsBody)).To(ContainSubstring("custom: custom"))
+		Expect(string(mappingsBody)).To(ContainSubstring("git: git"))
+		Expect(string(mappingsBody)).To(ContainSubstring("npm: npm"))
+	})
+
+	It("rebuilds shipped mappings when the current mappings file is invalid", func() {
+		srcDir := GinkgoT().TempDir()
+		srcPath := filepath.Join(srcDir, ".mappings.yaml")
+		dstPath := filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml")
+		Expect(os.MkdirAll(filepath.Dir(dstPath), 0o755)).To(Succeed())
+		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(dstPath, []byte("not: [valid"), 0o644)).To(Succeed())
+
+		Expect(mergeMissingMappings(srcPath, dstPath)).To(Succeed())
+
+		body, err := os.ReadFile(dstPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(ContainSubstring("git: git"))
 	})
 })
 

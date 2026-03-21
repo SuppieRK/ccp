@@ -1,0 +1,30 @@
+{
+  "schema": {
+    "version": "preview"
+  },
+  "target": "project",
+  "project": {
+    "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo",
+    "workspace": {
+      "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo"
+    }
+  },
+  "sync": {
+    "environment": {
+      "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/.venv",
+      "python": {
+        "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/.venv/bin/python3",
+        "version": "3.11.15",
+        "implementation": "cpython"
+      }
+    },
+    "action": "check",
+    "changes": []
+  },
+  "lock": {
+    "path": "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-sync-demo/uv.lock",
+    "action": "use"
+  },
+  "dry_run": false
+}
+Checked 1 package in 5ms

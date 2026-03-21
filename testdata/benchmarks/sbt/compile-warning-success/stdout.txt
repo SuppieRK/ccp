@@ -1,0 +1,11 @@
+00000|[info] welcome to sbt 1.10.1 (Eclipse Adoptium Java 21.0.6)
+00001|[info] loading settings for project root-build from plugins.sbt ...
+00002|[info] loading project definition from /work/demo/project
+00003|[info] set current project to demo (in build file:/work/demo/)
+00004|[info] compiling 1 Scala source to /work/demo/target/scala-3.3.3/classes ...
+00005|[warn] /work/demo/src/main/scala/Main.scala:8:24: method oldApi in object Helpers is deprecated
+00006|[warn]   println(Helpers.oldApi())
+00007|[warn]                        ^
+00008|[warn] one warning found
+00009|[info] done compiling
+00010|[success] Total time: 4 s, completed Mar 20, 2026, 9:20:41 AM

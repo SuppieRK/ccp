@@ -1,0 +1,13 @@
+00000|warning: Failed to parse `pyproject.toml` during settings discovery:
+00001|  TOML parse error at line 1, column 9
+00002|    |
+00003|  1 | [project
+00004|    |         ^
+00005|  unclosed table, expected `]`
+00006|
+00007|error: Failed to parse: `pyproject.toml`
+00008|  Caused by: TOML parse error at line 1, column 9
+00009|  |
+00010|1 | [project
+00011|  |         ^
+00012|unclosed table, expected `]`

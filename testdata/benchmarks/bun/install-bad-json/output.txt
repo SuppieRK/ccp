@@ -1,0 +1,5 @@
+3 |   "version": "1.0.0",
+                         ^
+error: Expected string but found end of file
+    at /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-bad-json/package.json:3:22
+ParserError: failed to parse '/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-bad-json/package.json'

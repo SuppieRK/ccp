@@ -1,0 +1,2 @@
+00000|Found 0 warnings and 0 errors.
+00001|Finished in 20ms on 1 file with 93 rules using 16 threads.

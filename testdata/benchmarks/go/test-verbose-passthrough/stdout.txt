@@ -1,0 +1,10 @@
+00000|=== RUN   TestVerbosePass
+00001|    main_test.go:6: running verbose pass
+00002|--- PASS: TestVerbosePass (0.00s)
+00003|=== RUN   TestVerboseFail
+00004|    main_test.go:10: before failure
+00005|    main_test.go:11: intentional verbose failure
+00006|--- FAIL: TestVerboseFail (0.00s)
+00007|FAIL
+00008|FAIL	fixture-go-verbose	0.002s
+00009|FAIL

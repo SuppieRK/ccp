@@ -1,0 +1,2 @@
+argv: ["uv", "sync", "--frozen"]
+exit_code: 0

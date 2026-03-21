@@ -1,0 +1,4 @@
+error: linking with `cc` failed: exit status: 1
+  |
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: collect2: error: ld returned 1 exit status

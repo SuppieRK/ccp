@@ -1,0 +1,2 @@
+argv: ["bazel", "build", "//:broken"]
+exit_code: 1

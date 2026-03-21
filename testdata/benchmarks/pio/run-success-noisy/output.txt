@@ -1,0 +1,4 @@
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  11.2% (used 36792 bytes from 327680 bytes)
+Flash: [===       ]  31.8% (used 417421 bytes from 1310720 bytes)
+========================= [SUCCESS] Took 1.23 seconds =========================

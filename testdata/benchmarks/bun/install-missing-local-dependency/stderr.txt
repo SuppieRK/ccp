@@ -1,0 +1,2 @@
+00001|error: Could not find package.json for "file:../does-not-exist" dependency "missing-local-pkg"
+00002|error: missing-local-pkg@file:../does-not-exist failed to resolve
