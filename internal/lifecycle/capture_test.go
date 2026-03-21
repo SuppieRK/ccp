@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,11 +49,11 @@ var _ = Describe("capture", func() {
 
 		stdoutData, err := os.ReadFile(filepath.Join(tmp, captureStdoutFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(stdoutData)).To(HaveSuffix("|" + stdoutLine))
+		Expect(normalizeCaptureLineEndings(string(stdoutData))).To(HaveSuffix("|" + stdoutLine))
 
 		stderrData, err := os.ReadFile(filepath.Join(tmp, captureStderrFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(stderrData)).To(HaveSuffix("|" + stderrLine))
+		Expect(normalizeCaptureLineEndings(string(stderrData))).To(HaveSuffix("|" + stderrLine))
 
 		commandData, err := os.ReadFile(filepath.Join(tmp, replay.CommandFileName))
 		Expect(err).NotTo(HaveOccurred())
@@ -67,15 +68,15 @@ var _ = Describe("capture", func() {
 		Expect(stub.gotArgs).To(Equal(commandArgs))
 		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
-		Expect(replay.CombinedInput(stub.gotEvents)).To(Or(
+		Expect(normalizeCaptureLineEndings(replay.CombinedInput(stub.gotEvents))).To(Or(
 			Equal(stdoutLine+stderrLine),
 			Equal(stderrLine+stdoutLine),
 		))
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
-			return event.Stream == contracts.StreamStdout && event.Line == stdoutLine
+			return event.Stream == contracts.StreamStdout && normalizeCaptureLineEndings(event.Line) == stdoutLine
 		})).To(BeTrue())
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
-			return event.Stream == contracts.StreamStderr && event.Line == stderrLine
+			return event.Stream == contracts.StreamStderr && normalizeCaptureLineEndings(event.Line) == stderrLine
 		})).To(BeTrue())
 	})
 
@@ -160,4 +161,8 @@ func captureStdoutOnlyCommand() ([]string, string, string) {
 		return []string{"cmd", "/c", "echo native stdout"}, "native stdout\n", ""
 	}
 	return []string{"sh", "-c", "printf 'native stdout\\n'"}, "native stdout\n", ""
+}
+
+func normalizeCaptureLineEndings(v string) string {
+	return strings.ReplaceAll(v, "\r\n", "\n")
 }
