@@ -90,9 +90,9 @@ Benchmarked with each build across `52` tool families and `382` replay cases.
 | Go/Rust | `go`, `golangci-lint`, `cargo`, `trunk` | `35–90%+` |
 | Dart/Flutter | `dart`, `flutter` | `35–85%+` |
 | Containers | `docker` | `95%+` for build surfaces |
-| Embedded / Firmware | `pio` | `0–40%+` |
-| Elixir | `mix` | `0–80%+` |
-| Other runtimes | `deno` | `0–80%+` |
+| Embedded / Firmware | `pio` | `10–40%+` |
+| Elixir | `mix` | `5–80%+` |
+| Other runtimes | `deno` | `5–80%+` |
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 
