@@ -112,14 +112,73 @@ var _ = Describe("Runner", func() {
 	It("routes direct emitted entries to the correct streams", func() {
 		runner := &Runner{sources: []corefilters.FilterSource{}}
 
-		runner.writeEntries([]engine.BufferEntry{
+		_, err := runner.writeEntries([]engine.BufferEntry{
 			{Stream: contracts.StreamStdout, Line: "out-1\n"},
 			{Stream: contracts.StreamStderr, Line: "err-1\n"},
 			{Stream: contracts.StreamStdout, Line: "out-2\n"},
 		})
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("out-1\nout-2\n"))
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(Equal("err-1\n"))
+	})
+
+	Context("when downstream output cannot be written", func() {
+		It("surfaces filtered stdout write failures instead of reporting success", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses unix sh")
+			}
+
+			brokenStdout, err := os.CreateTemp("", "core-runner-broken-stdout-*")
+			Expect(err).NotTo(HaveOccurred())
+			brokenStdoutPath := brokenStdout.Name()
+			DeferCleanup(func() {
+				Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+			})
+			Expect(brokenStdout.Close()).To(Succeed())
+			os.Stdout = brokenStdout
+
+			repoRoot, err := os.MkdirTemp("", "core-runner-write-failure-*")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(os.RemoveAll(repoRoot)).To(Succeed())
+			})
+
+			runner := &Runner{
+				sources:     []corefilters.FilterSource{},
+				metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+			}
+
+			code, err := runner.Run([]string{"sh", "-c", "printf 'hello from ccp\\n'"})
+
+			Expect(err).To(HaveOccurred())
+			Expect(code).NotTo(Equal(0))
+		})
+
+		It("surfaces raw-mode flush failures instead of reporting success", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses unix sh")
+			}
+
+			brokenStdout, err := os.CreateTemp("", "core-runner-broken-raw-stdout-*")
+			Expect(err).NotTo(HaveOccurred())
+			brokenStdoutPath := brokenStdout.Name()
+			DeferCleanup(func() {
+				Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+			})
+			Expect(brokenStdout.Close()).To(Succeed())
+			os.Stdout = brokenStdout
+
+			runner := NewRunnerWithOptions(Options{
+				Raw:          true,
+				Confidential: []string{"secret"},
+			})
+
+			code, err := runner.Run([]string{"sh", "-c", "printf 'secret-without-newline'"})
+
+			Expect(err).To(HaveOccurred())
+			Expect(code).NotTo(Equal(0))
+		})
 	})
 
 	It("copies a trailing line before stopping on a non-EOF read error", func() {
@@ -130,9 +189,9 @@ var _ = Describe("Runner", func() {
 		}
 		stats := &streamStats{}
 
-		runner.copyStream(src, func(line string) []engine.BufferEntry {
+		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
 			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)
+		}, stats)).NotTo(HaveOccurred())
 
 		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("tail-without-newline"))
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
@@ -145,9 +204,9 @@ var _ = Describe("Runner", func() {
 		src := strings.NewReader("\r⠋ first\r⠙ second\rDone\n")
 		stats := &streamStats{}
 
-		runner.copyStream(src, func(line string) []engine.BufferEntry {
+		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
 			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)
+		}, stats)).NotTo(HaveOccurred())
 
 		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("Done\n"))
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
@@ -160,9 +219,9 @@ var _ = Describe("Runner", func() {
 		src := strings.NewReader("runner-win\r\n")
 		stats := &streamStats{}
 
-		runner.copyStream(src, func(line string) []engine.BufferEntry {
+		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
 			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)
+		}, stats)).NotTo(HaveOccurred())
 
 		Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("runner-win\n"))
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
