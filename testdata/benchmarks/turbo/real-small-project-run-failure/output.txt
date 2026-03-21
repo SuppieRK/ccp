@@ -1,0 +1,8 @@
+turbo: 1/2 tasks succeeded
+shared-ui:build: cache miss, executing 71f2a08b
+shared-ui:build: vite v6.3.1 building for production...
+shared-ui:build: ✓ 4 modules transformed.
+web:build: cache miss, executing 10bc5aa2
+web:build: error: Cannot find module './missing'
+web:build: command finished with error Error: command (/repo/apps/web) pnpm run build exited (1)
+ ERROR  run failed: command  exited (1)

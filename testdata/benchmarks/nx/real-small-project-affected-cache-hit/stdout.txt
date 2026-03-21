@@ -1,0 +1,22 @@
+00000|
+00001| NX   Running target lint for 3 projects:
+00002|
+00003|- web
+00004|- shared-ui
+00005|- shared-data
+00006|
+00007|> nx run shared-ui:lint
+00008|
+00009|All files pass linting.
+00010|
+00011|> nx run web:lint
+00012|
+00013|All files pass linting.
+00014|
+00015|> nx run shared-data:lint
+00016|
+00017|All files pass linting.
+00018|
+00019|Nx read the output from the cache for 2 out of 3 tasks.
+00020|
+00021|Successfully ran target lint for 3 projects

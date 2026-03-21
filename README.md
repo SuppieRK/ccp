@@ -75,24 +75,24 @@ That mix is the point. CCP can save a lot. It also knows when not to fake it.
 
 ## Capability Matrix
 
-Benchmarked with each build across `47` tool families and `354` replay cases.
+Benchmarked with each build across `52` tool families and `382` replay cases.
 
 | Area | Tools | Representative Savings |
 |---|---|---:|
 | Files/search | `find`, `grep`, `ls` | up to `95%+` |
 | Source control | `git` | `10–60%+` |
 | Build systems | `maven`, `gradle`, `sbt`, `bazel` | `50–95%+` |
-| JS/TS | `biome`, `bun`, `eslint`, `npm`, `oxlint`, `pnpm`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc` | `15–85%+` |
+| JS/TS | `biome`, `bun`, `eslint`, `jest`, `npm`, `nx`, `oxlint`, `pnpm`, `turbo`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc`, `vitest` | `15–85%+` |
 | PHP | `composer` | `10–30%+` |
 | Python | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff`, `ty`, `uv` | `25–85%+` |
 | Config lint | `yamllint`, `shellcheck`, `hadolint` | `10–40%+` |
-| Infra & IaC | `helm`, `terraform`, `tofu` | `5–90%+` |
+| Infra & IaC | `helm`, `terraform`, `tofu`, `tflint` | `5–90%+` |
 | Go/Rust | `go`, `golangci-lint`, `cargo`, `trunk` | `35–90%+` |
 | Dart/Flutter | `dart`, `flutter` | `35–85%+` |
 | Containers | `docker` | `95%+` for build surfaces |
-| Embedded / Firmware | `pio` | `0–40%+` |
-| Elixir | `mix` | `0–80%+` |
-| Other runtimes | `deno` | `0–80%+` |
+| Embedded / Firmware | `pio` | `10–40%+` |
+| Elixir | `mix` | `5–80%+` |
+| Other runtimes | `deno` | `5–80%+` |
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 

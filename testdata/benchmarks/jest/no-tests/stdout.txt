@@ -1,0 +1,2 @@
+00000|No tests found, exiting with code 1
+00001|Pattern: src/never-matched/*.test.ts - 0 matches

@@ -1,0 +1,20 @@
+00000| RUN  v3.0.0 /workspace/app
+00001|
+00002| ❯ test/example.test.ts (1 test | 1 failed) 8ms
+00003|   × an example of a test with annotation 8ms
+00004|     → expected 1 to be 2
+00005|
+00006| ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+00007|
+00008|  FAIL  test/example.test.ts > an example of a test with annotation
+00009| AssertionError: expected 1 to be 2
+00010|   ❯ test/example.test.ts:11:21
+00011|     9 |   expect(1).toBe(1)
+00012|    10 | })
+00013|    11 |   expect(1).toBe(2)
+00014|       |            ^
+00015|
+00016|  Test Files  1 failed (1)
+00017|       Tests  1 failed (1)
+00018|    Start at  11:01:36
+00019|    Duration  2.00s (transform 35ms, setup 1ms, collect 90ms, tests 8ms, environment 0ms, prepare 267ms)

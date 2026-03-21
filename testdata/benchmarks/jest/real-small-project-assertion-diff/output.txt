@@ -1,0 +1,15 @@
+jest: 1 suites failed (1 total)
+tests: 1 passed | 1 failed (2 total)
+FAIL src/ui/filter-bar.test.ts
+    ✕ keeps "all" selected by default (7 ms)
+    ✓ renders the remaining filters
+  ● filter bar › keeps "all" selected by default
+    expect(received).toBe(expected) // Object.is equality
+    Expected: "all"
+    Received: "completed"
+      25 |   renderFilterBar({ selected: 'completed' })
+      26 |   const active = screen.getByRole('button', { name: 'All' })
+    > 27 |   expect(active.dataset.state).toBe('all')
+         |                               ^
+      28 | })
+Ran all test suites matching /src\\/ui\\/filter-bar.test.ts/i.

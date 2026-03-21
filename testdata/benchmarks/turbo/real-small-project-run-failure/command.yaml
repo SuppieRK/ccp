@@ -1,0 +1,1 @@
+argv: ["turbo", "run", "build", "--filter=web", "--filter=shared-ui"]

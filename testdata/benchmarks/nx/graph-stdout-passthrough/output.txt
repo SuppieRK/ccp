@@ -1,0 +1,1 @@
+{"tasks":[{"id":"web:build","target":{"project":"web","target":"build"}},{"id":"shared-ui:build","target":{"project":"shared-ui","target":"build"}}],"dependencies":{"web:build":["shared-ui:build"]}}

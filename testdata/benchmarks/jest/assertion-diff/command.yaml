@@ -1,0 +1,1 @@
+argv: ["jest", "src/ui/filter-bar.test.ts"]

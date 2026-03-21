@@ -1,0 +1,4 @@
+vitest: 2 files passed (2 total)
+tests: 10 passed | 2 skipped (12 total)
+ ✓ test/example-1.test.ts (5 tests | 1 skipped) 306ms
+ ✓ test/example-2.test.ts (5 tests | 1 skipped) 307ms

@@ -1,0 +1,5 @@
+nx: target test succeeded for 2 projects
+> nx run shared-ui:test
+PASS shared-ui src/lib/slugify.spec.ts
+> nx run web:test
+PASS web src/app/app.spec.ts

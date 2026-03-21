@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+version: 1
+filter: jest
+about: Compact default Jest text summaries conservatively, preserve failure selectors, assertion/code-frame detail, and leave watch, JSON, coverage, and discovery-oriented modes native.
+
+cases:
+  - id: passthrough_machine_and_watch
+    when_arguments:
+      have_any:
+        - --json
+        - --outputFile
+        - --watch
+        - --watchAll
+        - --listTests
+        - --showConfig
+        - --coverage
+    passthrough: true
+
+  - id: default
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - regex: '^\s*$'
+            - regex: '^Determining test suites to run\.\.\.$'
+            - regex: '^Time:\s+.+$'
+          keep:
+            - regex: '^(PASS|FAIL)\s+.+$'
+            - regex: '^\s*[✓✕×]\s+.+$'
+            - regex: '^\s*● .+$'
+            - regex: '^\s*No tests found, exiting with code 1$'
+            - regex: '^\s*Pattern: .+$'
+            - regex: '^\s*Ran all test suites.*$'
+            - regex: '^\s*Jest encountered an unexpected token.*$'
+            - regex: '^\s*(AssertionError|Error|TypeError|ReferenceError|SyntaxError): .+$'
+            - regex: '^\s*expect\(.+$'
+            - regex: '^\s*Expected: .+$'
+            - regex: '^\s*Received: .+$'
+            - regex: '^\s*[-+]\s.*$'
+            - regex: '^\s*at .+:\d+(?::\d+)?\s*$'
+            - regex: '^\s*\d+\s+\|.*$'
+            - regex: '^\s*>\s*\d+\s+\|.*$'
+            - regex: '^\s*\|\s+\^$'
+          replace:
+            - regex: '^Test Suites:\s+(\d+)\s+passed,\s+(\d+)\s+total$'
+              to: 'jest: $1 suites passed ($2 total)'
+            - regex: '^Test Suites:\s+(\d+)\s+failed,\s+(\d+)\s+total$'
+              to: 'jest: $1 suites failed ($2 total)'
+            - regex: '^Test Suites:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total$'
+              to: 'jest: $2 suites passed, $1 failed ($3 total)'
+            - regex: '^Tests:\s+(\d+)\s+passed,\s+(\d+)\s+total$'
+              to: 'tests: $1 passed ($2 total)'
+            - regex: '^Tests:\s+(\d+)\s+failed,\s+(\d+)\s+total$'
+              to: 'tests: $1 failed ($2 total)'
+            - regex: '^Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total$'
+              to: 'tests: $2 passed | $1 failed ($3 total)'
+            - regex: '^Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+skipped,\s+(\d+)\s+total$'
+              to: 'tests: $2 passed | $1 failed | $3 skipped ($4 total)'
+            - regex: '^Tests:\s+(\d+)\s+passed,\s+(\d+)\s+skipped,\s+(\d+)\s+total$'
+              to: 'tests: $1 passed | $2 skipped ($3 total)'

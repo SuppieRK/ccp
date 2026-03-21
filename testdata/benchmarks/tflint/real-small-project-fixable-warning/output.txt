@@ -1,0 +1,3 @@
+Warning: [Fixed] variable "aws_region" is declared but not used (terraform_unused_declarations)
+  on variables.tf line 6:
+   6: variable "aws_region" {

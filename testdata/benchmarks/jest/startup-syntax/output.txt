@@ -1,0 +1,13 @@
+jest: 1 suites failed (1 total)
+FAIL src/ui/filter-bar.test.ts
+  ● Test suite failed to run
+    Jest encountered an unexpected token
+    SyntaxError: /workspace/todo-lite/src/ui/filter-bar.test.ts: Unexpected token, expected "," (4:26)
+      2 | import { render } from '@testing-library/react'
+      3 | import { describe, it, expect } from '@jest/globals'
+    > 4 | import { FilterBar from './FilterBar'
+        |                          ^
+      5 |
+      6 | describe('filter bar', () => {
+      7 |   it('keeps all selected by default', () => {
+Ran all test suites matching /src\\/ui\\/filter-bar.test.ts/i.

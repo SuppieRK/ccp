@@ -1,0 +1,15 @@
+00000|
+00001| NX   Running target test for 2 projects:
+00002|
+00003|- web
+00004|- shared-ui
+00005|
+00006|> nx run shared-ui:test
+00007|
+00008|PASS shared-ui src/lib/slugify.spec.ts
+00009|
+00010|> nx run web:test
+00011|
+00012|PASS web src/app/app.spec.ts
+00013|
+00014|Successfully ran target test for 2 projects

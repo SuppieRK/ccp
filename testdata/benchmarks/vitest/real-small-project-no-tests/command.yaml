@@ -1,0 +1,1 @@
+argv: ["vitest", "run", "src/never-matched/*.test.ts"]

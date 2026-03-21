@@ -1,0 +1,1 @@
+argv: ["nx", "affected", "-t", "test", "--projects=does-not-exist"]

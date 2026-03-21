@@ -1,0 +1,22 @@
+00000|FAIL src/ui/filter-bar.test.ts
+00001|  filter bar
+00002|    ✕ keeps "all" selected by default (6 ms)
+00003|    ✓ renders the remaining filters
+00004|
+00005|  ● filter bar › keeps "all" selected by default
+00006|
+00007|    expect(received).toBe(expected) // Object.is equality
+00008|
+00009|    Expected: "all"
+00010|    Received: "completed"
+00011|
+00012|      25 |   renderFilterBar({ selected: 'completed' })
+00013|      26 |   const active = screen.getByRole('button', { name: 'All' })
+00014|    > 27 |   expect(active.dataset.state).toBe('all')
+00015|         |                               ^
+00016|      28 | })
+00017|
+00018|Test Suites: 1 failed, 1 total
+00019|Tests:       1 failed, 1 passed, 2 total
+00020|Time:        0.648 s
+00021|Ran all test suites matching /src\\/ui\\/filter-bar.test.ts/i.
