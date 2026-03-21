@@ -703,7 +703,7 @@ var _ = Describe("gain formatting helpers", func() {
 			{BucketStart: "2026-03-03", EstimatedSavingsPct: 37.6},
 			{BucketStart: "2026-03-04", EstimatedSavingsPct: 37.6},
 		}
-		Expect(trendSummaryText(rows, "week")).To(Equal("↑ +6.2 pts WoW (31.4% → 37.6%) · clear gain"))
+		Expect(trendSummaryText(rows, "week")).To(Equal("↑ +6.2 pts week over week (31.4% → 37.6%) · clear gain"))
 	})
 
 	It("uses richer deterministic suffixes for flat and downward trends", func() {
@@ -720,8 +720,8 @@ var _ = Describe("gain formatting helpers", func() {
 			{BucketStart: "2026-03-04", EstimatedSavingsPct: 10.9},
 		}
 
-		Expect(trendSummaryText(flatRows, "week")).To(Equal("→ flat WoW (52.0% → 52.0%) · holding high"))
-		Expect(trendSummaryText(downRows, "week")).To(Equal("↓ -2.1 pts WoW (13.0% → 10.9%) · slipping"))
+		Expect(trendSummaryText(flatRows, "week")).To(Equal("→ flat week over week (52.0% → 52.0%) · holding high"))
+		Expect(trendSummaryText(downRows, "week")).To(Equal("↓ -2.1 pts week over week (13.0% → 10.9%) · slipping"))
 	})
 
 	DescribeTable("truncateForDisplay branches",

@@ -210,11 +210,11 @@ func summaryInsightLines(rows []metrics.SummaryToolRow) []labeledLine {
 func trendLabel(period string) string {
 	switch period {
 	case "day":
-		return "DoD"
+		return "day over day"
 	case "month":
-		return "MoM"
+		return "month over month"
 	default:
-		return "WoW"
+		return "week over week"
 	}
 }
 

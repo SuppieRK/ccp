@@ -118,7 +118,7 @@ Two real `ccp gain` snapshots from day-to-day work:
 
 Wins  : find 98.7% · gradle 87.1% · grep 1.4%
 Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
-Trend : ↑ +12.4 pts WoW (85.9% → 98.3%) · on a roll
+Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
 ```
 
 - Current repository snapshot from `ccp gain` (Codex):
@@ -128,7 +128,7 @@ Trend : ↑ +12.4 pts WoW (85.9% → 98.3%) · on a roll
 
 Wins  : grep 59.5% · go 90.3% · git 59.3%
 Drag  : sed (765 cmds) · openspec (245 cmds)
-Trend : ↓ -2.1 pts WoW (14.4% → 12.3%) · slipping
+Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
 ```
 
 Detailed views:
