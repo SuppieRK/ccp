@@ -190,12 +190,31 @@ func ReadSequenced(path string, stream contracts.Stream) ([]Event, error) {
 	return readSequencedFromReader(f, stream, path)
 }
 
+func ReadSequencedReader(r io.Reader, stream contracts.Stream) ([]Event, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return readSequencedFromReader(r, stream, string(stream))
+}
+
 func ReadEvents(stdoutPath, stderrPath string) ([]Event, error) {
 	stdoutEvents, err := ReadSequenced(stdoutPath, contracts.StreamStdout)
 	if err != nil {
 		return nil, err
 	}
 	stderrEvents, err := ReadSequenced(stderrPath, contracts.StreamStderr)
+	if err != nil {
+		return nil, err
+	}
+	return MergeAndValidate(stdoutEvents, stderrEvents)
+}
+
+func ReadEventReaders(stdout, stderr io.Reader) ([]Event, error) {
+	stdoutEvents, err := ReadSequencedReader(stdout, contracts.StreamStdout)
+	if err != nil {
+		return nil, err
+	}
+	stderrEvents, err := ReadSequencedReader(stderr, contracts.StreamStderr)
 	if err != nil {
 		return nil, err
 	}

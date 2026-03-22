@@ -233,7 +233,7 @@ func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 }
 
 func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error) {
-	events, err := replayEventsFromReaders(stdout, stderr)
+	events, err := replay.ReadEventReaders(stdout, stderr)
 	if err != nil {
 		return "", err
 	}
@@ -558,91 +558,6 @@ func splitDecisionLines(line string) []string {
 	}
 	return parts
 }
-
-func replayEventsFromReaders(stdout, stderr io.Reader) ([]replay.Event, error) {
-	var events []replay.Event
-	sequence := 0
-	for _, current := range []struct {
-		stream contracts.Stream
-		reader io.Reader
-	}{
-		{stream: contracts.StreamStdout, reader: stdout},
-		{stream: contracts.StreamStderr, reader: stderr},
-	} {
-		if current.reader == nil {
-			continue
-		}
-		lines, err := readReplayLines(current.reader)
-		if err != nil {
-			return nil, err
-		}
-		for _, line := range lines {
-			events = append(events, replay.Event{
-				Sequence: sequence,
-				Stream:   current.stream,
-				Line:     line,
-			})
-			sequence++
-		}
-	}
-	return events, nil
-}
-
-func readReplayLines(src io.Reader) ([]string, error) {
-	reader := bufio.NewReader(src)
-	lines := make([]string, 0, 32)
-	var currentLine []byte
-	pendingCR := false
-	for {
-		b, err := reader.ReadByte()
-		if err != nil {
-			return finishReplayLines(lines, currentLine, pendingCR, err)
-		}
-		line, emitted, nextPendingCR := appendReplayLineByte(currentLine, b, pendingCR)
-		if emitted {
-			lines = append(lines, line)
-			currentLine = currentLine[:0]
-			pendingCR = false
-			continue
-		}
-		if b != '\r' {
-			currentLine = append(currentLine, b)
-		}
-		pendingCR = nextPendingCR
-	}
-}
-
-func appendReplayLineByte(currentLine []byte, b byte, pendingCR bool) (string, bool, bool) {
-	if pendingCR {
-		if b == '\n' {
-			return string(append(currentLine, '\n')), true, false
-		}
-		currentLine = currentLine[:0]
-	}
-
-	switch b {
-	case '\r':
-		return "", false, true
-	case '\n':
-		return string(append(currentLine, '\n')), true, false
-	default:
-		return "", false, false
-	}
-}
-
-func finishReplayLines(lines []string, currentLine []byte, pendingCR bool, err error) ([]string, error) {
-	if pendingCR {
-		currentLine = currentLine[:0]
-	}
-	if len(currentLine) > 0 {
-		lines = append(lines, string(currentLine))
-	}
-	if err == io.EOF {
-		return lines, nil
-	}
-	return nil, err
-}
-
 func commandWithPipes(name string, args []string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
