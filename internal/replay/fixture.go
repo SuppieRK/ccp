@@ -320,7 +320,7 @@ func appendReplayLineByte(current []byte, b byte, pendingCR bool) ([]byte, strin
 		if b == '\n' {
 			return current, string(append(current, '\n')), true, false
 		}
-		current = current[:0]
+		current = resetReplayLinePayload(current)
 	}
 
 	switch b {
@@ -335,10 +335,18 @@ func appendReplayLineByte(current []byte, b byte, pendingCR bool) ([]byte, strin
 
 func finishReplayLine(current []byte, pendingCR bool) (string, error) {
 	if pendingCR {
-		current = current[:0]
+		current = resetReplayLinePayload(current)
 	}
 	if len(current) == 0 {
 		return "", io.EOF
 	}
 	return string(current), nil
+}
+
+func resetReplayLinePayload(current []byte) []byte {
+	sep := bytes.IndexByte(current, '|')
+	if sep < 0 {
+		return current[:0]
+	}
+	return current[:sep+1]
 }
