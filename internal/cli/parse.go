@@ -36,6 +36,10 @@ func Parse(args []string) (Options, error) {
 	opts := Options{}
 
 	for i := 0; i < len(args); i++ {
+		if args[i] == "--" {
+			opts.CommandArgs = args[i+1:]
+			return finalizeParsedOptions(opts)
+		}
 		if done, nextIndex, err := parseFlagArg(args, i, &opts); done {
 			if err != nil {
 				return Options{}, err
