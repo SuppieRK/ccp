@@ -1,12 +1,16 @@
 package lifecycle
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -141,6 +145,49 @@ var _ = Describe("capture", func() {
 		}))
 	})
 
+	It("orders partial cross-stream lines by first observed byte", func() {
+		stdout := newScriptedCaptureReader()
+		stderr := newScriptedCaptureReader()
+
+		var (
+			wg       sync.WaitGroup
+			mu       sync.Mutex
+			events   []replay.Event
+			sequence atomic.Int64
+		)
+		record := func(seq int, stream contracts.Stream, line string) {
+			mu.Lock()
+			defer mu.Unlock()
+			events = append(events, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		}
+
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
+		}()
+		go func() {
+			defer wg.Done()
+			readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
+		}()
+
+		stdout.sendByte('o')
+		stderr.sendByte('e')
+		stderr.sendByte('\n')
+		stdout.sendByte('k')
+		stdout.sendByte('\n')
+		stdout.finish()
+		stderr.finish()
+		wg.Wait()
+
+		sort.Slice(events, func(i, j int) bool { return events[i].Sequence < events[j].Sequence })
+		Expect(replay.ValidateSequence(events)).To(Succeed())
+		Expect(events).To(Equal([]replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok\n"},
+			{Sequence: 1, Stream: contracts.StreamStderr, Line: "e\n"},
+		}))
+	})
+
 	It("refuses to overwrite symlinked capture artifacts", func() {
 		tmp := GinkgoT().TempDir()
 		target := filepath.Join(GinkgoT().TempDir(), "outside-output.txt")
@@ -187,4 +234,48 @@ func captureStdoutOnlyCommand() ([]string, string, string) {
 
 func normalizeCaptureLineEndings(v string) string {
 	return strings.ReplaceAll(v, "\r\n", "\n")
+}
+
+type scriptedCaptureReader struct {
+	steps chan scriptedCaptureStep
+}
+
+type scriptedCaptureStep struct {
+	data []byte
+	err  error
+	ack  chan struct{}
+}
+
+func newScriptedCaptureReader() *scriptedCaptureReader {
+	return &scriptedCaptureReader{steps: make(chan scriptedCaptureStep)}
+}
+
+func (r *scriptedCaptureReader) Read(p []byte) (int, error) {
+	step, ok := <-r.steps
+	if !ok {
+		return 0, os.ErrClosed
+	}
+	defer close(step.ack)
+	if len(step.data) > 0 {
+		p[0] = step.data[0]
+		return 1, nil
+	}
+	return 0, step.err
+}
+
+func (r *scriptedCaptureReader) Close() error {
+	return nil
+}
+
+func (r *scriptedCaptureReader) sendByte(b byte) {
+	ack := make(chan struct{})
+	r.steps <- scriptedCaptureStep{data: []byte{b}, ack: ack}
+	<-ack
+}
+
+func (r *scriptedCaptureReader) finish() {
+	ack := make(chan struct{})
+	r.steps <- scriptedCaptureStep{err: io.EOF, ack: ack}
+	<-ack
+	close(r.steps)
 }
