@@ -569,10 +569,6 @@ func openDB(path string, readOnly bool) (*bolt.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !readOnly {
-
-		db.NoSync = true
-	}
 	return db, nil
 }
 

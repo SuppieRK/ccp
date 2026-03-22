@@ -79,6 +79,18 @@ var _ = Describe("metrics storage", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
+	It("opens writable metrics databases with durable sync enabled", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+
+		db, err := openDB(path, false)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(db.Close()).To(Succeed())
+		})
+
+		Expect(db.NoSync).To(BeFalse())
+	})
+
 	It("truncates long command text deterministically", func() {
 		path := filepath.Join(tempDir, "metrics.db")
 		long := strings.Repeat("x", 2000)
