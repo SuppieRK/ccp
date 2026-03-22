@@ -34,7 +34,7 @@ var _ = Describe("ParseCommandArgs", func() {
 		Entry("windows style executable path keeps its path-style basename",
 			[]string{`C:\Tools\kubectl.exe`, "--context", "dev", "get", "pods"},
 			contracts.Command{
-				RawInput: `C:\Tools\kubectl.exe --context dev get pods`,
+				RawInput: `'C:\Tools\kubectl.exe' --context dev get pods`,
 				Args:     []string{`C:\Tools\kubectl.exe`, "--context", "dev", "get", "pods"},
 				Tool:     "kubectl",
 			},
@@ -50,7 +50,7 @@ var _ = Describe("ParseCommandArgs", func() {
 		Entry("maven wrapper windows script resolves to canonical maven tool",
 			[]string{`C:\repo\mvnw.cmd`, "-B", "verify"},
 			contracts.Command{
-				RawInput: `C:\repo\mvnw.cmd -B verify`,
+				RawInput: `'C:\repo\mvnw.cmd' -B verify`,
 				Args:     []string{`C:\repo\mvnw.cmd`, "-B", "verify"},
 				Tool:     "mvn",
 			},
@@ -74,12 +74,23 @@ var _ = Describe("ParseCommandArgs", func() {
 		Entry("shell utility wrapper keeps the wrapper executable as tool",
 			[]string{"bash", "-lc", "npm test && npm run lint"},
 			contracts.Command{
-				RawInput: "bash -lc npm test && npm run lint",
+				RawInput: "bash -lc 'npm test && npm run lint'",
 				Args:     []string{"bash", "-lc", "npm test && npm run lint"},
 				Tool:     "bash",
 			},
 		),
 	)
+
+	It("renders RawInput so argv round-trips through command line parsing", func() {
+		args := []string{"cmd", "", "two words", `contains'quote`, `C:\Program Files\demo\main.py`, `semi;colon`}
+
+		command, err := ParseCommandArgs(args)
+		Expect(err).NotTo(HaveOccurred())
+
+		reparsed, err := ParseCommandLine(command.RawInput)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reparsed.Args).To(Equal(args))
+	})
 
 	It("rejects missing command args", func() {
 		command, err := ParseCommandArgs(nil)
@@ -308,8 +319,16 @@ var _ = Describe("ParseCommandLine", func() {
 			`sh -lc "printf '%s\n' 'hello world'"`,
 			contracts.Command{
 				RawInput: `sh -lc "printf '%s\n' 'hello world'"`,
-				Args:     []string{"sh", "-lc", `printf '%sn' 'hello world'`},
+				Args:     []string{"sh", "-lc", `printf '%s\n' 'hello world'`},
 				Tool:     "sh",
+			},
+		),
+		Entry("double quotes preserve backslashes before non-special characters",
+			`cmd "path\zvalue"`,
+			contracts.Command{
+				RawInput: `cmd "path\zvalue"`,
+				Args:     []string{"cmd", `path\zvalue`},
+				Tool:     "cmd",
 			},
 		),
 		Entry("escaped spaces",

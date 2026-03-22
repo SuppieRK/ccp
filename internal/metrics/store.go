@@ -612,7 +612,7 @@ func encodeRunRecord(rec runRecord) []byte {
 	i += 8
 	putNonNegativeInt64AsU64(out[i:i+8], rec.KeptBytes)
 	i += 8
-	putNonNegativeIntAsU64(out[i:i+8], rec.ExitCode)
+	putIntAsU64(out[i:i+8], rec.ExitCode)
 	i += 8
 	putNonNegativeInt64AsU64(out[i:i+8], rec.DurationMS)
 	i += 8
@@ -659,7 +659,7 @@ func decodeRunRecord(b []byte) runRecord {
 	i += 8
 	rec.KeptBytes = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
-	rec.ExitCode = getBoundedIntFromU64(b[i : i+8])
+	rec.ExitCode = getBoundedSignedIntFromU64(b[i : i+8])
 	i += 8
 	rec.DurationMS = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
@@ -685,11 +685,8 @@ func putNonNegativeInt64AsU64(dst []byte, v int64) {
 	putU64(dst, uint64(v))
 }
 
-func putNonNegativeIntAsU64(dst []byte, v int) {
-	if v < 0 {
-		v = 0
-	}
-	putU64(dst, uint64(v))
+func putIntAsU64(dst []byte, v int) {
+	putU64(dst, uint64(int64(v)))
 }
 
 func putLengthU32(dst []byte, n int) {
@@ -711,12 +708,16 @@ func getBoundedInt64FromU64(src []byte) int64 {
 	return int64(v)
 }
 
-func getBoundedIntFromU64(src []byte) int {
-	v := getU64(src)
-	if v > uint64(math.MaxInt) {
+func getBoundedSignedIntFromU64(src []byte) int {
+	v := int64(getU64(src))
+	switch {
+	case v > int64(math.MaxInt):
 		return math.MaxInt
+	case v < int64(math.MinInt):
+		return math.MinInt
+	default:
+		return int(v)
 	}
-	return int(v)
 }
 
 func getBoundedIntFromU32(src []byte) int {

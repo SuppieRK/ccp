@@ -145,6 +145,10 @@ func compileFilters(loaded []LoadedFilter) (map[string]contracts.Filter, error) 
 			})
 			continue
 		}
+		// Intentional override behavior: within a single source directory, later
+		// lexicographically loaded files replace earlier ones for the same filter
+		// id. This matches CCP's documented override model and keeps precedence
+		// deterministic instead of failing registry construction on collisions.
 		filters[candidate.Spec.Filter] = filter
 	}
 	return filters, nil

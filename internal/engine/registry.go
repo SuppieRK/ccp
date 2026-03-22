@@ -40,6 +40,9 @@ func (r *Registry) Resolve(command contracts.Command) contracts.Filter {
 		return v2filters.Passthrough{}
 	}
 	if filter, ok := r.filters[strings.TrimSpace(command.Tool)]; ok && filter != nil {
+		if cloneable, ok := filter.(contracts.CloneableFilter); ok {
+			return cloneable.CloneFilter()
+		}
 		return filter
 	}
 	audit.MustAppend("filter_fallback", map[string]any{

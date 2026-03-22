@@ -43,6 +43,25 @@ var _ = Describe("EnsureGitignoreEntry", func() {
 		})
 	})
 
+	Context("when .gitignore is a symlink", func() {
+		It("refuses to append outside the project", func() {
+			root := GinkgoT().TempDir()
+			outside := filepath.Join(GinkgoT().TempDir(), "outside-gitignore")
+			path := filepath.Join(root, gitignorePathName)
+			Expect(os.WriteFile(outside, []byte("node_modules\n"), 0o644)).To(Succeed())
+			if err := os.Symlink(outside, path); err != nil {
+				Skip("symlink creation unavailable: " + err.Error())
+			}
+
+			err := EnsureGitignoreEntry(root, ".ccp")
+
+			Expect(err).To(HaveOccurred())
+			body, readErr := os.ReadFile(outside)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("node_modules\n"))
+		})
+	})
+
 	Context("when given blank inputs", func() {
 		var (
 			root string

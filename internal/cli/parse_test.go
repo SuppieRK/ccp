@@ -62,6 +62,12 @@ var _ = Describe("Parse", func() {
 		Entry("confidential", []string{"--confidential", "secret", "ls"}),
 	)
 
+	It("treats bare double-dash as the end of CCP option parsing", func() {
+		opts := mustParse([]string{"--", "echo", "-n"})
+
+		Expect(opts.CommandArgs).To(Equal([]string{"echo", "-n"}))
+	})
+
 	DescribeTable("rejecting verbosity flags",
 		func(flag string) {
 			expectParseFailure([]string{flag, "ls"})

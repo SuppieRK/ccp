@@ -330,6 +330,9 @@ func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 	slices.SortFunc(sorted, func(a, b metrics.PeriodRow) int {
 		return cmp.Compare(a.BucketStart, b.BucketStart)
 	})
+	if len(sorted) == 2 {
+		return formatTrendSummary(sorted[0].EstimatedSavingsPct, sorted[1].EstimatedSavingsPct, period)
+	}
 	split := trendSplitIndex(len(sorted), period)
 	if split <= 0 || split >= len(sorted) {
 		return "insufficient data"
@@ -337,6 +340,10 @@ func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 
 	earlier := averageSavings(sorted[:split])
 	recent := averageSavings(sorted[split:])
+	return formatTrendSummary(earlier, recent, period)
+}
+
+func formatTrendSummary(earlier, recent float64, period string) string {
 	diff := recent - earlier
 	label := trendLabel(period)
 

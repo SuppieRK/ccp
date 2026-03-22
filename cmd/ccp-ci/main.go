@@ -22,11 +22,12 @@ func main() {
 	flag.StringVar(&previousReport, "previous-report", "", "optional previous report.json for benchmark comparison")
 	flag.Parse()
 
-	if strings.TrimSpace(tool) != "" {
-		fixturesRoot = filepath.Join(fixturesRoot, tool)
+	resolvedRoot, err := resolveFixturesRoot(fixturesRoot, tool)
+	if err != nil {
+		fatal(err.Error())
 	}
 	report, err := benchmark.Run(benchmark.RunOptions{
-		FixturesRoot:   fixturesRoot,
+		FixturesRoot:   resolvedRoot,
 		ArtifactsDir:   artifactsDir,
 		ProxyBinary:    "ccp",
 		Timeout:        2 * time.Minute,
@@ -44,6 +45,24 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+func resolveFixturesRoot(fixturesRoot, tool string) (string, error) {
+	trimmedTool := strings.TrimSpace(tool)
+	if trimmedTool == "" {
+		return fixturesRoot, nil
+	}
+	if !isSingleToolDirName(trimmedTool) {
+		return "", fmt.Errorf("--tool must be a single tool directory name, got %q", tool)
+	}
+	return filepath.Join(fixturesRoot, trimmedTool), nil
+}
+
+func isSingleToolDirName(tool string) bool {
+	if tool == "." || tool == ".." || filepath.Base(tool) != tool {
+		return false
+	}
+	return !strings.ContainsAny(tool, `/\`)
 }
 
 func fatal(msg string) {

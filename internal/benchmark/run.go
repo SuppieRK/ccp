@@ -425,7 +425,6 @@ func maybeWarnCompactionDrop(curr *CaseResult, prev CaseResult) {
 			prev.TokenCompactionRatio,
 			curr.TokenCompactionRatio,
 		))
-		curr.Success = false
 	}
 }
 

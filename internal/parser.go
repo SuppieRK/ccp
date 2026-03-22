@@ -28,10 +28,58 @@ func ParseCommandArgs(args []string) (contracts.Command, error) {
 
 	cloned := append([]string(nil), args...)
 	return contracts.Command{
-		RawInput: strings.Join(cloned, " "),
+		RawInput: renderCommandArgs(cloned),
 		Args:     cloned,
 		Tool:     canonicalToolName(name),
 	}, nil
+}
+
+func renderCommandArgs(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	rendered := make([]string, len(args))
+	for i, arg := range args {
+		rendered[i] = renderCommandArg(arg)
+	}
+	return strings.Join(rendered, " ")
+}
+
+func renderCommandArg(arg string) string {
+	if arg == "" {
+		return `''`
+	}
+	if isShellSafeArg(arg) {
+		return arg
+	}
+	return quoteShellArg(arg)
+}
+
+func isShellSafeArg(arg string) bool {
+	const safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@%_+=:,./-"
+	for _, r := range arg {
+		if !strings.ContainsRune(safe, r) {
+			return false
+		}
+	}
+	return true
+}
+
+func quoteShellArg(arg string) string {
+	if !strings.Contains(arg, "'") {
+		return "'" + arg + "'"
+	}
+	var b strings.Builder
+	b.WriteByte('\'')
+	for _, r := range arg {
+		if r == '\'' {
+			b.WriteString(`'"'"'`)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	b.WriteByte('\'')
+	return b.String()
 }
 
 func ParseCommandLine(raw string) (contracts.Command, error) {
@@ -137,6 +185,13 @@ func (s *commandLineSplitState) consume(r rune) {
 
 func (s *commandLineSplitState) consumeEscaped(r rune) {
 	if s.escapeDouble {
+		if isDoubleQuotedEscape(r) {
+			if r != '\n' {
+				s.writeRune(r)
+			}
+			return
+		}
+		s.writeRune('\\')
 		s.writeRune(r)
 		return
 	}
@@ -146,6 +201,15 @@ func (s *commandLineSplitState) consumeEscaped(r rune) {
 	}
 	s.writeRune('\\')
 	s.writeRune(r)
+}
+
+func isDoubleQuotedEscape(r rune) bool {
+	switch r {
+	case '"', '\\', '$', '`', '\n':
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *commandLineSplitState) consumeSingleQuoted(r rune) {

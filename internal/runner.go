@@ -364,7 +364,7 @@ func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.Buffer
 		b, err := reader.ReadByte()
 		if err != nil {
 			r.finishDrainedStream(currentLine, pendingCR, consume, stats, sink, &sinkErr)
-			return sinkErr
+			return errors.Join(sinkErr, wrapStreamReadError(err))
 		}
 		recordRawByte(stats)
 		if r.handlePendingCRByte(b, consume, stats, sink, &pendingCR, &currentLine, &sinkErr) {
@@ -741,11 +741,19 @@ func (r *Runner) copyRawStream(src io.Reader, dst *os.File) error {
 		}
 		target = outWriter
 	}
-	_, _ = io.Copy(target, src)
+	_, copyErr := io.Copy(target, src)
+	var flushErr error
 	if outWriter != nil {
-		_ = outWriter.Flush()
+		flushErr = outWriter.Flush()
 	}
-	return recorder.err
+	return errors.Join(recorder.err, wrapStreamReadError(copyErr), flushErr)
+}
+
+func wrapStreamReadError(err error) error {
+	if err == nil || errors.Is(err, io.EOF) {
+		return nil
+	}
+	return fmt.Errorf("read stream: %w", err)
 }
 
 type errorRecordingWriter struct {

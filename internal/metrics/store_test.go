@@ -110,6 +110,24 @@ var _ = Describe("metrics storage", func() {
 		Expect(history[0].Command).To(HaveSuffix("..."))
 	})
 
+	It("preserves negative exit codes in failed history queries", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+
+		Expect(Append(path, RunMetric{
+			Tool:      "node",
+			Command:   "node crashed.js",
+			RawBytes:  12,
+			KeptBytes: 12,
+			ExitCode:  -1,
+		})).To(Succeed())
+
+		failedHistory, err := QueryHistory(path, QueryOptions{Failed: true})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(failedHistory).To(HaveLen(1))
+		Expect(failedHistory[0].ExitCode).To(Equal(-1))
+		Expect(failedHistory[0].Failed).To(BeTrue())
+	})
+
 	Context("when storing tool names", func() {
 		var path string
 

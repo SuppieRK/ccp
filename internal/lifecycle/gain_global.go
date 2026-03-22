@@ -91,11 +91,17 @@ func renderGlobalSummaryText(flags reportFlags, opts metrics.QueryOptions, filte
 		return printSummaryTableText(filters, total, toolRows, flags.limit, opts.Period, true)
 	}
 	trendPeriod := defaultGainTrendPeriod(opts.Period)
-	dayRows, err := queryGlobalPeriodRows(windowDayQueryOptions(summaryOpts, trendPeriod), currentMetricsPath)
+	dayRows, err := queryGlobalTrendRows(opts, currentMetricsPath, trendPeriod)
 	if err != nil {
 		return err
 	}
 	return printCompactGainSummary(filters, total, toolRows, dayRows, trendPeriod, opts.Period, true)
+}
+
+func queryGlobalTrendRows(opts metrics.QueryOptions, currentMetricsPath, period string) ([]metrics.PeriodRow, error) {
+	return queryTrendPeriodRows(func(queryOpts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
+		return queryGlobalPeriodRows(queryOpts, currentMetricsPath)
+	}, opts, period, gainNow())
 }
 
 func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {

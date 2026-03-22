@@ -162,6 +162,44 @@ cases:
 		})
 		Expect(action.Kind).To(Equal(contracts.ActionKeep))
 	})
+
+	It("lets later files in the same source override duplicate filter ids deterministically", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "00-first.yaml"), []byte(`
+version: 1
+filter: demo
+cases:
+  - id: first
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - contains: keep-me
+`), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "99-second.yaml"), []byte(`
+version: 1
+filter: demo
+cases:
+  - id: second
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - regex: '^.*$'
+              to: rewritten
+`), 0o644)).To(Succeed())
+
+		filters, err := LoadRegistryFiltersFromSources([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Intentional and documented override model: the later lexicographic file
+		// within the same source wins, so duplicate ids behave as deterministic
+		// overrides rather than loader errors.
+		action := filters["demo"].OnStdout("keep-me\n", yamlFilterContext{args: []string{"demo"}})
+		Expect(action.Kind).To(Equal(contracts.ActionReplace))
+		Expect(action.Output).To(Equal("rewritten\n"))
+	})
 })
 
 var _ = Describe("Shipped repository filters", func() {

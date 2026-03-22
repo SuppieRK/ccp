@@ -145,17 +145,27 @@ func WriteArtifact(path string, body []byte, perm os.FileMode) error {
 }
 
 func rejectSymlinkPath(path string) error {
-	info, err := os.Lstat(path)
-	if err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("refuse to overwrite symlink %q", path)
+	resolved, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("resolve artifact path: %w", err)
+	}
+	for current := resolved; ; current = filepath.Dir(current) {
+		info, err := os.Lstat(current)
+		if err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				return fmt.Errorf("refuse to use symlink path component %q", current)
+			}
+			if info.IsDir() {
+				return nil
+			}
+		} else if !os.IsNotExist(err) {
+			return err
 		}
-		return nil
+		parent := filepath.Dir(current)
+		if parent == current {
+			return nil
+		}
 	}
-	if os.IsNotExist(err) {
-		return nil
-	}
-	return err
 }
 
 func WriteSequencedEvents(path string, events []Event, stream contracts.Stream) error {

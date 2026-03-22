@@ -590,6 +590,44 @@ var _ = Describe("YamlFilter", func() {
 		}))
 	})
 
+	It("restores explicit case variable initial values on invocation reset", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{{
+				ID: "default",
+				Variables: []Variable{{
+					Name:         "count",
+					Type:         "number",
+					InitialValue: stringPtr("7"),
+				}},
+				CompressOutput: &OutputShape{
+					Stdout: &OutputScope{
+						Lines: &OutputLines{
+							Replace: []ReplaceRule{{
+								Regex: `^bump$`,
+								To:    stringPtr("bump"),
+								OnMatch: []MatchAction{{
+									Variable:  "count",
+									Increment: intPtr(1),
+								}},
+							}},
+						},
+					},
+				},
+				Finally: &OnExit{Print: "count={{count}}"},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.OnStdout("bump\n", yamlFilterContext{args: []string{"demo", "one"}}).Output).To(Equal("bump\n"))
+		firstExit := filter.OnStdoutExit(yamlFilterContext{args: []string{"demo", "one"}, stdout: []string{"bump"}})
+		Expect(firstExit.Output).To(Equal("bump\ncount=8\n"))
+
+		secondExit := filter.OnStdoutExit(yamlFilterContext{args: []string{"demo", "two"}, stdout: nil})
+		Expect(secondExit.Output).To(Equal("count=7\n"))
+	})
+
 	It("renders sequential boundary groups in encounter order", func() {
 		filter, err := NewFilter(&FilterDefinition{
 			Version: 1,
@@ -833,6 +871,49 @@ var _ = Describe("YamlFilter", func() {
 		Expect(failureExit).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
 			Output: "fatal: not a git repository: '.git'\n",
+		}))
+	})
+
+	It("keeps grouped initial headers on non-zero exit codes", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "pytest",
+			Cases: []CaseClause{{
+				ID: "default",
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{
+						Groups: []OutputGroup{{
+							ID:         "failures",
+							StartsWith: "=================================== FAILURES",
+							Initially:  &OnExit{Print: "failure details:"},
+							Lines: &OutputLines{
+								Keep:    []SkipOrKeepRule{{Contains: "AssertionError:"}},
+								Replace: []ReplaceRule{{Regex: `^E\s+(.+)$`, To: stringPtr("AssertionError: $1")}},
+							},
+						}},
+					},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		ctx := yamlFilterContext{args: []string{"pytest", "-q"}}
+		for _, line := range []string{
+			"=================================== FAILURES ===================================\n",
+			"E       AssertionError: assert {'ok': False} == {'ok': True}\n",
+		} {
+			action := filter.OnStdout(line, ctx)
+			Expect(action.Kind).To(Equal(contracts.ActionIgnore))
+		}
+
+		failureExit := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"pytest", "-q"},
+			exitCode: 1,
+		})
+		Expect(failureExit).To(Equal(contracts.Action{
+			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
+			Output: "failure details:\nE       AssertionError: assert {'ok': False} == {'ok': True}\n",
 		}))
 	})
 

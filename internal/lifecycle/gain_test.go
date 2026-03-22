@@ -129,6 +129,80 @@ var _ = Describe("RunGain", func() {
 			Expect(out).To(ContainSubstring("git"))
 		})
 
+		It("compares adjacent global week windows for compact trends", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+			Expect(os.Remove(path)).To(Succeed())
+
+			nowUTC := time.Now().UTC()
+			referenceDay := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 12, 0, 0, 0, time.UTC)
+			repo := filepath.Join(tmpDir, "repo-trend")
+			appendGlobalWorkspaceMetrics(home, repo, []metrics.RunMetric{
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -10),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  400,
+					KeptBytes: 200,
+				},
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -2),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  400,
+					KeptBytes: 100,
+				},
+			})
+
+			out := runGain(flagGlobal)
+			Expect(out).To(ContainSubstring("Trend : \u2191 +25.0 pts week over week (50.0% \u2192 75.0%)"))
+		})
+
+		It("weights global trend windows by actual volume instead of averaging bucket percentages", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+			Expect(os.Remove(path)).To(Succeed())
+
+			nowUTC := time.Now().UTC()
+			referenceDay := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 12, 0, 0, 0, time.UTC)
+			repo := filepath.Join(tmpDir, "repo-weighted-trend")
+			appendGlobalWorkspaceMetrics(home, repo, []metrics.RunMetric{
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -13),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  400,
+					KeptBytes: 200,
+				},
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -12),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  4,
+					KeptBytes: 0,
+				},
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -6),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  400,
+					KeptBytes: 100,
+				},
+				{
+					Timestamp: referenceDay.AddDate(0, 0, -5),
+					Tool:      "go",
+					Command:   "go test ./...",
+					RawBytes:  4,
+					KeptBytes: 4,
+				},
+			})
+
+			out := runGain(flagGlobal)
+			Expect(out).To(ContainSubstring("Trend : \u2191 +23.8 pts week over week (50.5% \u2192 74.3%)"))
+		})
+
 		It("ignores unreadable registered workspaces during global gain aggregation", func() {
 			home := GinkgoT().TempDir()
 			restore := workspaces.WithTestConfig(home, nil)

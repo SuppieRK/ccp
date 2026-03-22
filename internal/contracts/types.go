@@ -45,3 +45,7 @@ type Filter interface {
 	OnStderr(line string, context Context) Action
 	OnStdoutExit(context Context) Action
 }
+
+type CloneableFilter interface {
+	CloneFilter() Filter
+}

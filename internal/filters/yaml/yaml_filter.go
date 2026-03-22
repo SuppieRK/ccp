@@ -20,6 +20,16 @@ type YamlFilter struct {
 	activeArgs string
 }
 
+func (f *YamlFilter) CloneFilter() contracts.Filter {
+	if f == nil {
+		return nil
+	}
+	return &YamlFilter{
+		spec:  f.spec,
+		cases: cloneCompiledCases(f.cases),
+	}
+}
+
 func NewFilter(spec *FilterDefinition) (*YamlFilter, error) {
 	if err := ValidateDefinition(spec); err != nil {
 		return nil, err
@@ -55,6 +65,9 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 	if !ok || cs.passthrough {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
+	// Exit handling is intentionally stdout-oriented. Shared/combined scopes may
+	// summarize merged buffered output, but stderr-only exit rewrites are not a
+	// supported contract and stderr otherwise passes through unchanged.
 	scope := cs.scopeForExit(contracts.StreamStdout)
 	exitStream := contracts.StreamStdout
 	if cs.shared != nil {
@@ -141,6 +154,7 @@ type compiledCase struct {
 	passthrough bool
 	when        compiledWhen
 	variables   map[string]string
+	initials    map[string]string
 	command     *compiledCommand
 	stdout      *compiledScope
 	stderr      *compiledScope
@@ -273,11 +287,13 @@ type compiledGroup struct {
 }
 
 func buildCompiledCase(cs *CaseClause) (compiledCase, error) {
+	variables, initials := compileVariables(cs.Variables)
 	compiled := compiledCase{
 		id:          cs.ID,
 		passthrough: cs.Passthrough,
 		when:        compileWhenArguments(cs.WhenArguments),
-		variables:   compileVariables(cs.Variables),
+		variables:   variables,
+		initials:    initials,
 		command:     compileCommandMutation(cs.NormalizeCommand),
 		onExit:      compileOnExit(cs.Finally),
 	}
@@ -299,28 +315,32 @@ func buildCompiledCase(cs *CaseClause) (compiledCase, error) {
 	return compiled, nil
 }
 
-func compileVariables(variables []Variable) map[string]string {
+func compileVariables(variables []Variable) (map[string]string, map[string]string) {
 	if len(variables) == 0 {
-		return nil
+		return nil, nil
 	}
 	compiled := make(map[string]string, len(variables))
+	initials := make(map[string]string, len(variables))
 	for _, variable := range variables {
+		value := ""
 		switch variable.Type {
 		case "number":
 			if variable.InitialValue != nil {
-				compiled[variable.Name] = *variable.InitialValue
+				value = *variable.InitialValue
 			} else {
-				compiled[variable.Name] = "0"
+				value = "0"
 			}
 		default:
 			if variable.InitialValue != nil {
-				compiled[variable.Name] = *variable.InitialValue
+				value = *variable.InitialValue
 			} else {
-				compiled[variable.Name] = ""
+				value = ""
 			}
 		}
+		compiled[variable.Name] = value
+		initials[variable.Name] = value
 	}
-	return compiled
+	return compiled, initials
 }
 
 func compileOnExit(onExit *OnExit) *compiledOnExit {
@@ -328,6 +348,67 @@ func compileOnExit(onExit *OnExit) *compiledOnExit {
 		return nil
 	}
 	return &compiledOnExit{print: onExit.Print}
+}
+
+func cloneCompiledCases(cases []compiledCase) []compiledCase {
+	if len(cases) == 0 {
+		return nil
+	}
+	cloned := make([]compiledCase, len(cases))
+	for i := range cases {
+		cloned[i] = cloneCompiledCase(cases[i])
+	}
+	return cloned
+}
+
+func cloneCompiledCase(src compiledCase) compiledCase {
+	return compiledCase{
+		id:          src.id,
+		passthrough: src.passthrough,
+		when:        src.when,
+		variables:   cloneVariableValues(src.variables),
+		initials:    cloneVariableValues(src.initials),
+		command:     src.command,
+		stdout:      cloneCompiledScope(src.stdout),
+		stderr:      cloneCompiledScope(src.stderr),
+		shared:      cloneCompiledScope(src.shared),
+		onExit:      src.onExit,
+	}
+}
+
+func cloneVariableValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func cloneCompiledScope(src *compiledScope) *compiledScope {
+	if src == nil {
+		return nil
+	}
+	cloned := *src
+	cloned.hidden = 0
+	cloned.activeBoundary = nil
+	if len(src.groups) > 0 {
+		cloned.groups = make([]compiledGroup, len(src.groups))
+		for i := range src.groups {
+			cloned.groups[i] = cloneCompiledGroup(src.groups[i])
+		}
+	}
+	return &cloned
+}
+
+func cloneCompiledGroup(src compiledGroup) compiledGroup {
+	cloned := src
+	cloned.items = make(map[string][]compiledGroupItem)
+	cloned.sections = nil
+	cloned.lines = cloneCompiledScope(src.lines)
+	return cloned
 }
 
 func compileCommandMutation(command *CommandMutation) *compiledCommand {
@@ -673,12 +754,8 @@ func (f *YamlFilter) prepareInvocation(args []string) {
 }
 
 func (c *compiledCase) resetState() {
-	for name := range c.variables {
-		if _, err := strconv.Atoi(c.variables[name]); err == nil {
-			c.variables[name] = "0"
-			continue
-		}
-		c.variables[name] = ""
+	for name, value := range c.initials {
+		c.variables[name] = value
 	}
 	c.shared.resetState()
 	c.stdout.resetState()
@@ -983,14 +1060,14 @@ func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey str
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStageWithExitCode(g.initially, groupItems[0].vars, exitCode)...)
+	lines = append(lines, renderGroupStage(g.initially, groupItems[0].vars)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStageWithExitCode(g.finally, groupItems[0].vars, exitCode)...)
+	lines = append(lines, renderGroupFinalStage(g.finally, groupItems[0].vars, exitCode)...)
 	return lines
 }
 
@@ -1000,14 +1077,14 @@ func (g *compiledGroup) renderBoundarySection(section compiledBoundarySection, e
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStageWithExitCode(g.initially, section.vars, exitCode)...)
+	lines = append(lines, renderGroupStage(g.initially, section.vars)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStageWithExitCode(g.finally, section.vars, exitCode)...)
+	lines = append(lines, renderGroupFinalStage(g.finally, section.vars, exitCode)...)
 	return lines
 }
 
@@ -1056,11 +1133,8 @@ func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (st
 	}
 }
 
-func renderGroupStageWithExitCode(stage *compiledOnExit, vars map[string]string, exitCode int) []renderedLine {
+func renderGroupStage(stage *compiledOnExit, vars map[string]string) []renderedLine {
 	if stage == nil {
-		return nil
-	}
-	if !shouldRenderFinally(exitCode) {
 		return nil
 	}
 	printed := renderTemplate(stage.print, vars)
@@ -1068,6 +1142,13 @@ func renderGroupStageWithExitCode(stage *compiledOnExit, vars map[string]string,
 		return nil
 	}
 	return []renderedLine{{text: printed}}
+}
+
+func renderGroupFinalStage(stage *compiledOnExit, vars map[string]string, exitCode int) []renderedLine {
+	if !shouldRenderFinally(exitCode) {
+		return nil
+	}
+	return renderGroupStage(stage, vars)
 }
 
 func shouldRenderFinally(exitCode int) bool {

@@ -20,7 +20,7 @@ var _ = Describe("OrderedBuffer", func() {
 		Expect(buffer.Joined(contracts.StreamStderr)).To(Equal("b\n"))
 	})
 
-	It("drops duplicate keys", func() {
+	It("intentionally drops duplicate keys within one stream", func() {
 		buffer := engine.NewOrderedBuffer()
 		Expect(buffer.Add(contracts.StreamStdout, "x\n")).To(BeTrue())
 		Expect(buffer.Add(contracts.StreamStdout, "x\n")).To(BeFalse())

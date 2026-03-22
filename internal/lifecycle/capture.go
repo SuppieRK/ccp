@@ -161,8 +161,7 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 		events   []replay.Event
 		sequence atomic.Int64
 	)
-	record := func(stream contracts.Stream, line string) {
-		seq := int(sequence.Add(1) - 1)
+	record := func(seq int, stream contracts.Stream, line string) {
 		mu.Lock()
 		defer mu.Unlock()
 		events = append(events, replay.Event{Sequence: seq, Stream: stream, Line: line})
@@ -177,11 +176,11 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		readSequencedCapture(stdout, contracts.StreamStdout, record)
+		readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
 	}()
 	go func() {
 		defer wg.Done()
-		readSequencedCapture(stderr, contracts.StreamStderr, record)
+		readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
 	}()
 	wg.Wait()
 	waitErr := cmd.Wait()
@@ -198,42 +197,54 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 	return events, 0, nil
 }
 
-func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, record func(contracts.Stream, string)) {
+func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) {
 	defer func() { _ = src.Close() }()
 	reader := bufio.NewReader(src)
-	var currentLine []byte
+	var (
+		currentLine []byte
+		currentSeq  = -1
+	)
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
-			finishSequencedCaptureLine(&currentLine, stream, record)
+			finishSequencedCaptureLine(&currentLine, &currentSeq, stream, record)
 			return
 		}
-		appendSequencedCaptureByte(&currentLine, b, stream, record)
+		appendSequencedCaptureByte(&currentLine, &currentSeq, b, stream, sequence, record)
 	}
 }
 
-func appendSequencedCaptureByte(currentLine *[]byte, b byte, stream contracts.Stream, record func(contracts.Stream, string)) {
+func appendSequencedCaptureByte(currentLine *[]byte, currentSeq *int, b byte, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) {
+	ensureSequencedCaptureLine(currentLine, currentSeq, sequence)
 	switch b {
 	case '\n':
-		emitSequencedCaptureLine(currentLine, true, stream, record)
+		emitSequencedCaptureLine(currentLine, currentSeq, true, stream, record)
 	default:
 		*currentLine = append(*currentLine, b)
 	}
 }
 
-func finishSequencedCaptureLine(currentLine *[]byte, stream contracts.Stream, record func(contracts.Stream, string)) {
+func ensureSequencedCaptureLine(currentLine *[]byte, currentSeq *int, sequence *atomic.Int64) {
+	if len(*currentLine) > 0 || *currentSeq >= 0 {
+		return
+	}
+	*currentSeq = int(sequence.Add(1) - 1)
+}
+
+func finishSequencedCaptureLine(currentLine *[]byte, currentSeq *int, stream contracts.Stream, record func(int, contracts.Stream, string)) {
 	if len(*currentLine) == 0 {
 		return
 	}
-	record(stream, string(*currentLine))
+	record(*currentSeq, stream, string(*currentLine))
 }
 
-func emitSequencedCaptureLine(currentLine *[]byte, includeNewline bool, stream contracts.Stream, record func(contracts.Stream, string)) {
+func emitSequencedCaptureLine(currentLine *[]byte, currentSeq *int, includeNewline bool, stream contracts.Stream, record func(int, contracts.Stream, string)) {
 	if includeNewline {
 		*currentLine = append(*currentLine, '\n')
 	}
-	record(stream, string(*currentLine))
+	record(*currentSeq, stream, string(*currentLine))
 	*currentLine = (*currentLine)[:0]
+	*currentSeq = -1
 }
 
 func streamBytes(events []replay.Event, stream contracts.Stream) int {
