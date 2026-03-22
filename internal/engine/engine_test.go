@@ -220,7 +220,7 @@ var _ = Describe("Engine integration", func() {
 	})
 
 	Context("when exit handling targets the combined stream", func() {
-		It("replaces the full retained combined output instead of leaving stderr behind", func() {
+		It("replaces the full retained combined output and emits the summary on stdout", func() {
 			registry := NewRegistry()
 			registry.Register("combined", &combinedExitFilter{})
 			runtime := NewEngine(registry)

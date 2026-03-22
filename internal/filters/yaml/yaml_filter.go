@@ -65,6 +65,9 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 	if !ok || cs.passthrough {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
+	// Exit handling is intentionally stdout-oriented. Shared/combined scopes may
+	// summarize merged buffered output, but stderr-only exit rewrites are not a
+	// supported contract and stderr otherwise passes through unchanged.
 	scope := cs.scopeForExit(contracts.StreamStdout)
 	exitStream := contracts.StreamStdout
 	if cs.shared != nil {

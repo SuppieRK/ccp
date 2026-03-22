@@ -95,6 +95,9 @@ func (s *State) applyExit(action contracts.Action) {
 		return
 	case contracts.ActionReplace:
 		s.buffer.RemoveLast(targetStream, exitReplaceCount(s.buffer, targetStream, action.ReplaceCount))
+		// Exit summaries are intentionally emitted on stdout for CLI consumption.
+		// Filters may replace combined buffered content, but stderr-only exit
+		// rewrites are not a supported contract.
 		s.buffer.Add(contracts.StreamStdout, action.Output)
 		return
 	default:
