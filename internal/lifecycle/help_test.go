@@ -15,21 +15,37 @@ var _ = Describe("lifecycle help", func() {
 		parts   []string
 	}
 
-	captureStderr := func(fn func() error) string {
+	captureOutput := func(fn func() error) (string, string) {
+		stdoutOrig := os.Stdout
 		orig := os.Stderr
-		r, w, err := os.Pipe()
+		stdoutR, stdoutW, err := os.Pipe()
 		Expect(err).NotTo(HaveOccurred())
-		os.Stderr = w
-		DeferCleanup(func() { os.Stderr = orig })
+		stderrR, stderrW, err := os.Pipe()
+		Expect(err).NotTo(HaveOccurred())
+		os.Stdout = stdoutW
+		os.Stderr = stderrW
+		DeferCleanup(func() {
+			os.Stdout = stdoutOrig
+			os.Stderr = orig
+		})
 
 		Expect(fn()).To(Succeed())
-		Expect(w.Close()).To(Succeed())
+		Expect(stdoutW.Close()).To(Succeed())
+		Expect(stderrW.Close()).To(Succeed())
 
-		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r)
+		var stdoutBuf, stderrBuf bytes.Buffer
+		_, err = io.Copy(&stdoutBuf, stdoutR)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Close()).To(Succeed())
-		return buf.String()
+		_, err = io.Copy(&stderrBuf, stderrR)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stdoutR.Close()).To(Succeed())
+		Expect(stderrR.Close()).To(Succeed())
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	captureStderr := func(fn func() error) string {
+		_, stderr := captureOutput(fn)
+		return stderr
 	}
 
 	DescribeTable("rendering help output",
@@ -153,5 +169,26 @@ var _ = Describe("lifecycle help", func() {
 				"removing the executable",
 			},
 		}),
+	)
+
+	DescribeTable("help requests do not emit report output",
+		func(command string) {
+			stdout, stderr := captureOutput(func() error {
+				switch command {
+				case "gain":
+					return RunGain([]string{"--help"}, "")
+				case "history":
+					return RunHistory([]string{"--help"}, "")
+				default:
+					Fail("unknown lifecycle help command: " + command)
+					return nil
+				}
+			})
+
+			Expect(stdout).To(BeEmpty())
+			Expect(stderr).To(ContainSubstring("Usage:"))
+		},
+		Entry("gain", "gain"),
+		Entry("history", "history"),
 	)
 })

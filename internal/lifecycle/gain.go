@@ -63,9 +63,12 @@ var gainNow = func() time.Time {
 }
 
 func RunGain(args []string, metricsPath string) error {
-	flags, err := parseReportFlags("gain", args)
+	flags, handled, err := parseReportFlags("gain", args)
 	if err != nil {
 		return err
+	}
+	if handled {
+		return nil
 	}
 	if err := validateGainFlags(flags); err != nil {
 		return err
@@ -94,9 +97,12 @@ func RunGain(args []string, metricsPath string) error {
 }
 
 func RunHistory(args []string, metricsPath string) error {
-	flags, err := parseReportFlags("history", args)
+	flags, handled, err := parseReportFlags("history", args)
 	if err != nil {
 		return err
+	}
+	if handled {
+		return nil
 	}
 	opts, err := buildQueryOptions(flags)
 	if err != nil {
@@ -130,7 +136,7 @@ func RunHistory(args []string, metricsPath string) error {
 	}
 }
 
-func parseReportFlags(name string, args []string) (reportFlags, error) {
+func parseReportFlags(name string, args []string) (reportFlags, bool, error) {
 	fs := newLifecycleFlagSet(name)
 	format := fs.String("format", "text", "output format: text|json|csv")
 	period := fs.String("period", "", "period aggregation: day|week|month (gain only)")
@@ -144,10 +150,10 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 	setReportUsage(fs, name)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
-		return reportFlags{}, err
+		return reportFlags{}, false, err
 	}
 	if handled {
-		return reportFlags{}, nil
+		return reportFlags{}, true, nil
 	}
 	out := reportFlags{
 		format: strings.ToLower(strings.TrimSpace(*format)),
@@ -166,18 +172,18 @@ func parseReportFlags(name string, args []string) (reportFlags, error) {
 		out.format = "text"
 	}
 	if err := validateReportFormat(out.format); err != nil {
-		return reportFlags{}, err
+		return reportFlags{}, false, err
 	}
 	if err := validateReportPeriod(name, out.period); err != nil {
-		return reportFlags{}, err
+		return reportFlags{}, false, err
 	}
 	if name == "history" && out.table {
-		return reportFlags{}, fmt.Errorf("--table is only valid for gain")
+		return reportFlags{}, false, fmt.Errorf("--table is only valid for gain")
 	}
 	if out.limit < -1 {
-		return reportFlags{}, fmt.Errorf("invalid --limit %d (expected -1, 0, or a positive integer)", out.limit)
+		return reportFlags{}, false, fmt.Errorf("invalid --limit %d (expected -1, 0, or a positive integer)", out.limit)
 	}
-	return out, nil
+	return out, false, nil
 }
 
 func validateGainFlags(flags reportFlags) error {
