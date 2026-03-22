@@ -58,6 +58,10 @@ const (
 	gainHeaderText   = "ccp gain (estimated tokens: 4B/token)"
 )
 
+var gainNow = func() time.Time {
+	return time.Now().UTC()
+}
+
 func RunGain(args []string, metricsPath string) error {
 	flags, err := parseReportFlags("gain", args)
 	if err != nil {
@@ -250,7 +254,7 @@ func renderTextSummaryDataset(metricsPath string, flags reportFlags, opts, summa
 		return printSummaryTableText(filters, total, toolRows, flags.limit, opts.Period, false)
 	}
 	trendPeriod := defaultGainTrendPeriod(opts.Period)
-	trendRows, err := queryTrendRows(metricsPath, summaryOpts, trendPeriod)
+	trendRows, err := queryTrendRows(metricsPath, opts, trendPeriod)
 	if err != nil {
 		return err
 	}
@@ -258,7 +262,112 @@ func renderTextSummaryDataset(metricsPath string, flags reportFlags, opts, summa
 }
 
 func queryTrendRows(metricsPath string, opts metrics.QueryOptions, period string) ([]metrics.PeriodRow, error) {
-	return metrics.QueryPeriod(metricsPath, windowDayQueryOptions(opts, period))
+	return queryTrendPeriodRows(func(queryOpts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
+		return metrics.QueryPeriod(metricsPath, queryOpts)
+	}, opts, period, gainNow())
+}
+
+type periodRowQuery func(metrics.QueryOptions) ([]metrics.PeriodRow, error)
+
+func queryTrendPeriodRows(query periodRowQuery, opts metrics.QueryOptions, period string, now time.Time) ([]metrics.PeriodRow, error) {
+	dayRows, err := query(trendDayQueryOptions(opts, period, now))
+	if err != nil {
+		return nil, err
+	}
+	return aggregateTrendRows(dayRows, period, now), nil
+}
+
+func trendDayQueryOptions(opts metrics.QueryOptions, period string, now time.Time) metrics.QueryOptions {
+	windowed := opts
+	windowed.Period = "day"
+	earliestStart, _, _, ok := trendWindowBounds(now, period)
+	if !ok {
+		return windowed
+	}
+	lookback := now.UTC().Sub(earliestStart)
+	if opts.Since > 0 && opts.Since < lookback {
+		windowed.Since = opts.Since
+		return windowed
+	}
+	windowed.Since = lookback
+	return windowed
+}
+
+func aggregateTrendRows(dayRows []metrics.PeriodRow, period string, now time.Time) []metrics.PeriodRow {
+	earliestStart, recentStart, recentEnd, ok := trendWindowBounds(now, period)
+	if !ok {
+		return nil
+	}
+	earliestEnd := recentStart.AddDate(0, 0, -1)
+	recentEndExclusive := recentEnd.AddDate(0, 0, 1)
+	earliest := metrics.PeriodRow{
+		Bucket:      earliestStart.Format(time.DateOnly),
+		BucketStart: earliestStart.Format(time.DateOnly),
+		BucketEnd:   earliestEnd.Format(time.DateOnly),
+	}
+	recent := metrics.PeriodRow{
+		Bucket:      recentStart.Format(time.DateOnly),
+		BucketStart: recentStart.Format(time.DateOnly),
+		BucketEnd:   recentEnd.Format(time.DateOnly),
+	}
+	for _, row := range dayRows {
+		bucketStart, err := time.Parse(time.DateOnly, row.BucketStart)
+		if err != nil {
+			continue
+		}
+		switch {
+		case !bucketStart.Before(earliestStart) && bucketStart.Before(recentStart):
+			addTrendPeriodRow(&earliest, row)
+		case !bucketStart.Before(recentStart) && bucketStart.Before(recentEndExclusive):
+			addTrendPeriodRow(&recent, row)
+		}
+	}
+	out := make([]metrics.PeriodRow, 0, 2)
+	if earliest.Commands > 0 {
+		fillLocalPeriodRowDerived(&earliest)
+		out = append(out, earliest)
+	}
+	if recent.Commands > 0 {
+		fillLocalPeriodRowDerived(&recent)
+		out = append(out, recent)
+	}
+	return out
+}
+
+func addTrendPeriodRow(dst *metrics.PeriodRow, src metrics.PeriodRow) {
+	dst.Commands += src.Commands
+	dst.RawBytes += src.RawBytes
+	dst.KeptBytes += src.KeptBytes
+}
+
+func trendWindowBounds(now time.Time, period string) (time.Time, time.Time, time.Time, bool) {
+	windowDays := trendWindowDays(period)
+	if windowDays <= 0 {
+		return time.Time{}, time.Time{}, time.Time{}, false
+	}
+	recentEnd := dayStartUTC(now)
+	recentStart := recentEnd.AddDate(0, 0, -(windowDays - 1))
+	earliestEnd := recentStart.AddDate(0, 0, -1)
+	earliestStart := earliestEnd.AddDate(0, 0, -(windowDays - 1))
+	return earliestStart, recentStart, recentEnd, true
+}
+
+func trendWindowDays(period string) int {
+	switch period {
+	case "day":
+		return 1
+	case "week":
+		return 7
+	case "month":
+		return 30
+	default:
+		return 0
+	}
+}
+
+func dayStartUTC(value time.Time) time.Time {
+	utc := value.UTC()
+	return time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func setReportUsage(fs *flag.FlagSet, name string) {
@@ -380,13 +489,6 @@ func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnv
 		)
 	}
 	return nil
-}
-
-func windowDayQueryOptions(opts metrics.QueryOptions, period string) metrics.QueryOptions {
-	windowed := opts
-	windowed.Period = "day"
-	windowed.Since = effectiveWindowSince(opts.Since, period)
-	return windowed
 }
 
 func effectiveWindowSince(base time.Duration, period string) time.Duration {
