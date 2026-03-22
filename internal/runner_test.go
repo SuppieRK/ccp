@@ -344,6 +344,30 @@ var _ = Describe("Runner", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_finish"`))
 	})
 
+	It("redacts confidential command arguments in audit logs", func() {
+		tmpDir, err := os.MkdirTemp("", "core-runner-audit-secret-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+
+		restoreAudit := audit.WithTestConfig(tmpDir, 8, 7)
+		DeferCleanup(restoreAudit)
+		DeferCleanup(audit.Reset)
+
+		secret := "super-secret-token"
+		runner := NewRunnerWithOptions(Options{Confidential: []string{secret}})
+
+		code, err := runner.Run(confidentialAuditCommand(secret))
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(code).To(Equal(0))
+		auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(auditData)).To(ContainSubstring(`***`))
+		Expect(string(auditData)).NotTo(ContainSubstring(secret))
+	})
+
 	It("surfaces audit initialization failures instead of silently succeeding", func() {
 		tmpDir, err := os.MkdirTemp("", "core-runner-audit-fail-*")
 		Expect(err).NotTo(HaveOccurred())
@@ -994,4 +1018,11 @@ func auditCommand() []string {
 		return []string{"cmd", "/c", "echo audit-ok"}
 	}
 	return []string{"sh", "-c", "printf 'audit-ok\\n'"}
+}
+
+func confidentialAuditCommand(secret string) []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd", "/c", "echo", secret}
+	}
+	return []string{"echo", secret}
 }
