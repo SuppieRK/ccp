@@ -42,11 +42,6 @@ var _ = Describe("init additional integration coverage", func() {
 			_, err := os.Stat(filepath.Join(base, tc.artifactRel))
 			Expect(err).NotTo(HaveOccurred())
 		},
-		Entry("iflow", additionalDetectionCase{
-			tool:        "iflow",
-			markerPath:  initIFlowDir,
-			artifactRel: filepath.Join(initIFlowDir, initIFlowFileName),
-		}),
 		Entry("pi", additionalDetectionCase{
 			tool:         "pi",
 			markerPath:   initPiDir,
@@ -116,11 +111,6 @@ var _ = Describe("init additional integration coverage", func() {
 			targetRoot: "work",
 			targetRel:  initAgentsFileName,
 		}),
-		Entry("iflow", additionalManagedFileCase{
-			tool:       "iflow",
-			markerPath: initIFlowDir,
-			targetRel:  filepath.Join(initIFlowDir, initIFlowFileName),
-		}),
 		Entry("pi", additionalManagedFileCase{
 			tool:       "pi",
 			markerPath: initPiDir,
@@ -167,11 +157,6 @@ var _ = Describe("init additional integration coverage", func() {
 			markerPath: initAuggieDir,
 			targetRoot: "work",
 			targetRel:  initAgentsFileName,
-		}),
-		Entry("iflow", additionalManagedFileCase{
-			tool:       "iflow",
-			markerPath: initIFlowDir,
-			targetRel:  filepath.Join(initIFlowDir, initIFlowFileName),
 		}),
 		Entry("pi", additionalManagedFileCase{
 			tool:       "pi",
