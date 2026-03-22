@@ -111,7 +111,7 @@ func RunCapture(args []string) error {
 	if err != nil {
 		return recordFailure(commandArgs, captureDir, "replay_output", err)
 	}
-	if err := os.WriteFile(outputPath, []byte(replayed.Output), 0o644); err != nil {
+	if err := replay.WriteArtifact(outputPath, []byte(replayed.Output), 0o644); err != nil {
 		return recordFailure(commandArgs, captureDir, "write_output", err)
 	}
 

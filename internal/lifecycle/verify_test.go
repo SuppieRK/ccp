@@ -186,6 +186,31 @@ var _ = Describe("verify", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"stage":"read_events"`))
 	})
 
+	It("refuses to overwrite symlinked verify artifacts", func() {
+		restoreVersion := setVersionForTest("dev")
+		DeferCleanup(restoreVersion)
+
+		stub := &stubVerifyRunner{output: "filtered output\n", decisions: "<keep>    | native stdout\n"}
+		DeferCleanup(stubVerifyRunnerForTest(stub))
+
+		tmp := GinkgoT().TempDir()
+		writeFileForTest(filepath.Join(tmp, replay.CommandFileName), "argv: [\"git\", \"status\"]\n")
+		writeFileForTest(filepath.Join(tmp, replay.StdoutFileName), "00000|native stdout\n")
+
+		target := filepath.Join(GinkgoT().TempDir(), "outside-verify-output.txt")
+		Expect(os.WriteFile(target, []byte("keep me"), 0o644)).To(Succeed())
+		if err := os.Symlink(target, filepath.Join(tmp, replay.VerifyOutputFileName)); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		err := RunVerify([]string{"--dir", tmp})
+
+		Expect(err).To(HaveOccurred())
+		body, readErr := os.ReadFile(target)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me"))
+	})
+
 	It("rejects command arguments", func() {
 		restoreVersion := setVersionForTest("dev")
 		DeferCleanup(restoreVersion)

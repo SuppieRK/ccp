@@ -90,10 +90,10 @@ func RunVerify(args []string) error {
 	if err != nil {
 		return recordFailure(dir, "runner_replay", err)
 	}
-	if err := os.WriteFile(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
+	if err := replay.WriteArtifact(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
 		return recordFailure(dir, "write_output", err)
 	}
-	if err := os.WriteFile(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
+	if err := replay.WriteArtifact(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
 		return recordFailure(dir, "write_decisions", err)
 	}
 

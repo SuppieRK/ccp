@@ -148,4 +148,21 @@ var _ = Describe("replay fixtures", func() {
 
 		Expect(strings.ReplaceAll(CombinedInput(events), "\r\n", "\n")).To(Equal("alpha\nbeta\ngamma"))
 	})
+
+	It("refuses to overwrite a symlinked command fixture", func() {
+		tmp := GinkgoT().TempDir()
+		target := filepath.Join(tmp, "outside-command.yaml")
+		link := filepath.Join(tmp, CommandFileName)
+		Expect(os.WriteFile(target, []byte("keep me"), 0o644)).To(Succeed())
+		if err := os.Symlink(target, link); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		err := WriteCommand(link, []string{"git", "status"})
+
+		Expect(err).To(HaveOccurred())
+		body, readErr := os.ReadFile(target)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me"))
+	})
 })

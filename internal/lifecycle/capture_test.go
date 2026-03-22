@@ -140,6 +140,28 @@ var _ = Describe("capture", func() {
 			Line:     "\rstep 1\rstep 2\rdone\n",
 		}))
 	})
+
+	It("refuses to overwrite symlinked capture artifacts", func() {
+		tmp := GinkgoT().TempDir()
+		target := filepath.Join(GinkgoT().TempDir(), "outside-output.txt")
+		Expect(os.WriteFile(target, []byte("keep me"), 0o644)).To(Succeed())
+		if err := os.Symlink(target, filepath.Join(tmp, captureOutputFileName)); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		stub := &stubCaptureRunner{output: "proxy output\n"}
+		prev := newCaptureRunner
+		newCaptureRunner = func() captureVerifier { return stub }
+		DeferCleanup(func() { newCaptureRunner = prev })
+
+		commandArgs, _, _ := captureStdoutOnlyCommand()
+		err := RunCapture(append([]string{"--dir", tmp, "--"}, commandArgs...))
+
+		Expect(err).To(HaveOccurred())
+		body, readErr := os.ReadFile(target)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me"))
+	})
 })
 
 func captureSuccessCommand() ([]string, string, string) {
