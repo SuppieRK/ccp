@@ -86,6 +86,18 @@ var _ = Describe("replay fixtures", func() {
 			Expect(loaded).To(Equal(events))
 		})
 
+		It("normalizes CRLF sequenced fixtures without leaking stray carriage returns", func() {
+			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
+			Expect(os.WriteFile(path, []byte("00000|one\r\n00001|two\r\n"), 0o644)).To(Succeed())
+
+			loaded, err := ReadSequenced(path, contracts.StreamStdout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(Equal([]Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "one\n"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two\n"},
+			}))
+		})
+
 		DescribeTable("validating merged stream sequences",
 			func(stdout, stderr []Event, expected []Event, wantErr string) {
 				merged, err := MergeAndValidate(stdout, stderr)

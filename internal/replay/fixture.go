@@ -279,7 +279,9 @@ func readReplayLine(reader *bufio.Reader) (string, error) {
 		if done {
 			return line, nil
 		}
-		current = append(current, b)
+		if b != '\r' {
+			current = append(current, b)
+		}
 		pendingCR = nextPendingCR
 	}
 }
