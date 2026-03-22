@@ -165,4 +165,25 @@ var _ = Describe("replay fixtures", func() {
 		Expect(readErr).NotTo(HaveOccurred())
 		Expect(string(body)).To(Equal("keep me"))
 	})
+
+	It("refuses to write through a symlinked parent directory", func() {
+		tmp := GinkgoT().TempDir()
+		fixtureDir := filepath.Join(tmp, "fixture")
+		outsideDir := filepath.Join(tmp, "outside")
+		linkDir := filepath.Join(fixtureDir, "stdout")
+		outsidePath := filepath.Join(outsideDir, StdoutFileName)
+		artifactPath := filepath.Join(linkDir, StdoutFileName)
+
+		Expect(os.MkdirAll(fixtureDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(outsideDir, 0o755)).To(Succeed())
+		if err := os.Symlink(outsideDir, linkDir); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		err := WriteArtifact(artifactPath, []byte("should-not-escape"), 0o644)
+
+		Expect(err).To(HaveOccurred())
+		_, statErr := os.Stat(outsidePath)
+		Expect(os.IsNotExist(statErr)).To(BeTrue())
+	})
 })
