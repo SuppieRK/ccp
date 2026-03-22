@@ -138,6 +138,28 @@ var _ = Describe("verify", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"verify_output":` + strconv.Quote(filepath.Join(tmp, replay.VerifyOutputFileName))))
 	})
 
+	It("surfaces audit initialization failures instead of silently succeeding", func() {
+		restoreVersion := setVersionForTest("dev")
+		DeferCleanup(restoreVersion)
+
+		auditHome := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(auditHome, ".config"), []byte("block"), 0o644)).To(Succeed())
+		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
+		DeferCleanup(restoreAudit)
+		DeferCleanup(audit.Reset)
+
+		stub := &stubVerifyRunner{output: "filtered output\n"}
+		DeferCleanup(stubVerifyRunnerForTest(stub))
+
+		tmp := GinkgoT().TempDir()
+		writeFileForTest(filepath.Join(tmp, replay.CommandFileName), "argv: [\"git\", \"status\"]\n")
+		writeFileForTest(filepath.Join(tmp, replay.StdoutFileName), "00000|native stdout\n")
+
+		err := RunVerify([]string{"--dir", tmp})
+
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("records verify invocation failures in the audit log", func() {
 		restoreVersion := setVersionForTest("dev")
 		DeferCleanup(restoreVersion)

@@ -344,6 +344,26 @@ var _ = Describe("Runner", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_finish"`))
 	})
 
+	It("surfaces audit initialization failures instead of silently succeeding", func() {
+		tmpDir, err := os.MkdirTemp("", "core-runner-audit-fail-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+		Expect(os.WriteFile(filepath.Join(tmpDir, ".config"), []byte("block"), 0o644)).To(Succeed())
+
+		restoreAudit := audit.WithTestConfig(tmpDir, 8, 7)
+		DeferCleanup(restoreAudit)
+		DeferCleanup(audit.Reset)
+
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		code, err := runner.Run(auditCommand())
+
+		Expect(err).To(HaveOccurred())
+		Expect(code).NotTo(Equal(0))
+	})
+
 	It("records nested and chained execution shape diagnostics", func() {
 		tmpDir, err := os.MkdirTemp("", "core-runner-audit-shape-*")
 		Expect(err).NotTo(HaveOccurred())
