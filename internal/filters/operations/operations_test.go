@@ -77,4 +77,11 @@ var _ = Describe("Predicate helpers", func() {
 	It("allows a single leading command token when matcher context identifies it", func() {
 		Expect(operations.MatchesNoPositionals([]string{"branch"}, true, true)).To(BeTrue())
 	})
+
+	It("does not treat common option values as explicit positionals", func() {
+		Expect(operations.MatchesPositionalsLackAny([]string{"-C", "repo", "status"}, []string{"repo"})).To(BeTrue())
+		Expect(operations.MatchesPositionalsLackAny([]string{"-C", "repo", "status"}, []string{"status"})).To(BeFalse())
+		Expect(operations.MatchesNoPositionals([]string{"-C", "repo"}, true, false)).To(BeTrue())
+		Expect(operations.MatchesNoPositionals([]string{"-f", "archive.tar"}, true, false)).To(BeTrue())
+	})
 })

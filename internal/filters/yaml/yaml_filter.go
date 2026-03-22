@@ -1227,21 +1227,7 @@ func applyCommandMutations(args []string, command *compiledCommand) []string {
 }
 
 func hasExplicitPositionals(args []string) bool {
-	afterSeparator := false
-	for _, arg := range args {
-		if afterSeparator {
-			return true
-		}
-		if arg == "--" {
-			afterSeparator = true
-			continue
-		}
-		if len(arg) > 0 && arg[0] == '-' {
-			continue
-		}
-		return true
-	}
-	return false
+	return operations.HasExplicitPositionals(args)
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
