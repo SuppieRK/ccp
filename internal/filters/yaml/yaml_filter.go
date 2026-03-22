@@ -20,6 +20,16 @@ type YamlFilter struct {
 	activeArgs string
 }
 
+func (f *YamlFilter) CloneFilter() contracts.Filter {
+	if f == nil {
+		return nil
+	}
+	return &YamlFilter{
+		spec:  f.spec,
+		cases: cloneCompiledCases(f.cases),
+	}
+}
+
 func NewFilter(spec *FilterDefinition) (*YamlFilter, error) {
 	if err := ValidateDefinition(spec); err != nil {
 		return nil, err
@@ -328,6 +338,66 @@ func compileOnExit(onExit *OnExit) *compiledOnExit {
 		return nil
 	}
 	return &compiledOnExit{print: onExit.Print}
+}
+
+func cloneCompiledCases(cases []compiledCase) []compiledCase {
+	if len(cases) == 0 {
+		return nil
+	}
+	cloned := make([]compiledCase, len(cases))
+	for i := range cases {
+		cloned[i] = cloneCompiledCase(cases[i])
+	}
+	return cloned
+}
+
+func cloneCompiledCase(src compiledCase) compiledCase {
+	return compiledCase{
+		id:          src.id,
+		passthrough: src.passthrough,
+		when:        src.when,
+		variables:   cloneVariableValues(src.variables),
+		command:     src.command,
+		stdout:      cloneCompiledScope(src.stdout),
+		stderr:      cloneCompiledScope(src.stderr),
+		shared:      cloneCompiledScope(src.shared),
+		onExit:      src.onExit,
+	}
+}
+
+func cloneVariableValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func cloneCompiledScope(src *compiledScope) *compiledScope {
+	if src == nil {
+		return nil
+	}
+	cloned := *src
+	cloned.hidden = 0
+	cloned.activeBoundary = nil
+	if len(src.groups) > 0 {
+		cloned.groups = make([]compiledGroup, len(src.groups))
+		for i := range src.groups {
+			cloned.groups[i] = cloneCompiledGroup(src.groups[i])
+		}
+	}
+	return &cloned
+}
+
+func cloneCompiledGroup(src compiledGroup) compiledGroup {
+	cloned := src
+	cloned.items = make(map[string][]compiledGroupItem)
+	cloned.sections = nil
+	cloned.lines = cloneCompiledScope(src.lines)
+	return cloned
 }
 
 func compileCommandMutation(command *CommandMutation) *compiledCommand {
