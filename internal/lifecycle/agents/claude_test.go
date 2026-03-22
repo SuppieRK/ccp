@@ -202,17 +202,20 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 		Expect(changed).To(BeFalse())
 	})
 
-	ginkgo.It("removes invalid settings files", func() {
+	ginkgo.It("preserves invalid user settings files and returns an actionable error", func() {
 		settings := filepath.Join(tmpDir, "settings.json")
 		hook := filepath.Join(tmpDir, "ccp-rewrite.sh")
-		Expect(os.WriteFile(settings, []byte("{invalid"), 0o644)).To(Succeed())
+		original := []byte("{invalid")
+		Expect(os.WriteFile(settings, original, 0o644)).To(Succeed())
 
 		changed, err := removePreToolUseCommandHook(settings, hook)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(changed).To(BeTrue())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("invalid"))
+		Expect(changed).To(BeFalse())
 
-		_, statErr := os.Stat(settings)
-		Expect(statErr).To(MatchError(os.ErrNotExist))
+		raw, readErr := os.ReadFile(settings)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(raw).To(Equal(original))
 	})
 
 	ginkgo.It("tolerates removing a missing file", func() {

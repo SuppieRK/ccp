@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,11 +49,11 @@ var _ = Describe("capture", func() {
 
 		stdoutData, err := os.ReadFile(filepath.Join(tmp, captureStdoutFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(stdoutData)).To(HaveSuffix("|" + stdoutLine))
+		Expect(normalizeCaptureLineEndings(string(stdoutData))).To(HaveSuffix("|" + stdoutLine))
 
 		stderrData, err := os.ReadFile(filepath.Join(tmp, captureStderrFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(stderrData)).To(HaveSuffix("|" + stderrLine))
+		Expect(normalizeCaptureLineEndings(string(stderrData))).To(HaveSuffix("|" + stderrLine))
 
 		commandData, err := os.ReadFile(filepath.Join(tmp, replay.CommandFileName))
 		Expect(err).NotTo(HaveOccurred())
@@ -67,15 +68,15 @@ var _ = Describe("capture", func() {
 		Expect(stub.gotArgs).To(Equal(commandArgs))
 		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
-		Expect(replay.CombinedInput(stub.gotEvents)).To(Or(
+		Expect(normalizeCaptureLineEndings(replay.CombinedInput(stub.gotEvents))).To(Or(
 			Equal(stdoutLine+stderrLine),
 			Equal(stderrLine+stdoutLine),
 		))
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
-			return event.Stream == contracts.StreamStdout && event.Line == stdoutLine
+			return event.Stream == contracts.StreamStdout && normalizeCaptureLineEndings(event.Line) == stdoutLine
 		})).To(BeTrue())
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
-			return event.Stream == contracts.StreamStderr && event.Line == stderrLine
+			return event.Stream == contracts.StreamStderr && normalizeCaptureLineEndings(event.Line) == stderrLine
 		})).To(BeTrue())
 	})
 
@@ -122,6 +123,23 @@ var _ = Describe("capture", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"command_path":` + strconv.Quote(filepath.Join(tmp, replay.CommandFileName))))
 		Expect(string(auditData)).To(ContainSubstring(`"output_path":` + strconv.Quote(filepath.Join(tmp, captureOutputFileName))))
 	})
+
+	It("preserves carriage-return progress output in captured events", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		events, exitCode, err := runNativeCapture([]string{"sh", "-c", "printf '\rstep 1\rstep 2\rdone\n'"})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exitCode).To(BeZero())
+		Expect(replay.CombinedInput(events)).To(Equal("\rstep 1\rstep 2\rdone\n"))
+		Expect(events).To(ContainElement(replay.Event{
+			Sequence: 0,
+			Stream:   contracts.StreamStdout,
+			Line:     "\rstep 1\rstep 2\rdone\n",
+		}))
+	})
 })
 
 func captureSuccessCommand() ([]string, string, string) {
@@ -143,4 +161,8 @@ func captureStdoutOnlyCommand() ([]string, string, string) {
 		return []string{"cmd", "/c", "echo native stdout"}, "native stdout\n", ""
 	}
 	return []string{"sh", "-c", "printf 'native stdout\\n'"}, "native stdout\n", ""
+}
+
+func normalizeCaptureLineEndings(v string) string {
+	return strings.ReplaceAll(v, "\r\n", "\n")
 }

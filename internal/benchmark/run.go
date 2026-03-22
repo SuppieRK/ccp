@@ -445,6 +445,9 @@ func tokenCompactionRatio(nativeTokens, proxyTokens int) float64 {
 	if proxyTokens > 0 {
 		return float64(nativeTokens) / float64(proxyTokens)
 	}
+	if nativeTokens > 0 {
+		return float64(nativeTokens)
+	}
 	return 1
 }
 

@@ -56,11 +56,15 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
 	scope := cs.scopeForExit(contracts.StreamStdout)
-	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamStdout), ""), scope, context.ExitCode())
+	exitStream := contracts.StreamStdout
+	if cs.shared != nil {
+		exitStream = contracts.StreamCombined
+	}
+	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(exitStream), ""), scope, context.ExitCode())
 	if cs.onExit != nil {
 		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
 	}
-	return exitActionForOutput(output)
+	return exitActionForOutput(output, exitStream)
 }
 
 func renderStdoutExitOutput(output string, scope *compiledScope, exitCode int) string {
@@ -99,11 +103,15 @@ func appendCaseExitPrint(output string, onExit *compiledOnExit, variables map[st
 	return output
 }
 
-func exitActionForOutput(output string) contracts.Action {
+func exitActionForOutput(output string, stream contracts.Stream) contracts.Action {
 	if output == "" {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
-	return contracts.Action{Kind: contracts.ActionReplace, Output: output}
+	action := contracts.Action{Kind: contracts.ActionReplace, Output: output}
+	if stream == contracts.StreamCombined {
+		action.Stream = stream
+	}
+	return action
 }
 
 func (f *YamlFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {

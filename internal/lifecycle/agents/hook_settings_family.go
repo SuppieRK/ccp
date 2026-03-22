@@ -66,7 +66,7 @@ func removePreToolUseCommandHook(settingsPath, hookPath string) (bool, error) {
 
 	root, ok := decodeHookSettings(raw)
 	if !ok {
-		return removeFileIfExists(settingsPath)
+		return false, fmt.Errorf("invalid hook settings file %s: requires manual attention", settingsPath)
 	}
 
 	hooks, pre, ok := preToolUseEntries(root)

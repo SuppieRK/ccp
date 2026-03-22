@@ -518,7 +518,7 @@ var _ = Describe("benchmark replay runner", func() {
 				Expect(tokenCompactionRatio(nativeTokens, proxyTokens)).To(Equal(expected))
 			},
 			Entry("uses native to proxy ratio", 10, 4, 2.5),
-			Entry("falls back to one for zero proxy tokens", 10, 0, 1.0),
+			Entry("treats zero proxy tokens as best-case improvement", 10, 0, 10.0),
 		)
 
 		It("hashes fixture input from command and replayed streams", func() {

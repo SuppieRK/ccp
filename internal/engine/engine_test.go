@@ -60,6 +60,34 @@ func (f *exitNoopFilter) OnStdoutExit(_ contracts.Context) contracts.Action {
 	return contracts.Action{Kind: contracts.ActionKeep}
 }
 
+type combinedExitFilter struct{}
+
+func (f *combinedExitFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
+	return command, nil
+}
+
+func (f *combinedExitFilter) Dispatch(command contracts.Command) string {
+	return command.Tool
+}
+
+func (f *combinedExitFilter) OnStdout(line string, _ contracts.Context) contracts.Action {
+	_ = line
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+func (f *combinedExitFilter) OnStderr(line string, _ contracts.Context) contracts.Action {
+	_ = line
+	return contracts.Action{Kind: contracts.ActionKeep}
+}
+
+func (f *combinedExitFilter) OnStdoutExit(context contracts.Context) contracts.Action {
+	return contracts.Action{
+		Kind:   contracts.ActionReplace,
+		Stream: contracts.StreamCombined,
+		Output: "summary: " + strings.Join(context.BufferedLines(contracts.StreamCombined), ""),
+	}
+}
+
 var _ = Describe("Engine integration", func() {
 	Context("when a matching filter is registered", func() {
 		var (
@@ -188,6 +216,28 @@ var _ = Describe("Engine integration", func() {
 					{Stream: contracts.StreamStderr, Line: "err-1\n"},
 				}))
 			})
+		})
+	})
+
+	Context("when exit handling targets the combined stream", func() {
+		It("replaces the full retained combined output instead of leaving stderr behind", func() {
+			registry := NewRegistry()
+			registry.Register("combined", &combinedExitFilter{})
+			runtime := NewEngine(registry)
+			state := runtime.Start(contracts.Command{
+				CommandID: "cmd-5",
+				RawInput:  "combined",
+				Args:      []string{"combined"},
+				Tool:      "combined",
+			})
+
+			Expect(state.Stdout("out-1\n")).To(BeEmpty())
+			Expect(state.Stderr("err-1\n")).To(BeEmpty())
+
+			Expect(state.Exit(0)).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "summary: out-1\nerr-1\n",
+			}}))
 		})
 	})
 

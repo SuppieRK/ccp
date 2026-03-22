@@ -13,6 +13,7 @@ type yamlFilterContext struct {
 	args     []string
 	stdout   []string
 	stderr   []string
+	combined []string
 	exitCode int
 }
 
@@ -26,6 +27,11 @@ func (c yamlFilterContext) BufferedLines(stream contracts.Stream) []string {
 		return c.stdout
 	case contracts.StreamStderr:
 		return c.stderr
+	case contracts.StreamCombined:
+		if c.combined != nil {
+			return c.combined
+		}
+		return append(append([]string(nil), c.stdout...), c.stderr...)
 	default:
 		return nil
 	}
@@ -263,6 +269,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(exit).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: "pkg/a/\n  a.go\n",
 		}))
 	})
@@ -326,7 +333,8 @@ var _ = Describe("YamlFilter", func() {
 
 		exit := filter.OnStdoutExit(yamlFilterContext{args: args})
 		Expect(exit).To(Equal(contracts.Action{
-			Kind: contracts.ActionReplace,
+			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: strings.Join([]string{
 				"a/",
 				"  1.go",
@@ -577,6 +585,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(exitAction).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: "docs/\nREADME.md  59\n1 dirs, 1 files\n",
 		}))
 	})
@@ -653,6 +662,30 @@ var _ = Describe("YamlFilter", func() {
 		Expect(strings.Index(exitAction.Output, "failure details:\n")).To(BeNumerically("<", strings.Index(exitAction.Output, "failed tests:\n")))
 	})
 
+	It("uses combined buffered lines for combined exit output", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{{
+				ID: "default",
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{Lines: &OutputLines{}},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		exitAction := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"demo"},
+			combined: []string{"out-1\n", "err-1\n"},
+		})
+		Expect(exitAction).To(Equal(contracts.Action{
+			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
+			Output: "out-1\nerr-1\n",
+		}))
+	})
+
 	It("groups matched find file paths by parent directory at exit", func() {
 		filter, err := NewFilter(&FilterDefinition{
 			Version: 1,
@@ -695,6 +728,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(exitAction).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: "./\n  main.go\npkg/a/\n  a.go\npkg/b/\n  b.go\n",
 		}))
 	})
@@ -744,6 +778,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(exitAction).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: "pkg/a/\n  a.go\n\n2 lines\ndone\n",
 		}))
 	})
@@ -850,14 +885,14 @@ var _ = Describe("YamlFilter", func() {
 			})
 			Expect(exitAction).To(Equal(expected))
 		},
-		Entry("keep, replace, and skip all apply within one grouped stream", true, true, true, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n"}),
-		Entry("keep and replace apply while skip is absent in grouped output", true, true, false, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n"}),
-		Entry("keep and skip apply while replace is absent in grouped output", true, false, true, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n"}),
-		Entry("only keep is configured so unmatched grouped lines are ignored", true, false, false, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n"}),
-		Entry("replace and skip apply while unmatched grouped lines still passthrough", false, true, true, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n./pkg/a/value\n"}),
-		Entry("only replace is configured so non-target grouped lines passthrough", false, true, false, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n./pkg/a/SKIP\n./pkg/a/value\n"}),
-		Entry("only skip is configured so untargeted grouped lines passthrough", false, false, true, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/value\n"}),
-		Entry("no grouped line conditions are present so the stream passthroughs unchanged", false, false, false, contracts.Action{Kind: contracts.ActionReplace, Output: "pkg/a/\n./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n"}),
+		Entry("keep, replace, and skip all apply within one grouped stream", true, true, true, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n"}),
+		Entry("keep and replace apply while skip is absent in grouped output", true, true, false, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n"}),
+		Entry("keep and skip apply while replace is absent in grouped output", true, false, true, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n"}),
+		Entry("only keep is configured so unmatched grouped lines are ignored", true, false, false, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n"}),
+		Entry("replace and skip apply while unmatched grouped lines still passthrough", false, true, true, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n./pkg/a/value\n"}),
+		Entry("only replace is configured so non-target grouped lines passthrough", false, true, false, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n  REWRITTEN\n./pkg/a/SKIP\n./pkg/a/value\n"}),
+		Entry("only skip is configured so untargeted grouped lines passthrough", false, false, true, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/value\n"}),
+		Entry("no grouped line conditions are present so the stream passthroughs unchanged", false, false, false, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "pkg/a/\n./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n"}),
 	)
 
 	It("applies parent scope max after grouped output is rendered", func() {
@@ -904,6 +939,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(exitAction).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
 			Output: "pkg/a/\n  a.go\n2 lines\n",
 		}))
 	})

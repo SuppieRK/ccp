@@ -532,7 +532,7 @@ var _ = Describe("uninstall", func() {
 		}))
 	})
 
-	It("removes workspace and global CCP state helpers", func() {
+	It("removes only CCP-owned workspace state helpers", func() {
 		ws := newUninstallWorkspace("root")
 		currentCCP := filepath.Join(ws.root, ".ccp")
 		otherScope := filepath.Join(ws.root, "other")
@@ -555,7 +555,7 @@ var _ = Describe("uninstall", func() {
 		})).To(Succeed())
 		expectMissingPath(currentCCP)
 		expectMissingPath(otherCCP)
-		expectMissingPath(externalMetrics)
+		Expect(externalMetrics).To(BeAnExistingFile())
 
 		Expect(removeGlobalCCPState(ws.home)).To(Succeed())
 		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))

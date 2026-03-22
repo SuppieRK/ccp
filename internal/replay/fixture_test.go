@@ -68,6 +68,24 @@ var _ = Describe("replay fixtures", func() {
 			}))
 		})
 
+		It("round-trips sequence numbers beyond five digits", func() {
+			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
+			events := []Event{
+				{Sequence: 99999, Stream: contracts.StreamStdout, Line: "boundary\n"},
+				{Sequence: 100000, Stream: contracts.StreamStdout, Line: "overflow\n"},
+			}
+
+			Expect(WriteSequenced(path, events)).To(Succeed())
+
+			body, err := os.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("99999|boundary\n100000|overflow\n"))
+
+			loaded, err := ReadSequenced(path, contracts.StreamStdout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(Equal(events))
+		})
+
 		DescribeTable("validating merged stream sequences",
 			func(stdout, stderr []Event, expected []Event, wantErr string) {
 				merged, err := MergeAndValidate(stdout, stderr)

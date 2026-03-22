@@ -43,7 +43,7 @@ type ReplayResult struct {
 	Decisions string
 }
 
-type entrySink func([]engine.BufferEntry) int
+type entrySink func([]engine.BufferEntry) (int, error)
 
 type redactingWriter struct {
 	writer       io.Writer
@@ -69,13 +69,12 @@ func NewRunnerWithOptions(opts Options) *Runner {
 }
 
 func (r *Runner) Run(args []string) (int, error) {
-	if r.opts.Raw {
-		return r.runRaw(args)
-	}
-
 	command, err := ParseCommandArgs(args)
 	if err != nil {
 		return 2, err
+	}
+	if r.opts.Raw {
+		return r.runRaw(command, args)
 	}
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
@@ -120,21 +119,31 @@ func (r *Runner) Run(args []string) (int, error) {
 	wg.Add(2)
 	stdoutStats := &streamStats{}
 	stderrStats := &streamStats{}
+	var stdoutWriteErr error
+	var stderrWriteErr error
 	go func() {
 		defer wg.Done()
-		r.drainStream(stdout, state.Stdout, stdoutStats, r.writeEntries)
+		stdoutWriteErr = r.drainStream(stdout, state.Stdout, stdoutStats, r.writeEntries)
 	}()
 	go func() {
 		defer wg.Done()
-		r.drainStream(stderr, state.Stderr, stderrStats, r.writeEntries)
+		stderrWriteErr = r.drainStream(stderr, state.Stderr, stderrStats, r.writeEntries)
 	}()
 	wg.Wait()
 
 	exitCode, err := waitExitCode(cmd)
+	exitWritten, exitWriteErr := r.writeEntries(state.Exit(exitCode))
+	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr, exitWriteErr)
 	if err != nil {
-		return 1, err
+		return 1, errors.Join(err, outputErr)
 	}
-	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + r.writeEntries(state.Exit(exitCode))
+	if outputErr != nil {
+		if exitCode == 0 {
+			return 1, outputErr
+		}
+		return exitCode, outputErr
+	}
+	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.appendMetrics(command, isPassthroughFilter(resolved), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
 	audit.MustAppend("execution_finish", map[string]any{
@@ -150,11 +159,7 @@ func (r *Runner) Run(args []string) (int, error) {
 	return exitCode, nil
 }
 
-func (r *Runner) runRaw(args []string) (int, error) {
-	command, err := ParseCommandArgs(args)
-	if err != nil {
-		return 2, err
-	}
+func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
 	audit.MustAppend("execution_start", map[string]any{
@@ -180,17 +185,20 @@ func (r *Runner) runRaw(args []string) (int, error) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
+	var stdoutWriteErr error
+	var stderrWriteErr error
 	go func() {
 		defer wg.Done()
-		r.copyRawStream(stdout, os.Stdout)
+		stdoutWriteErr = r.copyRawStream(stdout, os.Stdout)
 	}()
 	go func() {
 		defer wg.Done()
-		r.copyRawStream(stderr, os.Stderr)
+		stderrWriteErr = r.copyRawStream(stderr, os.Stderr)
 	}()
 	wg.Wait()
 
 	exitCode, err := waitExitCode(cmd)
+	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr)
 	audit.MustAppend("execution_finish", map[string]any{
 		"command":     command.RawInput,
 		"tool":        command.Tool,
@@ -198,6 +206,12 @@ func (r *Runner) runRaw(args []string) (int, error) {
 		"exit_code":   exitCode,
 		"duration_ms": time.Since(startedAt).Milliseconds(),
 	})
+	if outputErr != nil {
+		if exitCode == 0 {
+			return 1, outputErr
+		}
+		return exitCode, outputErr
+	}
 	return exitCode, err
 }
 
@@ -317,24 +331,25 @@ type streamStats struct {
 	keptBytes int
 }
 
-func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats, sink entrySink) {
+func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats, sink entrySink) error {
 	if src == nil {
-		return
+		return nil
 	}
 	reader := bufio.NewReader(src)
 	var currentLine []byte
 	pendingCR := false
+	var sinkErr error
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
-			r.finishDrainedStream(currentLine, pendingCR, consume, stats, sink)
-			return
+			r.finishDrainedStream(currentLine, pendingCR, consume, stats, sink, &sinkErr)
+			return sinkErr
 		}
 		recordRawByte(stats)
-		if r.handlePendingCRByte(b, consume, stats, sink, &pendingCR, &currentLine) {
+		if r.handlePendingCRByte(b, consume, stats, sink, &pendingCR, &currentLine, &sinkErr) {
 			continue
 		}
-		r.consumeStreamByte(b, consume, stats, sink, &pendingCR, &currentLine)
+		r.consumeStreamByte(b, consume, stats, sink, &pendingCR, &currentLine, &sinkErr)
 	}
 }
 
@@ -356,11 +371,13 @@ func (r *Runner) finishDrainedStream(
 	consume func(string) []engine.BufferEntry,
 	stats *streamStats,
 	sink entrySink,
+	sinkErr *error,
 ) {
 	if pendingCR || len(currentLine) == 0 {
 		return
 	}
-	recordKeptBytes(stats, sink(consume(string(currentLine))))
+	written, err := sink(consume(string(currentLine)))
+	r.recordSinkResult(stats, written, err, sinkErr)
 }
 
 func (r *Runner) handlePendingCRByte(
@@ -370,12 +387,13 @@ func (r *Runner) handlePendingCRByte(
 	sink entrySink,
 	pendingCR *bool,
 	currentLine *[]byte,
+	sinkErr *error,
 ) bool {
 	if !*pendingCR {
 		return false
 	}
 	if b == '\n' {
-		r.emitConsumedLine(currentLine, true, consume, stats, sink)
+		r.emitConsumedLine(currentLine, true, consume, stats, sink, sinkErr)
 		*pendingCR = false
 		return true
 	}
@@ -391,12 +409,13 @@ func (r *Runner) consumeStreamByte(
 	sink entrySink,
 	pendingCR *bool,
 	currentLine *[]byte,
+	sinkErr *error,
 ) {
 	switch b {
 	case '\r':
 		*pendingCR = true
 	case '\n':
-		r.emitConsumedLine(currentLine, true, consume, stats, sink)
+		r.emitConsumedLine(currentLine, true, consume, stats, sink, sinkErr)
 	default:
 		*currentLine = append(*currentLine, b)
 	}
@@ -408,29 +427,46 @@ func (r *Runner) emitConsumedLine(
 	consume func(string) []engine.BufferEntry,
 	stats *streamStats,
 	sink entrySink,
+	sinkErr *error,
 ) {
 	if includeNewline {
 		*currentLine = append(*currentLine, '\n')
 	}
-	recordKeptBytes(stats, sink(consume(string(*currentLine))))
+	written, err := sink(consume(string(*currentLine)))
+	r.recordSinkResult(stats, written, err, sinkErr)
 	*currentLine = (*currentLine)[:0]
 }
 
-func (r *Runner) copyStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats) {
-	r.drainStream(src, consume, stats, r.writeEntries)
+func (r *Runner) recordSinkResult(stats *streamStats, written int, err error, sinkErr *error) {
+	recordKeptBytes(stats, written)
+	if err != nil && sinkErr != nil && *sinkErr == nil {
+		*sinkErr = err
+	}
 }
 
-func (r *Runner) writeEntries(entries []engine.BufferEntry) int {
+func (r *Runner) copyStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats) error {
+	return r.drainStream(src, consume, stats, r.writeEntries)
+}
+
+func (r *Runner) writeEntries(entries []engine.BufferEntry) (int, error) {
 	written := 0
 	for _, entry := range entries {
+		var (
+			lineWritten int
+			err         error
+		)
 		switch entry.Stream {
 		case "stderr":
-			written += r.writeRedacted(os.Stderr, entry.Line)
+			lineWritten, err = r.writeRedacted(os.Stderr, entry.Line)
 		default:
-			written += r.writeRedacted(os.Stdout, entry.Line)
+			lineWritten, err = r.writeRedacted(os.Stdout, entry.Line)
+		}
+		written += lineWritten
+		if err != nil {
+			return written, err
 		}
 	}
-	return written
+	return written, nil
 }
 
 type replayCollector struct {
@@ -661,23 +697,21 @@ func currentWorkingDir() string {
 	return cwd
 }
 
-func (r *Runner) writeRedacted(dst *os.File, line string) int {
+func (r *Runner) writeRedacted(dst *os.File, line string) (int, error) {
 	redacted := redactConfidential(line, r.opts.Confidential)
 	if _, err := io.WriteString(dst, redacted); err != nil {
-		if dst != os.Stderr {
-			_, _ = io.WriteString(os.Stderr, "ccp: failed to write output\n")
-		}
-		return 0
+		return 0, fmt.Errorf("write %s: %w", outputName(dst), err)
 	}
-	return len(redacted)
+	return len(redacted), nil
 }
 
-func (r *Runner) copyRawStream(src io.Reader, dst *os.File) {
-	target := io.Writer(dst)
+func (r *Runner) copyRawStream(src io.Reader, dst *os.File) error {
+	recorder := &errorRecordingWriter{writer: dst, name: outputName(dst)}
+	target := io.Writer(recorder)
 	var outWriter *redactingWriter
 	if len(r.opts.Confidential) > 0 {
 		outWriter = &redactingWriter{
-			writer:       dst,
+			writer:       recorder,
 			confidential: r.opts.Confidential,
 		}
 		target = outWriter
@@ -686,6 +720,35 @@ func (r *Runner) copyRawStream(src io.Reader, dst *os.File) {
 	if outWriter != nil {
 		_ = outWriter.Flush()
 	}
+	return recorder.err
+}
+
+type errorRecordingWriter struct {
+	writer io.Writer
+	name   string
+	err    error
+}
+
+func (w *errorRecordingWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 || w.writer == nil {
+		return len(p), nil
+	}
+	if w.err != nil {
+		return len(p), nil
+	}
+	_, err := w.writer.Write(p)
+	if err != nil {
+		w.err = fmt.Errorf("write %s: %w", w.name, err)
+		return len(p), nil
+	}
+	return len(p), nil
+}
+
+func outputName(dst *os.File) string {
+	if dst == os.Stderr {
+		return "stderr"
+	}
+	return "stdout"
 }
 
 func redactConfidential(input string, confidential []string) string {

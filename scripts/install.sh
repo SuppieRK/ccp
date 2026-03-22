@@ -26,6 +26,49 @@ curl_secure() {
   return 0
 }
 
+sha256_file() {
+  file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return 0
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return 0
+  fi
+  echo "missing required command: sha256sum or shasum" >&2
+  exit 1
+}
+
+verify_download_checksum() {
+  checksums_file="$1"
+  asset_name="$2"
+  asset_path="$3"
+  expected=""
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    hash="$(printf '%s' "$line" | awk '{print $1}')"
+    name="$(printf '%s' "$line" | sed -E 's/^[0-9a-fA-F]+[[:space:]]+\*?//')"
+    name="${name#./}"
+    if [ "$name" = "$asset_name" ]; then
+      expected="$hash"
+      break
+    fi
+  done < "$checksums_file"
+
+  if [ -z "$expected" ]; then
+    echo "checksum for asset not found: $asset_name" >&2
+    exit 1
+  fi
+
+  actual="$(sha256_file "$asset_path")"
+  if [ "$actual" != "$expected" ]; then
+    echo "checksum mismatch for $asset_name" >&2
+    exit 1
+  fi
+}
+
 need_cmd() {
   cmd="$1"
   command -v "$cmd" >/dev/null 2>&1 || {
@@ -219,9 +262,13 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 ASSET="${BIN_NAME}_${VERSION}_${OS}_${ARCH}.zip"
 URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET"
+CHECKSUMS_ASSET="ccp_checksums.txt"
+CHECKSUMS_URL="https://github.com/$REPO/releases/download/$VERSION/$CHECKSUMS_ASSET"
 
 echo "Downloading $URL"
 curl_secure "$URL" -o "$TMP_DIR/$ASSET"
+curl_secure "$CHECKSUMS_URL" -o "$TMP_DIR/$CHECKSUMS_ASSET"
+verify_download_checksum "$TMP_DIR/$CHECKSUMS_ASSET" "$ASSET" "$TMP_DIR/$ASSET"
 
 unzip -oq "$TMP_DIR/$ASSET" -d "$TMP_DIR"
 
