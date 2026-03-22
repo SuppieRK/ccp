@@ -319,8 +319,16 @@ var _ = Describe("ParseCommandLine", func() {
 			`sh -lc "printf '%s\n' 'hello world'"`,
 			contracts.Command{
 				RawInput: `sh -lc "printf '%s\n' 'hello world'"`,
-				Args:     []string{"sh", "-lc", `printf '%sn' 'hello world'`},
+				Args:     []string{"sh", "-lc", `printf '%s\n' 'hello world'`},
 				Tool:     "sh",
+			},
+		),
+		Entry("double quotes preserve backslashes before non-special characters",
+			`cmd "path\zvalue"`,
+			contracts.Command{
+				RawInput: `cmd "path\zvalue"`,
+				Args:     []string{"cmd", `path\zvalue`},
+				Tool:     "cmd",
 			},
 		),
 		Entry("escaped spaces",

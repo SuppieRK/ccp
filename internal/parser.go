@@ -185,6 +185,13 @@ func (s *commandLineSplitState) consume(r rune) {
 
 func (s *commandLineSplitState) consumeEscaped(r rune) {
 	if s.escapeDouble {
+		if isDoubleQuotedEscape(r) {
+			if r != '\n' {
+				s.writeRune(r)
+			}
+			return
+		}
+		s.writeRune('\\')
 		s.writeRune(r)
 		return
 	}
@@ -194,6 +201,15 @@ func (s *commandLineSplitState) consumeEscaped(r rune) {
 	}
 	s.writeRune('\\')
 	s.writeRune(r)
+}
+
+func isDoubleQuotedEscape(r rune) bool {
+	switch r {
+	case '"', '\\', '$', '`', '\n':
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *commandLineSplitState) consumeSingleQuoted(r rune) {
