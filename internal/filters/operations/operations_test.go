@@ -43,7 +43,7 @@ var _ = Describe("Predicate helpers", func() {
 		Entry("MatchesHaveAllShortFlags", "MatchesHaveAllShortFlags", operations.MatchesHaveAllShortFlags([]string{"-lR"}, []string{"-l", "-R"})),
 		Entry("MatchesNotHaveAllShortFlags", "MatchesNotHaveAllShortFlags", operations.MatchesNotHaveAllShortFlags([]string{"-l"}, []string{"-l", "-R"})),
 		Entry("MatchesPositionalsLackAny", "MatchesPositionalsLackAny", operations.MatchesPositionalsLackAny([]string{"test", "--watch", "unit"}, []string{"e2e"})),
-		Entry("MatchesNoPositionals", "MatchesNoPositionals", operations.MatchesNoPositionals([]string{"branch", "--all"}, true)),
+		Entry("MatchesNoPositionals", "MatchesNoPositionals", operations.MatchesNoPositionals([]string{"branch", "--all"}, true, true)),
 	)
 
 	It("rejects disallowed positional values", func() {
@@ -67,6 +67,21 @@ var _ = Describe("Predicate helpers", func() {
 	})
 
 	It("rejects explicit positionals when none are allowed", func() {
-		Expect(operations.MatchesNoPositionals([]string{"branch", "feature"}, true)).To(BeFalse())
+		Expect(operations.MatchesNoPositionals([]string{"branch", "feature"}, true, true)).To(BeFalse())
+	})
+
+	It("rejects a single true positional after the executable has already been stripped", func() {
+		Expect(operations.MatchesNoPositionals([]string{"feature"}, true, false)).To(BeFalse())
+	})
+
+	It("allows a single leading command token when matcher context identifies it", func() {
+		Expect(operations.MatchesNoPositionals([]string{"branch"}, true, true)).To(BeTrue())
+	})
+
+	It("does not treat common option values as explicit positionals", func() {
+		Expect(operations.MatchesPositionalsLackAny([]string{"-C", "repo", "status"}, []string{"repo"})).To(BeTrue())
+		Expect(operations.MatchesPositionalsLackAny([]string{"-C", "repo", "status"}, []string{"status"})).To(BeFalse())
+		Expect(operations.MatchesNoPositionals([]string{"-C", "repo"}, true, false)).To(BeTrue())
+		Expect(operations.MatchesNoPositionals([]string{"-f", "archive.tar"}, true, false)).To(BeTrue())
 	})
 })

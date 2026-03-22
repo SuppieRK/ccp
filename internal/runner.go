@@ -78,8 +78,9 @@ func (r *Runner) Run(args []string) (int, error) {
 	}
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
-	audit.MustAppend("execution_start", map[string]any{
-		"command":       command.RawInput,
+	auditCommand := r.auditCommand(command.RawInput)
+	if err := audit.Append("execution_start", map[string]any{
+		"command":       auditCommand,
 		"tool":          command.Tool,
 		"raw":           false,
 		"uses_shell":    shape.UsesShell,
@@ -88,16 +89,17 @@ func (r *Runner) Run(args []string) (int, error) {
 		"has_find_exec": shape.HasFindExec,
 		"has_xargs":     shape.HasXargs,
 		"nested_ccp":    shape.NestedCCP,
-	})
+	}); err != nil {
+		return 1, err
+	}
 
 	registry, err := r.loadRegistry()
 	if err != nil {
-		audit.MustAppend("execution_registry_error", map[string]any{
-			"command": command.RawInput,
+		return 1, errors.Join(err, audit.Append("execution_registry_error", map[string]any{
+			"command": auditCommand,
 			"tool":    command.Tool,
 			"error":   err.Error(),
-		})
-		return 1, err
+		}))
 	}
 	resolved := registry.Resolve(command)
 	command, err = resolved.PrepareCommand(command)
@@ -146,8 +148,8 @@ func (r *Runner) Run(args []string) (int, error) {
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.appendMetrics(command, isPassthroughFilter(resolved), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
-	audit.MustAppend("execution_finish", map[string]any{
-		"command":     command.RawInput,
+	auditErr := audit.Append("execution_finish", map[string]any{
+		"command":     auditCommand,
 		"tool":        command.Tool,
 		"dispatch":    command.Dispatch,
 		"raw":         false,
@@ -156,14 +158,21 @@ func (r *Runner) Run(args []string) (int, error) {
 		"raw_bytes":   rawBytes,
 		"kept_bytes":  keptBytes,
 	})
+	if auditErr != nil {
+		if exitCode == 0 {
+			return 1, auditErr
+		}
+		return exitCode, auditErr
+	}
 	return exitCode, nil
 }
 
 func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
-	audit.MustAppend("execution_start", map[string]any{
-		"command":       command.RawInput,
+	auditCommand := r.auditCommand(command.RawInput)
+	if err := audit.Append("execution_start", map[string]any{
+		"command":       auditCommand,
 		"tool":          command.Tool,
 		"raw":           true,
 		"uses_shell":    shape.UsesShell,
@@ -172,7 +181,9 @@ func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 		"has_find_exec": shape.HasFindExec,
 		"has_xargs":     shape.HasXargs,
 		"nested_ccp":    shape.NestedCCP,
-	})
+	}); err != nil {
+		return 1, err
+	}
 
 	cmd, stdout, stderr, err := commandWithPipes(command.Args[0], command.Args[1:])
 	if err != nil {
@@ -199,13 +210,19 @@ func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 
 	exitCode, err := waitExitCode(cmd)
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr)
-	audit.MustAppend("execution_finish", map[string]any{
-		"command":     command.RawInput,
+	auditErr := audit.Append("execution_finish", map[string]any{
+		"command":     auditCommand,
 		"tool":        command.Tool,
 		"raw":         true,
 		"exit_code":   exitCode,
 		"duration_ms": time.Since(startedAt).Milliseconds(),
 	})
+	if auditErr != nil {
+		if exitCode == 0 {
+			return 1, errors.Join(outputErr, auditErr)
+		}
+		return exitCode, errors.Join(outputErr, auditErr)
+	}
 	if outputErr != nil {
 		if exitCode == 0 {
 			return 1, outputErr
@@ -236,19 +253,21 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 	if err != nil {
 		return ReplayResult{}, err
 	}
-	audit.MustAppend("verify_start", map[string]any{
-		"command": command.RawInput,
+	auditCommand := r.auditCommand(command.RawInput)
+	if err := audit.Append("verify_start", map[string]any{
+		"command": auditCommand,
 		"tool":    command.Tool,
-	})
+	}); err != nil {
+		return ReplayResult{}, err
+	}
 
 	registry, err := r.loadRegistry()
 	if err != nil {
-		audit.MustAppend("verify_registry_error", map[string]any{
-			"command": command.RawInput,
+		return ReplayResult{}, errors.Join(err, audit.Append("verify_registry_error", map[string]any{
+			"command": auditCommand,
 			"tool":    command.Tool,
 			"error":   err.Error(),
-		})
-		return ReplayResult{}, err
+		}))
 	}
 	resolved := registry.Resolve(command)
 	command, err = resolved.PrepareCommand(command)
@@ -273,12 +292,14 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 	}
 	exitAction, exitEntries := state.ExitAction(exitCode)
 	collector.recordExit(exitAction, exitEntries)
-	audit.MustAppend("verify_finish", map[string]any{
-		"command":      command.RawInput,
+	if err := audit.Append("verify_finish", map[string]any{
+		"command":      auditCommand,
 		"tool":         command.Tool,
 		"dispatch":     command.Dispatch,
 		"output_bytes": len(collector.output.String()),
-	})
+	}); err != nil {
+		return ReplayResult{}, err
+	}
 	return ReplayResult{
 		Output:    collector.output.String(),
 		Decisions: collector.decisions.String(),
@@ -703,6 +724,10 @@ func (r *Runner) writeRedacted(dst *os.File, line string) (int, error) {
 		return 0, fmt.Errorf("write %s: %w", outputName(dst), err)
 	}
 	return len(redacted), nil
+}
+
+func (r *Runner) auditCommand(raw string) string {
+	return redactConfidential(raw, r.opts.Confidential)
 }
 
 func (r *Runner) copyRawStream(src io.Reader, dst *os.File) error {

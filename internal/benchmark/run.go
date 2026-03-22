@@ -204,7 +204,9 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 	if warning := compareIfPresent(fixture.DecisionsPath, verifyDecisionsPath, "decisions"); warning != "" {
 		result.Warnings = append(result.Warnings, warning)
 	}
-	appendCaseMetrics(artifactDir, fixture.Command.Argv, result.NativeTokens, result.ProxyTokens)
+	if err := appendCaseMetrics(artifactDir, fixture.Command.Argv, result.NativeTokens, result.ProxyTokens); err != nil {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("persist benchmark metrics: %v", err))
+	}
 	result.Success = len(result.Warnings) == 0
 	return result
 }
@@ -254,11 +256,13 @@ func compareIfPresent(expectedPath, actualPath, label string) string {
 	return ""
 }
 
-func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTokens int) {
+func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTokens int) error {
 	rawBytes := nativeTokens * 4
 	keptBytes := proxyTokens * 4
-	_ = os.MkdirAll(filepath.Join(artifactDir, ".ccp"), 0o755)
-	_ = metrics.Append(filepath.Join(artifactDir, ".ccp", "gain.db"), metrics.RunMetric{
+	if err := os.MkdirAll(filepath.Join(artifactDir, ".ccp"), 0o755); err != nil {
+		return err
+	}
+	return metrics.Append(filepath.Join(artifactDir, ".ccp", "gain.db"), metrics.RunMetric{
 		Timestamp:  time.Now().UTC(),
 		Command:    strings.Join(args, " "),
 		Tool:       args[0],

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -289,29 +288,16 @@ var _ = Describe("Startup maintenance", func() {
 		})
 	})
 
-	It("builds the real binary and materializes embedded filters on repair", func() {
+	It("rewrites managed state with embedded shipped filters on repair", func() {
 		ws := newLifecycleWorkspaceSpec()
-		repoRoot := lifecycleRepoRootFromSpec()
-		binDir := filepath.Join(ws.root, "bin")
-		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
+		configDir := filepath.Join(ws.home, ".config", "ccp")
+		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
 
-		binPath := filepath.Join(binDir, "ccp")
-		if runtime.GOOS == "windows" {
-			binPath += ".exe"
-		}
+		Expect(RunRepair([]string{"--yes"})).To(Succeed())
 
-		build := exec.Command("go", "build", "-o", binPath, "./cmd/ccp")
-		build.Dir = repoRoot
-		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(ws.root, ".gocache"))
-		out, err := build.CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(), string(out))
-
-		cmd := exec.Command(binPath, "repair", "--yes")
-		cmd.Dir = ws.work
-		cmd.Env = lifecycleCommandEnv(os.Environ(), ws.home)
-		out, err = cmd.CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(), string(out))
-
+		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
+		Expect(err).To(MatchError(os.ErrNotExist))
 		_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
 		Expect(err).To(MatchError(os.ErrNotExist))
 		for _, path := range []string{
@@ -424,19 +410,22 @@ var _ = Describe("repair", func() {
 		Expect(string(mappingsBody)).To(ContainSubstring("npm: npm"))
 	})
 
-	It("rebuilds shipped mappings when the current mappings file is invalid", func() {
+	It("preserves invalid user mappings when add-missing mode encounters parse errors", func() {
 		srcDir := GinkgoT().TempDir()
 		srcPath := filepath.Join(srcDir, ".mappings.yaml")
 		dstPath := filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml")
 		Expect(os.MkdirAll(filepath.Dir(dstPath), 0o755)).To(Succeed())
 		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
-		Expect(os.WriteFile(dstPath, []byte("not: [valid"), 0o644)).To(Succeed())
+		original := []byte("not: [valid")
+		Expect(os.WriteFile(dstPath, original, 0o644)).To(Succeed())
 
-		Expect(mergeMissingMappings(srcPath, dstPath)).To(Succeed())
+		err := mergeMissingMappings(srcPath, dstPath)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("decode mappings"))
 
 		body, err := os.ReadFile(dstPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(body)).To(ContainSubstring("git: git"))
+		Expect(body).To(Equal(original))
 	})
 })
 
@@ -514,23 +503,4 @@ func resolvedPath(path string) string {
 		return path
 	}
 	return resolved
-}
-
-func lifecycleRepoRootFromSpec() string {
-	_, file, _, ok := runtime.Caller(0)
-	Expect(ok).To(BeTrue())
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-}
-
-func lifecycleCommandEnv(base []string, home string) []string {
-	env := append([]string{}, base...)
-	env = append(env, "HOME="+home)
-	if runtime.GOOS == "windows" {
-		env = append(env, "USERPROFILE="+home)
-		if vol := filepath.VolumeName(home); vol != "" {
-			env = append(env, "HOMEDRIVE="+vol)
-			env = append(env, "HOMEPATH="+strings.TrimPrefix(home, vol))
-		}
-	}
-	return env
 }

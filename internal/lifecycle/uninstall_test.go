@@ -586,6 +586,17 @@ var _ = Describe("uninstall", func() {
 		Expect(cmd.Env).To(ContainElement("PATH=/usr/bin:/bin"))
 	})
 
+	It("ignores injected Windows root environment variables when resolving cmd.exe", func() {
+		Expect(os.Setenv("SystemRoot", `C:\attacker`)).To(Succeed())
+		Expect(os.Setenv("WINDIR", `C:\attacker`)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(os.Unsetenv("SystemRoot")).To(Succeed())
+			Expect(os.Unsetenv("WINDIR")).To(Succeed())
+		})
+
+		Expect(windowsCmdPath()).To(Equal(filepath.Join(`C:\Windows`, "System32", "cmd.exe")))
+	})
+
 	It("rejects self-removal when the executable path is empty", func() {
 		Expect(scheduleExecutableRemoval("")).To(MatchError(ContainSubstring("resolve executable path for uninstall")))
 	})

@@ -90,14 +90,7 @@ func windowsCmdPath() string {
 }
 
 func windowsSystemRoot() string {
-	root := strings.TrimSpace(os.Getenv("SystemRoot"))
-	if root == "" {
-		root = strings.TrimSpace(os.Getenv("WINDIR"))
-	}
-	if root == "" {
-		root = `C:\Windows`
-	}
-	return filepath.Clean(root)
+	return filepath.Clean(`C:\Windows`)
 }
 
 func shellQuoteArg(value string) string {

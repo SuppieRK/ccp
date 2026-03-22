@@ -112,6 +112,7 @@ type commandLineSplitState struct {
 	inSingle     bool
 	inDouble     bool
 	escaping     bool
+	escapeDouble bool
 	tokenStarted bool
 }
 
@@ -122,8 +123,9 @@ func newCommandLineSplitState() *commandLineSplitState {
 func (s *commandLineSplitState) consume(r rune) {
 	switch {
 	case s.escaping:
-		s.writeRune(r)
+		s.consumeEscaped(r)
 		s.escaping = false
+		s.escapeDouble = false
 	case s.inSingle:
 		s.consumeSingleQuoted(r)
 	case s.inDouble:
@@ -131,6 +133,19 @@ func (s *commandLineSplitState) consume(r rune) {
 	default:
 		s.consumeUnquoted(r)
 	}
+}
+
+func (s *commandLineSplitState) consumeEscaped(r rune) {
+	if s.escapeDouble {
+		s.writeRune(r)
+		return
+	}
+	if unicodeIsSpace(r) || r == '\\' || r == '\'' || r == '"' || r == ';' {
+		s.writeRune(r)
+		return
+	}
+	s.writeRune('\\')
+	s.writeRune(r)
 }
 
 func (s *commandLineSplitState) consumeSingleQuoted(r rune) {
@@ -147,6 +162,7 @@ func (s *commandLineSplitState) consumeDoubleQuoted(r rune) {
 		s.inDouble = false
 	case '\\':
 		s.escaping = true
+		s.escapeDouble = true
 	default:
 		s.writeRune(r)
 	}
@@ -164,6 +180,7 @@ func (s *commandLineSplitState) consumeUnquoted(r rune) {
 		s.tokenStarted = true
 	case r == '\\':
 		s.escaping = true
+		s.escapeDouble = false
 		s.tokenStarted = true
 	default:
 		s.writeRune(r)

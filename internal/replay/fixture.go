@@ -99,7 +99,7 @@ func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
 	if err := enc.Close(); err != nil {
 		return fmt.Errorf("close command yaml encoder: %w", err)
 	}
-	return os.WriteFile(path, buf.Bytes(), 0o644)
+	return WriteArtifact(path, buf.Bytes(), 0o644)
 }
 
 func ReadCommand(path string) (CommandSpec, error) {
@@ -134,7 +134,28 @@ func WriteSequenced(path string, events []Event) error {
 			buf.WriteByte('\n')
 		}
 	}
-	return os.WriteFile(path, []byte(buf.String()), 0o644)
+	return WriteArtifact(path, []byte(buf.String()), 0o644)
+}
+
+func WriteArtifact(path string, body []byte, perm os.FileMode) error {
+	if err := rejectSymlinkPath(path); err != nil {
+		return err
+	}
+	return os.WriteFile(path, body, perm)
+}
+
+func rejectSymlinkPath(path string) error {
+	info, err := os.Lstat(path)
+	if err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("refuse to overwrite symlink %q", path)
+		}
+		return nil
+	}
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 func WriteSequencedEvents(path string, events []Event, stream contracts.Stream) error {
@@ -279,7 +300,9 @@ func readReplayLine(reader *bufio.Reader) (string, error) {
 		if done {
 			return line, nil
 		}
-		current = append(current, b)
+		if b != '\r' {
+			current = append(current, b)
+		}
 		pendingCR = nextPendingCR
 	}
 }

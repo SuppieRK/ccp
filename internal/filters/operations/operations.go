@@ -2,6 +2,24 @@ package operations
 
 import "go-command-compression-proxy/internal/contracts"
 
+var standaloneValueOptions = map[string]struct{}{
+	"-C":          {},
+	"-f":          {},
+	"-g":          {},
+	"-p":          {},
+	"-t":          {},
+	"--config":    {},
+	"--cwd":       {},
+	"--format":    {},
+	"--group":     {},
+	"--path-mode": {},
+	"--project":   {},
+	"--python":    {},
+	"--schema":    {},
+	"--tests":     {},
+	"--workers":   {},
+}
+
 func MatchesFirstIs(args []string, first string) bool {
 	return first == "" || (len(args) > 0 && args[0] == first)
 }
@@ -42,14 +60,21 @@ func MatchesPositionalsLackAny(args, disallowed []string) bool {
 	return len(disallowed) == 0 || !containsAny(positionals(args), disallowed)
 }
 
-func MatchesNoPositionals(args []string, want bool) bool {
+func HasExplicitPositionals(args []string) bool {
+	return len(positionals(args)) > 0
+}
+
+func MatchesNoPositionals(args []string, want bool, allowLeadingCommand bool) bool {
 	if !want {
 		return true
 	}
-	if len(args) <= 1 {
+	if len(args) == 0 {
 		return true
 	}
-	return len(positionals(args[1:])) == 0
+	if allowLeadingCommand {
+		return len(positionals(args[1:])) == 0
+	}
+	return len(positionals(args)) == 0
 }
 
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
@@ -149,7 +174,12 @@ func containsRune(value string, want rune) bool {
 func positionals(args []string) []string {
 	out := make([]string, 0, len(args))
 	afterSeparator := false
+	skipNextValue := false
 	for _, arg := range args {
+		if skipNextValue {
+			skipNextValue = false
+			continue
+		}
 		if afterSeparator {
 			out = append(out, arg)
 			continue
@@ -158,10 +188,19 @@ func positionals(args []string) []string {
 			afterSeparator = true
 			continue
 		}
+		if takesStandaloneValue(arg) {
+			skipNextValue = true
+			continue
+		}
 		if len(arg) > 0 && arg[0] == '-' {
 			continue
 		}
 		out = append(out, arg)
 	}
 	return out
+}
+
+func takesStandaloneValue(arg string) bool {
+	_, ok := standaloneValueOptions[arg]
+	return ok
 }

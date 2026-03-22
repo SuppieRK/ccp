@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,23 +24,22 @@ var newVerifyRunner = func() verifyRunner {
 
 func RunVerify(args []string) error {
 	recordFailure := func(dir, stage string, err error) error {
-		audit.MustAppend("verify_invocation_finish", map[string]any{
+		auditErr := audit.Append("verify_invocation_finish", map[string]any{
 			"dir":     dir,
 			"success": false,
 			"stage":   stage,
 			"error":   err.Error(),
 		})
-		return err
+		return errors.Join(err, auditErr)
 	}
 
 	if version.Version != "dev" {
 		err := fmt.Errorf("ccp verify is only available in dev builds")
-		audit.MustAppend("verify_invocation_finish", map[string]any{
+		return errors.Join(err, audit.Append("verify_invocation_finish", map[string]any{
 			"success": false,
 			"stage":   "version_gate",
 			"error":   err.Error(),
-		})
-		return err
+		}))
 	}
 
 	fs := newLifecycleFlagSet("verify")
@@ -58,11 +58,10 @@ func RunVerify(args []string) error {
 		return recordFailure("", "parse_flags", err)
 	}
 	if handled {
-		audit.MustAppend("verify_invocation_finish", map[string]any{
+		return audit.Append("verify_invocation_finish", map[string]any{
 			"success": true,
 			"stage":   "help",
 		})
-		return nil
 	}
 	if len(fs.Args()) > 0 {
 		return recordFailure("", "validate_flags", fmt.Errorf("verify does not accept command arguments; use command.yaml in the fixture directory"))
@@ -72,9 +71,11 @@ func RunVerify(args []string) error {
 	if err != nil {
 		return recordFailure("", "resolve_dir", err)
 	}
-	audit.MustAppend("verify_invocation_start", map[string]any{
+	if err := audit.Append("verify_invocation_start", map[string]any{
 		"dir": dir,
-	})
+	}); err != nil {
+		return err
+	}
 
 	fixture, err := replay.LoadFixture(dir)
 	if err != nil {
@@ -89,14 +90,14 @@ func RunVerify(args []string) error {
 	if err != nil {
 		return recordFailure(dir, "runner_replay", err)
 	}
-	if err := os.WriteFile(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
+	if err := replay.WriteArtifact(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
 		return recordFailure(dir, "write_output", err)
 	}
-	if err := os.WriteFile(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
+	if err := replay.WriteArtifact(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
 		return recordFailure(dir, "write_decisions", err)
 	}
 
-	audit.MustAppend("verify_invocation_finish", map[string]any{
+	if err := audit.Append("verify_invocation_finish", map[string]any{
 		"dir":            dir,
 		"command":        strings.Join(fixture.Command.Argv, " "),
 		"verify_output":  fixture.VerifyOutput,
@@ -104,7 +105,9 @@ func RunVerify(args []string) error {
 		"success":        true,
 		"output_bytes":   len(replayed.Output),
 		"decision_bytes": len(replayed.Decisions),
-	})
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 

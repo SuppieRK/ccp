@@ -1227,21 +1227,7 @@ func applyCommandMutations(args []string, command *compiledCommand) []string {
 }
 
 func hasExplicitPositionals(args []string) bool {
-	afterSeparator := false
-	for _, arg := range args {
-		if afterSeparator {
-			return true
-		}
-		if arg == "--" {
-			afterSeparator = true
-			continue
-		}
-		if len(arg) > 0 && arg[0] == '-' {
-			continue
-		}
-		return true
-	}
-	return false
+	return operations.HasExplicitPositionals(args)
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
@@ -1279,6 +1265,7 @@ func containsShortFlag(args []string, want rune) bool {
 }
 
 func matchesWhenArguments(when compiledWhen, args []string) bool {
+	leadingCommandContext := when.firstIs != "" || len(when.firstIn) > 0
 	return operations.MatchesFirstIs(args, when.firstIs) &&
 		operations.MatchesFirstIn(args, when.firstIn) &&
 		operations.MatchesHaveAny(args, when.haveAny) &&
@@ -1289,7 +1276,7 @@ func matchesWhenArguments(when compiledWhen, args []string) bool {
 		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
 		operations.MatchesNotHaveAllShortFlags(args, when.notHaveAllShortFlags) &&
 		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny) &&
-		operations.MatchesNoPositionals(args, when.noPositionals)
+		operations.MatchesNoPositionals(args, when.noPositionals, leadingCommandContext)
 }
 
 func outputCombined(out *OutputShape) *OutputScope {

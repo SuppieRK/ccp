@@ -101,7 +101,7 @@ func mergeMissingMappings(srcPath, dstPath string) error {
 
 	current, err := readLifecycleMappings(dstPath)
 	if err != nil {
-		current = lifecycleMappingsFile{Version: 1, Map: map[string]string{}}
+		return err
 	}
 	if current.Version == 0 {
 		current.Version = 1
