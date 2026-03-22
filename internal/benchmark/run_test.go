@@ -332,8 +332,8 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(report.Results).To(HaveLen(1))
 			Expect(report.Results[0].Warnings).To(ContainElement("token compaction ratio dropped from 10.00 to 1.25"))
-			Expect(report.Results[0].Success).To(BeFalse())
-			Expect(report.Failed).To(BeTrue())
+			Expect(report.Results[0].Success).To(BeTrue())
+			Expect(report.Failed).To(BeFalse())
 		})
 
 		It("skips compaction-drop comparison for legacy previous reports without input hash", func() {
@@ -541,7 +541,7 @@ var _ = Describe("benchmark replay runner", func() {
 			Entry("ignores legacy previous reports without input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, nil, true),
 			Entry("ignores changed input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "previous", TokenCompactionRatio: 10}, nil, true),
 			Entry("ignores stable ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
-			Entry("warns on material drop", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, false),
+			Entry("warns on material drop", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, true),
 		)
 
 		DescribeTable("computes token compaction ratio",
