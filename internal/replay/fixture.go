@@ -155,6 +155,9 @@ func rejectSymlinkPath(path string) error {
 			if info.Mode()&os.ModeSymlink != 0 {
 				return fmt.Errorf("refuse to use symlink path component %q", current)
 			}
+			if info.IsDir() {
+				return nil
+			}
 		} else if !os.IsNotExist(err) {
 			return err
 		}
