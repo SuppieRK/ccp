@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -289,34 +288,16 @@ var _ = Describe("Startup maintenance", func() {
 		})
 	})
 
-	It("builds the real binary and materializes embedded filters on repair", func() {
-		repoRoot := lifecycleRepoRootFromSpec()
-		buildRoot, err := os.MkdirTemp("", "lifecycle-build-*")
-		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(func() { _ = os.RemoveAll(buildRoot) })
-
-		binDir := filepath.Join(buildRoot, "bin")
-		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
-
-		binPath := filepath.Join(binDir, "ccp")
-		if runtime.GOOS == "windows" {
-			binPath += ".exe"
-		}
-
-		build := exec.Command("go", "build", "-o", binPath, "./cmd/ccp")
-		build.Dir = repoRoot
-		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(buildRoot, ".gocache"))
-		out, err := build.CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(), string(out))
-
+	It("rewrites managed state with embedded shipped filters on repair", func() {
 		ws := newLifecycleWorkspaceSpec()
+		configDir := filepath.Join(ws.home, ".config", "ccp")
+		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
 
-		cmd := exec.Command(binPath, "repair", "--yes")
-		cmd.Dir = ws.work
-		cmd.Env = lifecycleCommandEnv(os.Environ(), ws.home)
-		out, err = cmd.CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(), string(out))
+		Expect(RunRepair([]string{"--yes"})).To(Succeed())
 
+		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
+		Expect(err).To(MatchError(os.ErrNotExist))
 		_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
 		Expect(err).To(MatchError(os.ErrNotExist))
 		for _, path := range []string{
@@ -522,23 +503,4 @@ func resolvedPath(path string) string {
 		return path
 	}
 	return resolved
-}
-
-func lifecycleRepoRootFromSpec() string {
-	_, file, _, ok := runtime.Caller(0)
-	Expect(ok).To(BeTrue())
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-}
-
-func lifecycleCommandEnv(base []string, home string) []string {
-	env := append([]string{}, base...)
-	env = append(env, "HOME="+home)
-	if runtime.GOOS == "windows" {
-		env = append(env, "USERPROFILE="+home)
-		if vol := filepath.VolumeName(home); vol != "" {
-			env = append(env, "HOMEDRIVE="+vol)
-			env = append(env, "HOMEPATH="+strings.TrimPrefix(home, vol))
-		}
-	}
-	return env
 }
