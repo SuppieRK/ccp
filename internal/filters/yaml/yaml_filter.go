@@ -154,6 +154,7 @@ type compiledCase struct {
 	passthrough bool
 	when        compiledWhen
 	variables   map[string]string
+	initials    map[string]string
 	command     *compiledCommand
 	stdout      *compiledScope
 	stderr      *compiledScope
@@ -286,11 +287,13 @@ type compiledGroup struct {
 }
 
 func buildCompiledCase(cs *CaseClause) (compiledCase, error) {
+	variables, initials := compileVariables(cs.Variables)
 	compiled := compiledCase{
 		id:          cs.ID,
 		passthrough: cs.Passthrough,
 		when:        compileWhenArguments(cs.WhenArguments),
-		variables:   compileVariables(cs.Variables),
+		variables:   variables,
+		initials:    initials,
 		command:     compileCommandMutation(cs.NormalizeCommand),
 		onExit:      compileOnExit(cs.Finally),
 	}
@@ -312,28 +315,32 @@ func buildCompiledCase(cs *CaseClause) (compiledCase, error) {
 	return compiled, nil
 }
 
-func compileVariables(variables []Variable) map[string]string {
+func compileVariables(variables []Variable) (map[string]string, map[string]string) {
 	if len(variables) == 0 {
-		return nil
+		return nil, nil
 	}
 	compiled := make(map[string]string, len(variables))
+	initials := make(map[string]string, len(variables))
 	for _, variable := range variables {
+		value := ""
 		switch variable.Type {
 		case "number":
 			if variable.InitialValue != nil {
-				compiled[variable.Name] = *variable.InitialValue
+				value = *variable.InitialValue
 			} else {
-				compiled[variable.Name] = "0"
+				value = "0"
 			}
 		default:
 			if variable.InitialValue != nil {
-				compiled[variable.Name] = *variable.InitialValue
+				value = *variable.InitialValue
 			} else {
-				compiled[variable.Name] = ""
+				value = ""
 			}
 		}
+		compiled[variable.Name] = value
+		initials[variable.Name] = value
 	}
-	return compiled
+	return compiled, initials
 }
 
 func compileOnExit(onExit *OnExit) *compiledOnExit {
@@ -360,6 +367,7 @@ func cloneCompiledCase(src compiledCase) compiledCase {
 		passthrough: src.passthrough,
 		when:        src.when,
 		variables:   cloneVariableValues(src.variables),
+		initials:    cloneVariableValues(src.initials),
 		command:     src.command,
 		stdout:      cloneCompiledScope(src.stdout),
 		stderr:      cloneCompiledScope(src.stderr),
@@ -746,12 +754,8 @@ func (f *YamlFilter) prepareInvocation(args []string) {
 }
 
 func (c *compiledCase) resetState() {
-	for name := range c.variables {
-		if _, err := strconv.Atoi(c.variables[name]); err == nil {
-			c.variables[name] = "0"
-			continue
-		}
-		c.variables[name] = ""
+	for name, value := range c.initials {
+		c.variables[name] = value
 	}
 	c.shared.resetState()
 	c.stdout.resetState()
