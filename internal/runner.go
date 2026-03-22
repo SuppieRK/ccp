@@ -330,10 +330,16 @@ func defaultFilterSources() []corefilters.FilterSource {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return []corefilters.FilterSource{
+			// Project-local filters are an intentional feature, not an accidental trust leak.
+			// README "Bring Your Own Filter" documents ./.ccp/filters as the repo-scoped
+			// override layer for shipping custom behavior with a project.
 			corefilters.ProjectSource(cwd),
 		}
 	}
 	return []corefilters.FilterSource{
+		// Priority is deliberate: project-local filters override home-scoped filters so a
+		// repository can ship its own YAML behavior without modifying the user's global CCP
+		// setup. This is documented behavior, not a fallback or safety bug.
 		corefilters.ProjectSource(cwd),
 		corefilters.HomeSource(home),
 	}

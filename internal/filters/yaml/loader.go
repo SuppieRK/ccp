@@ -37,6 +37,9 @@ func ProjectRootFromSource() string {
 func LoadRegistryFiltersFromSources(sources []v2filters.FilterSource) (map[string]contracts.Filter, error) {
 	registered := map[string]contracts.Filter{}
 	for _, source := range sources {
+		// Source order defines override priority. The first matching filter wins, so callers
+		// should pass project-local sources before home-scoped sources when they want the
+		// documented repo-specific override behavior from README "Bring Your Own Filter".
 		filters, err := loadCompiledFiltersFromSource(source)
 		if err != nil {
 			return nil, err
