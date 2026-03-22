@@ -1060,14 +1060,14 @@ func (g *compiledGroup) renderGroup(groupItems []compiledGroupItem, groupKey str
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStageWithExitCode(g.initially, groupItems[0].vars, exitCode)...)
+	lines = append(lines, renderGroupStage(g.initially, groupItems[0].vars)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStageWithExitCode(g.finally, groupItems[0].vars, exitCode)...)
+	lines = append(lines, renderGroupFinalStage(g.finally, groupItems[0].vars, exitCode)...)
 	return lines
 }
 
@@ -1077,14 +1077,14 @@ func (g *compiledGroup) renderBoundarySection(section compiledBoundarySection, e
 		return nil
 	}
 	lines := make([]renderedLine, 0)
-	lines = append(lines, renderGroupStageWithExitCode(g.initially, section.vars, exitCode)...)
+	lines = append(lines, renderGroupStage(g.initially, section.vars)...)
 	lines = append(lines, renderedItems...)
 	if g.lines != nil && g.lines.max != nil && hidden > 0 {
 		if printed := renderMaxPrint(g.lines.max.print, hidden, ""); printed != "" {
 			lines = append(lines, renderedLine{text: printed})
 		}
 	}
-	lines = append(lines, renderGroupStageWithExitCode(g.finally, section.vars, exitCode)...)
+	lines = append(lines, renderGroupFinalStage(g.finally, section.vars, exitCode)...)
 	return lines
 }
 
@@ -1133,11 +1133,8 @@ func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (st
 	}
 }
 
-func renderGroupStageWithExitCode(stage *compiledOnExit, vars map[string]string, exitCode int) []renderedLine {
+func renderGroupStage(stage *compiledOnExit, vars map[string]string) []renderedLine {
 	if stage == nil {
-		return nil
-	}
-	if !shouldRenderFinally(exitCode) {
 		return nil
 	}
 	printed := renderTemplate(stage.print, vars)
@@ -1145,6 +1142,13 @@ func renderGroupStageWithExitCode(stage *compiledOnExit, vars map[string]string,
 		return nil
 	}
 	return []renderedLine{{text: printed}}
+}
+
+func renderGroupFinalStage(stage *compiledOnExit, vars map[string]string, exitCode int) []renderedLine {
+	if !shouldRenderFinally(exitCode) {
+		return nil
+	}
+	return renderGroupStage(stage, vars)
 }
 
 func shouldRenderFinally(exitCode int) bool {

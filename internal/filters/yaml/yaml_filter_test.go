@@ -874,6 +874,49 @@ var _ = Describe("YamlFilter", func() {
 		}))
 	})
 
+	It("keeps grouped initial headers on non-zero exit codes", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "pytest",
+			Cases: []CaseClause{{
+				ID: "default",
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{
+						Groups: []OutputGroup{{
+							ID:         "failures",
+							StartsWith: "=================================== FAILURES",
+							Initially:  &OnExit{Print: "failure details:"},
+							Lines: &OutputLines{
+								Keep:    []SkipOrKeepRule{{Contains: "AssertionError:"}},
+								Replace: []ReplaceRule{{Regex: `^E\s+(.+)$`, To: stringPtr("AssertionError: $1")}},
+							},
+						}},
+					},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		ctx := yamlFilterContext{args: []string{"pytest", "-q"}}
+		for _, line := range []string{
+			"=================================== FAILURES ===================================\n",
+			"E       AssertionError: assert {'ok': False} == {'ok': True}\n",
+		} {
+			action := filter.OnStdout(line, ctx)
+			Expect(action.Kind).To(Equal(contracts.ActionIgnore))
+		}
+
+		failureExit := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"pytest", "-q"},
+			exitCode: 1,
+		})
+		Expect(failureExit).To(Equal(contracts.Action{
+			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamCombined,
+			Output: "failure details:\nE       AssertionError: assert {'ok': False} == {'ok': True}\n",
+		}))
+	})
+
 	DescribeTable("applies grouped lines.* precedence deterministically",
 		func(keep, replace, skip bool, expected contracts.Action) {
 			lines := &OutputLines{}
