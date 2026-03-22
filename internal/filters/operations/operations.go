@@ -42,14 +42,17 @@ func MatchesPositionalsLackAny(args, disallowed []string) bool {
 	return len(disallowed) == 0 || !containsAny(positionals(args), disallowed)
 }
 
-func MatchesNoPositionals(args []string, want bool) bool {
+func MatchesNoPositionals(args []string, want bool, allowLeadingCommand bool) bool {
 	if !want {
 		return true
 	}
-	if len(args) <= 1 {
+	if len(args) == 0 {
 		return true
 	}
-	return len(positionals(args[1:])) == 0
+	if allowLeadingCommand {
+		return len(positionals(args[1:])) == 0
+	}
+	return len(positionals(args)) == 0
 }
 
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
