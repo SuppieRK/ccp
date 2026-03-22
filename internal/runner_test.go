@@ -181,7 +181,7 @@ var _ = Describe("Runner", func() {
 		})
 	})
 
-	It("copies a trailing line before stopping on a non-EOF read error", func() {
+	It("copies a trailing filtered line before surfacing a non-EOF read error", func() {
 		runner := &Runner{sources: []corefilters.FilterSource{}}
 		src := &errorAfterLineReader{
 			line: "tail-without-newline",
@@ -189,14 +189,29 @@ var _ = Describe("Runner", func() {
 		}
 		stats := &streamStats{}
 
-		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
+		err := runner.copyStream(src, func(line string) []engine.BufferEntry {
 			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)).NotTo(HaveOccurred())
+		}, stats)
+		Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
 
 		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("tail-without-newline"))
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 		Expect(stats.rawBytes).To(Equal(len("tail-without-newline")))
 		Expect(stats.keptBytes).To(Equal(len("tail-without-newline")))
+	})
+
+	It("copies a trailing raw line before surfacing a non-EOF read error", func() {
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+		src := &errorAfterLineReader{
+			line: "raw-tail-without-newline",
+			err:  errors.New("boom"),
+		}
+
+		err := runner.copyRawStream(src, stdoutWriter)
+		Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
+
+		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("raw-tail-without-newline"))
+		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 	})
 
 	It("treats carriage returns as in-place line overwrites before emit", func() {
