@@ -1,5 +1,7 @@
+  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py:
   1:1 warning [reportUnknownVariableType] Type of "value" is unknown
   1:9 error [reportUndefinedVariable] "missing_name" is not defined
+  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_syntax_error.py:
   1:11 error [error] "(" was not closed
   1:12 error [error] Expected parameter name
   1:12 error [error] Position-only parameter separator not allowed as first parameter

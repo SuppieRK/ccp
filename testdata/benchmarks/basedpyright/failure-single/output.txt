@@ -1,2 +1,3 @@
+  /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py:
   1:1 warning [reportUnknownVariableType] Type of "value" is unknown
   1:9 error [reportUndefinedVariable] "missing_name" is not defined
