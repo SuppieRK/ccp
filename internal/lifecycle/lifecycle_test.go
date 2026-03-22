@@ -424,19 +424,22 @@ var _ = Describe("repair", func() {
 		Expect(string(mappingsBody)).To(ContainSubstring("npm: npm"))
 	})
 
-	It("rebuilds shipped mappings when the current mappings file is invalid", func() {
+	It("preserves invalid user mappings when add-missing mode encounters parse errors", func() {
 		srcDir := GinkgoT().TempDir()
 		srcPath := filepath.Join(srcDir, ".mappings.yaml")
 		dstPath := filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml")
 		Expect(os.MkdirAll(filepath.Dir(dstPath), 0o755)).To(Succeed())
 		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
-		Expect(os.WriteFile(dstPath, []byte("not: [valid"), 0o644)).To(Succeed())
+		original := []byte("not: [valid")
+		Expect(os.WriteFile(dstPath, original, 0o644)).To(Succeed())
 
-		Expect(mergeMissingMappings(srcPath, dstPath)).To(Succeed())
+		err := mergeMissingMappings(srcPath, dstPath)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("decode mappings"))
 
 		body, err := os.ReadFile(dstPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(body)).To(ContainSubstring("git: git"))
+		Expect(body).To(Equal(original))
 	})
 })
 
