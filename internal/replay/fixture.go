@@ -306,35 +306,36 @@ func readReplayLine(reader *bufio.Reader) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		line, done, nextPendingCR := appendReplayLineByte(current, b, pendingCR)
+		nextCurrent, line, done, nextPendingCR := appendReplayLineByte(current, b, pendingCR)
 		if done {
 			return line, nil
 		}
-		if b != '\r' {
-			current = append(current, b)
-		}
+		current = nextCurrent
 		pendingCR = nextPendingCR
 	}
 }
 
-func appendReplayLineByte(current []byte, b byte, pendingCR bool) (string, bool, bool) {
-	if pendingCR && b == '\n' {
-		return string(append(current, '\n')), true, false
+func appendReplayLineByte(current []byte, b byte, pendingCR bool) ([]byte, string, bool, bool) {
+	if pendingCR {
+		if b == '\n' {
+			return current, string(append(current, '\n')), true, false
+		}
+		current = current[:0]
 	}
 
 	switch b {
 	case '\r':
-		return "", false, true
+		return current, "", false, true
 	case '\n':
-		return string(append(current, '\n')), true, false
+		return current, string(append(current, '\n')), true, false
 	default:
-		return "", false, false
+		return append(current, b), "", false, false
 	}
 }
 
 func finishReplayLine(current []byte, pendingCR bool) (string, error) {
-	if pendingCR && len(current) > 0 {
-		current = current[:len(current)-1]
+	if pendingCR {
+		current = current[:0]
 	}
 	if len(current) == 0 {
 		return "", io.EOF

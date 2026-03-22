@@ -1,6 +1,8 @@
 package replay
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,6 +47,21 @@ var _ = Describe("replay fixtures", func() {
 	})
 
 	Describe("sequenced streams", func() {
+		DescribeTable("reading replay lines with carriage returns at EOF",
+			func(input string, expectedLine string, expectedErr error) {
+				line, err := readReplayLine(bufio.NewReader(strings.NewReader(input)))
+
+				Expect(line).To(Equal(expectedLine))
+				if expectedErr == nil {
+					Expect(err).NotTo(HaveOccurred())
+					return
+				}
+				Expect(err).To(MatchError(expectedErr))
+			},
+			Entry("drops a trailing bare carriage return", "spinner\r", "", io.EOF),
+			Entry("keeps only the final overwritten line at EOF", "spinner\rdone", "done", nil),
+		)
+
 		It("writes and reloads sequenced stream files", func() {
 			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
 			events := []Event{
