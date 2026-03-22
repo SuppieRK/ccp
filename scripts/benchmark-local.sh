@@ -11,6 +11,7 @@ mkdir -p "$GOCACHE" "$XDG_CACHE_HOME" "$ROOT_DIR/.bin"
 build_ccp() {
   echo "[benchmark-local] go build -o .bin/ccp ./cmd/ccp"
   go build -o .bin/ccp ./cmd/ccp
+  return 0
 }
 
 collect_tools() {
@@ -20,6 +21,7 @@ collect_tools() {
     [[ "$filter_path" == "filters/.mappings.yaml" ]] && continue
     basename "${filter_path%.yaml}"
   done | sort
+  return 0
 }
 
 resolve_tools() {
@@ -62,6 +64,7 @@ run_tool_benchmark() {
   if [[ -f "${out_dir}/report.json" ]]; then
     cp "${out_dir}/report.json" "$prev_report"
   fi
+  return 0
 }
 
 build_ccp
