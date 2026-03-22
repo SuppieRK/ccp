@@ -290,9 +290,12 @@ var _ = Describe("Startup maintenance", func() {
 	})
 
 	It("builds the real binary and materializes embedded filters on repair", func() {
-		ws := newLifecycleWorkspaceSpec()
 		repoRoot := lifecycleRepoRootFromSpec()
-		binDir := filepath.Join(ws.root, "bin")
+		buildRoot, err := os.MkdirTemp("", "lifecycle-build-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(buildRoot) })
+
+		binDir := filepath.Join(buildRoot, "bin")
 		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
 
 		binPath := filepath.Join(binDir, "ccp")
@@ -302,9 +305,11 @@ var _ = Describe("Startup maintenance", func() {
 
 		build := exec.Command("go", "build", "-o", binPath, "./cmd/ccp")
 		build.Dir = repoRoot
-		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(ws.root, ".gocache"))
+		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(buildRoot, ".gocache"))
 		out, err := build.CombinedOutput()
 		Expect(err).NotTo(HaveOccurred(), string(out))
+
+		ws := newLifecycleWorkspaceSpec()
 
 		cmd := exec.Command(binPath, "repair", "--yes")
 		cmd.Dir = ws.work
