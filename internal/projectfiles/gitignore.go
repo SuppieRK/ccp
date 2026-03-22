@@ -1,6 +1,7 @@
 package projectfiles
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,12 @@ func EnsureGitignoreEntry(projectRoot, entry string) error {
 	}
 
 	gitignorePath := filepath.Join(projectRoot, ".gitignore")
+	if err := rejectSymlinkGitignore(gitignorePath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
 	content, err := os.ReadFile(gitignorePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -42,4 +49,15 @@ func EnsureGitignoreEntry(projectRoot, entry string) error {
 		return writeErr
 	}
 	return closeErr
+}
+
+func rejectSymlinkGitignore(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("refuse to update symlinked gitignore %q", path)
+	}
+	return nil
 }
