@@ -15,17 +15,19 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"go-command-compression-proxy/internal/version"
 )
 
 const (
 	defaultUpgradeRepo    = "SuppieRK/ccp"
 	releaseChecksumsAsset = "ccp_checksums.txt"
+	upgradeRepairCutover  = "0.5.1"
 )
 
 var (
 	upgradeExecutablePath = os.Executable
 	upgradeReplaceBinary  = replaceBinary
-	upgradePrintf         = fmt.Printf
 	upgradeHTTPClient     = &http.Client{Timeout: 30 * time.Second}
 	upgradeRuntimeOS      = func() string { return runtime.GOOS }
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
@@ -44,7 +46,7 @@ type githubAssetInfo struct {
 
 func RunUpgrade(args []string) error {
 	fs := newLifecycleFlagSet("upgrade")
-	version := fs.String("version", "", "specific release tag (for example 1.2.3)")
+	versionFlag := fs.String("version", "", "specific release tag (for example 1.2.3)")
 	setLifecycleUsage(
 		fs,
 		"upgrade ccp from GitHub Releases",
@@ -63,13 +65,18 @@ func RunUpgrade(args []string) error {
 	repoName := defaultUpgradeRepo
 	manualURL := fmt.Sprintf("https://github.com/%s/releases", repoName)
 
-	tag := strings.TrimSpace(*version)
+	tag := strings.TrimSpace(*versionFlag)
 	if tag == "" {
 		tag, err = latestReleaseTag(repoName)
 		if err != nil {
 			return fmt.Errorf("resolve latest release: %w; manual download: %s", err, manualURL)
 		}
 	}
+	releaseVersion, ok := version.Parse(tag)
+	if !ok {
+		return fmt.Errorf("invalid release version %q: must be X.Y.Z; manual download: %s", tag, manualURL)
+	}
+	tag = releaseVersion.String()
 
 	assetName, binaryName, err := releaseAssetName(tag, upgradeRuntimeOS(), upgradeRuntimeArch())
 	if err != nil {
@@ -127,10 +134,11 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 		return err
 	}
 	restoreBackup = false
-	if err := upgradeRunRepair(exePath); err != nil {
-		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair --yes` after fixing the environment", err)
+	repairMode := selectedUpgradeRepairMode(version.Version)
+	if err := upgradeRunRepair(exePath, repairMode); err != nil {
+		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", err, repairMode.flag())
 	}
-	return printUpgradeSuccess(exePath, assetName, tag)
+	return nil
 }
 
 func ensureUpgradeExecutablePermissions(exePath string) error {
@@ -140,9 +148,16 @@ func ensureUpgradeExecutablePermissions(exePath string) error {
 	return os.Chmod(exePath, 0o755)
 }
 
-func printUpgradeSuccess(exePath, assetName, tag string) error {
-	_, err := upgradePrintf("ccp upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag)
-	return err
+func selectedUpgradeRepairMode(currentVersion string) repairMode {
+	current, ok := version.Parse(currentVersion)
+	if !ok {
+		return repairModePreserve
+	}
+	cutover, ok := version.Parse(upgradeRepairCutover)
+	if !ok || current.Less(cutover) {
+		return repairModePreserve
+	}
+	return repairModeRewrite
 }
 
 func latestReleaseTag(repo string) (string, error) {
@@ -409,10 +424,17 @@ func backupBinaryPath(exePath string) (string, error) {
 	return filepath.Join(dir, fmt.Sprintf("%s.backup.%d", base, time.Now().UnixNano())), nil
 }
 
-func runInstalledRepair(exePath string) error {
-	cmd := exec.Command(exePath, "repair", "--yes")
+func runInstalledRepair(exePath string, mode repairMode) error {
+	cmd := exec.Command(exePath, "repair", mode.flag())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
+}
+
+func (m repairMode) flag() string {
+	if m == repairModeRewrite {
+		return "--yes"
+	}
+	return "--no"
 }

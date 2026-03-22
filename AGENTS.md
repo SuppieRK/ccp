@@ -17,6 +17,11 @@ CI is the canonical definition of release build mechanics.
 - MUST treat any non-zero exit from the validation script as a failed validation.
 - If the validation script reports missing optional tools, SHOULD suggest installing them.
 
+# Versioning
+
+- Repository version strings MUST use plain semantic versions in `X.Y.Z` form with no leading `v` prefix.
+- Any version string that is not exactly `X.Y.Z` MUST be treated as invalid rather than coerced.
+
 # Runtime Rules
 
 - Preserve native execution semantics: exit code, critical diagnostics, exact `--raw` behavior unless explicit redaction is enabled, and 0-byte output semantics.

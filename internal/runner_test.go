@@ -77,7 +77,7 @@ var _ = Describe("Runner", func() {
 
 	It("uses project and home filters by default in non-dev builds", func() {
 		oldVersion := version.Version
-		version.Version = "v1.2.3"
+		version.Version = "1.2.3"
 		DeferCleanup(func() {
 			version.Version = oldVersion
 		})

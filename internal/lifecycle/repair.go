@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,18 +14,27 @@ var (
 	repairStdout io.Writer = os.Stdout
 )
 
+type repairMode string
+
+const (
+	repairModeRewrite  repairMode = "rewrite"
+	repairModePreserve repairMode = "preserve"
+	repairModePrompt   repairMode = "prompt"
+)
+
 func RunRepair(args []string) error {
 	fs := newLifecycleFlagSet("repair")
 	yes := fs.Bool("yes", false, "rewrite managed CCP home state without prompting")
 	fs.BoolVar(yes, "y", false, "shorthand for --yes")
+	no := fs.Bool("no", false, "preserve existing home filters and add only missing shipped content")
 	setLifecycleUsage(
 		fs,
 		"rewrite managed CCP home state to canonical shipped content",
-		[]string{"ccp repair [--yes]"},
+		[]string{"ccp repair [--yes|--no]"},
 		"Repair rewrites the fully managed ~/.config/ccp directory and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
 		"Repair also removes obsolete managed ~/.ccp remnants.",
 		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings.",
-		"Use --yes for upgrade or installer automation.",
+		"Use --yes for destructive rewrite automation; use --no for additive preserve-existing automation.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -33,18 +43,40 @@ func RunRepair(args []string) error {
 	if handled {
 		return nil
 	}
-	return executeRepair(*yes)
+	mode, err := repairModeFromFlags(*yes, *no)
+	if err != nil {
+		return err
+	}
+	return executeRepair(mode)
 }
 
-func executeRepair(yes bool) error {
-	if !yes {
+func repairModeFromFlags(yes, no bool) (repairMode, error) {
+	if yes && no {
+		return "", errors.New("cannot use both --yes and --no")
+	}
+	if yes {
+		return repairModeRewrite, nil
+	}
+	if no {
+		return repairModePreserve, nil
+	}
+	return repairModePrompt, nil
+}
+
+func executeRepair(mode repairMode) error {
+	if mode == repairModePrompt {
 		ok, err := confirmRepair()
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return addMissingPackagedFilters()
+			mode = repairModePreserve
+		} else {
+			mode = repairModeRewrite
 		}
+	}
+	if mode == repairModePreserve {
+		return addMissingPackagedFilters()
 	}
 	return rewriteManagedRepairState()
 }
