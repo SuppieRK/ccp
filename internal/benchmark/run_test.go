@@ -172,6 +172,37 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(statErr).To(MatchError(os.ErrNotExist))
 		})
 
+		It("fails the case when artifact metrics cannot be persisted", func() {
+			fixtureDir := filepath.Join(root, "grep", "recursive-match")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|match one\n")
+			writeFixtureFile(fixtureDir, "output.txt", "grouped output\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("grouped output\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, "verify-decisions.txt"), []byte("<keep>    | match one\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			artifactCaseDir := filepath.Join(artifacts, "grep", "recursive-match")
+			Expect(os.MkdirAll(artifactCaseDir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(artifactCaseDir, ".ccp"), []byte("block"), 0o644)).To(Succeed())
+
+			report, err := Run(RunOptions{
+				FixturesRoot: root,
+				ArtifactsDir: artifacts,
+				ProxyBinary:  "ccp",
+				Timeout:      time.Second,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Results).To(HaveLen(1))
+			Expect(report.Results[0].Success).To(BeFalse())
+			Expect(report.Results[0].Warnings).To(ContainElement(ContainSubstring("persist benchmark metrics")))
+		})
+
 		DescribeTable("surfaces replay failures as warnings",
 			func(setup func(string), verifyErr error, warningMatcher OmegaMatcher) {
 				fixtureDir := filepath.Join(root, "grep", "case")
