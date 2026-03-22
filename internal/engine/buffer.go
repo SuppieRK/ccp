@@ -13,7 +13,10 @@ type BufferEntry struct {
 
 type OrderedBuffer struct {
 	entries []BufferEntry
-	seen    map[string]struct{}
+	// seen intentionally deduplicates repeated identical retained lines within a
+	// single stream. This is a product choice to keep compacted output concise;
+	// identical lines across different streams are still tracked independently.
+	seen map[string]struct{}
 }
 
 func NewOrderedBuffer() *OrderedBuffer {
