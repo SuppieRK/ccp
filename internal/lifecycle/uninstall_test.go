@@ -131,13 +131,6 @@ var _ = Describe("uninstall", func() {
 				"{home}/.config/crush/crush.json",
 			},
 		}),
-		Entry("iflow", uninstallRemovalCase{
-			name:      "iflow",
-			tool:      "iflow",
-			scope:     "root",
-			setupDirs: []string{"{root}/.iflow"},
-			removed:   []string{"{home}/.iflow/IFLOW.md"},
-		}),
 		Entry("pi", uninstallRemovalCase{
 			name:      "pi",
 			tool:      "pi",
@@ -287,11 +280,6 @@ var _ = Describe("uninstall", func() {
 		Entry("auggie preserves user content", blockPreserveCase("auggie", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.root, ".augment"), 0o755)).To(Succeed())
 			return filepath.Join(ws.root, "AGENTS.md")
-		})),
-		Entry("iflow preserves user content", blockPreserveCase("iflow", "root", func(ws lifecycleWorkspace) string {
-			Expect(os.MkdirAll(filepath.Join(ws.root, ".iflow"), 0o755)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Join(ws.home, ".iflow"), 0o755)).To(Succeed())
-			return filepath.Join(ws.home, ".iflow", "IFLOW.md")
 		})),
 		Entry("antigravity preserves gemini-family content", blockPreserveCase("antigravity", "root", func(ws lifecycleWorkspace) string {
 			Expect(os.MkdirAll(filepath.Join(ws.root, ".agent"), 0o755)).To(Succeed())

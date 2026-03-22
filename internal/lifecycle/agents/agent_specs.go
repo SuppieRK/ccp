@@ -16,7 +16,6 @@ const (
 	geminiInstructionsPath        = ".gemini/GEMINI.md"
 	githubCopilotInstructionsPath = ".copilot/copilot-instructions.md"
 	qoderAgentsPath               = ".qoder/AGENTS.md"
-	iflowMemoryPath               = ".iflow/IFLOW.md"
 	kiroSteeringPath              = ".kiro/steering/AGENTS.md"
 	factoryAgentsPath             = ".factory/AGENTS.md"
 	piAgentsPath                  = "AGENTS.md"
@@ -158,14 +157,6 @@ var (
 		MissingFmt:     "missing github copilot instructions file: %s",
 		MarkersFmt:     "missing github copilot managed block markers in %s",
 	}
-	iflowContextSpec = ManagedContextFileAdapterSpec{
-		ID:             AgentIFlow,
-		DetectRootPath: ".iflow",
-		TargetRelPath:  iflowMemoryPath,
-		TargetScope:    managedContextTargetHome,
-		MissingFmt:     "missing iflow memory file: %s",
-		MarkersFmt:     "missing iflow managed block markers in %s",
-	}
 	kiroContextSpec = ManagedContextFileAdapterSpec{
 		ID:             AgentKiro,
 		DetectRootPath: ".kiro",
@@ -199,7 +190,6 @@ var simpleContextAdapterSpecs = []ManagedContextFileAdapterSpec{
 	factoryContextSpec,
 	geminiContextSpec,
 	githubCopilotContextSpec,
-	iflowContextSpec,
 	kiroContextSpec,
 	piContextSpec,
 	qoderContextSpec,

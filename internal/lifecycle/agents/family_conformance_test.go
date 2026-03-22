@@ -52,7 +52,6 @@ var _ = ginkgo.Describe("Family conformance", func() {
 			ginkgo.Entry("factory", factoryContextSpec),
 			ginkgo.Entry("gemini", geminiContextSpec),
 			ginkgo.Entry("github-copilot", githubCopilotContextSpec),
-			ginkgo.Entry("iflow", iflowContextSpec),
 			ginkgo.Entry("kiro", kiroContextSpec),
 			ginkgo.Entry("pi", piContextSpec),
 			ginkgo.Entry("qoder", qoderContextSpec),

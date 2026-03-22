@@ -52,7 +52,6 @@ const (
 	AgentFactory       ID = "factory"
 	AgentGemini        ID = "gemini"
 	AgentGitHubCopilot ID = "github-copilot"
-	AgentIFlow         ID = "iflow"
 	AgentKiro          ID = "kiro"
 	AgentKilocode      ID = "kilocode"
 	AgentOpenCode      ID = "opencode"

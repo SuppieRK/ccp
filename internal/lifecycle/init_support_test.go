@@ -24,8 +24,6 @@ const (
 	initAntigravityDir    = ".agent"
 	initCodeBuddyDir      = ".codebuddy"
 	initCrushDir          = ".crush"
-	initIFlowDir          = ".iflow"
-	initIFlowFileName     = "IFLOW.md"
 	initPiDir             = ".pi"
 	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
