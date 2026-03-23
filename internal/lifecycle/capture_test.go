@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -156,16 +157,14 @@ var _ = Describe("capture", func() {
 			defer mu.Unlock()
 			events = append(events, replay.Event{Sequence: seq, Stream: stream, Line: line})
 		}
+		errCh := make(chan error, 2)
 
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
-		}()
-		go func() {
-			defer wg.Done()
-			readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
-		}()
+		wg.Go(func() {
+			errCh <- readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
+		})
+		wg.Go(func() {
+			errCh <- readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
+		})
 
 		stdout.sendByte('o')
 		stderr.sendByte('e')
@@ -175,6 +174,10 @@ var _ = Describe("capture", func() {
 		stdout.finish()
 		stderr.finish()
 		wg.Wait()
+		close(errCh)
+		for err := range errCh {
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		sort.Slice(events, func(i, j int) bool { return events[i].Sequence < events[j].Sequence })
 		Expect(replay.ValidateSequence(events)).To(Succeed())
@@ -182,6 +185,32 @@ var _ = Describe("capture", func() {
 			{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok\n"},
 			{Sequence: 1, Stream: contracts.StreamStderr, Line: "e\n"},
 		}))
+	})
+
+	It("returns non-EOF read failures instead of treating them as clean EOF", func() {
+		stdout := newScriptedCaptureReader()
+
+		var (
+			recorded []replay.Event
+			sequence atomic.Int64
+		)
+		record := func(seq int, stream contracts.Stream, line string) {
+			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		}
+
+		done := make(chan error, 1)
+		go func() {
+			done <- readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
+		}()
+
+		stdout.sendByte('o')
+		stdout.fail(io.ErrUnexpectedEOF)
+
+		err := <-done
+		Expect(err).To(HaveOccurred())
+		Expect(errors.Is(err, io.ErrUnexpectedEOF)).To(BeTrue())
+		Expect(err.Error()).To(ContainSubstring("read stdout stream"))
+		Expect(recorded).To(Equal([]replay.Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "o"}}))
 	})
 
 	It("refuses to overwrite symlinked capture artifacts", func() {
@@ -272,6 +301,13 @@ func (r *scriptedCaptureReader) sendByte(b byte) {
 func (r *scriptedCaptureReader) finish() {
 	ack := make(chan struct{})
 	r.steps <- scriptedCaptureStep{err: io.EOF, ack: ack}
+	<-ack
+	close(r.steps)
+}
+
+func (r *scriptedCaptureReader) fail(err error) {
+	ack := make(chan struct{})
+	r.steps <- scriptedCaptureStep{err: err, ack: ack}
 	<-ack
 	close(r.steps)
 }

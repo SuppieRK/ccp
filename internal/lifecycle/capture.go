@@ -158,6 +158,7 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 		wg       sync.WaitGroup
 		mu       sync.Mutex
 		events   []replay.Event
+		readErrs = make(chan error, 2)
 		sequence atomic.Int64
 	)
 	record := func(seq int, stream contracts.Stream, line string) {
@@ -172,17 +173,25 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 		return nil, 0, err
 	}
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
-	}()
-	go func() {
-		defer wg.Done()
-		readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
-	}()
+	wg.Go(func() {
+		readErrs <- readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
+	})
+	wg.Go(func() {
+		readErrs <- readSequencedCapture(stderr, contracts.StreamStderr, &sequence, record)
+	})
 	wg.Wait()
+	close(readErrs)
 	waitErr := cmd.Wait()
+	var readErr error
+	for err := range readErrs {
+		readErr = errors.Join(readErr, err)
+	}
+	if readErr != nil {
+		if waitErr != nil {
+			return nil, 0, errors.Join(readErr, waitErr)
+		}
+		return nil, 0, readErr
+	}
 	sort.Slice(events, func(i, j int) bool { return events[i].Sequence < events[j].Sequence })
 	if err := replay.ValidateSequence(events); err != nil {
 		return nil, 0, err
@@ -196,7 +205,7 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 	return events, 0, nil
 }
 
-func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) {
+func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) error {
 	defer func() { _ = src.Close() }()
 	reader := bufio.NewReader(src)
 	var (
@@ -207,7 +216,10 @@ func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, sequence *
 		b, err := reader.ReadByte()
 		if err != nil {
 			finishSequencedCaptureLine(&currentLine, &currentSeq, stream, record)
-			return
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return fmt.Errorf("read %s stream: %w", stream, err)
 		}
 		appendSequencedCaptureByte(&currentLine, &currentSeq, b, stream, sequence, record)
 	}
