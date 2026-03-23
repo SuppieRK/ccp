@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -142,15 +143,14 @@ func resolveCaptureDir(dir, _ string) (string, error) {
 }
 
 func runNativeCapture(args []string) ([]replay.Event, int, error) {
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin = os.Stdin
-	stdout, err := cmd.StdoutPipe()
+	ctx, stop := core.DefaultExecutionContext(context.Background())
+	defer stop()
+	return runNativeCaptureContext(ctx, args)
+}
+
+func runNativeCaptureContext(ctx context.Context, args []string) ([]replay.Event, int, error) {
+	cmd, stdout, stderr, err := core.CommandWithPipesContext(ctx, args[0], args[1:])
 	if err != nil {
-		return nil, 0, err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		_ = stdout.Close()
 		return nil, 0, err
 	}
 
@@ -191,6 +191,12 @@ func runNativeCapture(args []string) ([]replay.Event, int, error) {
 			return nil, 0, errors.Join(readErr, waitErr)
 		}
 		return nil, 0, readErr
+	}
+	if ctx.Err() != nil {
+		if waitErr != nil {
+			return nil, 0, errors.Join(ctx.Err(), waitErr)
+		}
+		return nil, 0, ctx.Err()
 	}
 	sort.Slice(events, func(i, j int) bool { return events[i].Sequence < events[j].Sequence })
 	if err := replay.ValidateSequence(events); err != nil {

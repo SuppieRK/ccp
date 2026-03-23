@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -211,6 +213,34 @@ var _ = Describe("capture", func() {
 		Expect(errors.Is(err, io.ErrUnexpectedEOF)).To(BeTrue())
 		Expect(err.Error()).To(ContainSubstring("read stdout stream"))
 		Expect(recorded).To(Equal([]replay.Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "o"}}))
+	})
+
+	It("cancels captured subprocess trees when the execution context ends", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix process groups")
+		}
+
+		startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+		markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
+		ctx, cancel := context.WithCancel(context.Background())
+
+		done := make(chan error, 1)
+		go func() {
+			_, _, err := runNativeCaptureContext(ctx, []string{"sh", "-c", "printf started > \"$1\"; (sleep 1; printf orphan > \"$2\") & wait", "sh", startedPath, markerPath})
+			done <- err
+		}()
+
+		Eventually(func() error {
+			_, err := os.Stat(startedPath)
+			return err
+		}, time.Second).Should(Succeed())
+
+		cancel()
+		Eventually(done, 5*time.Second).Should(Receive(HaveOccurred()))
+		Consistently(func() bool {
+			_, err := os.Stat(markerPath)
+			return err == nil
+		}, 1500*time.Millisecond, 100*time.Millisecond).Should(BeFalse())
 	})
 
 	It("refuses to overwrite symlinked capture artifacts", func() {

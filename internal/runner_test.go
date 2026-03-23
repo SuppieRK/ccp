@@ -1,13 +1,17 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"testing"
+	"time"
 
 	"go-command-compression-proxy/internal/audit"
 
@@ -559,7 +563,7 @@ var _ = Describe("Runner", func() {
 		It("creates subprocess pipes with stdin attached to os.Stdin", func() {
 			name, args := successCommand()
 
-			cmd, stdout, stderr, err := commandWithPipes(name, args)
+			cmd, stdout, stderr, err := CommandWithPipesContext(context.Background(), name, args)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cmd.Stdin).To(Equal(os.Stdin))
@@ -576,6 +580,69 @@ var _ = Describe("Runner", func() {
 
 			Expect(code).To(Equal(1))
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("cancels managed subprocesses when the execution context ends", func() {
+			startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+			markerPath := filepath.Join(GinkgoT().TempDir(), "late.txt")
+			name, args := cancellableCommand(startedPath, markerPath)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, name, args)
+
+			Expect(err).NotTo(HaveOccurred())
+			cmd.Env = append(os.Environ(), "CCP_MANAGED_SUBPROCESS_HELPER=1")
+			Expect(cmd.Start()).To(Succeed())
+			DeferCleanup(func() { closePipes(stdout, stderr) })
+
+			Eventually(func() error {
+				_, err := os.Stat(startedPath)
+				return err
+			}, time.Second).Should(Succeed())
+
+			done := make(chan error, 1)
+			go func() {
+				done <- cmd.Wait()
+			}()
+
+			cancel()
+			Eventually(done, 5*time.Second).Should(Receive(HaveOccurred()))
+			Consistently(func() bool {
+				_, err := os.Stat(markerPath)
+				return err == nil
+			}, 1500*time.Millisecond, 100*time.Millisecond).Should(BeFalse())
+		})
+
+		It("kills descendant processes when the execution context ends", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses unix process groups")
+			}
+
+			startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+			markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
+			ctx, cancel := context.WithCancel(context.Background())
+			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, "sh", []string{"-c", "printf started > \"$1\"; (sleep 1; printf orphan > \"$2\") & wait", "sh", startedPath, markerPath})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cmd.Start()).To(Succeed())
+			DeferCleanup(func() { closePipes(stdout, stderr) })
+
+			Eventually(func() error {
+				_, err := os.Stat(startedPath)
+				return err
+			}, time.Second).Should(Succeed())
+
+			done := make(chan error, 1)
+			go func() {
+				done <- cmd.Wait()
+			}()
+
+			cancel()
+			Eventually(done, 5*time.Second).Should(Receive(HaveOccurred()))
+			Consistently(func() bool {
+				_, err := os.Stat(markerPath)
+				return err == nil
+			}, 1500*time.Millisecond, 100*time.Millisecond).Should(BeFalse())
 		})
 	})
 
@@ -1193,6 +1260,31 @@ func confidentialAuditCommand(secret string) []string {
 		return []string{"cmd", "/c", "echo", secret}
 	}
 	return []string{"echo", secret}
+}
+
+func cancellableCommand(startedPath, markerPath string) (string, []string) {
+	return os.Args[0], []string{"-test.run=TestManagedSubprocessHelper", "--", startedPath, markerPath}
+}
+
+func TestManagedSubprocessHelper(t *testing.T) {
+	if os.Getenv("CCP_MANAGED_SUBPROCESS_HELPER") != "1" {
+		return
+	}
+
+	sep := slices.Index(os.Args, "--")
+	if sep < 0 || len(os.Args) < sep+3 {
+		os.Exit(2)
+	}
+	startedPath := os.Args[sep+1]
+	markerPath := os.Args[sep+2]
+	if err := os.WriteFile(startedPath, []byte("started"), 0o644); err != nil {
+		os.Exit(3)
+	}
+	time.Sleep(30 * time.Second)
+	if err := os.WriteFile(markerPath, []byte("late"), 0o644); err != nil {
+		os.Exit(4)
+	}
+	os.Exit(0)
 }
 
 func withUnavailableWorkingDirectory(fn func()) {
