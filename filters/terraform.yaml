@@ -2,6 +2,7 @@
 version: 1
 filter: terraform
 about: Compact terraform plan output by trimming generic legend, note, and no-change explanation lines while keeping the action block, summary, and parse failures reusable. Explicit JSON plan output stays native.
+flags_consuming_next_arg: []
 
 cases:
   - id: plan_json_passthrough

@@ -22,7 +22,7 @@ import (
 const (
 	defaultUpgradeRepo    = "SuppieRK/ccp"
 	releaseChecksumsAsset = "ccp_checksums.txt"
-	upgradeRepairCutover  = "0.5.1"
+	upgradeRepairCutover  = "0.6.0"
 )
 
 var (

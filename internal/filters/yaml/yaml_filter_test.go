@@ -1099,4 +1099,60 @@ var _ = Describe("YamlFilter", func() {
 			Args: []string{"git", "branch", "feature"},
 		})).To(Equal("git"))
 	})
+
+	It("uses filter-level flags_consuming_next_arg when checking positionals", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version:               1,
+			Filter:                "go",
+			FlagsConsumingNextArg: []string{"-run"},
+			Cases: []CaseClause{
+				{
+					ID: "test-run",
+					WhenArguments: &WhenArguments{
+						FirstIs:       "test",
+						NoPositionals: true,
+					},
+					CompressOutput: &OutputShape{
+						Combined: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^"}}}},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.Dispatch(contracts.Command{
+			Tool: "go",
+			Args: []string{"go", "test", "-run", "TestSmoke"},
+		})).To(Equal("go|test-run"))
+	})
+
+	It("uses filter-level flags_consuming_next_arg for append_if_no_positionals mutations", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version:               1,
+			Filter:                "go",
+			FlagsConsumingNextArg: []string{"-run"},
+			Cases: []CaseClause{
+				{
+					ID: "test-run",
+					WhenArguments: &WhenArguments{
+						FirstIs: "test",
+					},
+					NormalizeCommand: &CommandMutation{
+						AppendIfNoPositionals: []string{"./..."},
+					},
+					CompressOutput: &OutputShape{
+						Combined: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^"}}}},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		command, err := filter.PrepareCommand(contracts.Command{
+			Tool: "go",
+			Args: []string{"go", "test", "-run", "TestSmoke"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(command.Args).To(Equal([]string{"go", "test", "-run", "TestSmoke", "./..."}))
+	})
 })

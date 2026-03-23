@@ -2,6 +2,7 @@
 version: 1
 filter: ty
 about: Compact default `ty` type-checker output by dropping version, file-count, and blank-line boilerplate while preserving diagnostics, code frames, and final summaries.
+flags_consuming_next_arg: []
 
 cases:
   - id: ty

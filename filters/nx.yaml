@@ -2,6 +2,7 @@
 version: 1
 filter: nx
 about: Compact default Nx orchestration chatter for `run-many` and `affected` while leaving graph and other precision or discovery surfaces native, and preserving underlying task output verbatim.
+flags_consuming_next_arg: ["--graph"]
 
 cases:
   - id: passthrough_graph_and_discovery

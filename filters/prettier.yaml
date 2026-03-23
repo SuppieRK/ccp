@@ -2,6 +2,7 @@
 version: 1
 filter: prettier
 about: Compact Prettier check output, preserve parser diagnostics and file lists, and leave write-mode behavior close to native until broader corpus justifies more.
+flags_consuming_next_arg: []
 
 cases:
   - id: write

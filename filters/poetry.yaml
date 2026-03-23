@@ -2,6 +2,7 @@
 version: 1
 filter: poetry
 about: Compact Poetry install, lock, and update progress noise while preserving package-operation summaries, lock drift, current-project warnings, and parse failures.
+flags_consuming_next_arg: []
 
 cases:
   - id: install

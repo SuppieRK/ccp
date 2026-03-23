@@ -2,6 +2,7 @@
 version: 1
 filter: tofu
 about: Compact common OpenTofu fmt, init, validate, and plan surfaces while keeping parse or machine-oriented modes reusable and line-oriented.
+flags_consuming_next_arg: []
 
 cases:
   - id: plan_json_passthrough

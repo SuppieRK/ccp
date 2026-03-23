@@ -2,6 +2,8 @@
 version: 1
 filter: yarn
 about: Compact Yarn Classic script-run boilerplate for explicit run flows while preserving script output, failure text, and shell-usable line shapes.
+flags_consuming_next_arg: ["--cwd"]
+
 cases:
   - id: run
     when_arguments:

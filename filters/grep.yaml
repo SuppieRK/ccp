@@ -2,6 +2,8 @@
 version: 1
 filter: grep
 about: Group plain grep file:line:text matches conservatively while leaving context, count, byte-offset, only-matching, color, and null-delimited modes native
+flags_consuming_next_arg: ["--after-context", "--before-context", "--context", "--max-count", "-A", "-B", "-C", "-m"]
+
 cases:
   - id: precision_short_passthrough
     when_arguments:

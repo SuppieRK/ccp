@@ -2,6 +2,7 @@
 version: 1
 filter: yamllint
 about: Compact default yamllint diagnostics by normalizing file-local warning and error rows while leaving explicit alternate formats and file-listing modes native.
+flags_consuming_next_arg: []
 
 cases:
   - id: passthrough_alt_formats

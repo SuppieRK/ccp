@@ -2,8 +2,25 @@
 version: 1
 filter: ruff
 about: Compact structured Ruff diagnostics conservatively and normalize simple `ruff check` flows to Ruff's own grouped format while preserving explicit format, fix, diff, and watch modes.
+flags_consuming_next_arg: []
 
 cases:
+  - id: explicit_modes_passthrough
+    when_arguments:
+      first_is: check
+      have_any:
+        - --output-format
+        - --output-format=json
+        - --format
+        - --format=json
+        - --statistics
+        - --show-files
+        - --show-settings
+        - --watch
+        - --fix
+        - --diff
+    passthrough: true
+
   - id: check_grouped_normalized
     when_arguments:
       first_is: check

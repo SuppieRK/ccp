@@ -21,6 +21,16 @@
       "type": "string",
       "description": "Optional human-readable note describing the filter's purpose or scope."
     },
+    "flags_consuming_next_arg": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^-",
+        "description": "One flag token that consumes the next argv token when written in split form."
+      },
+      "description": "Tool-level flag tokens that consume the next argv token when CCP decides whether later tokens are real positional arguments. List split-form flags such as '-run' for '-run value'; attached forms such as '--format=json' are already self-contained and do not need listing. Each entry must begin with '-'."
+    },
     "cases": {
       "type": "array",
       "minItems": 1,
@@ -107,6 +117,7 @@
       "description": "List of literal argv tokens, flags, or substrings evaluated in order by the relevant predicate or mutation.",
       "items": {
         "type": "string",
+        "minLength": 1,
         "description": "One literal token or flag."
       }
     },

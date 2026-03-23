@@ -124,10 +124,11 @@ var _ = Describe("selectedUpgradeRepairMode", func() {
 			Expect(selectedUpgradeRepairMode(currentVersion)).To(Equal(expected))
 		},
 		Entry("older plain version preserves existing filters", "0.5.0", repairModePreserve),
-		Entry("cutover version rewrites managed state", "0.5.1", repairModeRewrite),
+		Entry("pre-cutover patch version preserves existing filters", "0.5.9", repairModePreserve),
+		Entry("cutover version rewrites managed state", "0.6.0", repairModeRewrite),
 		Entry("newer version rewrites managed state", "1.2.3", repairModeRewrite),
-		Entry("v-prefixed versions preserve existing filters", "v0.5.0", repairModePreserve),
-		Entry("pre-release versions preserve existing filters", "0.5.1-rc.1", repairModePreserve),
+		Entry("v-prefixed versions preserve existing filters", "v0.6.0", repairModePreserve),
+		Entry("pre-release versions preserve existing filters", "0.6.0-rc.1", repairModePreserve),
 		Entry("whitespace versions preserve existing filters", " 1.2.3 ", repairModePreserve),
 		Entry("dev preserves existing filters", "dev", repairModePreserve),
 		Entry("invalid version preserves existing filters", "not-a-version", repairModePreserve),
@@ -351,13 +352,13 @@ var _ = Describe("RunUpgrade", func() {
 		})
 	})
 
-	Context("when upgrading from 0.5.1 or newer", func() {
+	Context("when upgrading from 0.6.0 or newer", func() {
 		var seenMode repairMode
 
 		BeforeEach(func() {
 			args = []string{flagVersion, "1.2.3"}
 			seenMode = ""
-			version.Version = "0.5.1"
+			version.Version = "0.6.0"
 			restore := stubUpgradeRuntimeDeps(
 				func() (string, error) { return dest, nil },
 				func() string { return "linux" },
@@ -381,13 +382,13 @@ var _ = Describe("RunUpgrade", func() {
 		})
 	})
 
-	Context("when upgrading from older than 0.5.1", func() {
+	Context("when upgrading from older than 0.6.0", func() {
 		var seenMode repairMode
 
 		BeforeEach(func() {
 			args = []string{flagVersion, "1.2.3"}
 			seenMode = ""
-			version.Version = "0.5.0"
+			version.Version = "0.5.9"
 			restore := stubUpgradeRuntimeDeps(
 				func() (string, error) { return dest, nil },
 				func() string { return "linux" },

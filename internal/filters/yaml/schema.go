@@ -21,10 +21,11 @@ const (
 )
 
 type FilterDefinition struct {
-	Version int          `yaml:"version"`
-	Filter  string       `yaml:"filter"`
-	About   string       `yaml:"about"`
-	Cases   []CaseClause `yaml:"cases"`
+	Version               int          `yaml:"version"`
+	Filter                string       `yaml:"filter"`
+	About                 string       `yaml:"about"`
+	FlagsConsumingNextArg []string     `yaml:"flags_consuming_next_arg"`
+	Cases                 []CaseClause `yaml:"cases"`
 }
 
 type CaseClause struct {
@@ -185,6 +186,9 @@ func ValidateDefinition(spec *FilterDefinition) error {
 	if spec.Filter == "" {
 		return ValidationError{Path: "filter", Message: "filter id must not be empty"}
 	}
+	if err := validateFlagsConsumingNextArg(spec.FlagsConsumingNextArg, validationPath("flags_consuming_next_arg")); err != nil {
+		return err
+	}
 	if len(spec.Cases) == 0 {
 		return ValidationError{Path: "cases", Message: "at least one case is required"}
 	}
@@ -199,6 +203,18 @@ func ValidateDefinition(spec *FilterDefinition) error {
 			return ValidationError{Path: string(casePath(i).Path("id")), Message: "case id must be unique"}
 		}
 		seenCases[id] = struct{}{}
+	}
+	return nil
+}
+
+func validateFlagsConsumingNextArg(flags []string, path validationPath) error {
+	for i, flag := range flags {
+		if flag == "" {
+			return ValidationError{Path: string(indexedValidationPath(path, i)), Message: "flags_consuming_next_arg entries must not be empty"}
+		}
+		if flag[0] != '-' {
+			return ValidationError{Path: string(indexedValidationPath(path, i)), Message: "flags_consuming_next_arg entries must start with '-'"}
+		}
 	}
 	return nil
 }

@@ -2,7 +2,17 @@
 version: 1
 filter: npm
 about: Compact npm run wrapper output conservatively, trim low-value TAP harness noise, and keep npm install failures native.
+flags_consuming_next_arg: ["--script-shell", "--workspace", "-w"]
+
 cases:
+  - id: run_help_passthrough
+    when_arguments:
+      first_is: run
+      have_any:
+        - -h
+        - --help
+    passthrough: true
+
   - id: run
     when_arguments:
       first_is: run

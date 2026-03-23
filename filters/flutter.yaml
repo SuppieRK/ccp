@@ -2,6 +2,7 @@
 version: 1
 filter: flutter
 about: Compact plain flutter analyze diagnostics and flutter test summaries while preserving actionable failure loci and leaving explicit machine-oriented output native.
+flags_consuming_next_arg: ["--coverage-path", "--device-id", "--file-reporter", "--reporter", "-d", "-r"]
 
 cases:
   - id: analyze_machine_passthrough
@@ -43,6 +44,22 @@ cases:
       first_is: test
       have_any:
         - --machine
+    passthrough: true
+
+  - id: test_reporter_json_passthrough
+    when_arguments:
+      first_is: test
+      have_sequence:
+        - -r
+        - json
+    passthrough: true
+
+  - id: test_reporter_json_long_passthrough
+    when_arguments:
+      first_is: test
+      have_sequence:
+        - --reporter
+        - json
     passthrough: true
 
   - id: test

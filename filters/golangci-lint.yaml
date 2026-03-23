@@ -2,8 +2,17 @@
 version: 1
 filter: golangci-lint
 about: Group default text-mode golangci-lint diagnostics by file, keep exact file and line identity, and leave explicit structured or tabular output modes native.
+flags_consuming_next_arg: ["--enable-only", "--output.checkstyle.path", "--output.code-climate.path", "--output.html.path", "--output.json.path", "--output.junit-xml.path", "--output.sarif.path", "--output.tab.path", "--output.teamcity.path"]
 
 cases:
+  - id: help_passthrough
+    when_arguments:
+      first_is: run
+      have_any:
+        - -h
+        - --help
+    passthrough: true
+
   - id: structured_passthrough
     when_arguments:
       have_any:

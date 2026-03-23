@@ -2,6 +2,7 @@
 version: 1
 filter: trunk
 about: Compact default `trunk build` output by dropping repetitive Rust compile and fetch noise while preserving final build summaries and compiler failures.
+flags_consuming_next_arg: []
 
 cases:
   - id: build

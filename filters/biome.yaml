@@ -2,6 +2,7 @@
 version: 1
 filter: biome
 about: Compact plain Biome lint and check output by trimming decorative separators and generic summaries while preserving file paths, diff hunks, parser carets, and explicit reporter modes.
+flags_consuming_next_arg: []
 
 cases:
   - id: reporter_passthrough_inline
@@ -14,13 +15,6 @@ cases:
         - --reporter=gitlab
         - --reporter=checkstyle
         - --reporter=rdjson
-    passthrough: true
-
-  - id: reporter_passthrough_sequence
-    when_arguments:
-      have_sequence:
-        - --reporter
-        - json
     passthrough: true
 
   - id: lint

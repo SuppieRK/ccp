@@ -2,6 +2,7 @@
 version: 1
 filter: playwright
 about: Compact native Playwright test summaries conservatively, preserve failed spec selectors and startup parser guidance, and keep reporter modes passthrough.
+flags_consuming_next_arg: []
 
 cases:
   - id: reporter_passthrough

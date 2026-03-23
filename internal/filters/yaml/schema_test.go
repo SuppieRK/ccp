@@ -133,12 +133,31 @@ cases:
 		Entry("valid no_positionals predicate", `
 version: 1
 filter: git
+flags_consuming_next_arg: ['-C']
 cases:
   - id: branch
     when_arguments:
       no_positionals: true
     passthrough: true
 `, ""),
+		Entry("invalid top-level flags_consuming_next_arg entry", `
+version: 1
+filter: git
+flags_consuming_next_arg: ['branch']
+cases:
+  - id: branch
+    passthrough: true
+`, "flags_consuming_next_arg[0]: flags_consuming_next_arg entries must start with '-'"),
+		Entry("invalid case-local value_flags field", `
+version: 1
+filter: go
+cases:
+  - id: test
+    when_arguments:
+      first_is: test
+      value_flags: ['-run']
+    passthrough: true
+`, "decode yaml: yaml: unmarshal errors:\n  line 8: field value_flags not found in type yaml.WhenArguments"),
 		Entry("empty command block", `
 version: 1
 filter: python

@@ -2,6 +2,7 @@
 version: 1
 filter: basedpyright
 about: Compact default text-mode basedpyright diagnostics by removing repeated file prefixes while preserving exact line, column, severity, and rule identity, and leave explicit structured output native.
+flags_consuming_next_arg: ["--createstub", "--level", "--baselinefile", "--baselinemode", "-p", "--project", "--pythonpath", "--pythonplatform", "--pythonversion", "-t", "--typeshedpath", "--threads", "-v", "--venvpath", "--verifytypes"]
 
 cases:
   - id: structured_passthrough

@@ -2,6 +2,7 @@
 version: 1
 filter: sbt
 about: Trim sbt startup and loading boilerplate for direct `compile` and `test` runs while preserving warnings, errors, and framework-owned test output. Precision and debug modes stay native.
+flags_consuming_next_arg: []
 
 cases:
   - id: precision_passthrough

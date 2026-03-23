@@ -2,8 +2,18 @@
 version: 1
 filter: eslint
 about: Compact plain ESLint text diagnostics into path-first line-oriented output while keeping exact file, line, rule, and severity identity.
+flags_consuming_next_arg: []
 
 cases:
+  - id: explicit_output_passthrough
+    when_arguments:
+      have_any:
+        - -f
+        - --format
+        - -o
+        - --output-file
+    passthrough: true
+
   - id: default
     compress_output:
       stdout:

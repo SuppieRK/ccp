@@ -2,6 +2,7 @@
 version: 1
 filter: docker
 about: Compact BuildKit-heavy Docker build output where the end state is tool-defined, keep inventory tables and logs native, and leave machine-oriented build modes untouched.
+flags_consuming_next_arg: ["--iidfile", "--metadata-file", "--progress", "--tag", "-t"]
 
 cases:
   - id: build_passthrough_machine
@@ -12,6 +13,8 @@ cases:
         - --quiet
         - --progress
         - --progress=plain
+        - --progress=quiet
+        - --progress=rawjson
         - --iidfile
         - --metadata-file
         - --push

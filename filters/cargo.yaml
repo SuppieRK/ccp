@@ -2,6 +2,7 @@
 version: 1
 filter: cargo
 about: Compact cargo build, check, test, and clippy while preserving failure loci and warning-bearing success output that still matters for follow-up work.
+flags_consuming_next_arg: ["--allow", "--bench", "--bin", "--color", "--config", "--deny", "--exclude", "--explain", "--features", "--forbid", "--jobs", "--lockfile-path", "--manifest-path", "--message-format", "--package", "--profile", "--target", "--target-dir", "--test", "--warn", "-A", "-D", "-F", "-Z", "-j", "-p"]
 
 cases:
   - id: build

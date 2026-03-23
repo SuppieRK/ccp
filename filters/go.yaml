@@ -2,6 +2,7 @@
 version: 1
 filter: go
 about: Compact the go command family with conservative passthrough for verbose and structured modes.
+flags_consuming_next_arg: []
 
 cases:
   - id: build_verbose_passthrough

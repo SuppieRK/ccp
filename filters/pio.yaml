@@ -2,6 +2,7 @@
 version: 1
 filter: pio
 about: Compact default `pio run` build chatter by dropping repetitive PlatformIO setup and object-build noise while preserving compiler failures and keeping verbose mode native.
+flags_consuming_next_arg: []
 
 cases:
   - id: run_verbose_passthrough

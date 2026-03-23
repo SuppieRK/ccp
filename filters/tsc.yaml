@@ -2,6 +2,7 @@
 version: 1
 filter: tsc
 about: Compact plain TypeScript diagnostics by file path, keep explicit pretty output native, and preserve watch/build-style modes as passthrough.
+flags_consuming_next_arg: []
 
 cases:
   - id: diagnostics_pretty_false

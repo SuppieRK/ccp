@@ -2,6 +2,7 @@
 version: 1
 filter: hadolint
 about: Compact default no-color hadolint diagnostics by shortening repeated file prefixes while preserving line, rule code, severity, and message identity, and leave explicit alternate formats native.
+flags_consuming_next_arg: ["--format", "-f"]
 
 cases:
   - id: passthrough_alt_formats

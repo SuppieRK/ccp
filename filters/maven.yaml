@@ -2,6 +2,7 @@
 version: 1
 filter: maven
 about: Trim Maven info-level boilerplate aggressively, keep build phases and warnings visible, preserve actionable compiler and test failure blocks, and leave terse reactor-selection failures close to native.
+flags_consuming_next_arg: []
 
 cases:
   - id: maven_output

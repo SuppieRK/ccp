@@ -14,8 +14,9 @@ import (
 )
 
 type YamlFilter struct {
-	spec  *FilterDefinition
-	cases []compiledCase
+	spec                  *FilterDefinition
+	flagsConsumingNextArg []string
+	cases                 []compiledCase
 
 	activeArgs string
 }
@@ -25,8 +26,9 @@ func (f *YamlFilter) CloneFilter() contracts.Filter {
 		return nil
 	}
 	return &YamlFilter{
-		spec:  f.spec,
-		cases: cloneCompiledCases(f.cases),
+		spec:                  f.spec,
+		flagsConsumingNextArg: cloneStrings(f.flagsConsumingNextArg),
+		cases:                 cloneCompiledCases(f.cases),
 	}
 }
 
@@ -44,8 +46,9 @@ func NewFilter(spec *FilterDefinition) (*YamlFilter, error) {
 		cases[i] = current
 	}
 	return &YamlFilter{
-		spec:  spec,
-		cases: cases,
+		spec:                  spec,
+		flagsConsumingNextArg: cloneStrings(spec.FlagsConsumingNextArg),
+		cases:                 cases,
 	}, nil
 }
 
@@ -134,7 +137,7 @@ func (f *YamlFilter) PrepareCommand(command contracts.Command) (contracts.Comman
 	}
 
 	mutated := command
-	mutated.Args = applyCommandMutations(command.Args, cs.command)
+	mutated.Args = applyCommandMutations(command.Args, cs.when, f.flagsConsumingNextArg, cs.command)
 	return mutated, nil
 }
 
@@ -735,7 +738,7 @@ func (c *compiledCase) scopeForExit(stream contracts.Stream) *compiledScope {
 func (f *YamlFilter) caseForArgs(args []string) (*compiledCase, bool) {
 	filteredArgs := filterArgs(args)
 	for i := range f.cases {
-		if matchesWhenArguments(f.cases[i].when, filteredArgs) {
+		if matchesWhenArguments(f.cases[i].when, f.flagsConsumingNextArg, filteredArgs) {
 			return &f.cases[i], true
 		}
 	}
@@ -1286,7 +1289,7 @@ func filterArgs(args []string) []string {
 	return args[1:]
 }
 
-func applyCommandMutations(args []string, command *compiledCommand) []string {
+func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []string, command *compiledCommand) []string {
 	if command == nil {
 		return cloneStrings(args)
 	}
@@ -1301,14 +1304,18 @@ func applyCommandMutations(args []string, command *compiledCommand) []string {
 		}
 		mutated = append(mutated, arg)
 	}
-	if !hasExplicitPositionals(mutated[1:]) {
+	filtered := mutated[1:]
+	if when.firstIs != "" || len(when.firstIn) > 0 {
+		filtered = filterArgs(filtered)
+	}
+	if !hasExplicitPositionals(filtered, flagsWithValues) {
 		mutated = append(mutated, command.appendIfNoPositionals...)
 	}
 	return mutated
 }
 
-func hasExplicitPositionals(args []string) bool {
-	return operations.HasExplicitPositionals(args)
+func hasExplicitPositionals(args, valueFlags []string) bool {
+	return operations.HasExplicitPositionals(args, valueFlags)
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
@@ -1345,7 +1352,7 @@ func containsShortFlag(args []string, want rune) bool {
 	return false
 }
 
-func matchesWhenArguments(when compiledWhen, args []string) bool {
+func matchesWhenArguments(when compiledWhen, flagsWithValues, args []string) bool {
 	leadingCommandContext := when.firstIs != "" || len(when.firstIn) > 0
 	return operations.MatchesFirstIs(args, when.firstIs) &&
 		operations.MatchesFirstIn(args, when.firstIn) &&
@@ -1356,8 +1363,8 @@ func matchesWhenArguments(when compiledWhen, args []string) bool {
 		operations.MatchesNotHaveShortFlag(args, when.notHaveShortFlag) &&
 		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
 		operations.MatchesNotHaveAllShortFlags(args, when.notHaveAllShortFlags) &&
-		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny) &&
-		operations.MatchesNoPositionals(args, when.noPositionals, leadingCommandContext)
+		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny, flagsWithValues) &&
+		operations.MatchesNoPositionals(args, flagsWithValues, when.noPositionals, leadingCommandContext)
 }
 
 func outputCombined(out *OutputShape) *OutputScope {
