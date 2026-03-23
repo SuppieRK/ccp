@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func RejectSymlinkPath(path string) error {
@@ -11,21 +12,25 @@ func RejectSymlinkPath(path string) error {
 	if err != nil {
 		return fmt.Errorf("resolve path: %w", err)
 	}
-	for current := resolved; ; current = filepath.Dir(current) {
+	resolved = filepath.Clean(resolved)
+	volume := filepath.VolumeName(resolved)
+	remainder := strings.TrimPrefix(resolved[len(volume):], string(os.PathSeparator))
+	current := volume + string(os.PathSeparator)
+	for part := range strings.SplitSeq(remainder, string(os.PathSeparator)) {
+		if part == "" {
+			continue
+		}
+		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
-		if err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("refuse to use symlink path component %q", current)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
 			}
-			if info.IsDir() {
-				return nil
-			}
-		} else if !os.IsNotExist(err) {
 			return err
 		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return nil
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("refuse to use symlink path component %q", current)
 		}
 	}
+	return nil
 }
