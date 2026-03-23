@@ -200,7 +200,7 @@ cases:
 #   combined, stdout, stderr
 # - cases[].compress_output.<scope>.lines
 #   Apply line-oriented transforms:
-#   replace, skip, keep, max, tail, truncate
+#   replace, skip, keep, max
 # - cases[].compress_output.<scope>.groups
 #   Build repeated grouped sections with:
 #   id, starts_with, starts_with_regex, matches_regex, variables, group_by, initially, lines, finally

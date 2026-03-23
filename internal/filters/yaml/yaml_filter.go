@@ -473,12 +473,6 @@ func buildCompiledLines(name string, lines *OutputLines) (*compiledScope, error)
 	if lines == nil {
 		return &compiledScope{}, nil
 	}
-	if lines.Tail != nil {
-		return nil, fmt.Errorf("scope %q lines.tail is not supported by the generic operations runtime yet", name)
-	}
-	if lines.Truncate != nil {
-		return nil, fmt.Errorf("scope %q lines.truncate is not supported by the generic operations runtime yet", name)
-	}
 
 	replace, err := compileReplaceRules(lines.Replace)
 	if err != nil {

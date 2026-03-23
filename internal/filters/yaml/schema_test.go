@@ -220,6 +220,26 @@ cases:
             count: 0
             print: "\n{{value}} lines"
 `, "cases[0].compress_output.stdout.lines.max.count: max.count must be positive"),
+		Entry("tail is no longer a supported lines field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          tail: 10
+`, "decode yaml: yaml: unmarshal errors:\n  line 9: field tail not found in type yaml.OutputLines"),
+		Entry("truncate is no longer a supported lines field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          truncate: 80
+`, "decode yaml: yaml: unmarshal errors:\n  line 9: field truncate not found in type yaml.OutputLines"),
 		Entry("empty max print is allowed", `
 version: 1
 filter: python

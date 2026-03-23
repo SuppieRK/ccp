@@ -289,16 +289,6 @@
         "max": {
           "$ref": "#/$defs/max_rule",
           "description": "Optional cap on the number of lines emitted from this scope."
-        },
-        "tail": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Keep at most this many trailing lines. Must be non-negative."
-        },
-        "truncate": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Shorten each emitted line to this maximum width. Must be non-negative."
         }
       }
     },

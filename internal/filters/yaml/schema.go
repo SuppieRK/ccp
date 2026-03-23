@@ -78,12 +78,10 @@ type OutputScope struct {
 }
 
 type OutputLines struct {
-	Replace  []ReplaceRule    `yaml:"replace"`
-	Skip     []SkipOrKeepRule `yaml:"skip"`
-	Keep     []SkipOrKeepRule `yaml:"keep"`
-	Max      *MaxRule         `yaml:"max"`
-	Tail     *int             `yaml:"tail"`
-	Truncate *int             `yaml:"truncate"`
+	Replace []ReplaceRule    `yaml:"replace"`
+	Skip    []SkipOrKeepRule `yaml:"skip"`
+	Keep    []SkipOrKeepRule `yaml:"keep"`
+	Max     *MaxRule         `yaml:"max"`
 }
 
 type MaxRule struct {
@@ -552,7 +550,7 @@ func validateLines(lines *OutputLines, path validationPath, mode linesValidation
 	if err := validateLinesMax(lines.Max, path.Path("max"), mode); err != nil {
 		return err
 	}
-	return validateLinesBounds(lines, path)
+	return nil
 }
 
 func validateReplaceRules(rules []ReplaceRule, path validationPath) error {
@@ -596,16 +594,6 @@ func validateLinesMax(rule *MaxRule, path validationPath, mode linesValidationMo
 		return nil
 	}
 	return validateMaxPrint(rule.Print, path.Path("print"), rule.GroupsSummary != nil)
-}
-
-func validateLinesBounds(lines *OutputLines, path validationPath) error {
-	if lines.Tail != nil && *lines.Tail < 0 {
-		return ValidationError{Path: string(path.Path("tail")), Message: "tail must be non-negative"}
-	}
-	if lines.Truncate != nil && *lines.Truncate < 0 {
-		return ValidationError{Path: string(path.Path("truncate")), Message: "truncate must be non-negative"}
-	}
-	return nil
 }
 
 func validateReplaceRule(rule *ReplaceRule, path validationPath) error {

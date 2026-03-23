@@ -157,6 +157,26 @@ cases:
     compress_output:
       stdout: {}
 `, parityExpectation{schemaValid: true, parseValid: false}),
+		Entry("invalid removed tail field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          tail: 10
+`, parityExpectation{schemaValid: false, parseValid: false}),
+		Entry("invalid removed truncate field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          truncate: 80
+`, parityExpectation{schemaValid: false, parseValid: false}),
 		Entry("invalid replace matcher multiplicity remains a runtime-only gap", `
 version: 1
 filter: ls
