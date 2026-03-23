@@ -7,17 +7,17 @@ normalize_output() {
 
 runner_os="${RUNNER_OS:-}"
 ccp_bin="ccp"
-pass_cmd=(sh -c "printf 'smoke-filtered\\n'")
-raw_cmd=(sh -c "printf 'smoke-raw\\n'")
-blocked_cmd=(sh -c "printf 'smoke-audit\\n'")
-fail_cmd=(sh -c "exit 7")
+
+# Keep the smoke commands on a single shell shape across runners. The goal here is to
+# verify the installed ccp entrypoint and execution path, not to probe Git Bash -> cmd.exe
+# argument quirks on Windows CI hosts.
+pass_cmd=(bash -lc "printf 'smoke-filtered\\n'")
+raw_cmd=(bash -lc "printf 'smoke-raw\\n'")
+blocked_cmd=(bash -lc "printf 'smoke-audit\\n'")
+fail_cmd=(bash -lc "exit 7")
 
 if [[ "$runner_os" == "Windows" ]]; then
   ccp_bin="ccp.exe"
-  pass_cmd=(cmd /c echo smoke-filtered)
-  raw_cmd=(cmd /c echo smoke-raw)
-  blocked_cmd=(cmd /c echo smoke-audit)
-  fail_cmd=(cmd /c exit 7)
 fi
 
 if ! command -v "$ccp_bin" >/dev/null 2>&1; then
