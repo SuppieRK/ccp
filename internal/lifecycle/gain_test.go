@@ -203,7 +203,7 @@ var _ = Describe("RunGain", func() {
 			Expect(out).To(ContainSubstring("Trend : \u2191 +23.8 pts week over week (50.5% \u2192 74.3%)"))
 		})
 
-		It("ignores unreadable registered workspaces during global gain aggregation", func() {
+		It("warns when skipping corrupt registered workspaces during global gain aggregation", func() {
 			home := GinkgoT().TempDir()
 			restore := workspaces.WithTestConfig(home, nil)
 			DeferCleanup(restore)
@@ -212,11 +212,29 @@ var _ = Describe("RunGain", func() {
 			appendGlobalWorkspaceMetrics(home, repoOne, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
-			Expect(workspaces.Upsert(filepath.Join(tmpDir, "missing-repo"), filepath.Join(tmpDir, "missing-repo", ".ccp", "gain.db"))).To(Succeed())
 
-			out := runGain(flagGlobal, flagFormat, "json")
-			Expect(out).To(ContainSubstring(`"dataset": "summary"`))
-			Expect(out).To(ContainSubstring(`"go test ./..."`))
+			corruptRepo := filepath.Join(tmpDir, "corrupt-repo")
+			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
+			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
+			Expect(workspaces.Upsert(corruptRepo, corruptMetricsPath)).To(Succeed())
+
+			var stdout string
+			stderr, err := captureStderrOutput(func() error {
+				var runErr error
+				stdout, runErr = captureStdout(func() error {
+					return RunGain([]string{flagGlobal, flagFormat, "json"}, path)
+				})
+				return runErr
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stdout).To(ContainSubstring(`"dataset": "summary"`))
+			Expect(stdout).To(ContainSubstring(`"go test ./..."`))
+			Expect(stderr).To(ContainSubstring("ccp gain --global: warning: skipped workspace"))
+			Expect(stderr).To(ContainSubstring(corruptRepo))
+			Expect(stderr).To(ContainSubstring(corruptMetricsPath))
+			Expect(stderr).To(ContainSubstring("results exclude 1 workspace(s)"))
 		})
 
 		It("includes the current repo legacy gain database even when the registry is empty", func() {
@@ -684,6 +702,41 @@ var _ = Describe("RunHistory", func() {
 
 			Expect(out).To(ContainSubstring(`"source"`))
 			Expect(out).To(ContainSubstring(`"go test ./..."`))
+		})
+
+		It("warns when skipping corrupt registered workspaces during global history aggregation", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			repo := filepath.Join(tmpDir, "repo")
+			appendGlobalWorkspaceMetrics(home, repo, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
+			})
+
+			corruptRepo := filepath.Join(tmpDir, "corrupt-history-repo")
+			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
+			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
+			Expect(workspaces.Upsert(corruptRepo, corruptMetricsPath)).To(Succeed())
+
+			var stdout string
+			stderr, err := captureStderrOutput(func() error {
+				var runErr error
+				stdout, runErr = captureStdout(func() error {
+					return RunHistory([]string{flagGlobal, flagFormat, "json"}, path)
+				})
+				return runErr
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stdout).To(ContainSubstring(`"dataset": "history"`))
+			Expect(stdout).To(ContainSubstring(`"source"`))
+			Expect(stdout).To(ContainSubstring(`"go test ./..."`))
+			Expect(stderr).To(ContainSubstring("ccp history --global: warning: skipped workspace"))
+			Expect(stderr).To(ContainSubstring(corruptRepo))
+			Expect(stderr).To(ContainSubstring(corruptMetricsPath))
+			Expect(stderr).To(ContainSubstring("results exclude 1 workspace(s)"))
 		})
 
 		It("applies the text limit to history output", func() {
