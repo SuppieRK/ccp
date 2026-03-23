@@ -21,6 +21,7 @@ func RejectSymlinkPath(path string) error {
 			continue
 		}
 		current = filepath.Join(current, part)
+		parent := filepath.Dir(current)
 		info, err := os.Lstat(current)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -29,6 +30,10 @@ func RejectSymlinkPath(path string) error {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
+			// Allow top-level system aliases such as macOS `/var -> /private/var`.
+			if parent == volume+string(os.PathSeparator) {
+				continue
+			}
 			return fmt.Errorf("refuse to use symlink path component %q", current)
 		}
 	}
