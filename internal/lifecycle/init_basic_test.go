@@ -197,7 +197,8 @@ var _ = Describe("init basic behavior", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			content := string(body)
-			Expect(content).To(ContainSubstring(`if (/['"\\]|\$\(|\$\{|<</.test(command))`))
+			Expect(content).To(ContainSubstring(`if (/\$\(|\$\{|<</.test(command))`))
+			Expect(content).NotTo(ContainSubstring(`if (/['"\\]|\$\(|\$\{|<</.test(command))`))
 			Expect(content).To(ContainSubstring(`command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ")`))
 			Expect(content).To(ContainSubstring(`output.args.command = rewritten;`))
 		})

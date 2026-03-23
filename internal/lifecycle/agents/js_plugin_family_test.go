@@ -64,9 +64,10 @@ var _ = ginkgo.Describe("OpenCode JS plugin family", func() {
 	})
 
 	ginkgo.Describe("plugin content", func() {
-		ginkgo.It("uses the safe chained-rewrite flow", func() {
+		ginkgo.It("keeps ordinary quoted commands in the normal rewrite path", func() {
 			script := managedBashRewritePluginContent()
-			Expect(script).To(ContainSubstring(`if (/['"\\]|\$\(|\$\{|<</.test(command))`))
+			Expect(script).To(ContainSubstring(`if (/\$\(|\$\{|<</.test(command))`))
+			Expect(script).NotTo(ContainSubstring(`if (/['"\\]|\$\(|\$\{|<</.test(command))`))
 			Expect(script).To(ContainSubstring(`command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ")`))
 			Expect(script).To(ContainSubstring(`if (rewritten === command)`))
 			Expect(script).To(ContainSubstring(`output.args.command = rewritten;`))
