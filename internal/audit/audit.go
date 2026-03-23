@@ -42,7 +42,10 @@ func DefaultPath() (string, error) {
 func ConfigureDefault() error {
 	path, err := DefaultPath()
 	if err != nil {
-		return err
+		// Audit logging is best-effort only. CCP must preserve command execution even when
+		// the audit home cannot be resolved on a particular machine or runner.
+		disableLockedState()
+		return nil
 	}
 	return ConfigurePath(path, maxSizeMB, maxBackups)
 }
@@ -52,7 +55,10 @@ func ConfigurePath(path string, sizeMB int, backups int) error {
 	defer mu.Unlock()
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		// Do not turn audit-path permission problems into runtime failures. The caller may
+		// be executing a real command whose native semantics must remain unobstructed.
+		disableLockedState()
+		return nil
 	}
 
 	closeCurrentWriterLocked()
@@ -77,14 +83,23 @@ func Append(event string, fields map[string]any) error {
 	defer mu.Unlock()
 
 	if err := ensureConfiguredLocked(); err != nil {
-		return err
+		// Audit writes must never block command execution, verify, or lifecycle flows.
+		// If the log path is unavailable, we degrade to a no-op logger for this attempt.
+		disableLockedState()
+		return nil
 	}
 
 	record := slog.NewRecord(nowUTC(), slog.LevelInfo, event, 0)
 	for _, attr := range attrsFor(fields) {
 		record.AddAttrs(attr)
 	}
-	return currentHandler.Handle(context.Background(), record)
+	if err := currentHandler.Handle(context.Background(), record); err != nil {
+		// lumberjack opens the file lazily on first write, so permission failures can show
+		// up here even when ConfigureDefault succeeded earlier. Keep audit best-effort.
+		disableLockedState()
+		return nil
+	}
+	return nil
 }
 
 func newRollingWriter(path string, sizeMB int, backups int) *lumberjack.Logger {
@@ -118,10 +133,7 @@ func WithTestConfig(home string, sizeMB int, backups int) func() {
 	}
 	maxSizeMB = sizeMB
 	maxBackups = backups
-	closeCurrentWriterLocked()
-	currentLogger = nil
-	currentHandler = nil
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	disableLockedState()
 
 	return func() {
 		mu.Lock()
@@ -130,20 +142,14 @@ func WithTestConfig(home string, sizeMB int, backups int) func() {
 		nowUTC = prevNow
 		maxSizeMB = prevSize
 		maxBackups = prevBackups
-		closeCurrentWriterLocked()
-		currentLogger = nil
-		currentHandler = nil
-		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+		disableLockedState()
 	}
 }
 
 func Reset() {
 	mu.Lock()
 	defer mu.Unlock()
-	closeCurrentWriterLocked()
-	currentLogger = nil
-	currentHandler = nil
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	disableLockedState()
 }
 
 func ensureConfiguredLocked() error {
@@ -178,6 +184,13 @@ func closeCurrentWriterLocked() {
 		_ = currentWriter.Close()
 		currentWriter = nil
 	}
+}
+
+func disableLockedState() {
+	closeCurrentWriterLocked()
+	currentLogger = nil
+	currentHandler = nil
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
 }
 
 func attrsFor(fields map[string]any) []slog.Attr {

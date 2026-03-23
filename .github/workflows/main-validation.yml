@@ -96,6 +96,44 @@ jobs:
             cat .artifacts/coverage/summary.md >> "${GITHUB_STEP_SUMMARY}"
           fi
 
+  smoke-installed-binary:
+    name: Smoke Installed Binary / ${{ matrix.os }}
+    needs: [plan, validate]
+    if: needs.plan.outputs.run_validate == 'true' && needs.validate.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Build and install ccp into runner PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="${RUNNER_TEMP}/ccp-smoke-bin"
+          mkdir -p "$install_dir"
+          bin_path="$install_dir/ccp"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            bin_path="$install_dir/ccp.exe"
+          fi
+          go build -o "$bin_path" ./cmd/ccp
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Run installed binary smoke script
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash ./scripts/ci-smoke.sh
+
   benchmark-tool:
     name: Benchmark (informational) / ${{ matrix.tool }}
     needs: plan

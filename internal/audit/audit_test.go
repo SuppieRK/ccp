@@ -84,6 +84,20 @@ var _ = Describe("audit logging", func() {
 		}
 		Expect(rotated).To(BeNumerically("<=", 3))
 	})
+
+	It("degrades to no-op when the audit directory cannot be created", func() {
+		home := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(home, ".config"), []byte("block"), 0o644)).To(Succeed())
+		restore := WithTestConfig(home, 8, 7)
+		DeferCleanup(restore)
+		DeferCleanup(Reset)
+
+		Expect(ConfigureDefault()).To(Succeed())
+		Expect(Append("blocked", map[string]any{"ok": true})).To(Succeed())
+
+		_, err := os.Stat(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
+		Expect(err).To(HaveOccurred())
+	})
 })
 
 func cleanupAuditHome(home string) error {
