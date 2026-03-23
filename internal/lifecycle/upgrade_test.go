@@ -172,6 +172,19 @@ var _ = Describe("RunUpgrade", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(b)).To(Equal(newBinaryContent))
 		})
+
+		It("prints the upgraded asset and version", func() {
+			var printed string
+			prevPrintf := upgradePrintf
+			upgradePrintf = func(format string, args ...any) (int, error) {
+				printed = fmt.Sprintf(format, args...)
+				return len(printed), nil
+			}
+			DeferCleanup(func() { upgradePrintf = prevPrintf })
+
+			Expect(RunUpgrade(args)).To(Succeed())
+			Expect(printed).To(Equal(fmt.Sprintf("ccp upgrade: replaced %s with %s (%s)\n", dest, "ccp_1.2.3_linux_amd64.zip", "1.2.3")))
+		})
 	})
 
 	Context("when upgrading to a specific version", func() {
