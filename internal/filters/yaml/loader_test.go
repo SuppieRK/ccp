@@ -3,6 +3,7 @@ package yaml
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
@@ -62,7 +63,7 @@ var _ = Describe("LoadRegistryFiltersFromSources", func() {
 		auditHome, err = os.MkdirTemp("", "yaml-loader-audit-*")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
-			Expect(os.RemoveAll(auditHome)).To(Succeed())
+			Expect(cleanupAuditHome(auditHome)).To(Succeed())
 		})
 	})
 
@@ -246,3 +247,18 @@ var _ = Describe("ProjectRootFromSource", func() {
 		}
 	})
 })
+
+func cleanupAuditHome(home string) error {
+	audit.Reset()
+	auditDir := filepath.Join(home, ".config", "ccp", "audit")
+	var lastErr error
+	for range 10 {
+		if err := os.RemoveAll(auditDir); err == nil || os.IsNotExist(err) {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return lastErr
+}
