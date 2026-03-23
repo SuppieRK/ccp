@@ -73,15 +73,17 @@ var _ = Describe("workspace registry", func() {
 			return time.Date(2026, 3, 20, 12, 30, 0, 0, time.UTC)
 		})
 		DeferCleanup(restore)
+		registryPath, err := DefaultPath()
+		Expect(err).NotTo(HaveOccurred())
 
-		Expect(Upsert(filepath.Join(home, "repo"), filepath.Join(home, "repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(UpsertPath(registryPath, filepath.Join(home, "repo"), filepath.Join(home, "repo", ".ccp", "gain.db"))).To(Succeed())
 
-		entries, err := List()
+		entries, err := ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
 
-		Expect(Delete(filepath.Join(home, "repo"))).To(Succeed())
-		entries, err = List()
+		Expect(DeletePath(registryPath, filepath.Join(home, "repo"))).To(Succeed())
+		entries, err = ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(BeEmpty())
 

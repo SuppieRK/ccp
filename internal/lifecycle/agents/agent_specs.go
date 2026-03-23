@@ -47,7 +47,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetRelPath:  ".amazonq/rules/ccp.md",
 		MissingFmt:     "missing amazon q rule file: %s",
 		GuidanceFmt:    "missing amazon q managed guidance in %s",
-		Render:         amazonQRuleContent,
+		Render:         ccpManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -57,7 +57,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetRelPath:  ".clinerules/ccp.md",
 		MissingFmt:     "missing cline rule file: %s",
 		GuidanceFmt:    "missing cline managed guidance in %s",
-		Render:         clineRuleContent,
+		Render:         ccpManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -82,7 +82,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetRelPath:  ".roo/rules/ccp.md",
 		MissingFmt:     "missing roocode rule file: %s",
 		GuidanceFmt:    "missing roocode managed guidance in %s",
-		Render:         roocodeRuleContent,
+		Render:         ccpManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetHome,
 	},
@@ -92,7 +92,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetRelPath:  ".trae/rules/ccp.md",
 		MissingFmt:     "missing trae rule file: %s",
 		GuidanceFmt:    "missing trae managed guidance in %s",
-		Render:         traeRuleContent,
+		Render:         ccpManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -102,7 +102,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 		TargetRelPath:  ".windsurf/rules/ccp.md",
 		MissingFmt:     "missing windsurf rule file: %s",
 		GuidanceFmt:    "missing windsurf managed guidance in %s",
-		Render:         windsurfRuleContent,
+		Render:         ccpManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -329,12 +329,14 @@ var qwenContextLinkSpec = ManagedContextLinkAdapterSpec{
 }
 
 var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
-	ID:                  AgentCodeBuddy,
-	DetectRootPath:      ".codebuddy",
-	Root:                codebuddyRoot,
-	HookScriptName:      codebuddyHookScriptName,
-	SettingsName:        codebuddySettingsName,
-	HookContent:         codebuddyHookScriptContent,
+	ID:             AgentCodeBuddy,
+	DetectRootPath: ".codebuddy",
+	Root:           codebuddyRoot,
+	HookScriptName: codebuddyHookScriptName,
+	SettingsName:   codebuddySettingsName,
+	HookContent: func() string {
+		return bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")
+	},
 	PlanSettingsContent: preToolUseCommandSettingsContent,
 	UpsertSettings:      upsertCodeBuddySettings,
 	VerifySettings: func(settingsPath, hookPath string) error {
@@ -465,32 +467,12 @@ func newManagedRuleFileAdapterFromSpec(spec managedRuleFileAdapterSpec) Adapter 
 	}
 }
 
-func amazonQRuleContent() string {
-	return ccpManagedGuidanceMarkdown()
-}
-
-func clineRuleContent() string {
-	return ccpManagedGuidanceMarkdown()
-}
-
 func cursorRuleContent() string {
 	return "---\n" +
 		"description: Route shell commands through ccp\n" +
 		"alwaysApply: true\n" +
 		"---\n\n" +
 		ccpManagedGuidanceMarkdown()
-}
-
-func roocodeRuleContent() string {
-	return ccpManagedGuidanceMarkdown()
-}
-
-func traeRuleContent() string {
-	return ccpManagedGuidanceMarkdown()
-}
-
-func windsurfRuleContent() string {
-	return ccpManagedGuidanceMarkdown()
 }
 
 func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {

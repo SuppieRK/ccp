@@ -22,11 +22,11 @@ var _ = ginkgo.Describe("context link families", func() {
 					Expect(content).NotTo(ContainSubstring(needle))
 				}
 			},
-			ginkgo.Entry("amazon-q", amazonQRuleContent, []string{
+			ginkgo.Entry("amazon-q", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "description:", ccpManagedBlockStart}),
-			ginkgo.Entry("cline", clineRuleContent, []string{
+			ginkgo.Entry("cline", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
@@ -34,14 +34,14 @@ var _ = ginkgo.Describe("context link families", func() {
 				"alwaysApply: true",
 				"description: Route shell commands through ccp",
 			}, []string{ccpManagedBlockStart}),
-			ginkgo.Entry("roocode", roocodeRuleContent, []string{
+			ginkgo.Entry("roocode", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 			}, []string{ccpManagedBlockStart}),
-			ginkgo.Entry("trae", traeRuleContent, []string{
+			ginkgo.Entry("trae", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "trigger: always_on", ccpManagedBlockStart}),
-			ginkgo.Entry("windsurf", windsurfRuleContent, []string{
+			ginkgo.Entry("windsurf", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
 			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),

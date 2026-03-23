@@ -44,21 +44,17 @@ func (a ManagedContextLinkAdapter) Detect(scopeRoot string) bool {
 	return err == nil
 }
 
-func (a ManagedContextLinkAdapter) contextAdapter() ManagedContextAdapter {
-	return NewManagedContextAdapter(a.spec.ContextSpec)
-}
-
 func (a ManagedContextLinkAdapter) Plan(ctx Context) []PlannedArtifact {
 	return append([]PlannedArtifact{{
 		Kind:    ArtifactSettings,
 		Path:    a.spec.ConfigPath(ctx),
 		Content: a.spec.ConfigPlanContent(ctx),
 		Perm:    0o644,
-	}}, a.contextAdapter().Plan(ctx)...)
+	}}, NewManagedContextAdapter(a.spec.ContextSpec).Plan(ctx)...)
 }
 
 func (a ManagedContextLinkAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
-	res, err := a.contextAdapter().Install(ctx, write)
+	res, err := NewManagedContextAdapter(a.spec.ContextSpec).Install(ctx, write)
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -75,14 +71,14 @@ func (a ManagedContextLinkAdapter) Install(ctx Context, write WriterFunc) (Insta
 }
 
 func (a ManagedContextLinkAdapter) Verify(ctx Context) error {
-	if err := a.contextAdapter().Verify(ctx); err != nil {
+	if err := NewManagedContextAdapter(a.spec.ContextSpec).Verify(ctx); err != nil {
 		return err
 	}
 	return a.spec.VerifyConfig(a.spec.ConfigPath(ctx), ctx)
 }
 
 func (a ManagedContextLinkAdapter) Uninstall(ctx Context) (InstallResult, error) {
-	res, err := a.contextAdapter().Uninstall(ctx)
+	res, err := NewManagedContextAdapter(a.spec.ContextSpec).Uninstall(ctx)
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -128,16 +124,12 @@ func (a ManagedHookSettingsAdapter) DetectRoot(scopeRoot string) string {
 	return filepath.Join(scopeRoot, a.spec.DetectRootPath)
 }
 
-func (a ManagedHookSettingsAdapter) root(ctx Context) string {
-	return a.spec.Root(ctx)
-}
-
 func (a ManagedHookSettingsAdapter) hookPath(ctx Context) string {
-	return filepath.Join(a.root(ctx), "hooks", a.spec.HookScriptName)
+	return filepath.Join(a.spec.Root(ctx), "hooks", a.spec.HookScriptName)
 }
 
 func (a ManagedHookSettingsAdapter) settingsPath(ctx Context) string {
-	return filepath.Join(a.root(ctx), a.spec.SettingsName)
+	return filepath.Join(a.spec.Root(ctx), a.spec.SettingsName)
 }
 
 func (a ManagedHookSettingsAdapter) Plan(ctx Context) []PlannedArtifact {

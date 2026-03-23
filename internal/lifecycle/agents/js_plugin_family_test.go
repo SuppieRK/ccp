@@ -20,7 +20,7 @@ var _ = ginkgo.Describe("OpenCode JS plugin family", func() {
 		tmpDir = ginkgo.GinkgoT().TempDir()
 		home = filepath.Join(tmpDir, "home")
 		ctx = Context{ScopeRoot: tmpDir, HomeDir: home}
-		adapter = NewOpenCodeAdapter()
+		adapter = NewManagedJSPluginAdapter(openCodeJSPluginSpec)
 	})
 
 	ginkgo.Describe("adapter lifecycle", func() {
@@ -59,7 +59,7 @@ var _ = ginkgo.Describe("OpenCode JS plugin family", func() {
 			Expect(os.MkdirAll(filepath.Dir(pluginPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(pluginPath, []byte("export default {}"), 0o644)).To(Succeed())
 
-			Expect(NewOpenCodeAdapter().Verify(ctx)).To(HaveOccurred())
+			Expect(NewManagedJSPluginAdapter(openCodeJSPluginSpec).Verify(ctx)).To(HaveOccurred())
 		})
 	})
 

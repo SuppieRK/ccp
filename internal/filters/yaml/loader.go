@@ -166,10 +166,10 @@ func readMappingsFile(path string) (map[string]string, error) {
 	dec.KnownFields(true)
 	var payload mappingsFile
 	if err := dec.Decode(&payload); err != nil {
-		return nil, fmt.Errorf("decode mappings %q: %w", path, err)
+		return nil, fmt.Errorf("decode mappings %s: %w", path, err)
 	}
 	if payload.Version != 1 {
-		return nil, fmt.Errorf("decode mappings %q: version must be exactly 1", path)
+		return nil, fmt.Errorf("decode mappings %s: version must be exactly 1", path)
 	}
 	if payload.Map == nil {
 		return map[string]string{}, nil
@@ -179,7 +179,7 @@ func readMappingsFile(path string) (map[string]string, error) {
 		alias = strings.TrimSpace(alias)
 		target = strings.TrimSpace(target)
 		if alias == "" || target == "" {
-			return nil, fmt.Errorf("decode mappings %q: mapping keys and values must be non-empty", path)
+			return nil, fmt.Errorf("decode mappings %s: mapping keys and values must be non-empty", path)
 		}
 		out[alias] = target
 	}
@@ -196,7 +196,7 @@ func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
 	for _, p := range paths {
 		raw, err := os.ReadFile(p)
 		if err != nil {
-			return nil, fmt.Errorf("read filter %q: %w", p, err)
+			return nil, fmt.Errorf("read filter %s: %w", p, err)
 		}
 		spec, err := ParseDefinition(raw)
 		if err != nil {
@@ -213,11 +213,15 @@ func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
 }
 
 func matchedFilterFiles(root string) ([]string, error) {
-	if _, err := os.Stat(root); err != nil {
+	info, err := os.Stat(root)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("read filters %s: not a directory", root)
 	}
 
 	entries, err := os.ReadDir(root)

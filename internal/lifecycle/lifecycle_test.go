@@ -69,7 +69,7 @@ var _ = Describe("Lifecycle helpers", func() {
 
 		withWorkingDir(tmp)
 
-		root, err := initDetectRoot()
+		root, err := os.Getwd()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resolvedPath(root)).To(Equal(resolvedPath(tmp)))
 	})
@@ -80,15 +80,15 @@ var _ = Describe("Lifecycle helpers", func() {
 		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
 
 		path := filepath.Join(tmp, "cfg", "managed.txt")
-		changed, err := writeManagedFile(path, []byte("v1\n"), 0o644)
+		changed, err := writeManagedBytes(path, []byte("v1\n"), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 
-		changed, err = writeManagedFile(path, []byte("v1\n"), 0o644)
+		changed, err = writeManagedBytes(path, []byte("v1\n"), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeFalse())
 
-		changed, err = writeManagedFile(path, []byte("v2\n"), 0o644)
+		changed, err = writeManagedBytes(path, []byte("v2\n"), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 
@@ -112,7 +112,7 @@ var _ = Describe("Lifecycle helpers", func() {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		changed, err := writeManagedFile(filepath.Join(linkDir, "managed.txt"), []byte("overwrite\n"), 0o644)
+		changed, err := writeManagedBytes(filepath.Join(linkDir, "managed.txt"), []byte("overwrite\n"), 0o644)
 		Expect(err).To(HaveOccurred())
 		Expect(changed).To(BeFalse())
 

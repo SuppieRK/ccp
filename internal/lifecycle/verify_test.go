@@ -27,10 +27,6 @@ type stubVerifyRunner struct {
 	err         error
 }
 
-func (s *stubVerifyRunner) Replay(args []string, events []replay.Event) (core.ReplayResult, error) {
-	return s.ReplayWithExitCode(args, events, 0)
-}
-
 func (s *stubVerifyRunner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error) {
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)

@@ -49,7 +49,7 @@ func runToolScopedUninstall(tools []string, adapters map[string]agents.Adapter) 
 	if err := agents.ValidateSelectedTools(tools, adapters); err != nil {
 		return err
 	}
-	scopeRoot, err := initDetectRoot()
+	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func runToolScopedUninstall(tools []string, adapters map[string]agents.Adapter) 
 }
 
 func runCompleteUninstall(adapters map[string]agents.Adapter) error {
-	scopeRoot, err := initDetectRoot()
+	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return err
 	}

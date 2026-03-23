@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 		existing := "# Team rules\n\nBe deliberate.\n"
 		Expect(os.WriteFile(guide, []byte(existing+claudeManagedGuideBlock()), 0o644)).To(Succeed())
 
-		out, changed, removeAll, err := removeClaudeGuideBlock(guide)
+		out, changed, removeAll, err := removeManagedContextBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 		Expect(removeAll).To(BeFalse())
@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 	ginkgo.It("can delete a fully managed guide file", func() {
 		Expect(os.WriteFile(guide, []byte(claudeManagedGuideBlock()), 0o644)).To(Succeed())
 
-		_, changed, removeAll, err := removeClaudeGuideBlock(guide)
+		_, changed, removeAll, err := removeManagedContextBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 		Expect(removeAll).To(BeTrue())
@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 
 var _ = ginkgo.Describe("Claude hook script content", func() {
 	ginkgo.It("contains the expected runtime guards and payload flow", func() {
-		script := claudeHookScriptContent()
+		script := bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")
 		Expect(script).NotTo(ContainSubstring("command -v jq"))
 		Expect(script).To(ContainSubstring(`command -v ccp`))
 		Expect(script).To(ContainSubstring(`LOG_FILE="${TMPDIR:-/tmp}/ccp-claude-hook.log"`))
@@ -372,7 +372,7 @@ var _ = ginkgo.Describe("Claude artifact installation helpers", func() {
 })
 
 func runClaudeHookScriptSpec(input string, withCCP bool) (string, string) {
-	result := runHookScript(ginkgo.GinkgoT(), "ccp-rewrite.sh", "ccp-claude-hook.log", claudeHookScriptContent(), input, withCCP)
+	result := runHookScript(ginkgo.GinkgoT(), "ccp-rewrite.sh", "ccp-claude-hook.log", bashRewriteHookScriptContent("claude", "ccp-claude-hook.log"), input, withCCP)
 	Expect(result.exitCode).To(Equal(0), result.stderr)
 	return result.stdout, result.log
 }

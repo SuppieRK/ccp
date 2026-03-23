@@ -28,6 +28,7 @@ const (
 var (
 	upgradeExecutablePath = os.Executable
 	upgradeReplaceBinary  = replaceBinary
+	upgradePrintf         = fmt.Printf
 	upgradeHTTPClient     = &http.Client{Timeout: 30 * time.Second}
 	upgradeRuntimeOS      = func() string { return runtime.GOOS }
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
@@ -138,7 +139,7 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err := upgradeRunRepair(exePath, repairMode); err != nil {
 		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", err, repairMode.flag())
 	}
-	return nil
+	return printUpgradeSuccess(exePath, assetName, tag)
 }
 
 func ensureUpgradeExecutablePermissions(exePath string) error {
@@ -146,6 +147,11 @@ func ensureUpgradeExecutablePermissions(exePath string) error {
 		return nil
 	}
 	return os.Chmod(exePath, 0o755)
+}
+
+func printUpgradeSuccess(exePath, assetName, tag string) error {
+	_, err := upgradePrintf("ccp upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag)
+	return err
 }
 
 func selectedUpgradeRepairMode(currentVersion string) repairMode {

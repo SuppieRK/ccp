@@ -101,10 +101,6 @@ func managedJSPluginConfigRoot(ctx Context, configDirName string) string {
 	return filepath.Join(ctx.ScopeRoot, "."+configDirName)
 }
 
-func NewOpenCodeAdapter() ManagedJSPluginAdapter {
-	return NewManagedJSPluginAdapter(openCodeJSPluginSpec)
-}
-
 func managedBashRewritePluginContent() string {
 	return `export default async function ccpRewritePlugin() {
   return {

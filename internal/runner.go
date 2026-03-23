@@ -3,6 +3,7 @@ package core
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -28,11 +29,13 @@ import (
 type Options struct {
 	Raw          bool
 	Confidential []string
+	Context      context.Context
 	MetricsPath  string
 }
 
 type Runner struct {
 	sources     []corefilters.FilterSource
+	ctx         context.Context
 	metricsPath string
 	workingDir  string
 	opts        Options
@@ -51,10 +54,6 @@ type redactingWriter struct {
 	buf          []byte
 }
 
-func NewRunner() *Runner {
-	return NewRunnerWithOptions(Options{})
-}
-
 func NewRunnerWithOptions(opts Options) *Runner {
 	metricsPath := opts.MetricsPath
 	if strings.TrimSpace(metricsPath) == "" {
@@ -62,6 +61,7 @@ func NewRunnerWithOptions(opts Options) *Runner {
 	}
 	return &Runner{
 		sources:     defaultFilterSources(),
+		ctx:         opts.Context,
 		metricsPath: metricsPath,
 		workingDir:  currentWorkingDir(),
 		opts:        opts,
@@ -69,12 +69,15 @@ func NewRunnerWithOptions(opts Options) *Runner {
 }
 
 func (r *Runner) Run(args []string) (int, error) {
+	ctx, stop := runnerContext(r.ctx)
+	defer stop()
+
 	command, err := ParseCommandArgs(args)
 	if err != nil {
 		return 2, err
 	}
 	if r.opts.Raw {
-		return r.runRaw(command, args)
+		return r.runRaw(ctx, command, args)
 	}
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
@@ -108,7 +111,7 @@ func (r *Runner) Run(args []string) (int, error) {
 	}
 	command.Dispatch = resolved.Dispatch(command)
 	state := engine.NewEngine(registry).Start(command)
-	cmd, stdout, stderr, err := commandWithPipes(command.Args[0], command.Args[1:])
+	cmd, stdout, stderr, err := CommandWithPipesContext(ctx, command.Args[0], command.Args[1:])
 	if err != nil {
 		return 1, err
 	}
@@ -136,6 +139,9 @@ func (r *Runner) Run(args []string) (int, error) {
 	exitCode, err := waitExitCode(cmd)
 	exitWritten, exitWriteErr := r.writeEntries(state.Exit(exitCode))
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr, exitWriteErr)
+	if ctx.Err() != nil {
+		return 1, errors.Join(ctx.Err(), outputErr)
+	}
 	if err != nil {
 		return 1, errors.Join(err, outputErr)
 	}
@@ -167,7 +173,7 @@ func (r *Runner) Run(args []string) (int, error) {
 	return exitCode, nil
 }
 
-func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
+func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []string) (int, error) {
 	startedAt := time.Now().UTC()
 	shape := cli.DescribeExecutionShape(args)
 	auditCommand := r.auditCommand(command.RawInput)
@@ -185,7 +191,7 @@ func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 		return 1, err
 	}
 
-	cmd, stdout, stderr, err := commandWithPipes(command.Args[0], command.Args[1:])
+	cmd, stdout, stderr, err := CommandWithPipesContext(ctx, command.Args[0], command.Args[1:])
 	if err != nil {
 		return 1, err
 	}
@@ -210,6 +216,9 @@ func (r *Runner) runRaw(command contracts.Command, args []string) (int, error) {
 
 	exitCode, err := waitExitCode(cmd)
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr)
+	if ctx.Err() != nil {
+		return 1, errors.Join(ctx.Err(), outputErr)
+	}
 	auditErr := audit.Append("execution_finish", map[string]any{
 		"command":     auditCommand,
 		"tool":        command.Tool,
@@ -237,15 +246,11 @@ func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error)
 	if err != nil {
 		return "", err
 	}
-	result, err := r.Replay(args, events)
+	result, err := r.ReplayWithExitCode(args, events, 0)
 	if err != nil {
 		return "", err
 	}
 	return result.Output, nil
-}
-
-func (r *Runner) Replay(args []string, events []replay.Event) (ReplayResult, error) {
-	return r.ReplayWithExitCode(args, events, 0)
 }
 
 func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (ReplayResult, error) {
@@ -471,10 +476,6 @@ func (r *Runner) recordSinkResult(stats *streamStats, written int, err error, si
 	}
 }
 
-func (r *Runner) copyStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats) error {
-	return r.drainStream(src, consume, stats, r.writeEntries)
-}
-
 func (r *Runner) writeEntries(entries []engine.BufferEntry) (int, error) {
 	written := 0
 	for _, entry := range entries {
@@ -558,21 +559,6 @@ func splitDecisionLines(line string) []string {
 	}
 	return parts
 }
-func commandWithPipes(name string, args []string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
-	cmd := exec.Command(name, args...)
-	cmd.Stdin = os.Stdin
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		_ = stdout.Close()
-		return nil, nil, nil, err
-	}
-	return cmd, stdout, stderr, nil
-}
-
 func closePipes(stdout, stderr io.ReadCloser) {
 	if stdout != nil {
 		_ = stdout.Close()
@@ -624,7 +610,11 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 	if strings.TrimSpace(r.workingDir) == "" {
 		return
 	}
-	_ = workspaces.Upsert(r.workingDir, r.metricsPath)
+	path, err := workspaces.DefaultPath()
+	if err != nil {
+		return
+	}
+	_ = workspaces.UpsertPath(path, r.workingDir, r.metricsPath)
 }
 
 func shouldRecordMetrics(command contracts.Command) bool {

@@ -18,7 +18,7 @@ var _ = Describe("replay fixtures", func() {
 		It("writes and reads flow-style argv", func() {
 			path := filepath.Join(GinkgoT().TempDir(), CommandFileName)
 
-			Expect(WriteCommand(path, []string{"grep", "-r", "-n", "needle", "./internal"})).To(Succeed())
+			Expect(WriteCommandWithExitCode(path, []string{"grep", "-r", "-n", "needle", "./internal"}, 0)).To(Succeed())
 
 			body, err := os.ReadFile(path)
 			Expect(err).NotTo(HaveOccurred())
@@ -194,7 +194,7 @@ var _ = Describe("replay fixtures", func() {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		err := WriteCommand(link, []string{"git", "status"})
+		err := WriteCommandWithExitCode(link, []string{"git", "status"}, 0)
 
 		Expect(err).To(HaveOccurred())
 		body, readErr := os.ReadFile(target)

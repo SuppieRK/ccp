@@ -279,7 +279,3 @@ func codebuddyPreToolUseContains(pre []any, hookPath string) bool {
 	}
 	return false
 }
-
-func codebuddyHookScriptContent() string {
-	return bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")
-}

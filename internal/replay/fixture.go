@@ -62,10 +62,6 @@ func FixturePaths(dir string) map[string]string {
 	}
 }
 
-func WriteCommand(path string, args []string) error {
-	return WriteCommandWithExitCode(path, args, 0)
-}
-
 func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
 	root := yaml.Node{
 		Kind: yaml.MappingNode,
