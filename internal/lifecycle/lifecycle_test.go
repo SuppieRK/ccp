@@ -96,6 +96,30 @@ var _ = Describe("Lifecycle helpers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(matches).To(BeEmpty())
 	})
+
+	It("refuses to overwrite managed files through symlinked paths", func() {
+		tmp, err := os.MkdirTemp("", "lifecycle-managed-symlink-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
+
+		outsideDir := filepath.Join(tmp, "outside")
+		Expect(os.MkdirAll(outsideDir, 0o755)).To(Succeed())
+		outsideFile := filepath.Join(outsideDir, "managed.txt")
+		Expect(os.WriteFile(outsideFile, []byte("keep me\n"), 0o644)).To(Succeed())
+
+		linkDir := filepath.Join(tmp, "cfg")
+		if err := os.Symlink(outsideDir, linkDir); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		changed, err := writeManagedFile(filepath.Join(linkDir, "managed.txt"), []byte("overwrite\n"), 0o644)
+		Expect(err).To(HaveOccurred())
+		Expect(changed).To(BeFalse())
+
+		body, readErr := os.ReadFile(outsideFile)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me\n"))
+	})
 })
 
 var _ = Describe("Adapter application", func() {

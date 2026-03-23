@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"go-command-compression-proxy/internal/contracts"
+	"go-command-compression-proxy/internal/projectfiles"
 
 	"gopkg.in/yaml.v3"
 )
@@ -138,34 +139,10 @@ func WriteSequenced(path string, events []Event) error {
 }
 
 func WriteArtifact(path string, body []byte, perm os.FileMode) error {
-	if err := rejectSymlinkPath(path); err != nil {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
 		return err
 	}
 	return os.WriteFile(path, body, perm)
-}
-
-func rejectSymlinkPath(path string) error {
-	resolved, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("resolve artifact path: %w", err)
-	}
-	for current := resolved; ; current = filepath.Dir(current) {
-		info, err := os.Lstat(current)
-		if err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("refuse to use symlink path component %q", current)
-			}
-			if info.IsDir() {
-				return nil
-			}
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return nil
-		}
-	}
 }
 
 func WriteSequencedEvents(path string, events []Event, stream contracts.Stream) error {

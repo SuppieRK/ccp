@@ -187,7 +187,10 @@ func persistJSONSettings(settingsPath string, root map[string]any) (bool, error)
 		return false, err
 	}
 	out = append(out, '\n')
-	return true, os.WriteFile(settingsPath, out, 0o644)
+	if err := writeManagedArtifact(settingsPath, out, 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 const (

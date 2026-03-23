@@ -202,14 +202,5 @@ func (a ManagedContextFileAdapter) Uninstall(ctx Context) (InstallResult, error)
 	if !changed {
 		return InstallResult{Noop: 1}, nil
 	}
-	if removeAll {
-		if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
-			return InstallResult{}, err
-		}
-		return InstallResult{Applied: 1}, nil
-	}
-	if err := os.WriteFile(target, []byte(updated), 0o644); err != nil {
-		return InstallResult{}, err
-	}
-	return InstallResult{Applied: 1}, nil
+	return applyManagedFileChange(target, updated, changed, removeAll)
 }

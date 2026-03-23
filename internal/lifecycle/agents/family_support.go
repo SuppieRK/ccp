@@ -1,6 +1,9 @@
 package agents
 
-import "os"
+import (
+	"go-command-compression-proxy/internal/projectfiles"
+	"os"
+)
 
 func updateInstallResult(res *InstallResult, changed bool) {
 	if changed {
@@ -10,17 +13,28 @@ func updateInstallResult(res *InstallResult, changed bool) {
 	res.Noop++
 }
 
+func writeManagedArtifact(path string, body []byte, perm os.FileMode) error {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+		return err
+	}
+	return os.WriteFile(path, body, perm)
+}
+
 func applyManagedFileChange(path, updated string, changed bool, removeAll bool) (InstallResult, error) {
 	if !changed {
 		return InstallResult{Noop: 1}, nil
 	}
 	if removeAll {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		removed, err := removeFileIfExists(path)
+		if err != nil {
 			return InstallResult{}, err
+		}
+		if !removed {
+			return InstallResult{Noop: 1}, nil
 		}
 		return InstallResult{Applied: 1}, nil
 	}
-	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+	if err := writeManagedArtifact(path, []byte(updated), 0o644); err != nil {
 		return InstallResult{}, err
 	}
 	return InstallResult{Applied: 1}, nil
