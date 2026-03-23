@@ -19,7 +19,7 @@ func runnerContext(parent context.Context) (context.Context, context.CancelFunc)
 	if parent != nil {
 		return context.WithCancel(parent)
 	}
-	return DefaultExecutionContext(context.Background())
+	return DefaultExecutionContext(parent)
 }
 
 func CommandWithPipesContext(ctx context.Context, name string, args []string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {

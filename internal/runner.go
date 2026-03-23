@@ -29,13 +29,11 @@ import (
 type Options struct {
 	Raw          bool
 	Confidential []string
-	Context      context.Context
 	MetricsPath  string
 }
 
 type Runner struct {
 	sources     []corefilters.FilterSource
-	ctx         context.Context
 	metricsPath string
 	workingDir  string
 	opts        Options
@@ -61,7 +59,6 @@ func NewRunnerWithOptions(opts Options) *Runner {
 	}
 	return &Runner{
 		sources:     defaultFilterSources(),
-		ctx:         opts.Context,
 		metricsPath: metricsPath,
 		workingDir:  currentWorkingDir(),
 		opts:        opts,
@@ -69,7 +66,19 @@ func NewRunnerWithOptions(opts Options) *Runner {
 }
 
 func (r *Runner) Run(args []string) (int, error) {
-	ctx, stop := runnerContext(r.ctx)
+	var parent context.Context
+	return r.run(parent, args)
+}
+
+func (r *Runner) RunContext(parent context.Context, args []string) (int, error) {
+	if parent == nil {
+		return r.Run(args)
+	}
+	return r.run(parent, args)
+}
+
+func (r *Runner) run(parent context.Context, args []string) (int, error) {
+	ctx, stop := runnerContext(parent)
 	defer stop()
 
 	command, err := ParseCommandArgs(args)
