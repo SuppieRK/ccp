@@ -39,14 +39,6 @@ func PathForHome(home string) string {
 	return filepath.Join(home, ".config", "ccp", "workspaces.db")
 }
 
-func Upsert(cwd, metricsPath string) error {
-	path, err := DefaultPath()
-	if err != nil {
-		return err
-	}
-	return UpsertPath(path, cwd, metricsPath)
-}
-
 func UpsertPath(path, cwd, metricsPath string) (err error) {
 	normalized, ok, err := normalizeUpsertPathInput(path, cwd, metricsPath)
 	if err != nil || !ok {
@@ -127,14 +119,6 @@ func mergedWorkspaceEntry(raw []byte, normalized normalizedWorkspaceInput, times
 	return entry, nil
 }
 
-func List() ([]Workspace, error) {
-	path, err := DefaultPath()
-	if err != nil {
-		return nil, err
-	}
-	return ListPath(path)
-}
-
 func ListPath(path string) (entries []Workspace, err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, nil
@@ -172,14 +156,6 @@ func ListPath(path string) (entries []Workspace, err error) {
 		return out[i].CWD < out[j].CWD
 	})
 	return out, nil
-}
-
-func Delete(cwd string) error {
-	path, err := DefaultPath()
-	if err != nil {
-		return err
-	}
-	return DeletePath(path, cwd)
 }
 
 func DeletePath(path, cwd string) (err error) {

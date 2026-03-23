@@ -217,7 +217,7 @@ var _ = Describe("RunGain", func() {
 			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
 			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
-			Expect(workspaces.Upsert(corruptRepo, corruptMetricsPath)).To(Succeed())
+			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), corruptRepo, corruptMetricsPath)).To(Succeed())
 
 			var stdout string
 			stderr, err := captureStderrOutput(func() error {
@@ -718,7 +718,7 @@ var _ = Describe("RunHistory", func() {
 			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
 			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
-			Expect(workspaces.Upsert(corruptRepo, corruptMetricsPath)).To(Succeed())
+			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), corruptRepo, corruptMetricsPath)).To(Succeed())
 
 			var stdout string
 			stderr, err := captureStderrOutput(func() error {

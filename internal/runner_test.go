@@ -57,192 +57,229 @@ var _ = Describe("Runner", func() {
 		_ = stderrWriter.Close()
 	})
 
-	It("uses default filter sources when none are provided", func() {
-		runner := NewRunner()
-		Expect(runner).NotTo(BeNil())
-		Expect(runner.sources).To(Equal(defaultFilterSources()))
-	})
-
-	It("uses repository filters by default in dev builds", func() {
-		oldVersion := version.Version
-		version.Version = "dev"
-		DeferCleanup(func() {
-			version.Version = oldVersion
+	Context("when constructing default runner state", func() {
+		It("uses default filter sources when none are provided", func() {
+			runner := NewRunnerWithOptions(Options{})
+			Expect(runner).NotTo(BeNil())
+			Expect(runner.sources).To(Equal(defaultFilterSources()))
 		})
 
-		sources := defaultFilterSources()
-
-		Expect(sources).To(HaveLen(1))
-		Expect(sources[0]).To(Equal(corefilters.RepositorySource(filteryaml.ProjectRootFromSource())))
-	})
-
-	It("uses project and home filters by default in non-dev builds", func() {
-		oldVersion := version.Version
-		version.Version = "1.2.3"
-		DeferCleanup(func() {
-			version.Version = oldVersion
-		})
-
-		sources := defaultFilterSources()
-
-		Expect(sources).To(HaveLen(2))
-		Expect(sources[0].Kind).To(Equal(corefilters.SourceProject))
-		Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".ccp", "filters")))
-		Expect(sources[1].Kind).To(Equal(corefilters.SourceHome))
-		Expect(sources[1].Directory).To(HaveSuffix(filepath.Join(".config", "ccp", "filters")))
-	})
-
-	It("fails when no command is provided", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-
-		code, err := runner.Run(nil)
-
-		Expect(code).To(Equal(2))
-		Expect(err).To(MatchError("no command provided"))
-	})
-
-	It("returns command start errors with shell-not-found exit semantics", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-
-		code, err := runner.Run([]string{"__ccp_missing_binary__"})
-
-		Expect(code).To(Equal(127))
-		Expect(err).To(HaveOccurred())
-	})
-
-	It("routes direct emitted entries to the correct streams", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-
-		_, err := runner.writeEntries([]engine.BufferEntry{
-			{Stream: contracts.StreamStdout, Line: "out-1\n"},
-			{Stream: contracts.StreamStderr, Line: "err-1\n"},
-			{Stream: contracts.StreamStdout, Line: "out-2\n"},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("out-1\nout-2\n"))
-		Expect(closeAndRead(stderrReader, stderrWriter)).To(Equal("err-1\n"))
-	})
-
-	Context("when downstream output cannot be written", func() {
-		It("surfaces filtered stdout write failures instead of reporting success", func() {
-			if runtime.GOOS == "windows" {
-				Skip("uses unix sh")
-			}
-
-			brokenStdout, err := os.CreateTemp("", "core-runner-broken-stdout-*")
-			Expect(err).NotTo(HaveOccurred())
-			brokenStdoutPath := brokenStdout.Name()
+		It("uses repository filters by default in dev builds", func() {
+			oldVersion := version.Version
+			version.Version = "dev"
 			DeferCleanup(func() {
-				Expect(os.Remove(brokenStdoutPath)).To(Succeed())
-			})
-			Expect(brokenStdout.Close()).To(Succeed())
-			os.Stdout = brokenStdout
-
-			repoRoot, err := os.MkdirTemp("", "core-runner-write-failure-*")
-			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(func() {
-				Expect(os.RemoveAll(repoRoot)).To(Succeed())
+				version.Version = oldVersion
 			})
 
-			runner := &Runner{
-				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
-			}
+			sources := defaultFilterSources()
 
-			code, err := runner.Run([]string{"sh", "-c", "printf 'hello from ccp\\n'"})
+			Expect(sources).To(HaveLen(1))
+			Expect(sources[0]).To(Equal(corefilters.RepositorySource(filteryaml.ProjectRootFromSource())))
+		})
 
+		It("uses project and home filters by default in non-dev builds", func() {
+			oldVersion := version.Version
+			version.Version = "1.2.3"
+			DeferCleanup(func() {
+				version.Version = oldVersion
+			})
+
+			sources := defaultFilterSources()
+
+			Expect(sources).To(HaveLen(2))
+			Expect(sources[0].Kind).To(Equal(corefilters.SourceProject))
+			Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".ccp", "filters")))
+			Expect(sources[1].Kind).To(Equal(corefilters.SourceHome))
+			Expect(sources[1].Directory).To(HaveSuffix(filepath.Join(".config", "ccp", "filters")))
+		})
+
+		It("leaves default filter sources and metrics path unset when os.Getwd fails", func() {
+			oldVersion := version.Version
+			version.Version = "1.2.3"
+			DeferCleanup(func() { version.Version = oldVersion })
+
+			withUnavailableWorkingDirectory(func() {
+				cwd, err := os.Getwd()
+				if err == nil || cwd != "" {
+					Skip("platform keeps reporting a working directory after removal")
+				}
+
+				Expect(defaultFilterSources()).To(BeNil())
+				Expect(defaultMetricsPath()).To(BeEmpty())
+				Expect(currentWorkingDir()).To(BeEmpty())
+
+				runner := NewRunnerWithOptions(Options{})
+				Expect(runner.metricsPath).To(BeEmpty())
+				Expect(runner.workingDir).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("when starting execution", func() {
+		It("fails when no command is provided", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+
+			code, err := runner.Run(nil)
+
+			Expect(code).To(Equal(2))
+			Expect(err).To(MatchError("no command provided"))
+		})
+
+		It("returns command start errors with shell-not-found exit semantics", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+
+			code, err := runner.Run([]string{"__ccp_missing_binary__"})
+
+			Expect(code).To(Equal(127))
 			Expect(err).To(HaveOccurred())
-			Expect(code).NotTo(Equal(0))
 		})
 
-		It("surfaces raw-mode flush failures instead of reporting success", func() {
-			if runtime.GOOS == "windows" {
-				Skip("uses unix sh")
+		It("routes direct emitted entries to the correct streams", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+
+			_, err := runner.writeEntries([]engine.BufferEntry{
+				{Stream: contracts.StreamStdout, Line: "out-1\n"},
+				{Stream: contracts.StreamStderr, Line: "err-1\n"},
+				{Stream: contracts.StreamStdout, Line: "out-2\n"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("out-1\nout-2\n"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(Equal("err-1\n"))
+		})
+
+		Context("when downstream output cannot be written", func() {
+			It("returns an error when writing filtered stdout fails", func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix sh")
+				}
+
+				brokenStdout, err := os.CreateTemp("", "core-runner-broken-stdout-*")
+				Expect(err).NotTo(HaveOccurred())
+				brokenStdoutPath := brokenStdout.Name()
+				DeferCleanup(func() {
+					Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+				})
+				Expect(brokenStdout.Close()).To(Succeed())
+				os.Stdout = brokenStdout
+
+				repoRoot, err := os.MkdirTemp("", "core-runner-write-failure-*")
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(func() {
+					Expect(os.RemoveAll(repoRoot)).To(Succeed())
+				})
+
+				runner := &Runner{
+					sources:     []corefilters.FilterSource{},
+					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+				}
+
+				code, err := runner.Run([]string{"sh", "-c", "printf 'hello from ccp\\n'"})
+
+				Expect(err).To(HaveOccurred())
+				Expect(code).NotTo(Equal(0))
+			})
+
+			It("returns an error when raw-mode flush fails", func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix sh")
+				}
+
+				brokenStdout, err := os.CreateTemp("", "core-runner-broken-raw-stdout-*")
+				Expect(err).NotTo(HaveOccurred())
+				brokenStdoutPath := brokenStdout.Name()
+				DeferCleanup(func() {
+					Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+				})
+				Expect(brokenStdout.Close()).To(Succeed())
+				os.Stdout = brokenStdout
+
+				runner := NewRunnerWithOptions(Options{
+					Raw:          true,
+					Confidential: []string{"secret"},
+				})
+
+				code, err := runner.Run([]string{"sh", "-c", "printf 'secret-without-newline'"})
+
+				Expect(err).To(HaveOccurred())
+				Expect(code).NotTo(Equal(0))
+			})
+		})
+	})
+
+	Context("when draining streams", func() {
+		It("copies a trailing filtered line before surfacing a non-EOF read error", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+			src := &errorAfterLineReader{
+				line: "tail-without-newline",
+				err:  errors.New("boom"),
+			}
+			stats := &streamStats{}
+
+			err := runner.drainStream(src, func(line string) []engine.BufferEntry {
+				return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
+			}, stats, runner.writeEntries)
+			Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
+
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("tail-without-newline"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+			Expect(stats.rawBytes).To(Equal(len("tail-without-newline")))
+			Expect(stats.keptBytes).To(Equal(len("tail-without-newline")))
+		})
+
+		It("copies a trailing raw line before surfacing a non-EOF read error", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+			src := &errorAfterLineReader{
+				line: "raw-tail-without-newline",
+				err:  errors.New("boom"),
 			}
 
-			brokenStdout, err := os.CreateTemp("", "core-runner-broken-raw-stdout-*")
-			Expect(err).NotTo(HaveOccurred())
-			brokenStdoutPath := brokenStdout.Name()
-			DeferCleanup(func() {
-				Expect(os.Remove(brokenStdoutPath)).To(Succeed())
-			})
-			Expect(brokenStdout.Close()).To(Succeed())
-			os.Stdout = brokenStdout
+			err := runner.copyRawStream(src, stdoutWriter)
+			Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
 
-			runner := NewRunnerWithOptions(Options{
-				Raw:          true,
-				Confidential: []string{"secret"},
-			})
-
-			code, err := runner.Run([]string{"sh", "-c", "printf 'secret-without-newline'"})
-
-			Expect(err).To(HaveOccurred())
-			Expect(code).NotTo(Equal(0))
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("raw-tail-without-newline"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 		})
-	})
 
-	It("copies a trailing filtered line before surfacing a non-EOF read error", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-		src := &errorAfterLineReader{
-			line: "tail-without-newline",
-			err:  errors.New("boom"),
-		}
-		stats := &streamStats{}
+		It("treats carriage returns as in-place line overwrites before emit", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+			src := strings.NewReader("\r⠋ first\r⠙ second\rDone\n")
+			stats := &streamStats{}
 
-		err := runner.copyStream(src, func(line string) []engine.BufferEntry {
-			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)
-		Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
+			Expect(runner.drainStream(src, func(line string) []engine.BufferEntry {
+				return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
+			}, stats, runner.writeEntries)).NotTo(HaveOccurred())
 
-		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("tail-without-newline"))
-		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
-		Expect(stats.rawBytes).To(Equal(len("tail-without-newline")))
-		Expect(stats.keptBytes).To(Equal(len("tail-without-newline")))
-	})
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("Done\n"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+			Expect(stats.rawBytes).To(Equal(len("\r⠋ first\r⠙ second\rDone\n")))
+			Expect(stats.keptBytes).To(Equal(len("Done\n")))
+		})
 
-	It("copies a trailing raw line before surfacing a non-EOF read error", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-		src := &errorAfterLineReader{
-			line: "raw-tail-without-newline",
-			err:  errors.New("boom"),
-		}
+		It("preserves ordinary CRLF line endings", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+			src := strings.NewReader("runner-win\r\n")
+			stats := &streamStats{}
 
-		err := runner.copyRawStream(src, stdoutWriter)
-		Expect(err).To(MatchError(ContainSubstring("read stream: boom")))
+			Expect(runner.drainStream(src, func(line string) []engine.BufferEntry {
+				return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
+			}, stats, runner.writeEntries)).NotTo(HaveOccurred())
 
-		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("raw-tail-without-newline"))
-		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
-	})
+			Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("runner-win\n"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+			Expect(stats.rawBytes).To(Equal(len("runner-win\r\n")))
+			Expect(stats.keptBytes).To(Equal(len("runner-win\n")))
+		})
 
-	It("treats carriage returns as in-place line overwrites before emit", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-		src := strings.NewReader("\r⠋ first\r⠙ second\rDone\n")
-		stats := &streamStats{}
+		It("treats nil stream readers as empty input", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
 
-		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
-			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)).NotTo(HaveOccurred())
-
-		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("Done\n"))
-		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
-		Expect(stats.rawBytes).To(Equal(len("\r⠋ first\r⠙ second\rDone\n")))
-		Expect(stats.keptBytes).To(Equal(len("Done\n")))
-	})
-
-	It("preserves ordinary CRLF line endings", func() {
-		runner := &Runner{sources: []corefilters.FilterSource{}}
-		src := strings.NewReader("runner-win\r\n")
-		stats := &streamStats{}
-
-		Expect(runner.copyStream(src, func(line string) []engine.BufferEntry {
-			return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
-		}, stats)).NotTo(HaveOccurred())
-
-		Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("runner-win\n"))
-		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
-		Expect(stats.rawBytes).To(Equal(len("runner-win\r\n")))
-		Expect(stats.keptBytes).To(Equal(len("runner-win\n")))
+			Expect(runner.drainStream(nil, func(line string) []engine.BufferEntry {
+				return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
+			}, &streamStats{}, runner.writeEntries)).To(Succeed())
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(BeEmpty())
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+		})
 	})
 
 	It("executes a real command and preserves piped stdin on unix", func() {
@@ -271,7 +308,7 @@ var _ = Describe("Runner", func() {
 		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 	})
 
-	It("executes a real command on windows", func() {
+	It("executes a real command on Windows", func() {
 		if runtime.GOOS != "windows" {
 			Skip("windows-specific command")
 		}
@@ -511,11 +548,51 @@ var _ = Describe("Runner", func() {
 
 		runner.appendMetrics(command, false, 0, 1, 32, 16)
 
-		entries, err := workspaces.List()
+		registryPath, err := workspaces.DefaultPath()
+		Expect(err).NotTo(HaveOccurred())
+		entries, err := workspaces.ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
 		Expect(entries[0].CWD).To(Equal(filepath.Join(tmpDir, "repo")))
 		Expect(entries[0].MetricsPath).To(Equal(filepath.Join(tmpDir, "repo", ".ccp", "gain.db")))
+	})
+
+	It("records append metrics no-ops for raw mode, failed writes, and blank working directories", func() {
+		tmpDir := GinkgoT().TempDir()
+		restore := workspaces.WithTestConfig(tmpDir, nil)
+		DeferCleanup(restore)
+
+		command := contracts.Command{
+			RawInput: "go test ./...",
+			Args:     []string{"go", "test", "./..."},
+			Tool:     "go",
+			Dispatch: "go",
+		}
+
+		rawRunner := NewRunnerWithOptions(Options{Raw: true, MetricsPath: filepath.Join(tmpDir, "raw.db")})
+		rawRunner.appendMetrics(command, false, 0, 1, 10, 5)
+		history, err := metrics.QueryHistory(rawRunner.metricsPath, metrics.QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(BeEmpty())
+
+		parentFile := filepath.Join(tmpDir, "not-a-dir")
+		Expect(os.WriteFile(parentFile, []byte("x"), 0o644)).To(Succeed())
+		brokenRunner := &Runner{metricsPath: filepath.Join(parentFile, "gain.db"), workingDir: filepath.Join(tmpDir, "repo")}
+		brokenRunner.appendMetrics(command, false, 0, 1, 10, 5)
+		registryPath, err := workspaces.DefaultPath()
+		Expect(err).NotTo(HaveOccurred())
+		entries, err := workspaces.ListPath(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(BeEmpty())
+
+		blankRunner := &Runner{metricsPath: filepath.Join(tmpDir, "blank.db"), workingDir: "   "}
+		blankRunner.appendMetrics(command, false, 0, 1, 10, 5)
+		history, err = metrics.QueryHistory(blankRunner.metricsPath, metrics.QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(HaveLen(1))
+		entries, err = workspaces.ListPath(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(BeEmpty())
 	})
 
 	It("creates subprocess pipes with stdin attached to os.Stdin", func() {
@@ -538,6 +615,106 @@ var _ = Describe("Runner", func() {
 
 		Expect(code).To(Equal(1))
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("covers replay collector helpers and action labels", func() {
+		collector := &replayCollector{}
+
+		collector.recordInput(
+			replay.Event{Stream: contracts.StreamStdout, Line: "replace me\n"},
+			contracts.Action{Kind: contracts.ActionReplace},
+			[]engine.BufferEntry{{Stream: contracts.StreamStdout, Line: "rewritten\n"}},
+		)
+		collector.recordInput(
+			replay.Event{Stream: contracts.StreamStderr, Line: "skip me\n"},
+			contracts.Action{Kind: contracts.ActionIgnore},
+			nil,
+		)
+		collector.recordExit(contracts.Action{}, []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: "exit\n"}})
+
+		Expect(collector.output.String()).To(Equal("rewritten\nexit\n"))
+		Expect(collector.decisions.String()).To(ContainSubstring("<replace> | replace me"))
+		Expect(collector.decisions.String()).To(ContainSubstring("<emit>    | rewritten"))
+		Expect(collector.decisions.String()).To(ContainSubstring("<skip>    | skip me"))
+
+		Expect(labelForInputAction(contracts.Action{Kind: contracts.ActionEmit})).To(Equal("<keep>"))
+		Expect(labelForInputAction(contracts.Action{Kind: contracts.ActionKeep})).To(Equal("<keep>"))
+		Expect(labelForInputAction(contracts.Action{Kind: "unknown"})).To(Equal("<keep>"))
+		Expect(splitDecisionLines("")).To(Equal([]string{""}))
+		Expect(splitDecisionLines("a\r\nb\nc")).To(Equal([]string{"a\n", "b\n", "c"}))
+	})
+
+	It("covers writer helpers and stderr naming", func() {
+		buffer := &strings.Builder{}
+		writer := &errorRecordingWriter{writer: buffer, name: outputName(os.Stderr)}
+
+		n, err := writer.Write([]byte("stderr-line"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("stderr-line")))
+		Expect(buffer.String()).To(Equal("stderr-line"))
+		Expect(outputName(os.Stderr)).To(Equal("stderr"))
+		Expect(outputName(os.Stdout)).To(Equal("stdout"))
+
+		writer.err = errors.New("already-failed")
+		n, err = writer.Write([]byte("ignored"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("ignored")))
+
+		writer = &errorRecordingWriter{name: "stdout"}
+		n, err = writer.Write([]byte("nil-writer"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("nil-writer")))
+
+		writer = &errorRecordingWriter{writer: failingWriter{err: errors.New("boom")}, name: "stdout"}
+		n, err = writer.Write([]byte("wrapped"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("wrapped")))
+		Expect(writer.err).To(MatchError("write stdout: boom"))
+	})
+
+	It("covers redaction helpers for buffered writes and flush behavior", func() {
+		Expect(redactConfidential("", []string{"secret"})).To(BeEmpty())
+		Expect(redactConfidential("secret value", []string{"", "secret"})).To(Equal("*** value"))
+
+		buffer := &strings.Builder{}
+		writer := &redactingWriter{writer: buffer, confidential: []string{"secret"}}
+		n, err := writer.Write([]byte("secret\ntrail-secret"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("secret\ntrail-secret")))
+		Expect(buffer.String()).To(Equal("***\n"))
+		Expect(writer.Flush()).To(Succeed())
+		Expect(buffer.String()).To(Equal("***\ntrail-***"))
+
+		writer = &redactingWriter{}
+		n, err = writer.Write([]byte("ignored"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(len("ignored")))
+		Expect(writer.Flush()).To(Succeed())
+
+		writer = &redactingWriter{writer: failingWriter{err: errors.New("flush boom")}, confidential: []string{"secret"}}
+		_, err = writer.Write([]byte("secret\n"))
+		Expect(err).To(MatchError("flush boom"))
+
+		writer = &redactingWriter{writer: failingWriter{err: errors.New("flush tail boom")}, confidential: []string{"secret"}, buf: []byte("secret")}
+		Expect(writer.Flush()).To(MatchError("flush tail boom"))
+	})
+
+	It("surfaces direct writeRedacted failures with stderr labels", func() {
+		brokenStderr, err := os.CreateTemp("", "core-runner-broken-stderr-*")
+		Expect(err).NotTo(HaveOccurred())
+		brokenStderrPath := brokenStderr.Name()
+		DeferCleanup(func() {
+			Expect(os.Remove(brokenStderrPath)).To(Succeed())
+		})
+		Expect(brokenStderr.Close()).To(Succeed())
+		os.Stderr = brokenStderr
+
+		runner := NewRunnerWithOptions(Options{Confidential: []string{"secret"}})
+		written, err := runner.writeRedacted(brokenStderr, "secret")
+
+		Expect(written).To(Equal(0))
+		Expect(err).To(MatchError(ContainSubstring("write stderr:")))
+		Expect(runner.auditCommand("secret command")).To(Equal("*** command"))
 	})
 
 	It("loads filters from configured sources before execution", func() {
@@ -636,11 +813,11 @@ cases:
 			corefilters.RepositorySource(repoRoot),
 		}}
 
-		expected, err := runner.Replay([]string{"pytest"}, []replay.Event{
+		expected, err := runner.ReplayWithExitCode([]string{"pytest"}, []replay.Event{
 			{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-1\n"},
 			{Sequence: 1, Stream: contracts.StreamStderr, Line: "err-1\n"},
 			{Sequence: 2, Stream: contracts.StreamStdout, Line: "out-2\n"},
-		})
+		}, 0)
 		Expect(err).NotTo(HaveOccurred())
 
 		actual, err := runner.Verify(
@@ -651,6 +828,73 @@ cases:
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(actual).To(Equal(expected.Output))
+	})
+
+	It("returns verify input reader errors before replay", func() {
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		_, err := runner.Verify(
+			[]string{"git", "status"},
+			&readErrorReader{err: errors.New("boom")},
+			nil,
+		)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("read sequenced stream stdout: boom"))
+	})
+
+	It("returns verify replay errors when command args are missing", func() {
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		_, err := runner.Verify(nil, nil, nil)
+
+		Expect(err).To(MatchError("no command provided"))
+	})
+
+	It("returns verify replay errors when registry loading fails", func() {
+		sourceFile := filepath.Join(GinkgoT().TempDir(), "not-a-dir")
+		Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+		runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
+
+		_, err := runner.Verify([]string{"git", "status"}, strings.NewReader("00000|ok\n"), nil)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("not a directory"))
+	})
+
+	It("returns replay errors when command args are missing", func() {
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		_, err := runner.ReplayWithExitCode(nil, nil, 0)
+
+		Expect(err).To(MatchError("no command provided"))
+	})
+
+	It("returns replay errors when registry loading fails", func() {
+		sourceFile := filepath.Join(GinkgoT().TempDir(), "not-a-dir")
+		Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+		runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
+
+		_, err := runner.ReplayWithExitCode([]string{"git", "status"}, nil, 0)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("not a directory"))
+	})
+
+	It("replays stderr events and explicit exit codes without errors", func() {
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		result, err := runner.ReplayWithExitCode([]string{"git", "status"}, []replay.Event{{
+			Sequence: 0,
+			Stream:   contracts.StreamStderr,
+			Line:     "stderr-only\n",
+		}}, 7)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Output).To(Equal("stderr-only\n"))
+		Expect(result.Decisions).To(ContainSubstring("<keep>    | stderr-only"))
 	})
 
 	It("loads source-local mappings before registry resolution", func() {
@@ -1084,4 +1328,38 @@ func confidentialAuditCommand(secret string) []string {
 		return []string{"cmd", "/c", "echo", secret}
 	}
 	return []string{"echo", secret}
+}
+
+func withUnavailableWorkingDirectory(fn func()) {
+	original, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+
+	tmpDir := GinkgoT().TempDir()
+	Expect(os.Chdir(tmpDir)).To(Succeed())
+	defer func() {
+		Expect(os.Chdir(original)).To(Succeed())
+	}()
+
+	err = os.RemoveAll(tmpDir)
+	if err != nil {
+		Skip("cannot remove current working directory on this platform: " + err.Error())
+	}
+
+	fn()
+}
+
+type readErrorReader struct {
+	err error
+}
+
+func (r *readErrorReader) Read(_ []byte) (int, error) {
+	return 0, r.err
+}
+
+type failingWriter struct {
+	err error
+}
+
+func (w failingWriter) Write(_ []byte) (int, error) {
+	return 0, w.err
 }

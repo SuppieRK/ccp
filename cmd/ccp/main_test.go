@@ -19,9 +19,7 @@ var _ = Describe("ccp main", func() {
 			r, err := buildRuntime(cli.Options{CommandArgs: []string{"ls"}})
 
 			Expect(err).NotTo(HaveOccurred())
-			coreRuntime, ok := r.(*coreExecutionRuntime)
-			Expect(ok).To(BeTrue())
-			Expect(coreRuntime.runner).NotTo(BeNil())
+			Expect(r).NotTo(BeNil())
 		})
 	})
 
@@ -109,14 +107,14 @@ var _ = Describe("ccp main", func() {
 	})
 
 	It("classifies lifecycle commands separately from wrapped execution", func() {
-		Expect(isLifecycleCommand([]string{"capture", "--", "echo", "hi"})).To(BeTrue())
-		Expect(isLifecycleCommand([]string{"init"})).To(BeTrue())
-		Expect(isLifecycleCommand([]string{"repair"})).To(BeTrue())
-		Expect(isLifecycleCommand([]string{"filter", "new", "demo"})).To(BeTrue())
-		Expect(isLifecycleCommand([]string{"uninstall"})).To(BeTrue())
-		Expect(isLifecycleCommand([]string{"pwd"})).To(BeFalse())
-		Expect(isLifecycleCommand([]string{"echo", "hi"})).To(BeFalse())
-		Expect(isLifecycleCommand(nil)).To(BeFalse())
+		Expect(cli.IsManagedArgs([]string{"capture", "--", "echo", "hi"})).To(BeTrue())
+		Expect(cli.IsManagedArgs([]string{"init"})).To(BeTrue())
+		Expect(cli.IsManagedArgs([]string{"repair"})).To(BeTrue())
+		Expect(cli.IsManagedArgs([]string{"filter", "new", "demo"})).To(BeTrue())
+		Expect(cli.IsManagedArgs([]string{"uninstall"})).To(BeTrue())
+		Expect(cli.IsManagedArgs([]string{"pwd"})).To(BeFalse())
+		Expect(cli.IsManagedArgs([]string{"echo", "hi"})).To(BeFalse())
+		Expect(cli.IsManagedArgs(nil)).To(BeFalse())
 	})
 })
 

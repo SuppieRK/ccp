@@ -26,12 +26,11 @@ const (
 )
 
 type captureVerifier interface {
-	Replay(args []string, events []replay.Event) (core.ReplayResult, error)
 	ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error)
 }
 
 var newCaptureRunner = func() captureVerifier {
-	return core.NewRunner()
+	return core.NewRunnerWithOptions(core.Options{})
 }
 
 func RunCapture(args []string) error {

@@ -23,7 +23,7 @@ var (
 )
 
 func RunStartupMaintenance() error {
-	scopeRoot, err := initDetectRoot()
+	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return nil
 	}

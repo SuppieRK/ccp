@@ -51,10 +51,6 @@ type redactingWriter struct {
 	buf          []byte
 }
 
-func NewRunner() *Runner {
-	return NewRunnerWithOptions(Options{})
-}
-
 func NewRunnerWithOptions(opts Options) *Runner {
 	metricsPath := opts.MetricsPath
 	if strings.TrimSpace(metricsPath) == "" {
@@ -237,15 +233,11 @@ func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error)
 	if err != nil {
 		return "", err
 	}
-	result, err := r.Replay(args, events)
+	result, err := r.ReplayWithExitCode(args, events, 0)
 	if err != nil {
 		return "", err
 	}
 	return result.Output, nil
-}
-
-func (r *Runner) Replay(args []string, events []replay.Event) (ReplayResult, error) {
-	return r.ReplayWithExitCode(args, events, 0)
 }
 
 func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (ReplayResult, error) {
@@ -471,10 +463,6 @@ func (r *Runner) recordSinkResult(stats *streamStats, written int, err error, si
 	}
 }
 
-func (r *Runner) copyStream(src io.Reader, consume func(string) []engine.BufferEntry, stats *streamStats) error {
-	return r.drainStream(src, consume, stats, r.writeEntries)
-}
-
 func (r *Runner) writeEntries(entries []engine.BufferEntry) (int, error) {
 	written := 0
 	for _, entry := range entries {
@@ -624,7 +612,11 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 	if strings.TrimSpace(r.workingDir) == "" {
 		return
 	}
-	_ = workspaces.Upsert(r.workingDir, r.metricsPath)
+	path, err := workspaces.DefaultPath()
+	if err != nil {
+		return
+	}
+	_ = workspaces.UpsertPath(path, r.workingDir, r.metricsPath)
 }
 
 func shouldRecordMetrics(command contracts.Command) bool {

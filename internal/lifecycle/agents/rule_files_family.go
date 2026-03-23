@@ -40,17 +40,6 @@ type managedRuleFileAdapter struct {
 	resolveTarget  func(ctx Context, rel string) string
 }
 
-type managedRuleFileConfig struct {
-	id             string
-	detectDir      string
-	targetRelPath  string
-	missingFmt     string
-	guidanceFmt    string
-	render         func() string
-	verifyRequired []string
-	resolveTarget  func(ctx Context, rel string) string
-}
-
 func NewManagedRepoRuleFileAdapter(
 	id,
 	detectDir,
@@ -61,7 +50,7 @@ func NewManagedRepoRuleFileAdapter(
 	verifyRequired []string,
 ) ManagedRepoRuleFileAdapter {
 	return ManagedRepoRuleFileAdapter{
-		managedRuleFileAdapter: newManagedRuleFileAdapter(managedRuleFileConfig{
+		managedRuleFileAdapter: managedRuleFileAdapter{
 			id:             id,
 			detectDir:      detectDir,
 			targetRelPath:  targetRelPath,
@@ -72,7 +61,7 @@ func NewManagedRepoRuleFileAdapter(
 			resolveTarget: func(ctx Context, rel string) string {
 				return ResolveRepoScopedPath(ctx.ScopeRoot, rel)
 			},
-		}),
+		},
 	}
 }
 
@@ -86,7 +75,7 @@ func NewManagedHomeRuleFileAdapter(
 	verifyRequired []string,
 ) ManagedHomeRuleFileAdapter {
 	return ManagedHomeRuleFileAdapter{
-		managedRuleFileAdapter: newManagedRuleFileAdapter(managedRuleFileConfig{
+		managedRuleFileAdapter: managedRuleFileAdapter{
 			id:             id,
 			detectDir:      detectDir,
 			targetRelPath:  targetRelPath,
@@ -97,12 +86,8 @@ func NewManagedHomeRuleFileAdapter(
 			resolveTarget: func(ctx Context, rel string) string {
 				return ResolveHomeScopedPath(ctx.HomeDir, rel)
 			},
-		}),
+		},
 	}
-}
-
-func newManagedRuleFileAdapter(cfg managedRuleFileConfig) managedRuleFileAdapter {
-	return managedRuleFileAdapter(cfg)
 }
 
 func (a managedRuleFileAdapter) ID() string { return a.id }

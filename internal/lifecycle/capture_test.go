@@ -29,10 +29,6 @@ type stubCaptureRunner struct {
 	err         error
 }
 
-func (s *stubCaptureRunner) Replay(args []string, events []replay.Event) (core.ReplayResult, error) {
-	return s.ReplayWithExitCode(args, events, 0)
-}
-
 func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error) {
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)

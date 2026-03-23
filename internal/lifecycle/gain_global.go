@@ -333,7 +333,11 @@ func queryGlobalHistoryRows(session *globalQuerySession, opts metrics.QueryOptio
 }
 
 func globalMetricsSources(currentMetricsPath string) ([]globalMetricsSource, error) {
-	entries, err := workspaces.List()
+	registryPath, err := workspaces.DefaultPath()
+	entries := []workspaces.Workspace(nil)
+	if err == nil {
+		entries, err = workspaces.ListPath(registryPath)
+	}
 	if err != nil {
 		entries = nil
 	}
@@ -364,8 +368,8 @@ func globalMetricsSources(currentMetricsPath string) ([]globalMetricsSource, err
 
 	if current := currentGlobalMetricsSource(currentMetricsPath); current != nil {
 		add(current.CWD, current.MetricsPath)
-		if current.CWD != "" && current.MetricsPath != "" {
-			_ = workspaces.Upsert(current.CWD, current.MetricsPath)
+		if current.CWD != "" && current.MetricsPath != "" && registryPath != "" {
+			_ = workspaces.UpsertPath(registryPath, current.CWD, current.MetricsPath)
 		}
 	}
 
@@ -377,7 +381,7 @@ func currentGlobalMetricsSource(currentMetricsPath string) *globalMetricsSource 
 	if normalizedMetricsPath == "" {
 		return nil
 	}
-	cwd, err := initDetectRoot()
+	cwd, err := os.Getwd()
 	if err != nil {
 		return &globalMetricsSource{MetricsPath: normalizedMetricsPath}
 	}

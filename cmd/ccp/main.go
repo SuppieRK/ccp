@@ -14,10 +14,6 @@ import (
 
 var lifecycleDispatch = runLifecycleCommand
 
-type runner interface {
-	Run(args []string) int
-}
-
 func main() {
 	// Audit is intentionally best-effort: startup must never fail before argument parsing
 	// or command execution just because the audit log path is blocked or unwritable.
@@ -61,16 +57,16 @@ func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
 	if err != nil {
 		return true, 1, err
 	}
-	os.Exit(r.Run(opts.CommandArgs))
+	code, err := r.Run(opts.CommandArgs)
+	if err != nil {
+		return true, code, err
+	}
+	os.Exit(code)
 	return true, 0, nil
 }
 
-func isLifecycleCommand(args []string) bool {
-	return cli.IsManagedArgs(args)
-}
-
 func runLifecycleCommand(args []string) (bool, error) {
-	if !isLifecycleCommand(args) {
+	if !cli.IsManagedArgs(args) {
 		return false, nil
 	}
 	tail := args[1:]
@@ -151,27 +147,10 @@ Notes:
   - --raw preserves native output unless --confidential is also used.`
 }
 
-func buildRuntime(opts cli.Options) (runner, error) {
-	return &coreExecutionRuntime{
-		runner: core.NewRunnerWithOptions(core.Options{
-			Raw:          opts.Raw,
-			Confidential: opts.ConfidentialRedactions,
-			MetricsPath:  defaultMetricsPath(),
-		}),
-	}, nil
-}
-
-type coreExecutionRuntime struct {
-	runner *core.Runner
-}
-
-func (r *coreExecutionRuntime) Run(args []string) int {
-	if len(args) == 0 {
-		return 2
-	}
-	code, err := r.runner.Run(args)
-	if err != nil {
-		exitWithErr(code, err)
-	}
-	return code
+func buildRuntime(opts cli.Options) (*core.Runner, error) {
+	return core.NewRunnerWithOptions(core.Options{
+		Raw:          opts.Raw,
+		Confidential: opts.ConfidentialRedactions,
+		MetricsPath:  defaultMetricsPath(),
+	}), nil
 }

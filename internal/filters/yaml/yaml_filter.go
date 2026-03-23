@@ -71,7 +71,7 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 	// Exit handling is intentionally stdout-oriented. Shared/combined scopes may
 	// summarize merged buffered output, but stderr-only exit rewrites are not a
 	// supported contract and stderr otherwise passes through unchanged.
-	scope := cs.scopeForExit(contracts.StreamStdout)
+	scope, _ := cs.scope(contracts.StreamStdout)
 	exitStream := contracts.StreamStdout
 	if cs.shared != nil {
 		exitStream = contracts.StreamCombined
@@ -724,11 +724,6 @@ func (c *compiledCase) scope(stream contracts.Stream) (*compiledScope, bool) {
 	return operations.ScopeForStream(stream, c.shared, c.stdout, c.stderr)
 }
 
-func (c *compiledCase) scopeForExit(stream contracts.Stream) *compiledScope {
-	scope, _ := c.scope(stream)
-	return scope
-}
-
 func (f *YamlFilter) caseForArgs(args []string) (*compiledCase, bool) {
 	filteredArgs := filterArgs(args)
 	for i := range f.cases {
@@ -1302,14 +1297,10 @@ func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []s
 	if when.firstIs != "" || len(when.firstIn) > 0 {
 		filtered = filterArgs(filtered)
 	}
-	if !hasExplicitPositionals(filtered, flagsWithValues) {
+	if !operations.HasExplicitPositionals(filtered, flagsWithValues) {
 		mutated = append(mutated, command.appendIfNoPositionals...)
 	}
 	return mutated
-}
-
-func hasExplicitPositionals(args, valueFlags []string) bool {
-	return operations.HasExplicitPositionals(args, valueFlags)
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {

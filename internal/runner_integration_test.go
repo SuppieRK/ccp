@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corefilters "go-command-compression-proxy/internal/filters"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/metrics"
 )
@@ -152,5 +153,120 @@ printf 'internal/metrics/store.go:90:1: too many errors\n' >&2`
 		Expect(history[0].EstimatedInputTokens).To(BeNumerically("<", 256))
 		Expect(history[0].EstimatedOutputTokens).To(BeNumerically("<", 256))
 		Expect(history[0].Passthrough).To(BeTrue())
+	})
+})
+
+var _ = Describe("runner execution edge cases", func() {
+	var (
+		stdoutReader *os.File
+		stdoutWriter *os.File
+		stderrReader *os.File
+		stderrWriter *os.File
+		oldStdout    *os.File
+		oldStderr    *os.File
+	)
+
+	BeforeEach(func() {
+		var err error
+		oldStdout = os.Stdout
+		oldStderr = os.Stderr
+
+		stdoutReader, stdoutWriter, err = os.Pipe()
+		Expect(err).NotTo(HaveOccurred())
+		stderrReader, stderrWriter, err = os.Pipe()
+		Expect(err).NotTo(HaveOccurred())
+
+		os.Stdout = stdoutWriter
+		os.Stderr = stderrWriter
+	})
+
+	AfterEach(func() {
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		_ = stderrReader.Close()
+		_ = stderrWriter.Close()
+	})
+
+	It("returns registry errors from invalid filter sources before execution", func() {
+		sourceFile := filepath.Join(GinkgoT().TempDir(), "not-a-dir")
+		Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+		runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
+
+		code, err := runner.Run([]string{"git", "status"})
+
+		Expect(code).To(Equal(1))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("not a directory"))
+	})
+
+	It("returns raw-mode start failures with shell-not-found exit semantics", func() {
+		runner := NewRunnerWithOptions(Options{Raw: true})
+
+		code, err := runner.Run([]string{"__ccp_missing_binary__"})
+
+		Expect(code).To(Equal(127))
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("surfaces filtered stdout write failures while preserving non-zero exit codes", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		brokenStdout, err := os.CreateTemp("", "core-runner-broken-stdout-nonzero-*")
+		Expect(err).NotTo(HaveOccurred())
+		brokenStdoutPath := brokenStdout.Name()
+		DeferCleanup(func() {
+			Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+		})
+		Expect(brokenStdout.Close()).To(Succeed())
+		os.Stdout = brokenStdout
+
+		runner := &Runner{sources: []corefilters.FilterSource{}}
+
+		code, err := runner.Run([]string{"sh", "-c", "printf 'hello from ccp\\n'; exit 7"})
+
+		Expect(err).To(HaveOccurred())
+		Expect(code).To(Equal(7))
+	})
+
+	It("surfaces raw-mode write failures while preserving non-zero exit codes", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		brokenStdout, err := os.CreateTemp("", "core-runner-broken-raw-stdout-nonzero-*")
+		Expect(err).NotTo(HaveOccurred())
+		brokenStdoutPath := brokenStdout.Name()
+		DeferCleanup(func() {
+			Expect(os.Remove(brokenStdoutPath)).To(Succeed())
+		})
+		Expect(brokenStdout.Close()).To(Succeed())
+		os.Stdout = brokenStdout
+
+		runner := NewRunnerWithOptions(Options{Raw: true})
+
+		code, err := runner.Run([]string{"sh", "-c", "printf 'raw-fail'; exit 7"})
+
+		Expect(err).To(HaveOccurred())
+		Expect(code).To(Equal(7))
+	})
+
+	It("returns non-zero exit codes from raw mode without wrapping them as errors", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		runner := NewRunnerWithOptions(Options{Raw: true})
+
+		code, err := runner.Run([]string{"sh", "-c", "printf 'raw-nonzero\\n'; exit 7"})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(code).To(Equal(7))
+		Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("raw-nonzero\n"))
+		Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 	})
 })

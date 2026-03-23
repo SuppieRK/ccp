@@ -51,7 +51,7 @@ func RunInit(args []string) error {
 	if err := agents.ValidateSelectedTools(tools, adapters); err != nil {
 		return err
 	}
-	scopeRoot, err := initDetectRoot()
+	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,11 @@ func RunInit(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := workspaces.Upsert(scopeRoot, ""); err != nil {
+	registryPath, err := workspaces.DefaultPath()
+	if err == nil {
+		err = workspaces.UpsertPath(registryPath, scopeRoot, "")
+	}
+	if err != nil {
 		writeLifecycleWarning("ccp init: warning: could not update workspace registry: %v\n", err)
 	}
 	if allToolStatesNoop(states) {
@@ -83,7 +87,7 @@ func resolveInitTools(toolsArg string, adapters map[string]agents.Adapter) ([]st
 	if len(tools) > 0 {
 		return tools, nil
 	}
-	scopeRoot, err := initDetectRoot()
+	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
@@ -111,10 +115,6 @@ func parseTools(input string) []string {
 	return out
 }
 
-func initDetectRoot() (string, error) {
-	return os.Getwd()
-}
-
 func applyAdapters(scope agents.Context, tools []string, adapters map[string]agents.Adapter) ([]toolState, error) {
 	var states []toolState
 	for _, tool := range tools {
@@ -123,7 +123,7 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 		if len(plan) > 0 {
 			fmt.Printf("ccp init: planned %d changes for %s\n", len(plan), tool)
 		}
-		res, err := adapter.Install(scope, writeManagedFile)
+		res, err := adapter.Install(scope, writeManagedBytes)
 		if err != nil {
 			states = append(states, toolState{Tool: tool, Status: "failed", Reason: err.Error()})
 			return states, err
@@ -156,10 +156,6 @@ func allToolStatesNoop(states []toolState) bool {
 		}
 	}
 	return true
-}
-
-func writeManagedFile(path string, data []byte, perm os.FileMode) (changed bool, err error) {
-	return writeManagedBytes(path, data, perm)
 }
 
 func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool, err error) {

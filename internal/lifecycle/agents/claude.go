@@ -28,7 +28,7 @@ func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 	root := claudeRoot(ctx)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
 	guidePath := filepath.Join(root, claudeGuideName)
-	plan := bashHookAndSettingsArtifacts(root, claudeHookScriptName, claudeSettingsName, claudeHookScriptContent())
+	plan := bashHookAndSettingsArtifacts(root, claudeHookScriptName, claudeSettingsName, bashRewriteHookScriptContent("claude", "ccp-claude-hook.log"))
 	plan = append(plan,
 		PlannedArtifact{
 			Kind:    ArtifactAwareness,
@@ -146,7 +146,7 @@ func uninstallClaudeSettings(res *InstallResult, settingsPath, hookPath string) 
 }
 
 func uninstallClaudeGuide(res *InstallResult, guidePath string) error {
-	updatedGuide, changedGuide, removeAllGuide, err := removeClaudeGuideBlock(guidePath)
+	updatedGuide, changedGuide, removeAllGuide, err := removeManagedContextBlock(guidePath)
 	if err != nil {
 		return err
 	}
@@ -210,10 +210,6 @@ func upsertClaudeGuideBlock(path string) (string, error) {
 	return normalizeManagedFile(trimmed + "\n\n" + block), nil
 }
 
-func removeClaudeGuideBlock(path string) (updated string, changed bool, removeAll bool, err error) {
-	return removeManagedContextBlock(path)
-}
-
 func removeFileIfExists(path string) (bool, error) {
 	if err := projectfiles.RejectSymlinkPath(path); err != nil {
 		return false, err
@@ -226,11 +222,6 @@ func removeFileIfExists(path string) (bool, error) {
 	}
 	return true, nil
 }
-
-func claudeHookScriptContent() string {
-	return bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")
-}
-
 func awarenessContent(toolID string) string {
 	return fmt.Sprintf("# CCP Proxy Integration\n\nTool: %s\n\nCommands are routed through `ccp` via hook wiring installed by `ccp init`.\n", toolID)
 }
