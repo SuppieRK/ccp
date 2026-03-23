@@ -30,6 +30,7 @@ var _ = Describe("RejectSymlinkPath", func() {
 		err := RejectSymlinkPath(filepath.Join(linkPath, "nested", "file.txt"))
 
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring(linkPath))
+		Expect(err.Error()).To(ContainSubstring("refuse to use symlink path component"))
+		Expect(err.Error()).To(ContainSubstring(filepath.Base(linkPath)))
 	})
 })
