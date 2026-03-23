@@ -2,7 +2,9 @@
 set -euo pipefail
 
 normalize_output() {
-  printf '%s' "$1" | tr -d '\r'
+  local output="$1"
+  printf '%s' "$output" | tr -d '\r'
+  return 0
 }
 
 runner_os="${RUNNER_OS:-}"
