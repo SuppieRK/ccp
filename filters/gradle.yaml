@@ -2,6 +2,7 @@
 version: 1
 filter: gradle
 about: Trim Gradle and Gradle Wrapper boilerplate aggressively, keep task and failure loci visible, and drop low-value configuration, internal stack, and INFO chatter when it does not help follow-up shell work.
+flags_consuming_next_arg: []
 
 cases:
   - id: gradle_output

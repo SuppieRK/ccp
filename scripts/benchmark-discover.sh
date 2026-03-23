@@ -100,6 +100,7 @@ append_lines_to_array() {
     [[ -z "$line" ]] && continue
     eval "$__var_name+=(\"\$line\")"
   done < <("$@")
+  return 0
 }
 
 selected_contains() {

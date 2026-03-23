@@ -2,6 +2,7 @@
 version: 1
 filter: turbo
 about: Compact default Turborepo run orchestration chatter while preserving underlying task output and leaving dry-run, graph, summarize, and other precision/discovery modes native.
+flags_consuming_next_arg: []
 
 cases:
   - id: passthrough_discovery_and_precision

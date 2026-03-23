@@ -2,6 +2,7 @@
 version: 1
 filter: jest
 about: Compact default Jest text summaries conservatively, preserve failure selectors, assertion/code-frame detail, and leave watch, JSON, coverage, and discovery-oriented modes native.
+flags_consuming_next_arg: ["--outputFile"]
 
 cases:
   - id: passthrough_machine_and_watch

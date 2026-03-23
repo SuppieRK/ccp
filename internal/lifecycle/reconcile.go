@@ -14,6 +14,7 @@ import (
 const (
 	startupMaintenanceLockMaxAge = 10 * time.Second
 	configDirName                = ".config"
+	startupMaintenanceLockName   = "repair.lock"
 )
 
 var (
@@ -43,7 +44,7 @@ func RunStartupMaintenance() error {
 	}
 	defer release()
 
-	return syncCanonicalHomeLayout()
+	return reconcileManagedHomeLayout()
 }
 
 func startupMaintenanceLockPath() (string, error) {
@@ -51,7 +52,7 @@ func startupMaintenanceLockPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, configDirName, "ccp", "repair.lock"), nil
+	return filepath.Join(homeDir, configDirName, "ccp", startupMaintenanceLockName), nil
 }
 
 func acquireStartupMaintenanceLock(lockPath string) (func(), error) {
@@ -132,10 +133,35 @@ func syncCanonicalHomeLayout() error {
 	return syncPackagedFilters(homeDir)
 }
 
+func reconcileManagedHomeLayout() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	if err := cleanupManagedConfigDirPreservingFilters(homeDir); err != nil {
+		return err
+	}
+	return syncMissingPackagedFilters(homeDir)
+}
+
 func cleanupManagedConfigDir(homeDir string) error {
 	configDir := filepath.Join(homeDir, configDirName, "ccp")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
-	if err := removeAllChildrenExcept(configDir, "repair.lock", workspacesPath); err != nil {
+	if err := removeAllChildrenExcept(configDir, startupMaintenanceLockName, workspacesPath); err != nil {
+		return err
+	}
+
+	ccpDir := filepath.Join(homeDir, ".ccp")
+	if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
+	configDir := filepath.Join(homeDir, configDirName, "ccp")
+	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
+	if err := removeAllChildrenExcept(configDir, "filters", startupMaintenanceLockName, workspacesPath); err != nil {
 		return err
 	}
 

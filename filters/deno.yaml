@@ -2,6 +2,7 @@
 version: 1
 filter: deno
 about: Keep Deno run output native unless a tool-defined mode is clearly safe, passthrough structured output, and compact only the narrow test type-check failure surface.
+flags_consuming_next_arg: []
 
 cases:
   - id: structured_passthrough

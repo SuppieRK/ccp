@@ -2,6 +2,7 @@
 version: 1
 filter: oxlint
 about: Compact default oxlint text output by dropping blank lines and trailing timing chatter while preserving rule diagnostics, parser failures, code frames, help text, and the final warning/error summary.
+flags_consuming_next_arg: []
 
 cases:
   - id: default

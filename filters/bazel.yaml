@@ -2,6 +2,7 @@
 version: 1
 filter: bazel
 about: Trim Bazel progress and startup chatter for direct `build` and `test` runs while preserving target results, error blocks, and explicit precision modes like `--test_output=errors`.
+flags_consuming_next_arg: ["--profile", "--show_progress_rate_limit"]
 
 cases:
   - id: precision_passthrough

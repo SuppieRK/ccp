@@ -9,6 +9,7 @@ about: >-
   group other rooted directory and file listings by parent, and treat overflow
   summaries as additive hints about omitted grouped items rather than as a
   replacement for concrete paths.
+flags_consuming_next_arg: ["-fprintf", "-fprint", "-fprint0", "-group", "-iname", "-ipath", "-maxdepth", "-mindepth", "-mtime", "-name", "-path", "-printf", "-size", "-type", "-user"]
 
 cases:
   - id: nested_execution_or_machine_output
@@ -19,6 +20,7 @@ cases:
         - -ok
         - -okdir
         - -print0
+        - -fprint
         - -fprint0
         - -printf
         - -fprintf

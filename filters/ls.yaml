@@ -2,12 +2,14 @@
 version: 1
 filter: ls
 about: Compact long ls listings while preserving explicit path roots, recursive section headers, and native precision modes like --dired and quoted-name output
+flags_consuming_next_arg: ["--block-size", "--format", "--hide", "--ignore", "--indicator-style", "--quoting-style", "--sort", "--tabsize", "--time", "--time-style", "--width", "-I", "-T", "-w"]
 
 cases:
   - id: long_dired_passthrough
     when_arguments:
       have_any:
         - --dired
+        - --zero
     passthrough: true
 
   - id: long_quoted_short_passthrough

@@ -2,6 +2,7 @@
 version: 1
 filter: pnpm
 about: Compact pnpm install/list/outdated output while preserving real package state, dependency identities, and no-lockfile diagnostics.
+flags_consuming_next_arg: []
 
 cases:
   - id: install

@@ -21,10 +21,11 @@ const (
 )
 
 type FilterDefinition struct {
-	Version int          `yaml:"version"`
-	Filter  string       `yaml:"filter"`
-	About   string       `yaml:"about"`
-	Cases   []CaseClause `yaml:"cases"`
+	Version               int          `yaml:"version"`
+	Filter                string       `yaml:"filter"`
+	About                 string       `yaml:"about"`
+	FlagsConsumingNextArg []string     `yaml:"flags_consuming_next_arg"`
+	Cases                 []CaseClause `yaml:"cases"`
 }
 
 type CaseClause struct {
@@ -77,12 +78,10 @@ type OutputScope struct {
 }
 
 type OutputLines struct {
-	Replace  []ReplaceRule    `yaml:"replace"`
-	Skip     []SkipOrKeepRule `yaml:"skip"`
-	Keep     []SkipOrKeepRule `yaml:"keep"`
-	Max      *MaxRule         `yaml:"max"`
-	Tail     *int             `yaml:"tail"`
-	Truncate *int             `yaml:"truncate"`
+	Replace []ReplaceRule    `yaml:"replace"`
+	Skip    []SkipOrKeepRule `yaml:"skip"`
+	Keep    []SkipOrKeepRule `yaml:"keep"`
+	Max     *MaxRule         `yaml:"max"`
 }
 
 type MaxRule struct {
@@ -185,6 +184,9 @@ func ValidateDefinition(spec *FilterDefinition) error {
 	if spec.Filter == "" {
 		return ValidationError{Path: "filter", Message: "filter id must not be empty"}
 	}
+	if err := validateFlagsConsumingNextArg(spec.FlagsConsumingNextArg, validationPath("flags_consuming_next_arg")); err != nil {
+		return err
+	}
 	if len(spec.Cases) == 0 {
 		return ValidationError{Path: "cases", Message: "at least one case is required"}
 	}
@@ -199,6 +201,18 @@ func ValidateDefinition(spec *FilterDefinition) error {
 			return ValidationError{Path: string(casePath(i).Path("id")), Message: "case id must be unique"}
 		}
 		seenCases[id] = struct{}{}
+	}
+	return nil
+}
+
+func validateFlagsConsumingNextArg(flags []string, path validationPath) error {
+	for i, flag := range flags {
+		if flag == "" {
+			return ValidationError{Path: string(indexedValidationPath(path, i)), Message: "flags_consuming_next_arg entries must not be empty"}
+		}
+		if flag[0] != '-' {
+			return ValidationError{Path: string(indexedValidationPath(path, i)), Message: "flags_consuming_next_arg entries must start with '-'"}
+		}
 	}
 	return nil
 }
@@ -536,7 +550,7 @@ func validateLines(lines *OutputLines, path validationPath, mode linesValidation
 	if err := validateLinesMax(lines.Max, path.Path("max"), mode); err != nil {
 		return err
 	}
-	return validateLinesBounds(lines, path)
+	return nil
 }
 
 func validateReplaceRules(rules []ReplaceRule, path validationPath) error {
@@ -580,16 +594,6 @@ func validateLinesMax(rule *MaxRule, path validationPath, mode linesValidationMo
 		return nil
 	}
 	return validateMaxPrint(rule.Print, path.Path("print"), rule.GroupsSummary != nil)
-}
-
-func validateLinesBounds(lines *OutputLines, path validationPath) error {
-	if lines.Tail != nil && *lines.Tail < 0 {
-		return ValidationError{Path: string(path.Path("tail")), Message: "tail must be non-negative"}
-	}
-	if lines.Truncate != nil && *lines.Truncate < 0 {
-		return ValidationError{Path: string(path.Path("truncate")), Message: "truncate must be non-negative"}
-	}
-	return nil
 }
 
 func validateReplaceRule(rule *ReplaceRule, path validationPath) error {

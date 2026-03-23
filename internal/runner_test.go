@@ -19,6 +19,7 @@ import (
 	corefilters "go-command-compression-proxy/internal/filters"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/metrics"
+	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/version"
 	"go-command-compression-proxy/internal/workspaces"
 )
@@ -77,7 +78,7 @@ var _ = Describe("Runner", func() {
 
 	It("uses project and home filters by default in non-dev builds", func() {
 		oldVersion := version.Version
-		version.Version = "v1.2.3"
+		version.Version = "1.2.3"
 		DeferCleanup(func() {
 			version.Version = oldVersion
 		})
@@ -601,12 +602,54 @@ cases:
 
 		actual, err := runner.Verify(
 			[]string{"pytest"},
-			strings.NewReader("===== 2 passed in 0.12s =====\n"),
+			strings.NewReader("00000|===== 2 passed in 0.12s =====\n"),
 			nil,
 		)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(actual).To(Equal("pytest: 2 passed\n"))
+	})
+
+	It("preserves stdout stderr interleaving during verify when readers carry sequence prefixes", func() {
+		repoRoot, err := os.MkdirTemp("", "core-runner-verify-order-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(os.RemoveAll(repoRoot)).To(Succeed())
+		})
+		filterDir := filepath.Join(repoRoot, "filters")
+		Expect(os.MkdirAll(filterDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "pytest.yaml"), []byte(`
+version: 1
+filter: pytest
+about: test
+cases:
+  - id: order
+    compress_output:
+      combined:
+        lines:
+          keep:
+            - regex: '^'
+`), 0o644)).To(Succeed())
+
+		runner := &Runner{sources: []corefilters.FilterSource{
+			corefilters.RepositorySource(repoRoot),
+		}}
+
+		expected, err := runner.Replay([]string{"pytest"}, []replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-1\n"},
+			{Sequence: 1, Stream: contracts.StreamStderr, Line: "err-1\n"},
+			{Sequence: 2, Stream: contracts.StreamStdout, Line: "out-2\n"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		actual, err := runner.Verify(
+			[]string{"pytest"},
+			strings.NewReader("00000|out-1\n00002|out-2\n"),
+			strings.NewReader("00001|err-1\n"),
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(actual).To(Equal(expected.Output))
 	})
 
 	It("loads source-local mappings before registry resolution", func() {

@@ -120,9 +120,9 @@ func managedBashRewritePluginContent() string {
       if (trimmed === "ccp" || trimmed.startsWith("ccp ")) {
         return;
       }
-      if (/['"\\]|\$\(|\$\{|<</.test(command)) {
-        return;
-      }
+	      if (/\$\(|\$\{|<</.test(command)) {
+	        return;
+	      }
       const rewritten = command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ");
       if (rewritten === command) {
         return;

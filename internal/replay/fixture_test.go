@@ -1,6 +1,8 @@
 package replay
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,6 +47,40 @@ var _ = Describe("replay fixtures", func() {
 	})
 
 	Describe("sequenced streams", func() {
+		DescribeTable("reading replay lines with carriage returns at EOF",
+			func(input string, expectedLine string, expectedErr error) {
+				line, err := readReplayLine(bufio.NewReader(strings.NewReader(input)))
+
+				Expect(line).To(Equal(expectedLine))
+				if expectedErr == nil {
+					Expect(err).NotTo(HaveOccurred())
+					return
+				}
+				Expect(err).To(MatchError(expectedErr))
+			},
+			Entry("drops a trailing bare carriage return", "spinner\r", "", io.EOF),
+			Entry("keeps only the final overwritten line at EOF", "spinner\rdone", "done", nil),
+		)
+
+		DescribeTable("preserving sequenced prefixes across carriage-return redraws",
+			func(raw string, expected []Event) {
+				path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
+				Expect(os.WriteFile(path, []byte(raw), 0o644)).To(Succeed())
+
+				loaded, err := ReadSequenced(path, contracts.StreamStdout)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(loaded).To(Equal(expected))
+			},
+			Entry("keeps the sequence prefix for git rebase redraw output",
+				"00000|Rebasing (1/1)\r\r\x1b[KSuccessfully rebased and updated refs/heads/feature.\n",
+				[]Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "\x1b[KSuccessfully rebased and updated refs/heads/feature.\n"}},
+			),
+			Entry("keeps the sequence prefix for spinner redraw output",
+				"00004|\r⠋ [1/2] compiling calculator.js...\r⠋ [2/2] compiling legacy.js...\n",
+				[]Event{{Sequence: 4, Stream: contracts.StreamStdout, Line: "⠋ [2/2] compiling legacy.js...\n"}},
+			),
+		)
+
 		It("writes and reloads sequenced stream files", func() {
 			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
 			events := []Event{

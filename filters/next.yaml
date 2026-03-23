@@ -2,8 +2,17 @@
 version: 1
 filter: next
 about: Compact Next.js build output conservatively, keep config-load failures native, preserve actionable compile diagnostics, and retain a compact route/build summary on success.
+flags_consuming_next_arg: []
 
 cases:
+  - id: build_help_passthrough
+    when_arguments:
+      first_is: "build"
+      have_any:
+        - -h
+        - --help
+    passthrough: true
+
   - id: build_summary
     when_arguments:
       first_is: "build"

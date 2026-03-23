@@ -144,6 +144,10 @@ func newFilterScaffold(filterID string) string {
 version: 1
 filter: %s # canonical id used by .ccp/filters/.mappings.yaml, benchmark fixtures, and current filename.
 about: TODO describe what this filter should compress
+# flags_consuming_next_arg lists tool flags that consume the next argv token when CCP
+# decides whether a token is a real positional argument. List split-form flags like
+# "-run" for '-run value'; attached forms like '--format=json' are already self-contained.
+# flags_consuming_next_arg: ["-run"]
 
 # Cases are evaluated in order - the first matching case wins.
 # Keep the default passthrough case until you are ready to author real behavior.
@@ -182,6 +186,9 @@ cases:
 #             print: "... truncated to {{value}} lines"
 #
 # Authoring reference:
+# - flags_consuming_next_arg
+#   Tool-level argv metadata shared by all cases. Declare flags that consume the next token
+#   so positional-sensitive predicates and append_if_no_positionals behave correctly.
 # - cases[].when_arguments
 #   Match on argv shape with:
 #   first_is, first_in, have_any, lack_any, have_sequence, have_short_flag, positionals_lack_any
@@ -193,7 +200,7 @@ cases:
 #   combined, stdout, stderr
 # - cases[].compress_output.<scope>.lines
 #   Apply line-oriented transforms:
-#   replace, skip, keep, max, tail, truncate
+#   replace, skip, keep, max
 # - cases[].compress_output.<scope>.groups
 #   Build repeated grouped sections with:
 #   id, starts_with, starts_with_regex, matches_regex, variables, group_by, initially, lines, finally

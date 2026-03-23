@@ -2,6 +2,7 @@
 version: 1
 filter: dart
 about: Compact dart analyze diagnostics, dart test text output, and dart format drift summaries while keeping runtime output and machine-oriented test or format modes native.
+flags_consuming_next_arg: ["-o", "-r"]
 
 cases:
   - id: format_json_passthrough
@@ -47,9 +48,8 @@ cases:
   - id: test_reporter_long_json_passthrough
     when_arguments:
       first_is: test
-      have_sequence:
-        - --reporter
-        - json
+      have_any:
+        - --reporter=json
     passthrough: true
 
   - id: test

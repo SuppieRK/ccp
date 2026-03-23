@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -114,6 +115,78 @@ var _ = ginkgo.Describe("context link families", func() {
 			},
 			ginkgo.Entry("codebuddy", codebuddyHookSettingsSpec, ".codebuddy", "settings.json"),
 		)
+	})
+
+	ginkgo.Describe("managed hook settings install and verify", func() {
+		var (
+			tmpDir  string
+			ctx     Context
+			adapter ManagedHookSettingsAdapter
+		)
+
+		ginkgo.BeforeEach(func() {
+			tmpDir = ginkgo.GinkgoT().TempDir()
+			ctx = Context{ScopeRoot: filepath.Join(tmpDir, "repo"), HomeDir: filepath.Join(tmpDir, "home")}
+			adapter = NewManagedHookSettingsAdapter(ManagedHookSettingsAdapterSpec{
+				ID:             ID("test-hook"),
+				DetectRootPath: ".test-agent",
+				Root: func(ctx Context) string {
+					return filepath.Join(ctx.ScopeRoot, ".test-agent")
+				},
+				HookScriptName: "rewrite.sh",
+				SettingsName:   "settings.json",
+				HookContent: func() string {
+					return "#!/bin/sh\nexit 0\n"
+				},
+				PlanSettingsContent: func(hookPath string) string {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n"
+				},
+				UpsertSettings: func(settingsPath, hookPath string) (string, error) {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n", nil
+				},
+				VerifySettings: func(settingsPath, hookPath string) error {
+					return nil
+				},
+				UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
+					return InstallResult{}, nil
+				},
+				MissingHookFmt:     "missing hook: %s",
+				MissingSettingsFmt: "missing settings: %s",
+			})
+		})
+
+		ginkgo.It("reasserts executable permissions when reinstalling an unchanged hook", func() {
+			if runtime.GOOS == "windows" {
+				ginkgo.Skip("executable bit checks are skipped on Windows")
+			}
+
+			_, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			hookPath := adapter.hookPath(ctx)
+			Expect(os.Chmod(hookPath, 0o644)).To(Succeed())
+
+			_, err = adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			info, err := os.Stat(hookPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Mode().Perm() & 0o111).NotTo(BeZero())
+		})
+
+		ginkgo.It("fails verify when the managed hook script is not executable", func() {
+			if runtime.GOOS == "windows" {
+				ginkgo.Skip("executable bit checks are skipped on Windows")
+			}
+
+			_, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			hookPath := adapter.hookPath(ctx)
+			Expect(os.Chmod(hookPath, 0o644)).To(Succeed())
+
+			Expect(adapter.Verify(ctx)).To(HaveOccurred())
+		})
 	})
 
 	ginkgo.Describe("managed JS plugin plans", func() {

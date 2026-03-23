@@ -14,7 +14,7 @@ import (
 
 var lifecycleDispatch = runLifecycleCommand
 
-type executionRuntime interface {
+type runner interface {
 	Run(args []string) int
 }
 
@@ -151,7 +151,7 @@ Notes:
   - --raw preserves native output unless --confidential is also used.`
 }
 
-func buildRuntime(opts cli.Options) (executionRuntime, error) {
+func buildRuntime(opts cli.Options) (runner, error) {
 	return &coreExecutionRuntime{
 		runner: core.NewRunnerWithOptions(core.Options{
 			Raw:          opts.Raw,

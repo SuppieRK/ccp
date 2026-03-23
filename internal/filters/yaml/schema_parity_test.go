@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -76,6 +77,7 @@ cases:
 		Entry("valid no_positionals predicate", `
 version: 1
 filter: git
+flags_consuming_next_arg: ['-C']
 cases:
   - id: branch
     when_arguments:
@@ -85,12 +87,31 @@ cases:
 		Entry("valid append_if_no_positionals command mutation", `
 version: 1
 filter: ls
+flags_consuming_next_arg: ['--color']
 cases:
   - id: long
     normalize_command:
       append_if_no_positionals: ['.']
     passthrough: true
 `, parityExpectation{schemaValid: true, parseValid: true}),
+		Entry("invalid top-level flags_consuming_next_arg entry", `
+version: 1
+filter: ls
+flags_consuming_next_arg: ['color']
+cases:
+  - id: long
+    passthrough: true
+`, parityExpectation{schemaValid: false, parseValid: false}),
+		Entry("invalid case-local value_flags field", `
+version: 1
+filter: go
+cases:
+  - id: test
+    when_arguments:
+      first_is: test
+      value_flags: ['-run']
+    passthrough: true
+`, parityExpectation{schemaValid: false, parseValid: false}),
 		Entry("valid combined output case", `
 version: 1
 filter: ls
@@ -136,6 +157,26 @@ cases:
     compress_output:
       stdout: {}
 `, parityExpectation{schemaValid: true, parseValid: false}),
+		Entry("invalid removed tail field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          tail: 10
+`, parityExpectation{schemaValid: false, parseValid: false}),
+		Entry("invalid removed truncate field", `
+version: 1
+filter: python
+cases:
+  - id: default
+    compress_output:
+      stdout:
+        lines:
+          truncate: 80
+`, parityExpectation{schemaValid: false, parseValid: false}),
 		Entry("invalid replace matcher multiplicity remains a runtime-only gap", `
 version: 1
 filter: ls
@@ -349,6 +390,15 @@ func validateSchemaString(current map[string]any, value any) []string {
 	text, ok := value.(string)
 	if !ok {
 		return []string{"expected string"}
+	}
+	if pattern, ok := current["pattern"].(string); ok {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return []string{fmt.Sprintf("invalid schema pattern %q", pattern)}
+		}
+		if !re.MatchString(text) {
+			return []string{fmt.Sprintf("expected string matching %q", pattern)}
+		}
 	}
 	if minLength, ok := numberAsInt(current["minLength"]); ok && len(text) < minLength {
 		return []string{fmt.Sprintf("expected min length %d", minLength)}

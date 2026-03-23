@@ -141,11 +141,12 @@ func (a managedRuleFileAdapter) Verify(ctx Context) error {
 
 func (a managedRuleFileAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	target := a.targetPath(ctx)
-	if err := os.Remove(target); err != nil {
-		if os.IsNotExist(err) {
-			return InstallResult{Noop: 1}, nil
-		}
+	removed, err := removeFileIfExists(target)
+	if err != nil {
 		return InstallResult{}, err
+	}
+	if !removed {
+		return InstallResult{Noop: 1}, nil
 	}
 	return InstallResult{Applied: 1}, nil
 }

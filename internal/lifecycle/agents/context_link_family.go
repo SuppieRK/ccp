@@ -160,17 +160,22 @@ func (a ManagedHookSettingsAdapter) Plan(ctx Context) []PlannedArtifact {
 
 func (a ManagedHookSettingsAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
 	var res InstallResult
-	hookChanged, err := write(a.hookPath(ctx), []byte(a.spec.HookContent()), 0o755)
+	hookPath := a.hookPath(ctx)
+	hookChanged, err := write(hookPath, []byte(a.spec.HookContent()), 0o755)
 	if err != nil {
+		return InstallResult{}, err
+	}
+	if err := ensureHookArtifactExecutable(hookPath); err != nil {
 		return InstallResult{}, err
 	}
 	updateInstallResult(&res, hookChanged)
 
-	content, err := a.spec.UpsertSettings(a.settingsPath(ctx), a.hookPath(ctx))
+	settingsPath := a.settingsPath(ctx)
+	content, err := a.spec.UpsertSettings(settingsPath, hookPath)
 	if err != nil {
 		return InstallResult{}, err
 	}
-	settingsChanged, err := write(a.settingsPath(ctx), []byte(content), 0o644)
+	settingsChanged, err := write(settingsPath, []byte(content), 0o644)
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -179,16 +184,20 @@ func (a ManagedHookSettingsAdapter) Install(ctx Context, write WriterFunc) (Inst
 }
 
 func (a ManagedHookSettingsAdapter) Verify(ctx Context) error {
+	hookPath := a.hookPath(ctx)
 	if err := verifyArtifactFiles(
-		artifactCheck{path: a.hookPath(ctx), msg: a.spec.MissingHookFmt},
+		artifactCheck{path: hookPath, msg: a.spec.MissingHookFmt},
 		artifactCheck{path: a.settingsPath(ctx), msg: a.spec.MissingSettingsFmt},
 	); err != nil {
+		return err
+	}
+	if err := verifyHookArtifactExecutable(hookPath); err != nil {
 		return err
 	}
 	if a.spec.VerifySettings == nil {
 		return nil
 	}
-	return a.spec.VerifySettings(a.settingsPath(ctx), a.hookPath(ctx))
+	return a.spec.VerifySettings(a.settingsPath(ctx), hookPath)
 }
 
 func (a ManagedHookSettingsAdapter) Uninstall(ctx Context) (InstallResult, error) {

@@ -2,6 +2,7 @@ version: 1
 filter: pip
 about: Compact common read-only pip package inventory tables, keep terse failures and package metadata native, and preserve literal or structured modes when fidelity matters more than savings.
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+flags_consuming_next_arg: []
 
 cases:
   - id: show_passthrough
@@ -15,6 +16,14 @@ cases:
       have_sequence:
         - list
         - --format=freeze
+    passthrough: true
+
+  - id: list_freeze_passthrough_split
+    when_arguments:
+      have_sequence:
+        - list
+        - --format
+        - freeze
     passthrough: true
 
   - id: list_outdated

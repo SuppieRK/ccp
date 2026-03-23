@@ -154,6 +154,7 @@ var _ = Describe("lifecycle help", func() {
 				"Flags:",
 				"Notes:",
 				"--yes",
+				"--no",
 				"~/.config/ccp",
 			},
 		}),

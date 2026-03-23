@@ -2,6 +2,7 @@
 version: 1
 filter: composer
 about: Compact `composer install` repository and download churn while preserving lock and package-operation summaries, meaningful dependency failures, and parse errors.
+flags_consuming_next_arg: ["--audit-format", "--working-dir", "-d"]
 
 cases:
   - id: install

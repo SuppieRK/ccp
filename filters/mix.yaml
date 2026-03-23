@@ -2,6 +2,7 @@
 version: 1
 filter: mix
 about: Compact `mix compile` and `mix format --check-formatted` output by dropping repetitive compile churn and formatting boilerplate while preserving warnings, parse failures, and shell-usable file paths.
+flags_consuming_next_arg: []
 
 cases:
   - id: compile

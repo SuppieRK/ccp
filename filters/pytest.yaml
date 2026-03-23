@@ -2,6 +2,8 @@
 version: 1
 filter: pytest
 about: Compact quiet pytest summaries, preserve reusable failure and error loci, and trim assertion, setup, collection, and mixed-status noise without forcing traceback-mode rewrites.
+flags_consuming_next_arg: []
+
 cases:
   - id: default
     compress_output:

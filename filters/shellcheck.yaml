@@ -2,6 +2,7 @@
 version: 1
 filter: shellcheck
 about: Compact default ShellCheck output conservatively by trimming blank lines and wiki-link footers while preserving the diagnostic block, source line, carets, and suggested fix text; leave explicit alternate formats native.
+flags_consuming_next_arg: []
 
 cases:
   - id: passthrough_alt_formats

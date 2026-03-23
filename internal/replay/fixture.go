@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"go-command-compression-proxy/internal/contracts"
+	"go-command-compression-proxy/internal/projectfiles"
 
 	"gopkg.in/yaml.v3"
 )
@@ -138,34 +139,10 @@ func WriteSequenced(path string, events []Event) error {
 }
 
 func WriteArtifact(path string, body []byte, perm os.FileMode) error {
-	if err := rejectSymlinkPath(path); err != nil {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
 		return err
 	}
 	return os.WriteFile(path, body, perm)
-}
-
-func rejectSymlinkPath(path string) error {
-	resolved, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("resolve artifact path: %w", err)
-	}
-	for current := resolved; ; current = filepath.Dir(current) {
-		info, err := os.Lstat(current)
-		if err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("refuse to use symlink path component %q", current)
-			}
-			if info.IsDir() {
-				return nil
-			}
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return nil
-		}
-	}
 }
 
 func WriteSequencedEvents(path string, events []Event, stream contracts.Stream) error {
@@ -190,12 +167,31 @@ func ReadSequenced(path string, stream contracts.Stream) ([]Event, error) {
 	return readSequencedFromReader(f, stream, path)
 }
 
+func ReadSequencedReader(r io.Reader, stream contracts.Stream) ([]Event, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return readSequencedFromReader(r, stream, string(stream))
+}
+
 func ReadEvents(stdoutPath, stderrPath string) ([]Event, error) {
 	stdoutEvents, err := ReadSequenced(stdoutPath, contracts.StreamStdout)
 	if err != nil {
 		return nil, err
 	}
 	stderrEvents, err := ReadSequenced(stderrPath, contracts.StreamStderr)
+	if err != nil {
+		return nil, err
+	}
+	return MergeAndValidate(stdoutEvents, stderrEvents)
+}
+
+func ReadEventReaders(stdout, stderr io.Reader) ([]Event, error) {
+	stdoutEvents, err := ReadSequencedReader(stdout, contracts.StreamStdout)
+	if err != nil {
+		return nil, err
+	}
+	stderrEvents, err := ReadSequencedReader(stderr, contracts.StreamStderr)
 	if err != nil {
 		return nil, err
 	}
@@ -306,38 +302,47 @@ func readReplayLine(reader *bufio.Reader) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		line, done, nextPendingCR := appendReplayLineByte(current, b, pendingCR)
+		nextCurrent, line, done, nextPendingCR := appendReplayLineByte(current, b, pendingCR)
 		if done {
 			return line, nil
 		}
-		if b != '\r' {
-			current = append(current, b)
-		}
+		current = nextCurrent
 		pendingCR = nextPendingCR
 	}
 }
 
-func appendReplayLineByte(current []byte, b byte, pendingCR bool) (string, bool, bool) {
-	if pendingCR && b == '\n' {
-		return string(append(current, '\n')), true, false
+func appendReplayLineByte(current []byte, b byte, pendingCR bool) ([]byte, string, bool, bool) {
+	if pendingCR {
+		if b == '\n' {
+			return current, string(append(current, '\n')), true, false
+		}
+		current = resetReplayLinePayload(current)
 	}
 
 	switch b {
 	case '\r':
-		return "", false, true
+		return current, "", false, true
 	case '\n':
-		return string(append(current, '\n')), true, false
+		return current, string(append(current, '\n')), true, false
 	default:
-		return "", false, false
+		return append(current, b), "", false, false
 	}
 }
 
 func finishReplayLine(current []byte, pendingCR bool) (string, error) {
-	if pendingCR && len(current) > 0 {
-		current = current[:len(current)-1]
+	if pendingCR {
+		current = resetReplayLinePayload(current)
 	}
 	if len(current) == 0 {
 		return "", io.EOF
 	}
 	return string(current), nil
+}
+
+func resetReplayLinePayload(current []byte) []byte {
+	sep := bytes.IndexByte(current, '|')
+	if sep < 0 {
+		return current[:0]
+	}
+	return current[:sep+1]
 }

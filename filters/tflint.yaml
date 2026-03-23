@@ -2,6 +2,7 @@
 version: 1
 filter: tflint
 about: Compact default TFLint diagnostics conservatively by dropping counts and reference URLs while preserving file, line, rule, fixability, and config-load failures. Structured and workflow-changing modes stay native.
+flags_consuming_next_arg: []
 
 cases:
   - id: passthrough_alt_formats_and_modes

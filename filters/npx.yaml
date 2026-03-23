@@ -2,6 +2,7 @@
 version: 1
 filter: npx
 about: Compact routed npx subcommands conservatively, keep unsupported and package-injection forms native, and preserve wrapper behavior instead of turning npx into a semantic rewrite layer.
+flags_consuming_next_arg: []
 
 cases:
   - id: eslint

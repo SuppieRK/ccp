@@ -2,24 +2,6 @@ package operations
 
 import "go-command-compression-proxy/internal/contracts"
 
-var standaloneValueOptions = map[string]struct{}{
-	"-C":          {},
-	"-f":          {},
-	"-g":          {},
-	"-p":          {},
-	"-t":          {},
-	"--config":    {},
-	"--cwd":       {},
-	"--format":    {},
-	"--group":     {},
-	"--path-mode": {},
-	"--project":   {},
-	"--python":    {},
-	"--schema":    {},
-	"--tests":     {},
-	"--workers":   {},
-}
-
 func MatchesFirstIs(args []string, first string) bool {
 	return first == "" || (len(args) > 0 && args[0] == first)
 }
@@ -56,15 +38,15 @@ func MatchesNotHaveAllShortFlags(args, flags []string) bool {
 	return len(flags) == 0 || !containsAllShortFlags(args, flags)
 }
 
-func MatchesPositionalsLackAny(args, disallowed []string) bool {
-	return len(disallowed) == 0 || !containsAny(positionals(args), disallowed)
+func MatchesPositionalsLackAny(args, disallowed, valueFlags []string) bool {
+	return len(disallowed) == 0 || !containsAny(positionals(args, valueFlags), disallowed)
 }
 
-func HasExplicitPositionals(args []string) bool {
-	return len(positionals(args)) > 0
+func HasExplicitPositionals(args, valueFlags []string) bool {
+	return len(positionals(args, valueFlags)) > 0
 }
 
-func MatchesNoPositionals(args []string, want bool, allowLeadingCommand bool) bool {
+func MatchesNoPositionals(args, valueFlags []string, want bool, allowLeadingCommand bool) bool {
 	if !want {
 		return true
 	}
@@ -72,9 +54,9 @@ func MatchesNoPositionals(args []string, want bool, allowLeadingCommand bool) bo
 		return true
 	}
 	if allowLeadingCommand {
-		return len(positionals(args[1:])) == 0
+		return len(positionals(args[1:], valueFlags)) == 0
 	}
-	return len(positionals(args)) == 0
+	return len(positionals(args, valueFlags)) == 0
 }
 
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
@@ -171,7 +153,7 @@ func containsRune(value string, want rune) bool {
 	return false
 }
 
-func positionals(args []string) []string {
+func positionals(args, valueFlags []string) []string {
 	out := make([]string, 0, len(args))
 	afterSeparator := false
 	skipNextValue := false
@@ -188,7 +170,7 @@ func positionals(args []string) []string {
 			afterSeparator = true
 			continue
 		}
-		if takesStandaloneValue(arg) {
+		if takesStandaloneValue(arg, valueFlags) {
 			skipNextValue = true
 			continue
 		}
@@ -200,7 +182,6 @@ func positionals(args []string) []string {
 	return out
 }
 
-func takesStandaloneValue(arg string) bool {
-	_, ok := standaloneValueOptions[arg]
-	return ok
+func takesStandaloneValue(arg string, flags []string) bool {
+	return sliceContains(flags, arg)
 }

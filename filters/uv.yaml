@@ -2,6 +2,7 @@
 version: 1
 filter: uv
 about: Compact human `uv sync` and `uv pip` install or inventory output while keeping structured, freeze, and metadata-oriented modes native.
+flags_consuming_next_arg: []
 
 cases:
   - id: sync_json_passthrough_inline

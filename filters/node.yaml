@@ -2,6 +2,7 @@
 version: 1
 filter: node
 about: Compact repeated Node.js warnings and trim loader-boilerplate from safe `node -p` failure stacks while keeping broader runtime failures native.
+flags_consuming_next_arg: ["--print", "-p"]
 
 cases:
   - id: warning_dedupe
@@ -17,7 +18,7 @@ cases:
 
   - id: eval_loader_stack_trim
     when_arguments:
-      have_any: ["-p"]
+      have_any: ["-p", "--print"]
     compress_output:
       combined:
         lines:

@@ -96,6 +96,30 @@ var _ = Describe("Lifecycle helpers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(matches).To(BeEmpty())
 	})
+
+	It("refuses to overwrite managed files through symlinked paths", func() {
+		tmp, err := os.MkdirTemp("", "lifecycle-managed-symlink-*")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(tmp) })
+
+		outsideDir := filepath.Join(tmp, "outside")
+		Expect(os.MkdirAll(outsideDir, 0o755)).To(Succeed())
+		outsideFile := filepath.Join(outsideDir, "managed.txt")
+		Expect(os.WriteFile(outsideFile, []byte("keep me\n"), 0o644)).To(Succeed())
+
+		linkDir := filepath.Join(tmp, "cfg")
+		if err := os.Symlink(outsideDir, linkDir); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		changed, err := writeManagedFile(filepath.Join(linkDir, "managed.txt"), []byte("overwrite\n"), 0o644)
+		Expect(err).To(HaveOccurred())
+		Expect(changed).To(BeFalse())
+
+		body, readErr := os.ReadFile(outsideFile)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me\n"))
+	})
 })
 
 var _ = Describe("Adapter application", func() {
@@ -149,7 +173,7 @@ var _ = Describe("Startup maintenance", func() {
 	Context("when refreshing the managed home layout", func() {
 		BeforeEach(func() {
 			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "fake: fake\n",
+				".mappings.yaml": "version: 1\nmap:\n  fake: fake\n",
 				"fake.yaml":      "version: 1\nfilter: fake\nabout: test\n",
 			})
 			Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
@@ -232,10 +256,13 @@ var _ = Describe("Startup maintenance", func() {
 
 		It("replaces managed config contents and refreshes home filters", func() {
 			configDir := filepath.Join(ws.home, ".config", "ccp")
+			customFilter := filepath.Join(configDir, "filters", "custom.yaml")
 			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 
 			Expect(os.WriteFile(filepath.Join(configDir, "state.json"), []byte("stale"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Dir(customFilter), 0o755)).To(Succeed())
+			Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
 
 			oldHomeFilters := filepath.Join(ws.home, ".ccp", "filters")
 			Expect(os.MkdirAll(oldHomeFilters, 0o755)).To(Succeed())
@@ -244,11 +271,11 @@ var _ = Describe("Startup maintenance", func() {
 			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "backup.txt"), []byte("stale"), 0o644)).To(Succeed())
 
 			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "npm: npm\n",
+				".mappings.yaml": "version: 1\nmap:\n  npm: npm\n",
 				"npm.yaml":       "version: 1\nfilter: npm\nabout: test\n",
 			})
 
-			Expect(syncCanonicalHomeLayout()).To(Succeed())
+			Expect(RunStartupMaintenance()).To(Succeed())
 
 			for _, removed := range []string{
 				filepath.Join(configDir, "state.json"),
@@ -263,6 +290,7 @@ var _ = Describe("Startup maintenance", func() {
 			for _, copied := range []string{
 				filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml"),
 				filepath.Join(ws.home, ".config", "ccp", "filters", "npm.yaml"),
+				customFilter,
 			} {
 				_, err := os.Stat(copied)
 				Expect(err).NotTo(HaveOccurred())
@@ -291,8 +319,11 @@ var _ = Describe("Startup maintenance", func() {
 	It("rewrites managed state with embedded shipped filters on repair", func() {
 		ws := newLifecycleWorkspaceSpec()
 		configDir := filepath.Join(ws.home, ".config", "ccp")
+		customFilter := filepath.Join(configDir, "filters", "custom.yaml")
 		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Dir(customFilter), 0o755)).To(Succeed())
+		Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
 
 		Expect(RunRepair([]string{"--yes"})).To(Succeed())
 
@@ -308,6 +339,8 @@ var _ = Describe("Startup maintenance", func() {
 			_, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred(), path)
 		}
+		_, err = os.Stat(customFilter)
+		Expect(err).To(MatchError(os.ErrNotExist))
 	})
 })
 
@@ -362,9 +395,11 @@ var _ = Describe("repair", func() {
 
 		configDir := filepath.Join(ws.home, ".config", "ccp")
 		filtersDir := filepath.Join(configDir, "filters")
+		customFilter := filepath.Join(filtersDir, "custom.yaml")
 		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("keep"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filtersDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  custom: custom\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
 		stubMaterializeHomeFiltersForSpec(map[string]string{
 			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
 			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
@@ -376,10 +411,41 @@ var _ = Describe("repair", func() {
 		Expect(err).NotTo(HaveOccurred())
 		_, err = os.Stat(filepath.Join(filtersDir, "git.yaml"))
 		Expect(err).NotTo(HaveOccurred())
-		body, err := os.ReadFile(filepath.Join(filtersDir, ".mappings.yaml"))
+		body, err := os.ReadFile(customFilter)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(ContainSubstring("filter: custom"))
+		body, err = os.ReadFile(filepath.Join(filtersDir, ".mappings.yaml"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(body)).To(ContainSubstring("custom: custom"))
 		Expect(string(body)).To(ContainSubstring("git: git"))
+	})
+
+	It("adds missing filters and mappings with --no without prompting", func() {
+		prevIn := repairStdin
+		prevOut := repairStdout
+		repairStdin = strings.NewReader("y\n")
+		repairStdout = io.Discard
+		DeferCleanup(func() {
+			repairStdin = prevIn
+			repairStdout = prevOut
+		})
+
+		filtersDir := filepath.Join(ws.home, ".config", "ccp", "filters")
+		customFilter := filepath.Join(filtersDir, "custom.yaml")
+		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+		})
+
+		Expect(RunRepair([]string{"--no"})).To(Succeed())
+
+		body, err := os.ReadFile(customFilter)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(ContainSubstring("filter: custom"))
+		_, err = os.Stat(filepath.Join(filtersDir, "git.yaml"))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("syncs missing shipped filters without overwriting existing user files", func() {

@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 
+	"go-command-compression-proxy/internal/version"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -116,6 +118,23 @@ var _ = Describe("selectAssetURL", func() {
 	})
 })
 
+var _ = Describe("selectedUpgradeRepairMode", func() {
+	DescribeTable("selecting repair mode from the running version",
+		func(currentVersion string, expected repairMode) {
+			Expect(selectedUpgradeRepairMode(currentVersion)).To(Equal(expected))
+		},
+		Entry("older plain version preserves existing filters", "0.5.0", repairModePreserve),
+		Entry("pre-cutover patch version preserves existing filters", "0.5.9", repairModePreserve),
+		Entry("cutover version rewrites managed state", "0.6.0", repairModeRewrite),
+		Entry("newer version rewrites managed state", "1.2.3", repairModeRewrite),
+		Entry("v-prefixed versions preserve existing filters", "v0.6.0", repairModePreserve),
+		Entry("pre-release versions preserve existing filters", "0.6.0-rc.1", repairModePreserve),
+		Entry("whitespace versions preserve existing filters", " 1.2.3 ", repairModePreserve),
+		Entry("dev preserves existing filters", "dev", repairModePreserve),
+		Entry("invalid version preserves existing filters", "not-a-version", repairModePreserve),
+	)
+})
+
 var _ = Describe("RunUpgrade", func() {
 	var (
 		tmpDir string
@@ -136,13 +155,13 @@ var _ = Describe("RunUpgrade", func() {
 			func() string { return "linux" },
 			func() string { return "amd64" },
 			client,
-			func(string) error { return nil },
+			func(string, repairMode) error { return nil },
 		)
 		DeferCleanup(restore)
 
-		origPrint := upgradePrintf
-		upgradePrintf = func(format string, args ...any) (int, error) { return 0, nil }
-		DeferCleanup(func() { upgradePrintf = origPrint })
+		prevVersion := version.Version
+		version.Version = "1.2.2"
+		DeferCleanup(func() { version.Version = prevVersion })
 	})
 
 	Context("when upgrading to the latest release", func() {
@@ -165,13 +184,47 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) error { return nil },
+				func(string, repairMode) error { return nil },
 			)
 			DeferCleanup(restore)
 		})
 
 		It("downloads and installs that version", func() {
 			Expect(RunUpgrade(args)).To(Succeed())
+		})
+	})
+
+	Context("when the requested version is not strict X.Y.Z", func() {
+		BeforeEach(func() {
+			args = []string{flagVersion, "v1.2.3"}
+		})
+
+		It("rejects the upgrade before download", func() {
+			err := RunUpgrade(args)
+			Expect(err).To(MatchError(ContainSubstring("invalid release version")))
+
+			body, readErr := os.ReadFile(dest)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("old"))
+		})
+	})
+
+	Context("when the latest release tag is not strict X.Y.Z", func() {
+		BeforeEach(func() {
+			client = mockUpgradeClient(defaultUpgradeRepo, "v1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
+			restore := stubUpgradeRuntimeDeps(
+				func() (string, error) { return dest, nil },
+				func() string { return "linux" },
+				func() string { return "amd64" },
+				client,
+				func(string, repairMode) error { return nil },
+			)
+			DeferCleanup(restore)
+		})
+
+		It("rejects the release tag as invalid", func() {
+			err := RunUpgrade(nil)
+			Expect(err).To(MatchError(ContainSubstring("invalid release version")))
 		})
 	})
 
@@ -183,7 +236,7 @@ var _ = Describe("RunUpgrade", func() {
 					func() string { return "linux" },
 					func() string { return "amd64" },
 					mockUpgradeClientWithFailures(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), failAPI, failDownload),
-					func(string) error { return nil },
+					func(string, repairMode) error { return nil },
 				)
 				DeferCleanup(restore)
 
@@ -208,7 +261,7 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				mockUpgradeClientWithoutChecksums(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent)),
-				func(string) error { return nil },
+				func(string, repairMode) error { return nil },
 			)
 			DeferCleanup(restore)
 		})
@@ -251,7 +304,7 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) error { return nil },
+				func(string, repairMode) error { return nil },
 			)
 			DeferCleanup(restore)
 		})
@@ -259,20 +312,6 @@ var _ = Describe("RunUpgrade", func() {
 		It("returns the path error", func() {
 			err := RunUpgrade(args)
 			Expect(err).To(MatchError(ContainSubstring("no executable")))
-		})
-	})
-
-	Context("when printing progress fails", func() {
-		BeforeEach(func() {
-			args = []string{flagVersion, "1.2.3"}
-			origPrint := upgradePrintf
-			upgradePrintf = func(format string, args ...any) (int, error) { return 0, errors.New("print failed") }
-			DeferCleanup(func() { upgradePrintf = origPrint })
-		})
-
-		It("returns the print error", func() {
-			err := RunUpgrade(args)
-			Expect(err).To(MatchError(ContainSubstring("print failed")))
 		})
 	})
 
@@ -284,7 +323,7 @@ var _ = Describe("RunUpgrade", func() {
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) error { return errors.New("repair failed") },
+				func(string, repairMode) error { return errors.New("repair failed") },
 			)
 			DeferCleanup(restore)
 		})
@@ -313,25 +352,59 @@ var _ = Describe("RunUpgrade", func() {
 		})
 	})
 
-	Context("when upgrading from 0.5.1 or newer", func() {
+	Context("when upgrading from 0.6.0 or newer", func() {
+		var seenMode repairMode
+
 		BeforeEach(func() {
 			args = []string{flagVersion, "1.2.3"}
+			seenMode = ""
+			version.Version = "0.6.0"
 			restore := stubUpgradeRuntimeDeps(
 				func() (string, error) { return dest, nil },
 				func() string { return "linux" },
 				func() string { return "amd64" },
 				client,
-				func(string) error { return nil },
+				func(_ string, mode repairMode) error {
+					seenMode = mode
+					return nil
+				},
 			)
 			DeferCleanup(restore)
 		})
 
-		It("still runs repair through the new binary", func() {
+		It("runs rewrite repair through the new binary", func() {
 			Expect(RunUpgrade(args)).To(Succeed())
+			Expect(seenMode).To(Equal(repairModeRewrite))
 
 			b, err := os.ReadFile(dest)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(b)).To(Equal(newBinaryContent))
+		})
+	})
+
+	Context("when upgrading from older than 0.6.0", func() {
+		var seenMode repairMode
+
+		BeforeEach(func() {
+			args = []string{flagVersion, "1.2.3"}
+			seenMode = ""
+			version.Version = "0.5.9"
+			restore := stubUpgradeRuntimeDeps(
+				func() (string, error) { return dest, nil },
+				func() string { return "linux" },
+				func() string { return "amd64" },
+				client,
+				func(_ string, mode repairMode) error {
+					seenMode = mode
+					return nil
+				},
+			)
+			DeferCleanup(restore)
+		})
+
+		It("runs preserve repair through the new binary", func() {
+			Expect(RunUpgrade(args)).To(Succeed())
+			Expect(seenMode).To(Equal(repairModePreserve))
 		})
 	})
 })
@@ -426,7 +499,7 @@ func stubUpgradeRuntimeDeps(
 	osFn func() string,
 	archFn func() string,
 	httpClient *http.Client,
-	repairFn func(string) error,
+	repairFn func(string, repairMode) error,
 ) func() {
 	prevExec := upgradeExecutablePath
 	prevOS := upgradeRuntimeOS

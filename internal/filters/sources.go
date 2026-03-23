@@ -24,6 +24,9 @@ func RepositorySource(root string) FilterSource {
 
 func ProjectSource(root string) FilterSource {
 	return FilterSource{
+		// ProjectSource intentionally points at ./.ccp/filters so repos can ship
+		// repo-specific YAML overrides. README documents this as the project-local scope
+		// that takes precedence over home-scoped filters.
 		Kind:      SourceProject,
 		Directory: filepath.Join(root, ".ccp", "filters"),
 	}

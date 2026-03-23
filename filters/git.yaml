@@ -2,6 +2,7 @@
 version: 1
 filter: git
 about: Compact common read-only and success-path git flows while preserving native failure semantics, 0-byte command behavior, and line-oriented output that remains usable in follow-up shell work.
+flags_consuming_next_arg: ["-C", "-c", "--config-env", "--contains", "--format", "--git-dir", "--merged", "--namespace", "--no-contains", "--no-merged", "--points-at", "--set-upstream-to", "--sort", "--work-tree"]
 
 cases:
   - id: status

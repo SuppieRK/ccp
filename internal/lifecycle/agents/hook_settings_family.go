@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -42,6 +43,24 @@ func verifyArtifactFiles(checks ...artifactCheck) error {
 		if _, err := os.Stat(check.path); err != nil {
 			return fmt.Errorf(check.msg, check.path)
 		}
+	}
+	return nil
+}
+
+func ensureHookArtifactExecutable(path string) error {
+	return os.Chmod(path, 0o755)
+}
+
+func verifyHookArtifactExecutable(path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode().Perm()&0o111 == 0 {
+		return fmt.Errorf("hook script is not executable: %s", path)
 	}
 	return nil
 }
@@ -168,7 +187,10 @@ func persistJSONSettings(settingsPath string, root map[string]any) (bool, error)
 		return false, err
 	}
 	out = append(out, '\n')
-	return true, os.WriteFile(settingsPath, out, 0o644)
+	if err := writeManagedArtifact(settingsPath, out, 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 const (

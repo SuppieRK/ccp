@@ -31,15 +31,32 @@ type globalMetricsSource struct {
 	MetricsPath string
 }
 
-func runGlobalGain(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
-	if shouldRenderPeriodDataset(flags, opts) {
-		return renderGlobalPeriodGain(flags, opts, filters, currentMetricsPath)
-	}
-	return renderGlobalSummaryGain(flags, opts, filters, currentMetricsPath)
+type globalQueryFailure struct {
+	CWD         string
+	MetricsPath string
+	Err         error
 }
 
-func renderGlobalPeriodGain(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
-	rows, err := queryGlobalPeriodRows(opts, currentMetricsPath)
+type globalQuerySession struct {
+	sources  []globalMetricsSource
+	failures map[string]globalQueryFailure
+}
+
+func runGlobalGain(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
+	session, err := newGlobalQuerySession(currentMetricsPath)
+	if err != nil {
+		return err
+	}
+	defer session.writeWarnings("gain")
+
+	if shouldRenderPeriodDataset(flags, opts) {
+		return renderGlobalPeriodGain(session, flags, opts, filters)
+	}
+	return renderGlobalSummaryGain(session, flags, opts, filters)
+}
+
+func renderGlobalPeriodGain(session *globalQuerySession, flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope) error {
+	rows, err := queryGlobalPeriodRows(session, opts)
 	if err != nil {
 		return err
 	}
@@ -58,9 +75,9 @@ func renderGlobalPeriodGain(flags reportFlags, opts metrics.QueryOptions, filter
 	}
 }
 
-func renderGlobalSummaryGain(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
+func renderGlobalSummaryGain(session *globalQuerySession, flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope) error {
 	summaryOpts := summaryQueryOptions(flags, opts)
-	rows, err := queryGlobalSummaryRows(summaryOpts, currentMetricsPath)
+	rows, err := queryGlobalSummaryRows(session, summaryOpts)
 	if err != nil {
 		return err
 	}
@@ -78,12 +95,12 @@ func renderGlobalSummaryGain(flags reportFlags, opts metrics.QueryOptions, filte
 	case "csv":
 		return writeSummaryCSV(rows, total, filters)
 	default:
-		return renderGlobalSummaryText(flags, opts, filters, total, summaryOpts, currentMetricsPath)
+		return renderGlobalSummaryText(session, flags, opts, filters, total, summaryOpts)
 	}
 }
 
-func renderGlobalSummaryText(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, total metrics.SummaryTotal, summaryOpts metrics.QueryOptions, currentMetricsPath string) error {
-	toolRows, err := queryGlobalSummaryToolRows(summaryOpts, currentMetricsPath)
+func renderGlobalSummaryText(session *globalQuerySession, flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, total metrics.SummaryTotal, summaryOpts metrics.QueryOptions) error {
+	toolRows, err := queryGlobalSummaryToolRows(session, summaryOpts)
 	if err != nil {
 		return err
 	}
@@ -91,22 +108,28 @@ func renderGlobalSummaryText(flags reportFlags, opts metrics.QueryOptions, filte
 		return printSummaryTableText(filters, total, toolRows, flags.limit, opts.Period, true)
 	}
 	trendPeriod := defaultGainTrendPeriod(opts.Period)
-	dayRows, err := queryGlobalTrendRows(opts, currentMetricsPath, trendPeriod)
+	dayRows, err := queryGlobalTrendRows(session, opts, trendPeriod)
 	if err != nil {
 		return err
 	}
 	return printCompactGainSummary(filters, total, toolRows, dayRows, trendPeriod, opts.Period, true)
 }
 
-func queryGlobalTrendRows(opts metrics.QueryOptions, currentMetricsPath, period string) ([]metrics.PeriodRow, error) {
+func queryGlobalTrendRows(session *globalQuerySession, opts metrics.QueryOptions, period string) ([]metrics.PeriodRow, error) {
 	return queryTrendPeriodRows(func(queryOpts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
-		return queryGlobalPeriodRows(queryOpts, currentMetricsPath)
+		return queryGlobalPeriodRows(session, queryOpts)
 	}, opts, period, gainNow())
 }
 
 func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filtersEnvelope, currentMetricsPath string) error {
+	session, err := newGlobalQuerySession(currentMetricsPath)
+	if err != nil {
+		return err
+	}
+	defer session.writeWarnings("history")
+
 	opts.Period = ""
-	rows, err := queryGlobalHistoryRows(opts, currentMetricsPath)
+	rows, err := queryGlobalHistoryRows(session, opts)
 	if err != nil {
 		return err
 	}
@@ -125,15 +148,71 @@ func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filt
 	}
 }
 
-func queryGlobalSummaryRows(opts metrics.QueryOptions, currentMetricsPath string) ([]metrics.SummaryRow, error) {
+func newGlobalQuerySession(currentMetricsPath string) (*globalQuerySession, error) {
 	sources, err := globalMetricsSources(currentMetricsPath)
 	if err != nil {
 		return nil, err
 	}
+	return &globalQuerySession{
+		sources:  sources,
+		failures: map[string]globalQueryFailure{},
+	}, nil
+}
+
+func (s *globalQuerySession) recordFailure(source globalMetricsSource, err error) {
+	if s == nil || err == nil {
+		return
+	}
+	key := source.MetricsPath
+	if key == "" {
+		key = source.CWD
+	}
+	if _, exists := s.failures[key]; exists {
+		return
+	}
+	s.failures[key] = globalQueryFailure{
+		CWD:         source.CWD,
+		MetricsPath: source.MetricsPath,
+		Err:         err,
+	}
+}
+
+func (s *globalQuerySession) writeWarnings(command string) {
+	if s == nil || len(s.failures) == 0 {
+		return
+	}
+	failures := make([]globalQueryFailure, 0, len(s.failures))
+	for _, failure := range s.failures {
+		failures = append(failures, failure)
+	}
+	sort.Slice(failures, func(i, j int) bool {
+		if failures[i].CWD != failures[j].CWD {
+			return failures[i].CWD < failures[j].CWD
+		}
+		return failures[i].MetricsPath < failures[j].MetricsPath
+	})
+	for _, failure := range failures {
+		writeLifecycleWarning("ccp %s --global: warning: skipped workspace %s (%s): %v\n", command, globalQuerySourceLabel(failure), failure.MetricsPath, failure.Err)
+	}
+	writeLifecycleWarning("ccp %s --global: warning: results exclude %d workspace(s) with unreadable or corrupt metrics\n", command, len(failures))
+}
+
+func globalQuerySourceLabel(failure globalQueryFailure) string {
+	if failure.CWD != "" {
+		return failure.CWD
+	}
+	if failure.MetricsPath != "" {
+		return failure.MetricsPath
+	}
+	return "<unknown>"
+}
+
+func queryGlobalSummaryRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryRow, error) {
 	grouped := map[string]metrics.SummaryRow{}
-	for _, source := range sources {
+	for _, source := range session.sources {
 		rows, err := metrics.QuerySummaryRows(source.MetricsPath, opts)
 		if err != nil {
+			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range rows {
@@ -162,15 +241,12 @@ func queryGlobalSummaryRows(opts metrics.QueryOptions, currentMetricsPath string
 	return out, nil
 }
 
-func queryGlobalSummaryToolRows(opts metrics.QueryOptions, currentMetricsPath string) ([]metrics.SummaryToolRow, error) {
-	sources, err := globalMetricsSources(currentMetricsPath)
-	if err != nil {
-		return nil, err
-	}
+func queryGlobalSummaryToolRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryToolRow, error) {
 	grouped := map[string]metrics.SummaryToolRow{}
-	for _, source := range sources {
+	for _, source := range session.sources {
 		rows, err := metrics.QuerySummaryRowsByTool(source.MetricsPath, opts)
 		if err != nil {
+			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range rows {
@@ -199,15 +275,12 @@ func queryGlobalSummaryToolRows(opts metrics.QueryOptions, currentMetricsPath st
 	return out, nil
 }
 
-func queryGlobalPeriodRows(opts metrics.QueryOptions, currentMetricsPath string) ([]metrics.PeriodRow, error) {
-	sources, err := globalMetricsSources(currentMetricsPath)
-	if err != nil {
-		return nil, err
-	}
+func queryGlobalPeriodRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
 	grouped := map[string]metrics.PeriodRow{}
-	for _, source := range sources {
+	for _, source := range session.sources {
 		rows, err := metrics.QueryPeriod(source.MetricsPath, opts)
 		if err != nil {
+			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range rows {
@@ -232,15 +305,12 @@ func queryGlobalPeriodRows(opts metrics.QueryOptions, currentMetricsPath string)
 	return out, nil
 }
 
-func queryGlobalHistoryRows(opts metrics.QueryOptions, currentMetricsPath string) ([]globalHistoryRow, error) {
-	sources, err := globalMetricsSources(currentMetricsPath)
-	if err != nil {
-		return nil, err
-	}
+func queryGlobalHistoryRows(session *globalQuerySession, opts metrics.QueryOptions) ([]globalHistoryRow, error) {
 	rows := make([]globalHistoryRow, 0, 32)
-	for _, source := range sources {
+	for _, source := range session.sources {
 		historyRows, err := metrics.QueryHistory(source.MetricsPath, opts)
 		if err != nil {
+			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range historyRows {

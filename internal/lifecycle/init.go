@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-command-compression-proxy/internal/lifecycle/agents"
+	"go-command-compression-proxy/internal/projectfiles"
 	"go-command-compression-proxy/internal/workspaces"
 	"os"
 	"path/filepath"
@@ -162,6 +163,9 @@ func writeManagedFile(path string, data []byte, perm os.FileMode) (changed bool,
 }
 
 func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool, err error) {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+		return false, err
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return false, err
 	}
@@ -173,7 +177,14 @@ func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool
 		return false, nil
 	}
 	tmp := fmt.Sprintf("%s.tmp.%d", path, time.Now().UnixNano())
+	if err := projectfiles.RejectSymlinkPath(tmp); err != nil {
+		return false, err
+	}
 	if err := os.WriteFile(tmp, data, perm); err != nil {
+		return false, err
+	}
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+		_ = os.Remove(tmp)
 		return false, err
 	}
 	if err := os.Rename(tmp, path); err != nil {

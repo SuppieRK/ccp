@@ -2,8 +2,23 @@
 version: 1
 filter: mypy
 about: Group mypy diagnostics by file, preserve exact line and error-code context, drop only the trailing summary footer, and keep clean success output native.
+flags_consuming_next_arg: []
 
 cases:
+  - id: explicit_output_passthrough
+    when_arguments:
+      have_any:
+        - -O
+        - --output
+        - --pretty
+        - --show-column-numbers
+        - --show-error-context
+        - --show-error-end
+        - --show-error-code-links
+        - --hide-error-codes
+        - --no-error-summary
+    passthrough: true
+
   - id: diagnostics
     compress_output:
       combined:

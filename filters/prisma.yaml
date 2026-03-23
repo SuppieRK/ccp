@@ -2,6 +2,7 @@
 version: 1
 filter: prisma
 about: Compact low-value Prisma config and schema-load banners for validate and format while preserving real schema paths, success state, and failure text.
+flags_consuming_next_arg: []
 
 cases:
   - id: validate

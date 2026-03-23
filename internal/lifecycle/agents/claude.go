@@ -2,6 +2,7 @@ package agents
 
 import (
 	"fmt"
+	"go-command-compression-proxy/internal/projectfiles"
 	"os"
 	"path/filepath"
 	"strings"
@@ -214,6 +215,9 @@ func removeClaudeGuideBlock(path string) (updated string, changed bool, removeAl
 }
 
 func removeFileIfExists(path string) (bool, error) {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+		return false, err
+	}
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
 			return false, nil

@@ -2,6 +2,7 @@
 version: 1
 filter: helm
 about: Compact `helm lint` output by shortening the linting banner and normalizing indented continuation lines while preserving chart-local INFO and ERROR diagnostics plus the final lint summary.
+flags_consuming_next_arg: ["--color", "--colour", "--content-cache", "--kube-apiserver", "--kube-as-user", "--kube-ca-file", "--kube-context", "--kube-tls-server-name", "--kube-token", "--kube-version", "--kubeconfig", "--registry-config", "--repository-cache", "--repository-config", "--values", "-f", "-n", "--namespace"]
 
 cases:
   - id: lint
