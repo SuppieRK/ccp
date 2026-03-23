@@ -384,7 +384,7 @@ var _ = Describe("Runner", func() {
 		Expect(string(auditData)).NotTo(ContainSubstring(secret))
 	})
 
-	It("surfaces audit initialization failures instead of silently succeeding", func() {
+	It("does not fail execution when audit logging cannot initialize", func() {
 		tmpDir, err := os.MkdirTemp("", "core-runner-audit-fail-*")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
@@ -400,8 +400,9 @@ var _ = Describe("Runner", func() {
 
 		code, err := runner.Run(auditCommand())
 
-		Expect(err).To(HaveOccurred())
-		Expect(code).NotTo(Equal(0))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(code).To(Equal(0))
+		Expect(closeAndRead(stdoutReader, stdoutWriter)).To(ContainSubstring("audit-ok"))
 	})
 
 	It("records nested and chained execution shape diagnostics", func() {

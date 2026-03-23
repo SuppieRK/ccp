@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -83,6 +84,28 @@ var _ = Describe("ccp main", func() {
 				Expect(handled).To(BeTrue())
 			})
 		})
+
+		Context("when audit setup is blocked", func() {
+			It("still reaches the installed entrypoint smoke command", func() {
+				runMainSmokeHelperIfRequested()
+
+				home := GinkgoT().TempDir()
+				Expect(os.WriteFile(home+string(os.PathSeparator)+".config", []byte("block"), 0o644)).To(Succeed())
+
+				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-smoke")
+				cmd.Env = append(os.Environ(),
+					"CCP_MAIN_TEST_HELPER_SMOKE=1",
+					"HOME="+home,
+					"USERPROFILE="+home,
+				)
+				var stdout bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+
+				Expect(cmd.Run()).To(Succeed())
+				Expect(stdout.String()).To(ContainSubstring("smoke-ok"))
+			})
+		})
 	})
 
 	It("classifies lifecycle commands separately from wrapped execution", func() {
@@ -104,4 +127,18 @@ func runMainUsageHelperIfRequested() {
 
 	os.Args = []string{"ccp"}
 	main()
+}
+
+func runMainSmokeHelperIfRequested() {
+	if os.Getenv("CCP_MAIN_TEST_HELPER_SMOKE") != "1" {
+		return
+	}
+
+	if runtime.GOOS == "windows" {
+		os.Args = []string{"ccp", "cmd", "/c", "echo", "smoke-ok"}
+	} else {
+		os.Args = []string{"ccp", "sh", "-c", "printf 'smoke-ok\n'"}
+	}
+	main()
+	os.Exit(0)
 }

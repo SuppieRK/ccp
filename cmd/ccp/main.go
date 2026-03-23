@@ -19,9 +19,9 @@ type runner interface {
 }
 
 func main() {
-	if err := audit.ConfigureDefault(); err != nil {
-		exitWithErr(1, err)
-	}
+	// Audit is intentionally best-effort: startup must never fail before argument parsing
+	// or command execution just because the audit log path is blocked or unwritable.
+	_ = audit.ConfigureDefault()
 
 	opts, err := cli.Parse(os.Args[1:])
 	if err != nil {

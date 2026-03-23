@@ -138,7 +138,7 @@ var _ = Describe("verify", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"verify_output":` + strconv.Quote(filepath.Join(tmp, replay.VerifyOutputFileName))))
 	})
 
-	It("surfaces audit initialization failures instead of silently succeeding", func() {
+	It("does not fail verify when audit logging cannot initialize", func() {
 		restoreVersion := setVersionForTest("dev")
 		DeferCleanup(restoreVersion)
 
@@ -157,7 +157,10 @@ var _ = Describe("verify", func() {
 
 		err := RunVerify([]string{"--dir", tmp})
 
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
+		output, readErr := os.ReadFile(filepath.Join(tmp, replay.VerifyOutputFileName))
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(output)).To(Equal("filtered output\n"))
 	})
 
 	It("records verify invocation failures in the audit log", func() {
