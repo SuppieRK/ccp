@@ -12,91 +12,113 @@ import (
 )
 
 var _ = Describe("audit logging", func() {
-	It("uses ~/.config/ccp/audit/audit.log", func() {
-		home := GinkgoT().TempDir()
-		restore := WithTestConfig(home, 8, 7)
-		DeferCleanup(restore)
-		DeferCleanup(Reset)
-		DeferCleanup(cleanupAuditHome, home)
+	var (
+		home         string
+		maxSizeMB    int
+		maxBackups   int
+		cleanupAudit bool
+	)
 
-		path, err := DefaultPath()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(path).To(Equal(filepath.Join(home, ".config", "ccp", "audit", "audit.log")))
+	BeforeEach(func() {
+		home = GinkgoT().TempDir()
+		maxSizeMB = 8
+		maxBackups = 7
+		cleanupAudit = true
 	})
 
-	It("rotates once the active log reaches the configured size limit", func() {
-		home := GinkgoT().TempDir()
-		restore := WithTestConfig(home, 1, 3)
+	JustBeforeEach(func() {
+		restore := WithTestConfig(home, maxSizeMB, maxBackups)
 		DeferCleanup(restore)
 		DeferCleanup(Reset)
-		DeferCleanup(cleanupAuditHome, home)
-
-		payload := strings.Repeat("abcdefghijklmnopqrstuvwxyz", 8000)
-		for i := 0; i < 6; i++ {
-			Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
+		if cleanupAudit {
+			DeferCleanup(cleanupAuditHome, home)
 		}
-		Reset()
+	})
 
-		active := filepath.Join(home, ".config", "ccp", "audit", "audit.log")
-		entries, err := os.ReadDir(filepath.Dir(active))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(entries).To(HaveLen(2))
-		names := []string{entries[0].Name(), entries[1].Name()}
-		slices.Sort(names)
-		Expect(names).To(ContainElement("audit.log"))
-		rotated := 0
-		for _, name := range names {
-			if strings.HasPrefix(name, "audit-") && strings.HasSuffix(name, ".log") {
-				rotated++
+	Context("when resolving the default log path", func() {
+		It("uses ~/.config/ccp/audit/audit.log", func() {
+			path, err := DefaultPath()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(path).To(Equal(filepath.Join(home, ".config", "ccp", "audit", "audit.log")))
+		})
+	})
+
+	Context("when rotating audit logs", func() {
+		var payload string
+
+		BeforeEach(func() {
+			maxSizeMB = 1
+			payload = strings.Repeat("abcdefghijklmnopqrstuvwxyz", 8000)
+		})
+
+		It("rotates once the active log reaches the configured size limit", func() {
+			for i := 0; i < 6; i++ {
+				Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
 			}
-		}
-		Expect(rotated).To(Equal(1))
-	})
+			Reset()
 
-	It("retains a bounded number of backup files", func() {
-		home := GinkgoT().TempDir()
-		restore := WithTestConfig(home, 1, 2)
-		DeferCleanup(restore)
-		DeferCleanup(Reset)
-		DeferCleanup(cleanupAuditHome, home)
-
-		payload := strings.Repeat("abcdefghijklmnopqrstuvwxyz", 8000)
-		for i := 0; i < 18; i++ {
-			Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
-		}
-		Reset()
-
-		auditDir := filepath.Join(home, ".config", "ccp", "audit")
-		entries, err := os.ReadDir(auditDir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(len(entries)).To(BeNumerically("<=", 4))
-		names := make([]string, 0, len(entries))
-		for _, entry := range entries {
-			names = append(names, entry.Name())
-		}
-		slices.Sort(names)
-		Expect(names).To(ContainElement("audit.log"))
-		rotated := 0
-		for _, name := range names {
-			if strings.HasPrefix(name, "audit-") && strings.HasSuffix(name, ".log") {
-				rotated++
+			active := filepath.Join(home, ".config", "ccp", "audit", "audit.log")
+			entries, err := os.ReadDir(filepath.Dir(active))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(2))
+			names := []string{entries[0].Name(), entries[1].Name()}
+			slices.Sort(names)
+			Expect(names).To(ContainElement("audit.log"))
+			rotated := 0
+			for _, name := range names {
+				if strings.HasPrefix(name, "audit-") && strings.HasSuffix(name, ".log") {
+					rotated++
+				}
 			}
-		}
-		Expect(rotated).To(BeNumerically("<=", 3))
+			Expect(rotated).To(Equal(1))
+		})
+
+		Context("when backup retention is tightened", func() {
+			BeforeEach(func() {
+				maxBackups = 2
+			})
+
+			It("retains a bounded number of backup files", func() {
+				for i := 0; i < 18; i++ {
+					Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
+				}
+				Reset()
+
+				auditDir := filepath.Join(home, ".config", "ccp", "audit")
+				entries, err := os.ReadDir(auditDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(entries)).To(BeNumerically("<=", 4))
+				names := make([]string, 0, len(entries))
+				for _, entry := range entries {
+					names = append(names, entry.Name())
+				}
+				slices.Sort(names)
+				Expect(names).To(ContainElement("audit.log"))
+				rotated := 0
+				for _, name := range names {
+					if strings.HasPrefix(name, "audit-") && strings.HasSuffix(name, ".log") {
+						rotated++
+					}
+				}
+				Expect(rotated).To(BeNumerically("<=", 3))
+			})
+		})
 	})
 
-	It("degrades to no-op when the audit directory cannot be created", func() {
-		home := GinkgoT().TempDir()
-		Expect(os.WriteFile(filepath.Join(home, ".config"), []byte("block"), 0o644)).To(Succeed())
-		restore := WithTestConfig(home, 8, 7)
-		DeferCleanup(restore)
-		DeferCleanup(Reset)
+	Context("when the audit directory cannot be created", func() {
+		BeforeEach(func() {
+			cleanupAudit = false
+		})
 
-		Expect(ConfigureDefault()).To(Succeed())
-		Expect(Append("blocked", map[string]any{"ok": true})).To(Succeed())
+		It("degrades to no-op", func() {
+			Expect(os.WriteFile(filepath.Join(home, ".config"), []byte("block"), 0o644)).To(Succeed())
 
-		_, err := os.Stat(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
-		Expect(err).To(HaveOccurred())
+			Expect(ConfigureDefault()).To(Succeed())
+			Expect(Append("blocked", map[string]any{"ok": true})).To(Succeed())
+
+			_, err := os.Stat(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })
 
