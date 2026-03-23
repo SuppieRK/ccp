@@ -213,11 +213,15 @@ func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
 }
 
 func matchedFilterFiles(root string) ([]string, error) {
-	if _, err := os.Stat(root); err != nil {
+	info, err := os.Stat(root)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("read filters %q: not a directory", root)
 	}
 
 	entries, err := os.ReadDir(root)

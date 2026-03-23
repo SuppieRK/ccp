@@ -132,6 +132,17 @@ filter: broken
 		Expect(string(auditData)).To(ContainSubstring(`broken.yaml`))
 	})
 
+	It("returns a stable error when a filter source path is a file", func() {
+		sourceFile := filepath.Join(root, "not-a-dir")
+		Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+		_, err := LoadRegistryFiltersFromSources([]v2filters.FilterSource{{Directory: sourceFile}})
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(sourceFile))
+		Expect(err.Error()).To(ContainSubstring("not a directory"))
+	})
+
 	It("registers mapped aliases for shipped-compatible filters", func() {
 		Expect(os.WriteFile(filepath.Join(filterDir, ".mappings.yaml"), []byte(`
 version: 1
