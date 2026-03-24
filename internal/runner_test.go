@@ -656,8 +656,9 @@ var _ = Describe("Runner", func() {
 			}
 
 			startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+			childStartedPath := filepath.Join(GinkgoT().TempDir(), "child-started.txt")
 			markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
-			name, args := descendantCommand(startedPath, markerPath)
+			name, args := descendantCommand(startedPath, childStartedPath, markerPath)
 			ctx, cancel := context.WithCancel(context.Background())
 			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, name, args)
 
@@ -668,6 +669,10 @@ var _ = Describe("Runner", func() {
 
 			Eventually(func() error {
 				_, err := os.Stat(startedPath)
+				return err
+			}, time.Second).Should(Succeed())
+			Eventually(func() error {
+				_, err := os.Stat(childStartedPath)
 				return err
 			}, time.Second).Should(Succeed())
 
@@ -1315,8 +1320,8 @@ func cancellableCommand(startedPath, markerPath string) (string, []string) {
 	return os.Args[0], []string{"-test.run=TestManagedSubprocessHelper", "--", startedPath, markerPath}
 }
 
-func descendantCommand(startedPath, markerPath string) (string, []string) {
-	return os.Args[0], []string{"-test.run=TestManagedDescendantHelper", "--", startedPath, markerPath}
+func descendantCommand(startedPath, childStartedPath, markerPath string) (string, []string) {
+	return os.Args[0], []string{"-test.run=TestManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath}
 }
 
 func TestManagedSubprocessHelper(t *testing.T) {
@@ -1346,13 +1351,17 @@ func TestManagedDescendantHelper(t *testing.T) {
 	}
 
 	sep := slices.Index(os.Args, "--")
-	if sep < 0 || len(os.Args) < sep+3 {
+	if sep < 0 || len(os.Args) < sep+4 {
 		os.Exit(2)
 	}
 	startedPath := os.Args[sep+1]
-	markerPath := os.Args[sep+2]
+	childStartedPath := os.Args[sep+2]
+	markerPath := os.Args[sep+3]
 	if os.Getenv("CCP_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
-		time.Sleep(time.Second)
+		if err := os.WriteFile(childStartedPath, []byte("started"), 0o644); err != nil {
+			os.Exit(5)
+		}
+		time.Sleep(3 * time.Second)
 		if err := os.WriteFile(markerPath, []byte("orphan"), 0o644); err != nil {
 			os.Exit(6)
 		}
@@ -1361,7 +1370,7 @@ func TestManagedDescendantHelper(t *testing.T) {
 	if err := os.WriteFile(startedPath, []byte("started"), 0o644); err != nil {
 		os.Exit(3)
 	}
-	child := exec.Command(os.Args[0], "-test.run=TestManagedDescendantHelper", "--", startedPath, markerPath)
+	child := exec.Command(os.Args[0], "-test.run=TestManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath)
 	child.Env = append(os.Environ(), "CCP_MANAGED_DESCENDANT_HELPER=1", "CCP_MANAGED_DESCENDANT_HELPER_MODE=child")
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
