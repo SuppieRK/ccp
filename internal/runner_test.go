@@ -1290,7 +1290,7 @@ func registryFailureCommand(exitCode int) []string {
 		if exitCode == 0 {
 			return []string{"cmd", "/c", "@echo registry-fallback"}
 		}
-		return []string{"cmd", "/c", fmt.Sprintf("@echo registry-fallback && exit /b %d", exitCode)}
+		return []string{"cmd", "/c", fmt.Sprintf("@echo registry-fallback&&exit /b %d", exitCode)}
 	}
 	return []string{"sh", "-c", fmt.Sprintf("printf 'registry-fallback\\n'; exit %d", exitCode)}
 }
