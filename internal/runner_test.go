@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -200,6 +201,42 @@ var _ = Describe("Runner", func() {
 				),
 			)
 
+		})
+
+		Context("when configured filter sources cannot be loaded", func() {
+			DescribeTable("fails open and preserves native command execution",
+				func(command []string, expectedExit int) {
+					tmpDir, err := os.MkdirTemp("", "core-runner-registry-fallback-*")
+					Expect(err).NotTo(HaveOccurred())
+					DeferCleanup(func() {
+						Expect(os.RemoveAll(tmpDir)).To(Succeed())
+					})
+
+					restoreAudit := audit.WithTestConfig(tmpDir, 8, 7)
+					DeferCleanup(restoreAudit)
+					DeferCleanup(audit.Reset)
+
+					sourceFile := filepath.Join(tmpDir, "not-a-dir")
+					Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+					runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
+
+					code, err := runner.Run(command)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(code).To(Equal(expectedExit))
+					Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("registry-fallback\n"))
+					Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+					auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_registry_error"`))
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_fallback"`))
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_finish"`))
+				},
+				Entry("for successful commands", registryFailureCommand(0), 0),
+				Entry("for non-zero exit codes", registryFailureCommand(7), 7),
+			)
 		})
 	})
 
@@ -1246,6 +1283,16 @@ func metricsCommand() ([]string, string) {
 		return []string{"cmd", "/c", "echo metrics-win"}, "cmd"
 	}
 	return []string{"sh", "-c", "printf 'metrics\\n'"}, "sh"
+}
+
+func registryFailureCommand(exitCode int) []string {
+	if runtime.GOOS == "windows" {
+		if exitCode == 0 {
+			return []string{"cmd", "/c", "@echo registry-fallback"}
+		}
+		return []string{"cmd", "/c", fmt.Sprintf("@echo registry-fallback && exit /b %d", exitCode)}
+	}
+	return []string{"sh", "-c", fmt.Sprintf("printf 'registry-fallback\\n'; exit %d", exitCode)}
 }
 
 func auditCommand() []string {

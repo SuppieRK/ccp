@@ -105,13 +105,9 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 		return 1, err
 	}
 
-	registry, err := r.loadRegistry()
+	registry, err := r.loadExecutionRegistry(auditCommand, command.Tool)
 	if err != nil {
-		return 1, errors.Join(err, audit.Append("execution_registry_error", map[string]any{
-			"command": auditCommand,
-			"tool":    command.Tool,
-			"error":   err.Error(),
-		}))
+		return 1, err
 	}
 	resolved := registry.Resolve(command)
 	command, err = resolved.PrepareCommand(command)
@@ -148,17 +144,8 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	exitCode, err := waitExitCode(cmd)
 	exitWritten, exitWriteErr := r.writeEntries(state.Exit(exitCode))
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr, exitWriteErr)
-	if ctx.Err() != nil {
-		return 1, errors.Join(ctx.Err(), outputErr)
-	}
-	if err != nil {
-		return 1, errors.Join(err, outputErr)
-	}
-	if outputErr != nil {
-		if exitCode == 0 {
-			return 1, outputErr
-		}
-		return exitCode, outputErr
+	if code, runErr := filteredRunResult(ctx, err, outputErr, exitCode); runErr != nil {
+		return code, runErr
 	}
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
@@ -174,12 +161,47 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 		"kept_bytes":  keptBytes,
 	})
 	if auditErr != nil {
-		if exitCode == 0 {
-			return 1, auditErr
-		}
-		return exitCode, auditErr
+		return auditFailureResult(exitCode, auditErr)
 	}
 	return exitCode, nil
+}
+
+func (r *Runner) loadExecutionRegistry(auditCommand, tool string) (*engine.Registry, error) {
+	registry, err := r.loadRegistry()
+	if err == nil {
+		return registry, nil
+	}
+	if auditErr := audit.Append("execution_registry_error", map[string]any{
+		"command": auditCommand,
+		"tool":    tool,
+		"error":   err.Error(),
+	}); auditErr != nil {
+		return nil, errors.Join(err, auditErr)
+	}
+	return engine.NewRegistry(), nil
+}
+
+func filteredRunResult(ctx context.Context, waitErr, outputErr error, exitCode int) (int, error) {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return 1, errors.Join(ctxErr, outputErr)
+	}
+	if waitErr != nil {
+		return 1, errors.Join(waitErr, outputErr)
+	}
+	if outputErr == nil {
+		return exitCode, nil
+	}
+	if exitCode == 0 {
+		return 1, outputErr
+	}
+	return exitCode, outputErr
+}
+
+func auditFailureResult(exitCode int, err error) (int, error) {
+	if exitCode == 0 {
+		return 1, err
+	}
+	return exitCode, err
 }
 
 func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []string) (int, error) {

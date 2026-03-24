@@ -16,11 +16,11 @@
 
 ## Command Compression Proxy for coding agents
 
-CCP shrinks noisy terminal output without breaking command behavior or stripping the context coding agents need to act correctly.
+CCP reduces terminal noise while preserving the context coding agents need to act with confidence.
 
 Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
-Benchmarked with each build across `52` tool families and `382` replay cases.
+Validated on every build across `52` tool families and `382` replay cases.
 
 ## See It Work
 
