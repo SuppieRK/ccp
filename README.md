@@ -14,9 +14,9 @@
   <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
 </p>
 
-## Command Compression Proxy for coding agents
+## Cut the noise. Own the compression rules.
 
-CCP reduces terminal noise while preserving the context coding agents need to act with confidence.
+Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
 
 Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
