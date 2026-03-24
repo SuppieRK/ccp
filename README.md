@@ -152,7 +152,7 @@ ccp uninstall --tools codex
 ccp uninstall
 ```
 
-## Bring Your Own Filter
+## Own The Compression Rules
 
 Own your compression logic: author filters in YAML, ship overridden behavior with your repo, share filters across your team, and fix your edge case today instead of waiting for upstream.
 
