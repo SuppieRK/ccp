@@ -35,8 +35,8 @@ jobs:
             echo "release tag must not start with 'v': ${TAG}" >&2
             exit 1
           fi
-          if [[ ! "${TAG}" =~ ^[0-9] ]]; then
-            echo "release tag must start with a digit: ${TAG}" >&2
+          if [[ ! "${TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release tag must match X.Y.Z exactly: ${TAG}" >&2
             exit 1
           fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"

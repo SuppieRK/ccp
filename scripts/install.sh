@@ -8,7 +8,7 @@ set -eu
 #   curl --proto "=https" --tlsv1.2 -sSfL ... | VERSION=0.1.0 sh
 #
 # Env:
-#   VERSION    Release tag (default: latest)
+#   VERSION    Release tag in X.Y.Z form (default: latest)
 # Installer behavior:
 #   - Repository is fixed to SuppieRK/ccp.
 #   - Install directory is selected automatically:
@@ -82,21 +82,27 @@ need_cmd uname
 need_cmd curl
 need_cmd unzip
 
-normalize_release_version() {
+validate_release_version() {
   ver="$(printf '%s' "$1" | tr -d '\r\n')"
-  ver="${ver#v}"
-  ver="${ver%%-*}"
-  ver="${ver%%+*}"
-  case "$ver" in
-    ''|*[!0-9.]*) return 1 ;;
-  esac
+  old_ifs="$IFS"
+  IFS=.
+  set -- $ver
+  IFS="$old_ifs"
+
+  [ "$#" -eq 3 ] || return 1
+  for part in "$@"; do
+    case "$part" in
+      ''|*[!0-9]*) return 1 ;;
+    esac
+  done
+
   printf '%s' "$ver"
   return 0
 }
 
 version_lt_cutoff() {
-  ver="$(normalize_release_version "$1")" || return 1
-  cutoff="$(normalize_release_version "$REPAIR_CUTOFF_VERSION")" || return 1
+  ver="$(validate_release_version "$1")" || return 1
+  cutoff="$(validate_release_version "$REPAIR_CUTOFF_VERSION")" || return 1
 
   old_ifs="$IFS"
   IFS=.
@@ -256,6 +262,11 @@ if [ "$VERSION" = "latest" ]; then
     exit 1
   fi
 fi
+
+VERSION="$(validate_release_version "$VERSION")" || {
+  echo "release version must be exact semantic version (X.Y.Z): ${VERSION}" >&2
+  exit 1
+}
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
