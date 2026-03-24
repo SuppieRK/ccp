@@ -18,7 +18,7 @@
 
 Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
 
-Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
+Use Command Compression Proxy directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
 Validated on every build across `52` tool families and `382` replay cases.
 
