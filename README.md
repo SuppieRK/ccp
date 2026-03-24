@@ -14,7 +14,7 @@
   <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
 </p>
 
-## Cut the noise. Own the compression rules.
+## Cut the noise. Own the filtering rules.
 
 Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
 
