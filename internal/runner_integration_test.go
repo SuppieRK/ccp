@@ -177,17 +177,18 @@ var _ = Describe("runner execution edge cases", func() {
 	})
 
 	Context("when execution fails before command output is processed", func() {
-		It("returns registry errors from invalid filter sources before execution", func() {
+		It("falls back to native execution when filter sources are invalid", func() {
 			sourceFile := filepath.Join(GinkgoT().TempDir(), "not-a-dir")
 			Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
 
 			runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
 
-			code, err := runner.Run([]string{"git", "status"})
+			code, err := runner.Run(auditCommand())
 
-			Expect(code).To(Equal(1))
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("not a directory"))
+			Expect(code).To(Equal(0))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(ContainSubstring("audit-ok"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 		})
 
 		It("returns raw-mode start failures with shell-not-found exit semantics", func() {

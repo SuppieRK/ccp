@@ -174,9 +174,8 @@ func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error
 		if scope == "" {
 			continue
 		}
-		ccpDir := filepath.Join(scope, ".ccp")
-		if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
-			errs = append(errs, fmt.Errorf("remove workspace state %q: %w", ccpDir, err))
+		if err := removeManagedWorkspaceState(scope); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	for _, entry := range entries {
@@ -189,6 +188,71 @@ func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func removeManagedWorkspaceState(scope string) error {
+	ccpDir := filepath.Join(scope, ".ccp")
+	targets, err := managedWorkspaceStatePaths(ccpDir)
+	if err != nil {
+		return fmt.Errorf("resolve workspace state %q: %w", ccpDir, err)
+	}
+
+	var errs []error
+	for _, path := range targets {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("remove workspace state %q: %w", path, err))
+		}
+	}
+	if err := removeEmptyDirsUnder(ccpDir); err != nil {
+		errs = append(errs, fmt.Errorf("cleanup workspace state %q: %w", ccpDir, err))
+	}
+	return errors.Join(errs...)
+}
+
+func managedWorkspaceStatePaths(ccpDir string) ([]string, error) {
+	targets := []string{
+		filepath.Join(ccpDir, "gain.db"),
+		filepath.Join(ccpDir, "init.json"),
+	}
+	matches, err := filepath.Glob(filepath.Join(ccpDir, "init.json.bak.*"))
+	if err != nil {
+		return nil, err
+	}
+	targets = append(targets, matches...)
+	return targets, nil
+}
+
+func removeEmptyDirsUnder(root string) error {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if err := removeEmptyDirsUnder(filepath.Join(root, entry.Name())); err != nil {
+			return err
+		}
+	}
+	entries, err = os.ReadDir(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if len(entries) > 0 {
+		return nil
+	}
+	if err := os.Remove(root); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
@@ -218,7 +282,7 @@ func removeGlobalCCPState(homeDir string) error {
 }
 
 func manualRepoUninstallCommand() string {
-	return `REPO=/path/to/repo && rm -rf "$REPO/.ccp" "$REPO/.cursor/rules/ccp.mdc" "$REPO/.clinerules/ccp.md" "$REPO/.amazonq/rules/ccp.md" "$REPO/.trae/rules/ccp.md" "$REPO/.windsurf/rules/ccp.md"`
+	return `REPO=/path/to/repo && rm -f "$REPO/.ccp/gain.db" "$REPO/.ccp/init.json" "$REPO"/.ccp/init.json.bak.* "$REPO/.cursor/rules/ccp.mdc" "$REPO/.clinerules/ccp.md" "$REPO/.amazonq/rules/ccp.md" "$REPO/.trae/rules/ccp.md" "$REPO/.windsurf/rules/ccp.md"`
 }
 
 func writeLifecycleWarning(format string, args ...any) {

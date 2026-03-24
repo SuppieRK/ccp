@@ -14,13 +14,13 @@
   <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
 </p>
 
-## Command Compression Proxy for coding agents
+## Cut the noise. Own the filtering rules.
 
-CCP shrinks noisy terminal output without breaking command behavior or stripping the context coding agents need to act correctly.
+Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
 
-Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
+Use Command Compression Proxy directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
-Benchmarked with each build across `52` tool families and `382` replay cases.
+Validated on every build across `52` tool families and `382` replay cases.
 
 ## See It Work
 
@@ -152,7 +152,7 @@ ccp uninstall --tools codex
 ccp uninstall
 ```
 
-## Bring Your Own Filter
+## Own The Compression Rules
 
 Own your compression logic: author filters in YAML, ship overridden behavior with your repo, share filters across your team, and fix your edge case today instead of waiting for upstream.
 

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -200,6 +201,42 @@ var _ = Describe("Runner", func() {
 				),
 			)
 
+		})
+
+		Context("when configured filter sources cannot be loaded", func() {
+			DescribeTable("fails open and preserves native command execution",
+				func(command []string, expectedExit int) {
+					tmpDir, err := os.MkdirTemp("", "core-runner-registry-fallback-*")
+					Expect(err).NotTo(HaveOccurred())
+					DeferCleanup(func() {
+						Expect(os.RemoveAll(tmpDir)).To(Succeed())
+					})
+
+					restoreAudit := audit.WithTestConfig(tmpDir, 8, 7)
+					DeferCleanup(restoreAudit)
+					DeferCleanup(audit.Reset)
+
+					sourceFile := filepath.Join(tmpDir, "not-a-dir")
+					Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+					runner := &Runner{sources: []corefilters.FilterSource{{Directory: sourceFile}}}
+
+					code, err := runner.Run(command)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(code).To(Equal(expectedExit))
+					Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("registry-fallback\n"))
+					Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+					auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_registry_error"`))
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_fallback"`))
+					Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_finish"`))
+				},
+				Entry("for successful commands", registryFailureCommand(0), 0),
+				Entry("for non-zero exit codes", registryFailureCommand(7), 7),
+			)
 		})
 	})
 
@@ -619,16 +656,23 @@ var _ = Describe("Runner", func() {
 			}
 
 			startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+			childStartedPath := filepath.Join(GinkgoT().TempDir(), "child-started.txt")
 			markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
+			name, args := descendantCommand(startedPath, childStartedPath, markerPath)
 			ctx, cancel := context.WithCancel(context.Background())
-			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, "sh", []string{"-c", "printf started > \"$1\"; (sleep 1; printf orphan > \"$2\") & wait", "sh", startedPath, markerPath})
+			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, name, args)
 
 			Expect(err).NotTo(HaveOccurred())
+			cmd.Env = append(os.Environ(), "CCP_MANAGED_DESCENDANT_HELPER=1")
 			Expect(cmd.Start()).To(Succeed())
 			DeferCleanup(func() { closePipes(stdout, stderr) })
 
 			Eventually(func() error {
 				_, err := os.Stat(startedPath)
+				return err
+			}, time.Second).Should(Succeed())
+			Eventually(func() error {
+				_, err := os.Stat(childStartedPath)
 				return err
 			}, time.Second).Should(Succeed())
 
@@ -1248,6 +1292,16 @@ func metricsCommand() ([]string, string) {
 	return []string{"sh", "-c", "printf 'metrics\\n'"}, "sh"
 }
 
+func registryFailureCommand(exitCode int) []string {
+	if runtime.GOOS == "windows" {
+		if exitCode == 0 {
+			return []string{"cmd", "/c", "@echo registry-fallback"}
+		}
+		return []string{"cmd", "/c", fmt.Sprintf("@echo registry-fallback&&exit /b %d", exitCode)}
+	}
+	return []string{"sh", "-c", fmt.Sprintf("printf 'registry-fallback\\n'; exit %d", exitCode)}
+}
+
 func auditCommand() []string {
 	if runtime.GOOS == "windows" {
 		return []string{"cmd", "/c", "echo audit-ok"}
@@ -1264,6 +1318,10 @@ func confidentialAuditCommand(secret string) []string {
 
 func cancellableCommand(startedPath, markerPath string) (string, []string) {
 	return os.Args[0], []string{"-test.run=TestManagedSubprocessHelper", "--", startedPath, markerPath}
+}
+
+func descendantCommand(startedPath, childStartedPath, markerPath string) (string, []string) {
+	return os.Args[0], []string{"-test.run=TestManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath}
 }
 
 func TestManagedSubprocessHelper(t *testing.T) {
@@ -1284,6 +1342,43 @@ func TestManagedSubprocessHelper(t *testing.T) {
 	if err := os.WriteFile(markerPath, []byte("late"), 0o644); err != nil {
 		os.Exit(4)
 	}
+	os.Exit(0)
+}
+
+func TestManagedDescendantHelper(t *testing.T) {
+	if os.Getenv("CCP_MANAGED_DESCENDANT_HELPER") != "1" {
+		return
+	}
+
+	sep := slices.Index(os.Args, "--")
+	if sep < 0 || len(os.Args) < sep+4 {
+		os.Exit(2)
+	}
+	startedPath := os.Args[sep+1]
+	childStartedPath := os.Args[sep+2]
+	markerPath := os.Args[sep+3]
+	if os.Getenv("CCP_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
+		if err := os.WriteFile(childStartedPath, []byte("started"), 0o644); err != nil {
+			os.Exit(5)
+		}
+		time.Sleep(3 * time.Second)
+		if err := os.WriteFile(markerPath, []byte("orphan"), 0o644); err != nil {
+			os.Exit(6)
+		}
+		os.Exit(0)
+	}
+	if err := os.WriteFile(startedPath, []byte("started"), 0o644); err != nil {
+		os.Exit(3)
+	}
+	child := exec.Command(os.Args[0], "-test.run=TestManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath)
+	child.Env = append(os.Environ(), "CCP_MANAGED_DESCENDANT_HELPER=1", "CCP_MANAGED_DESCENDANT_HELPER_MODE=child")
+	child.Stdout = os.Stdout
+	child.Stderr = os.Stderr
+	child.Stdin = os.Stdin
+	if err := child.Start(); err != nil {
+		os.Exit(4)
+	}
+	time.Sleep(30 * time.Second)
 	os.Exit(0)
 }
 
