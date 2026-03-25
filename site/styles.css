@@ -515,6 +515,12 @@ h3 code {
   gap: var(--space-sm);
 }
 
+.gain-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+}
+
 .filter-demo-source pre,
 .filter-demo-result pre {
   overflow-x: auto;

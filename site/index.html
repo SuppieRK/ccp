@@ -3,19 +3,19 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CCP (Command Compression Proxy) for Coding Agents | Reduce Noisy Terminal Output</title>
+    <title>CCP: CLI Output Filtering for Coding Agents | Reduce Noisy Terminal Output</title>
     <meta
       name="description"
-      content="CCP is a CLI proxy for coding agents that reduces noisy terminal output while preserving command behavior, exit codes, and critical diagnostics."
+      content="CCP is a CLI output filtering proxy for coding agents. Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
     >
     <link rel="canonical" href="https://suppierk.github.io/ccp/">
     <meta name="theme-color" content="#0b1020">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="CCP">
-    <meta property="og:title" content="CCP: Command Compression Proxy for Coding Agents">
+    <meta property="og:title" content="CCP: CLI Output Filtering for Coding Agents">
     <meta
       property="og:description"
-      content="Reduce noisy terminal output while preserving command behavior, exit codes, and critical diagnostics."
+      content="Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
     >
     <meta property="og:url" content="https://suppierk.github.io/ccp/">
     <meta
@@ -24,10 +24,10 @@
     >
     <meta property="og:image:alt" content="CCP Command Compression Proxy banner">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="CCP: Command Compression Proxy for Coding Agents">
+    <meta name="twitter:title" content="CCP: CLI Output Filtering for Coding Agents">
     <meta
       name="twitter:description"
-      content="Reduce noisy terminal output while preserving command behavior, exit codes, and critical diagnostics."
+      content="Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
     >
     <meta
       name="twitter:image"
@@ -48,15 +48,15 @@
         "name": "CCP",
         "alternateName": "Command Compression Proxy",
         "applicationCategory": "DeveloperApplication",
-        "operatingSystem": "Linux, macOS, Windows",
-        "description": "CCP is a CLI proxy for coding agents that reduces noisy terminal output while preserving command behavior, exit codes, and critical diagnostics.",
+        "operatingSystem": "Linux, macOS",
+        "description": "CCP is a CLI output filtering proxy for coding agents that reduces noisy terminal output while preserving command behavior, exit codes, and critical diagnostics.",
         "url": "https://suppierk.github.io/ccp/",
         "codeRepository": "https://github.com/SuppieRK/ccp",
         "downloadUrl": "https://github.com/SuppieRK/ccp/releases",
         "license": "https://github.com/SuppieRK/ccp/blob/main/LICENSE",
         "author": {
           "@type": "Person",
-          "name": "SuppieRK",
+          "name": "Roman Khlebnov",
           "url": "https://github.com/SuppieRK"
         },
         "offers": {
@@ -93,12 +93,12 @@
         <div class="hero-stack anchor-target" id="top">
           <h1>Cut the noise.<br>Own the filtering rules.</h1>
           <p class="hero-lede">
-            CCP is Command Compression Proxy: a filter layer for noisy terminal output before it reaches your coding
-            agent.
+            CCP, Command Compression Proxy, is a CLI output filtering layer for noisy terminal output before it
+            reaches your coding agent.
           </p>
           <p class="hero-sublede">
-            Keep command behavior intact, shape the output with YAML rules, and fall back to native
-            output when details matter.
+            Keep command behavior intact, shape terminal output with command-aware YAML rules, preserve exit codes
+            and critical diagnostics, and fall back to native output when details matter.
           </p>
           <article class="hero-install-card anchor-target" id="install">
             <pre id="install-command"><code>curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh</code></pre>
@@ -121,27 +121,27 @@
           <h2>Terminal output is built for humans, not agents</h2>
           <p>
             Tools print banners, progress bars, repeated status lines, and other boilerplate that helps a person
-            scan a terminal but adds little value for a coding agent.
+            scan a terminal but adds little value for a coding agent reading shell output as context.
           </p>
         </div>
       </section>
 
       <section class="section story-section">
         <div class="section-heading anchor-target" id="pain">
-          <h2>Noise wastes context and hides important lines</h2>
+          <h2>Noise wastes context and hides diagnostics</h2>
           <p>
             Long output burns the context window, slows follow-up reasoning, and makes failures, file paths, and
-            diagnostics harder to spot when the agent decides what to do next.
+            critical diagnostics harder to spot when the agent decides what to do next.
           </p>
         </div>
       </section>
 
       <section class="section story-section">
         <div class="section-heading anchor-target" id="solution">
-          <h2>CCP filters noisy output before agents see it</h2>
+          <h2>CCP filters CLI output before agents see it</h2>
           <p>
             It removes repetitive shell noise before the output reaches the agent, while keeping the lines that
-            still change what the agent should do next.
+            still change what the agent should do next during terminal output filtering.
           </p>
         </div>
       </section>
@@ -189,10 +189,46 @@
         </div>
       </section>
 
+      <section class="section gain-section stack-lg">
+        <div class="section-heading anchor-target" id="gain">
+          <h2>Gains on real work</h2>
+          <p>
+            CCP does not just promise smaller output. Command  <code>ccp gain</code>  shows the token impact of real
+            commands, so you can see where filtering helps, where it does not, and whether the output stays worth trusting.
+          </p>
+        </div>
+
+        <div class="gain-grid">
+          <article class="terminal">
+            <div class="terminal-bar">
+              <span>Claude Code</span>
+              <span>Gradle project</span>
+            </div>
+            <pre><code>88 cmds · 5,330,571 -> 90,127 tokens (98.3% saved)
+
+Wins  : find 98.7% · gradle 87.1% · grep 1.4%
+Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
+Trend : ↑ +12.4 pts week over week (85.9% -> 98.3%) · on a roll</code></pre>
+          </article>
+
+          <article class="terminal">
+            <div class="terminal-bar">
+              <span>Codex</span>
+              <span>this repository</span>
+            </div>
+            <pre><code>1,825 cmds · 2,461,959 -> 2,160,427 tokens (12.3% saved)
+
+Wins  : grep 59.5% · go 90.3% · git 59.3%
+Drag  : sed (765 cmds) · openspec (245 cmds)
+Trend : ↓ -2.1 pts week over week (14.4% -> 12.3%) · slipping</code></pre>
+          </article>
+        </div>
+      </section>
+
       <section class="section filters-section stack-lg">
         <div class="section-heading anchor-target" id="filters">
-          <h2>Create new filters for yourself</h2>
-          <p>Write command-aware YAML, replay real output, and verify exactly what changed before you promote a filter.</p>
+          <h2>Create CLI output filters for your workflow</h2>
+          <p>Write command-aware YAML, replay real output, and verify exactly what changed before you promote a terminal output filter.</p>
         </div>
 
         <div class="filter-demo" data-filter-demo>
@@ -227,7 +263,8 @@
           </article>
         </div>
 
-        <p class="filter-caption">Scaffold a filter, capture a real command, verify the replay, then promote only when the behavior earns trust. <a href="https://github.com/SuppieRK/ccp/blob/main/FILTERS.md">Read more</a>.</p>
+        <p class="filter-caption">Scaffold a filter, capture a real command, verify the replay, then promote only when the behavior earns trust.</p>
+        <p><a href="https://github.com/SuppieRK/ccp/blob/main/FILTERS.md">Read more</a> about command-aware YAML filters.</p>
       </section>
 
       <section class="section proof-section stack-lg">
