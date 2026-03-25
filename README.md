@@ -14,11 +14,11 @@
   <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
 </p>
 
-## Cut the noise. Own the filtering rules.
+## Command Compression Proxy for coding agents.
 
 Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
 
-Use Command Compression Proxy directly as `ccp <command>`, or install integrations and keep your usual command shape.
+Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
 Validated on every build across `52` tool families and `382` replay cases.
 

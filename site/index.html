@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CCP: CLI Output Filtering for Coding Agents | Reduce Noisy Terminal Output</title>
+    <meta
+      name="description"
+      content="CCP is a CLI output filtering proxy for coding agents. Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
+    >
+    <link rel="canonical" href="https://suppierk.github.io/ccp/">
+    <meta name="theme-color" content="#0b1020">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CCP">
+    <meta property="og:title" content="CCP: CLI Output Filtering for Coding Agents">
+    <meta
+      property="og:description"
+      content="Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
+    >
+    <meta property="og:url" content="https://suppierk.github.io/ccp/">
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/SuppieRK/ccp/main/assets/readme-banner.png"
+    >
+    <meta property="og:image:alt" content="CCP Command Compression Proxy banner">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CCP: CLI Output Filtering for Coding Agents">
+    <meta
+      name="twitter:description"
+      content="Reduce noisy terminal output with command-aware YAML rules while preserving exit codes and critical diagnostics."
+    >
+    <meta
+      name="twitter:image"
+      content="https://raw.githubusercontent.com/SuppieRK/ccp/main/assets/readme-banner.png"
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="./styles.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CCP",
+        "alternateName": "Command Compression Proxy",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS",
+        "description": "CCP is a CLI output filtering proxy for coding agents that reduces noisy terminal output while preserving command behavior, exit codes, and critical diagnostics.",
+        "url": "https://suppierk.github.io/ccp/",
+        "codeRepository": "https://github.com/SuppieRK/ccp",
+        "downloadUrl": "https://github.com/SuppieRK/ccp/releases",
+        "license": "https://github.com/SuppieRK/ccp/blob/main/LICENSE",
+        "author": {
+          "@type": "Person",
+          "name": "Roman Khlebnov",
+          "url": "https://github.com/SuppieRK"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="site-header" data-site-header>
+      <div class="content-shell header-row">
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#">Install</a>
+          <a href="#problem">Problem</a>
+          <a href="#filters">Filters</a>
+        </nav>
+        <a class="button button-ghost header-button" href="https://github.com/SuppieRK/ccp">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path
+              fill="currentColor"
+              d="M8 0C3.58 0 0 3.67 0 8.2c0 3.63 2.29 6.71 5.47 7.79.4.08.55-.18.55-.39 0-.19-.01-.84-.01-1.53-2.01.38-2.53-.5-2.69-.95-.09-.24-.48-.95-.82-1.14-.28-.15-.68-.52-.01-.53.63-.01 1.08.59 1.23.84.72 1.26 1.87.9 2.33.68.07-.54.28-.9.5-1.11-1.78-.21-3.64-.92-3.64-4.07 0-.9.31-1.63.82-2.2-.08-.21-.36-1.05.08-2.18 0 0 .67-.22 2.2.84.64-.18 1.32-.28 2-.28s1.36.1 2 .28c1.53-1.06 2.2-.84 2.2-.84.44 1.13.16 1.97.08 2.18.51.57.82 1.29.82 2.2 0 3.16-1.87 3.85-3.65 4.06.29.25.54.74.54 1.5 0 1.08-.01 1.95-.01 2.22 0 .21.14.47.55.39A8.22 8.22 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+            />
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="content-shell" id="main" tabindex="-1">
+      <section class="hero section">
+        <div class="hero-background" aria-hidden="true"></div>
+        <div class="hero-stack anchor-target" id="top">
+          <h1>Cut the noise.<br>Own the filtering rules.</h1>
+          <p class="hero-lede">
+            CCP, Command Compression Proxy, is a CLI output filtering layer for noisy terminal output before it
+            reaches your coding agent.
+          </p>
+          <p class="hero-sublede">
+            Keep command behavior intact, shape terminal output with command-aware YAML rules, preserve exit codes
+            and critical diagnostics, and fall back to native output when details matter.
+          </p>
+          <article class="hero-install-card anchor-target" id="install">
+            <pre id="install-command"><code>curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh</code></pre>
+            <button class="copy-button copy-button-inline" type="button" data-copy-target="install-command" aria-label="Copy install command">
+              <svg class="icon-copy" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M3.75 2A1.75 1.75 0 0 0 2 3.75v7.5C2 12.216 2.784 13 3.75 13H5v-1.5H3.75a.25.25 0 0 1-.25-.25v-7.5a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25V5H11V3.75A1.75 1.75 0 0 0 9.25 2z"></path>
+                <path fill="currentColor" d="M6.75 5A1.75 1.75 0 0 0 5 6.75v5.5C5 13.216 5.784 14 6.75 14h5.5A1.75 1.75 0 0 0 14 12.25v-5.5A1.75 1.75 0 0 0 12.25 5zm0 1.5h5.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25"></path>
+              </svg>
+              <svg class="icon-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M13.78 3.97a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0l-3.25-3.25a.75.75 0 1 1 1.06-1.06L6 10.69l6.72-6.72a.75.75 0 0 1 1.06 0"></path>
+              </svg>
+            </button>
+            <output class="copy-status" data-copy-status aria-live="polite" aria-atomic="true"></output>
+          </article>
+        </div>
+      </section>
+
+      <section class="section story-section">
+        <div class="section-heading anchor-target" id="problem">
+          <h2>Terminal output is built for humans, not agents</h2>
+          <p>
+            Tools print banners, progress bars, repeated status lines, and other boilerplate that helps a person
+            scan a terminal but adds little value for a coding agent reading shell output as context.
+          </p>
+        </div>
+      </section>
+
+      <section class="section story-section">
+        <div class="section-heading anchor-target" id="pain">
+          <h2>Noise wastes context and hides diagnostics</h2>
+          <p>
+            Long output burns the context window, slows follow-up reasoning, and makes failures, file paths, and
+            critical diagnostics harder to spot when the agent decides what to do next.
+          </p>
+        </div>
+      </section>
+
+      <section class="section story-section">
+        <div class="section-heading anchor-target" id="solution">
+          <h2>CCP filters CLI output before agents see it</h2>
+          <p>
+            It removes repetitive shell noise before the output reaches the agent, while keeping the lines that
+            still change what the agent should do next during terminal output filtering.
+          </p>
+        </div>
+      </section>
+
+      <section class="section story-section">
+        <div class="section-heading anchor-target" id="rules">
+          <h2>You own the rules and the behavior</h2>
+          <p>
+            Author YAML filters close to your workflow, preserve exit codes and critical diagnostics, and fall back
+            to native output when it matters.
+          </p>
+        </div>
+      </section>
+
+      <section class="section quick-start-section stack-lg">
+        <div class="section-heading anchor-target" id="quick-start">
+          <h2>Use with your coding agent</h2>
+        </div>
+
+        <div class="logo-marquee" aria-label="Supported coding agents">
+          <div class="logo-marquee-track">
+            <span class="logo-item"><img src="./assets/agent-logos/claudecode.svg" alt="Claude Code"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/codex.svg" alt="Codex"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/opencode.svg" alt="OpenCode"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/cursor.svg" alt="Cursor"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/githubcopilot.svg" alt="GitHub Copilot"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/gemini.svg" alt="Gemini"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/windsurf.svg" alt="Windsurf"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/roocode.svg" alt="Roo Code"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/kilocode.svg" alt="KiloCode"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/qwen.svg" alt="Qwen"></span>
+            <span class="logo-item"><img src="./assets/agent-logos/cline.svg" alt="Cline"></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/claudecode.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/codex.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/opencode.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/cursor.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/githubcopilot.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/gemini.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/windsurf.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/roocode.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/kilocode.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/qwen.svg" alt=""></span>
+            <span class="logo-item" aria-hidden="true"><img src="./assets/agent-logos/cline.svg" alt=""></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section gain-section stack-lg">
+        <div class="section-heading anchor-target" id="gain">
+          <h2>Gains on real work</h2>
+          <p>
+            CCP does not just promise smaller output. Command  <code>ccp gain</code>  shows the token impact of real
+            commands, so you can see where filtering helps, where it does not, and whether the output stays worth trusting.
+          </p>
+        </div>
+
+        <div class="gain-grid">
+          <article class="terminal">
+            <div class="terminal-bar">
+              <span>Claude Code</span>
+              <span>Gradle project</span>
+            </div>
+            <pre><code>88 cmds · 5,330,571 -> 90,127 tokens (98.3% saved)
+
+Wins  : find 98.7% · gradle 87.1% · grep 1.4%
+Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
+Trend : ↑ +12.4 pts week over week (85.9% -> 98.3%) · on a roll</code></pre>
+          </article>
+
+          <article class="terminal">
+            <div class="terminal-bar">
+              <span>Codex</span>
+              <span>this repository</span>
+            </div>
+            <pre><code>1,825 cmds · 2,461,959 -> 2,160,427 tokens (12.3% saved)
+
+Wins  : grep 59.5% · go 90.3% · git 59.3%
+Drag  : sed (765 cmds) · openspec (245 cmds)
+Trend : ↓ -2.1 pts week over week (14.4% -> 12.3%) · slipping</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section filters-section stack-lg">
+        <div class="section-heading anchor-target" id="filters">
+          <h2>Create CLI output filters for your workflow</h2>
+          <p>Write command-aware YAML, replay real output, and verify exactly what changed before you promote a terminal output filter.</p>
+        </div>
+
+        <div class="filter-demo" data-filter-demo>
+          <article class="terminal filter-demo-source">
+            <div class="terminal-bar">
+              <span data-filter-stage>start with the command</span>
+            </div>
+            <pre><code><span class="filter-line" data-filter-show="0"><span class="yaml-key">version</span>: <span class="yaml-number">1</span></span>
+<span class="filter-line" data-filter-show="0"><span class="yaml-key">filter</span>: <span class="yaml-string">"yarn"</span></span>
+<span class="filter-line" data-filter-show="0"><span class="yaml-key">cases</span>:</span>
+<span class="filter-line" data-filter-show="0">  - <span class="yaml-key">id</span>: <span class="yaml-string">"run-success"</span></span>
+<span class="filter-line" data-filter-show="1">    <span class="yaml-key">when_arguments</span>:</span>
+<span class="filter-line" data-filter-show="1">      <span class="yaml-key">have_sequence</span>: [<span class="yaml-string">"run"</span>]</span>
+<span class="filter-line" data-filter-show="2">    <span class="yaml-key">compress_output</span>:</span>
+<span class="filter-line" data-filter-show="2">      <span class="yaml-key">stdout</span>:</span>
+<span class="filter-line" data-filter-show="2">        <span class="yaml-key">lines</span>:</span>
+<span class="filter-line" data-filter-show="2">          <span class="yaml-key">skip</span>:</span>
+<span class="filter-line" data-filter-show="2">            - <span class="yaml-key">starts_with</span>: <span class="yaml-string">"yarn run v"</span></span>
+<span class="filter-line" data-filter-show="3">            - <span class="yaml-key">starts_with</span>: <span class="yaml-string">"$ "</span></span>
+<span class="filter-line" data-filter-show="4">            - <span class="yaml-key">starts_with</span>: <span class="yaml-string">"Done in "</span></span></code></pre>
+          </article>
+
+          <article class="terminal filter-demo-result">
+            <div class="terminal-bar">
+              <span data-filter-result>native output</span>
+            </div>
+            <pre><code><span class="output-line" data-filter-hide="2">yarn run v1.22.22</span>
+<span class="output-line" data-filter-hide="3">$ node scripts/success.js</span>
+<span class="output-line">success-line-1</span>
+<span class="output-line">success-line-2</span>
+<span class="output-line" data-filter-hide="4">Done in 0.06s.</span></code></pre>
+          </article>
+        </div>
+
+        <p class="filter-caption">Scaffold a filter, capture a real command, verify the replay, then promote only when the behavior earns trust.</p>
+        <p><a href="https://github.com/SuppieRK/ccp/blob/main/FILTERS.md">Read more</a> about command-aware YAML filters.</p>
+      </section>
+
+      <section class="section proof-section stack-lg">
+        <div class="section-heading anchor-target" id="proof">
+          <h2>Recorded examples from benchmark fixtures</h2>
+          <p>The command on the left is the recorded fixture input. The right side is the verified CCP output for that same case.</p>
+        </div>
+
+        <div class="example-tabs" role="tablist" aria-label="Benchmark examples">
+          <button
+            class="button button-ghost is-active"
+            id="example-tab-npm"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            tabindex="0"
+            aria-controls="example-panel-npm"
+            data-example-tab="npm"
+          >
+            NPM
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-git"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-git"
+            data-example-tab="git"
+          >
+            Git
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-bun"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-bun"
+            data-example-tab="bun"
+          >
+            Bun
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-find"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-find"
+            data-example-tab="find"
+          >
+            Find
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-eslint"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-eslint"
+            data-example-tab="eslint"
+          >
+            ESLint
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-next"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-next"
+            data-example-tab="next"
+          >
+            Next
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-pytest"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-pytest"
+            data-example-tab="pytest"
+          >
+            Pytest
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-go"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-go"
+            data-example-tab="go"
+          >
+            Go
+          </button>
+          <button
+            class="button button-ghost"
+            id="example-tab-gradle"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="example-panel-gradle"
+            data-example-tab="gradle"
+          >
+            Gradle
+          </button>
+        </div>
+
+        <article
+          class="example-panel"
+          id="example-panel-npm"
+          role="tabpanel"
+          aria-labelledby="example-tab-npm"
+          data-example-panel="npm"
+        >
+          <div class="example-header">
+            <div>
+              <h3>npm run success-noisy</h3>
+            </div>
+            <p class="example-meta">107 tokens -> 45 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>&gt; ccp-npm-benchmark-basic@1.0.0 success-noisy
+&gt; node --test test/success.test.js
+
+TAP version 13
+# Subtest: add computes sums
+ok 1 - add computes sums
+  ---
+  duration_ms: 0.366266
+  type: 'test'
+  ...
+# Subtest: divide computes quotient
+ok 2 - divide computes quotient
+  ---
+  duration_ms: 0.067165
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 37.905034</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code># Subtest: add computes sums
+ok 1 - add computes sums
+# Subtest: divide computes quotient
+ok 2 - divide computes quotient
+1..2
+# tests 2
+# pass 2
+# fail 0
+# duration_ms 37.905034</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-git"
+          role="tabpanel"
+          aria-labelledby="example-tab-git"
+          data-example-panel="git"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>git status</h3>
+            </div>
+            <p class="example-meta">196 tokens -> 109 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>On branch git-improvements
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  (use "git restore &lt;file&gt;..." to discard changes in working directory)
+	modified:   testdata/benchmarks/git/status-success-porcelain/output.txt
+	modified:   testdata/benchmarks/git/status-success-porcelain/stdout.txt
+	modified:   testdata/benchmarks/git/status-success/output.txt
+	modified:   testdata/benchmarks/git/status-success/stdout.txt
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+	FIND.md
+	GIT.md
+	GREP.md
+	LS.md
+	TOOL_EXPLORATION_LOG.md
+	testdata/benchmarks/git/status-success-porcelain/stderr.txt
+	testdata/benchmarks/git/status-success/stderr.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>## git-improvements
+ M testdata/benchmarks/git/status-success-porcelain/output.txt
+ M testdata/benchmarks/git/status-success-porcelain/stdout.txt
+ M testdata/benchmarks/git/status-success/output.txt
+ M testdata/benchmarks/git/status-success/stdout.txt
+?? FIND.md
+?? GIT.md
+?? GREP.md
+?? LS.md
+?? TOOL_EXPLORATION_LOG.md
+?? testdata/benchmarks/git/status-success-porcelain/stderr.txt
+?? testdata/benchmarks/git/status-success/stderr.txt</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-bun"
+          role="tabpanel"
+          aria-labelledby="example-tab-bun"
+          data-example-panel="bun"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>bun install --frozen-lockfile</h3>
+            </div>
+            <p class="example-meta">133 tokens -> 125 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>bun install v1.3.11 (af24e281)
+
++ @nestjs/testing@10.4.8
++ @types/bun@1.1.13
++ @types/express@5.0.0
++ @types/supertest@6.0.2
++ @typescript-eslint/eslint-plugin@8.15.0
++ @typescript-eslint/parser@8.15.0
++ eslint@8.57.1
++ eslint-config-prettier@9.1.0
++ eslint-plugin-prettier@5.2.1
++ prettier@3.3.3
++ supertest@7.0.0
++ tsc-watch@6.2.1
++ typescript@5.6.3
++ @nestjs/common@10.4.8
++ @nestjs/core@10.4.8
++ @nestjs/mapped-types@2.0.6
++ @nestjs/platform-express@10.4.8
++ reflect-metadata@0.2.2
++ rxjs@7.8.1
+
+278 packages installed [23.85s]</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>+ @nestjs/testing@10.4.8
++ @types/bun@1.1.13
++ @types/express@5.0.0
++ @types/supertest@6.0.2
++ @typescript-eslint/eslint-plugin@8.15.0
++ @typescript-eslint/parser@8.15.0
++ eslint@8.57.1
++ eslint-config-prettier@9.1.0
++ eslint-plugin-prettier@5.2.1
++ prettier@3.3.3
++ supertest@7.0.0
++ tsc-watch@6.2.1
++ typescript@5.6.3
++ @nestjs/common@10.4.8
++ @nestjs/core@10.4.8
++ @nestjs/mapped-types@2.0.6
++ @nestjs/platform-express@10.4.8
++ reflect-metadata@0.2.2
++ rxjs@7.8.1
+278 packages installed [23.85s]</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-find"
+          role="tabpanel"
+          aria-labelledby="example-tab-find"
+          data-example-panel="find"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>find ./internal -name "*.go" -type f</h3>
+            </div>
+            <p class="example-meta">115 tokens -> 73 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>/internal/audit/audit.go
+/internal/audit/audit_test.go
+/internal/audit/suite_test.go
+/internal/benchmark/run.go
+/internal/benchmark/run_test.go
+/internal/benchmark/suite_test.go
+/internal/cli/parse.go
+/internal/cli/parse_test.go
+/internal/cli/suite_test.go
+/internal/contracts/types.go
+/internal/engine/ansi.go
+/internal/engine/ansi_test.go
+/internal/engine/buffer.go
+/internal/engine/buffer_test.go
+/internal/engine/engine.go
+/internal/engine/engine_test.go</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>/internal/
+  parser.go
+  parser_test.go
+  runner.go
+  runner_integration_test.go
+  runner_test.go
+  suite_test.go
+/internal/audit/
+  audit.go
+  audit_test.go
+  suite_test.go
+/internal/benchmark/
+  run.go
+  run_test.go
+  suite_test.go
+/internal/cli/
+  parse.go
+  parse_test.go
+  suite_test.go</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-eslint"
+          role="tabpanel"
+          aria-labelledby="example-tab-eslint"
+          data-example-panel="eslint"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>eslint src/lint_fail.js</h3>
+            </div>
+            <p class="example-meta">110 tokens -> 39 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>/mnt/c/.../src/lint_fail.js
+  1:7   error  'unused' is assigned a value but never used  no-unused-vars
+  1:17  error  Missing semicolon                            semi
+  4:15  error  Missing semicolon                            semi
+
+✖ 3 problems (3 errors, 0 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>src/lint_fail.js
+1:7 error no-unused-vars 'unused' is assigned a value but never used
+1:17 error semi Missing semicolon
+4:15 error semi Missing semicolon</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-next"
+          role="tabpanel"
+          aria-labelledby="example-tab-next"
+          data-example-panel="next"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>next build</h3>
+            </div>
+            <p class="example-meta">268 tokens -> 152 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>▲ Next.js 15.5.12
+
+Creating an optimized production build ...
+Local search index generated...
+Generated 13 documents in .contentlayer
+Failed to compile.
+
+./app/page.tsx
+Error: x Unexpected token. Did you mean {'}'} or &rbrace;?
+6 |   const sortedPosts = sortPosts(allBlogs)
+7 |   const posts = allCoreContent(sortedPosts)
+8 |   return &lt;Main posts={posts} &gt;
+9 | }
+    ^
+x Unexpected eof
+
+Caused by:
+    Syntax Error
+
+> Build failed because of webpack errors</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>▲ Next.js 15.5.12
+Local search index generated...
+Generated 13 documents in .contentlayer
+Failed to compile.
+./app/page.tsx
+Error: x Unexpected token. Did you mean {'}'} or &rbrace;?
+   ,-[/tmp/repo-43a/app/page.tsx:9:1]
+   : ^
+   `----
+  x Unexpected eof
+Caused by:
+    Syntax Error
+Import trace for requested module:
+> Build failed because of webpack errors</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-pytest"
+          role="tabpanel"
+          aria-labelledby="example-tab-pytest"
+          data-example-panel="pytest"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>./.venv/bin/pytest -q tests/test_app.py::test_fail</h3>
+            </div>
+            <p class="example-meta">221 tokens -> 81 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>F                                                                        [100%]
+=================================== FAILURES ===================================
+__________________________________ test_fail ___________________________________
+
+    def test_fail():
+        print("captured stdout call")
+        left = {"ok": False}
+        right = {"ok": True}
+&gt;       assert left == right
+E       AssertionError: assert {'ok': False} == {'ok': True}
+E         Differing items:
+E         {'ok': False} != {'ok': True}
+E         Use -v to get more diff
+
+tests/test_app.py:10: AssertionError
+----------------------------- Captured stdout call -----------------------------
+captured stdout call
+=========================== short test summary info ============================
+FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
+1 failed in 1.42s</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>failure details:
+- test_fail
+E       AssertionError: assert {'ok': False} == {'ok': True}
+tests/test_app.py:10: AssertionError
+----------------------------- Captured stdout call -----------------------------
+  captured stdout call
+summary:
+FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-go"
+          role="tabpanel"
+          aria-labelledby="example-tab-go"
+          data-example-panel="go"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>go test -count=1 ./...</h3>
+            </div>
+            <p class="example-meta">65 tokens -> 54 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>--- FAIL: TestGlobalHistorySource (0.00s)
+    gain_test.go:405: source field mismatch
+        expected: /tmp/lifecycle/repo-one
+        actual: /tmp/lifecycle/repo
+    gain_test.go:406: source field should include repo tail
+FAIL
+FAIL	fixture-go-test	0.001s</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>--- FAIL: TestGlobalHistorySource
+    gain_test.go:405: source field mismatch
+        expected: /tmp/lifecycle/repo-one
+        actual: /tmp/lifecycle/repo
+    gain_test.go:406: source field should include repo tail</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article
+          class="example-panel"
+          id="example-panel-gradle"
+          role="tabpanel"
+          aria-labelledby="example-tab-gradle"
+          data-example-panel="gradle"
+          hidden
+        >
+          <div class="example-header">
+            <div>
+              <h3>./gradlew test</h3>
+            </div>
+            <p class="example-meta">323 tokens -> 124 tokens</p>
+          </div>
+          <div class="comparison-scroll">
+            <div class="terminal-pair">
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>original</span>
+                </div>
+                <pre><code>WARNING: A restricted method in java.lang.System has been called
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+&gt; Task :compileJava NO-SOURCE
+&gt; Task :processResources NO-SOURCE
+&gt; Task :classes UP-TO-DATE
+&gt; Task :compileTestJava UP-TO-DATE
+&gt; Task :processTestResources NO-SOURCE
+&gt; Task :testClasses UP-TO-DATE
+
+&gt; Task :test FAILED
+
+FailureTest &gt; test() FAILED
+    org.opentest4j.AssertionFailedError at FailureTest.java:9
+2 actionable tasks: 1 executed, 1 up-to-date
+
+1 test completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+&gt; There were failing tests. See the report at: file:///build/reports/tests/test/index.html
+
+* Try:
+&gt; Run with --scan to generate a Build Scan (powered by Develocity).
+
+BUILD FAILED in 1s</code></pre>
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>compressed</span>
+                </div>
+                <pre><code>&gt; Task :test FAILED
+FailureTest &gt; test() FAILED
+    org.opentest4j.AssertionFailedError at FailureTest.java:9
+2 actionable tasks: 1 executed, 1 up-to-date
+1 test completed, 1 failed
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':test'.
+&gt; There were failing tests. See the report at: file:///build/reports/tests/test/index.html
+BUILD FAILED in 1s</code></pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="content-shell footer-grid">
+        <div>
+          <p class="footer-copy">Smaller output you can still trust</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="https://github.com/SuppieRK/ccp">GitHub</a>
+          <a href="https://github.com/SuppieRK/ccp/releases">Releases</a>
+          <a href="https://github.com/SuppieRK/ccp#quick-start">Quick Start</a>
+          <a href="https://github.com/SuppieRK/ccp/discussions">Discussions</a>
+          <a href="https://github.com/SuppieRK/ccp/blob/main/LICENSE">License</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

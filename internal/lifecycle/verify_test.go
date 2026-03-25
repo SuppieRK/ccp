@@ -15,7 +15,6 @@ import (
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
 	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/version"
 )
 
 type stubVerifyRunner struct {
@@ -67,18 +66,18 @@ var _ = Describe("verify", func() {
 		}
 	})
 
-	It("rejects non-dev builds", func() {
-		restoreVersion := setVersionForTest("v1.2.3")
-		DeferCleanup(restoreVersion)
+	It("replays fixtures in non-dev builds too", func() {
+		stub := &stubVerifyRunner{output: "filtered output\n"}
+		DeferCleanup(stubVerifyRunnerForTest(stub))
 
-		err := RunVerify(nil)
-		Expect(err).To(MatchError(ContainSubstring("only available in dev builds")))
+		tmp := GinkgoT().TempDir()
+		writeFileForTest(filepath.Join(tmp, replay.CommandFileName), "argv: [\"git\", \"status\"]\n")
+		writeFileForTest(filepath.Join(tmp, replay.StdoutFileName), "00000|native stdout\n")
+
+		Expect(RunVerify([]string{"--dir", tmp})).To(Succeed())
 	})
 
 	It("replays fixtures and writes verify artifacts", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		stub := &stubVerifyRunner{
 			output:    "filtered output\n",
 			decisions: "<keep>    | native stdout\n",
@@ -108,9 +107,6 @@ var _ = Describe("verify", func() {
 	})
 
 	It("records verify invocation outcomes in the audit log", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		auditHome := GinkgoT().TempDir()
 		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
 		DeferCleanup(restoreAudit)
@@ -135,9 +131,6 @@ var _ = Describe("verify", func() {
 	})
 
 	It("does not fail verify when audit logging cannot initialize", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		auditHome := GinkgoT().TempDir()
 		Expect(os.WriteFile(filepath.Join(auditHome, ".config"), []byte("block"), 0o644)).To(Succeed())
 		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
@@ -160,9 +153,6 @@ var _ = Describe("verify", func() {
 	})
 
 	It("records verify invocation failures in the audit log", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		auditHome := GinkgoT().TempDir()
 		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
 		DeferCleanup(restoreAudit)
@@ -186,9 +176,6 @@ var _ = Describe("verify", func() {
 	})
 
 	It("refuses to overwrite symlinked verify artifacts", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		stub := &stubVerifyRunner{output: "filtered output\n", decisions: "<keep>    | native stdout\n"}
 		DeferCleanup(stubVerifyRunnerForTest(stub))
 
@@ -211,17 +198,11 @@ var _ = Describe("verify", func() {
 	})
 
 	It("rejects command arguments", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		err := RunVerify([]string{"--dir", GinkgoT().TempDir(), "--", "git", "status"})
 		Expect(err).To(MatchError(ContainSubstring("does not accept command arguments")))
 	})
 
 	It("fails when replay sequence prefixes break ordering", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		tmp := GinkgoT().TempDir()
 		writeFileForTest(filepath.Join(tmp, replay.CommandFileName), "argv: [\"git\", \"status\"]\n")
 		writeFileForTest(filepath.Join(tmp, replay.StdoutFileName), "00000|alpha\n")
@@ -232,9 +213,6 @@ var _ = Describe("verify", func() {
 	})
 
 	It("passes fixture exit codes to the runner", func() {
-		restoreVersion := setVersionForTest("dev")
-		DeferCleanup(restoreVersion)
-
 		stub := &stubVerifyRunner{output: "filtered output\n"}
 		DeferCleanup(stubVerifyRunnerForTest(stub))
 
@@ -253,12 +231,6 @@ func stubVerifyRunnerForTest(runner verifyRunner) func() {
 	prev := newVerifyRunner
 	newVerifyRunner = func() verifyRunner { return runner }
 	return func() { newVerifyRunner = prev }
-}
-
-func setVersionForTest(value string) func() {
-	prev := version.Version
-	version.Version = value
-	return func() { version.Version = prev }
 }
 
 func writeFileForTest(path, content string) {

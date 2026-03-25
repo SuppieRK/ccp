@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>CCP</title>
+  <rect width="64" height="64" fill="#050505"/>
+  <g fill="#f5f5f5">
+    <rect x="6" y="18" width="12" height="4"/>
+    <rect x="6" y="18" width="4" height="28"/>
+    <rect x="6" y="42" width="12" height="4"/>
+    <rect x="25" y="18" width="12" height="4"/>
+    <rect x="25" y="18" width="4" height="28"/>
+    <rect x="25" y="42" width="12" height="4"/>
+    <rect x="45" y="18" width="12" height="4"/>
+    <rect x="45" y="18" width="4" height="28"/>
+    <rect x="45" y="30" width="12" height="4"/>
+    <rect x="55" y="18" width="4" height="16"/>
+  </g>
+</svg>
