@@ -214,6 +214,89 @@ cases:
 	})
 })
 
+var _ = Describe("LoadRegistryStatusFromSources", func() {
+	It("reports active, overridden, and broken entries while keeping runtime winners", func() {
+		root := GinkgoT().TempDir()
+		projectRoot := filepath.Join(root, "project")
+		home := filepath.Join(root, "home")
+		projectDir := filepath.Join(projectRoot, ".ccp", "filters")
+		homeDir := filepath.Join(home, ".config", "ccp", "filters")
+		Expect(os.MkdirAll(projectDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
+
+		Expect(os.WriteFile(filepath.Join(projectDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(projectDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  gs: git\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(projectDir, "broken.yaml"), []byte("version: 1\nfilter: broken\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(homeDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(homeDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  py: python\n"), 0o644)).To(Succeed())
+
+		filters, rows, err := LoadRegistryStatusFromSources([]v2filters.FilterSource{
+			v2filters.ProjectSource(projectRoot),
+			v2filters.HomeSource(home),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("git"))
+		Expect(filters).To(HaveKey("gs"))
+		Expect(filters).NotTo(HaveKey("py"))
+
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("git")),
+			HaveField("FilterPath", Equal(filepath.Join(projectDir, "git.yaml"))),
+			HaveField("Target", Equal("")),
+			HaveField("SourceKind", Equal(v2filters.SourceProject)),
+			HaveField("Status", Equal("ok")),
+		)))
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("gs")),
+			HaveField("FilterPath", Equal(filepath.Join(projectDir, ".mappings.yaml"))),
+			HaveField("Target", Equal("git")),
+			HaveField("SourceKind", Equal(v2filters.SourceProject)),
+			HaveField("Status", Equal("ok")),
+		)))
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("git")),
+			HaveField("FilterPath", Equal(filepath.Join(homeDir, "git.yaml"))),
+			HaveField("Target", Equal("")),
+			HaveField("SourceKind", Equal(v2filters.SourceHome)),
+			HaveField("Status", Equal("overridden")),
+		)))
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("py")),
+			HaveField("FilterPath", Equal(filepath.Join(homeDir, ".mappings.yaml"))),
+			HaveField("Target", Equal("python")),
+			HaveField("SourceKind", Equal(v2filters.SourceHome)),
+			HaveField("Status", Equal("missing target: python")),
+		)))
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("-")),
+			HaveField("FilterPath", Equal(filepath.Join(projectDir, "broken.yaml"))),
+			HaveField("Target", Equal("")),
+			HaveField("SourceKind", Equal(v2filters.SourceProject)),
+			HaveField("Status", ContainSubstring("invalid filter:")),
+		)))
+	})
+
+	It("reports source-level errors without failing the overall status load", func() {
+		root := GinkgoT().TempDir()
+		sourceFile := filepath.Join(root, "not-a-dir")
+		Expect(os.WriteFile(sourceFile, []byte("x"), 0o644)).To(Succeed())
+
+		filters, rows, err := LoadRegistryStatusFromSources([]v2filters.FilterSource{{
+			Kind:      v2filters.SourceHome,
+			Directory: sourceFile,
+		}})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(BeEmpty())
+		Expect(rows).To(ContainElement(SatisfyAll(
+			HaveField("Tool", Equal("-")),
+			HaveField("FilterPath", Equal(sourceFile)),
+			HaveField("Target", Equal("")),
+			HaveField("SourceKind", Equal(v2filters.SourceHome)),
+			HaveField("Status", ContainSubstring("source error:")),
+		)))
+	})
+})
+
 var _ = Describe("Shipped repository filters", func() {
 	It("parse with strict validation from the real filters directory", func() {
 		root := ProjectRootFromSource()
@@ -261,4 +344,8 @@ func cleanupAuditHome(home string) error {
 		time.Sleep(20 * time.Millisecond)
 	}
 	return lastErr
+}
+
+func validLoaderStatusFilterYAML(filterID string) string {
+	return "version: 1\nfilter: " + filterID + "\ncases:\n  - id: passthrough\n    passthrough: true\n"
 }

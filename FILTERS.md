@@ -7,6 +7,7 @@ It is for user-authored filters, not built-in repository filters.
 By the end, you will know how to:
 
 - scaffold a new filter in `./.ccp/filters/`
+- inspect which filters are active, overridden, or broken with `ccp filter status`
 - edit the YAML safely
 - test the filter live against a command
 - capture a real fixture with `ccp capture`
@@ -22,6 +23,18 @@ CCP has two user-facing filter locations:
 If you are just getting started, use `./.ccp/filters/`.
 
 That is what this tutorial covers.
+
+When you are unsure which filter CCP will actually use, run:
+
+```bash
+ccp filter status
+```
+
+It shows all discovered rows from the active filter scopes and helps answer:
+
+- which filters are active now
+- which home-scoped filters are overridden by project-local ones
+- which filters or mappings are broken and therefore unavailable
 
 ## What We Will Build
 
@@ -58,6 +71,7 @@ Useful commands in this tutorial:
 
 ```bash
 ccp filter new demo-tool
+ccp filter status
 ccp capture --dir fixture-run -- ./demo-tool run
 ccp verify --dir fixture-run
 ```
@@ -137,6 +151,36 @@ map:
 ```
 
 That means commands such as `./demo-tool run` still resolve to the `demo-tool` filter id.
+
+## Step 2.5: Check Which Filter CCP Will Use
+
+Before you start editing behavior, confirm that CCP can see your new project-local filter:
+
+```bash
+ccp filter status
+```
+
+You should see a row for `demo-tool` coming from the project scope:
+
+```text
+ccp filter status
+
+showing 1 rows
+
++-----------+------------------------------+---------+--------+
+| TOOL      | FILTER                       | SOURCE  | STATUS |
++-----------+------------------------------+---------+--------+
+| demo-tool | ./.ccp/filters/demo-tool.yaml | project | ok     |
++-----------+------------------------------+---------+--------+
+```
+
+As you add more filters over time, this command also shows:
+
+- overridden rows when a project-local filter shadows a home-scoped one
+- broken filter files with parse or validation errors
+- broken `.mappings.yaml` rows and missing mapping targets
+
+Use `ccp filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether CCP is using the filter you think it is.
 
 ## Step 3: Start With A Minimal Real Filter
 
@@ -890,6 +934,7 @@ Check these first:
 - the command shape in `command.yaml`
 - the order of your `cases`
 - whether an earlier case is catching the command first
+- `ccp filter status` to confirm the filter is active instead of overridden or broken
 
 ### JSON got compacted when I wanted passthrough
 
@@ -910,6 +955,7 @@ Once you are comfortable with this tutorial, explore these next:
 - `schemas/ccp-filter.schema.json` for the full field structure
 - `./.ccp/filters/.mappings.yaml` for aliasing multiple command names to one filter
 - `~/.config/ccp/filters/` when you want the same custom filter across many repos
+- `ccp filter status` when you need to inspect active, overridden, or broken filter rows across scopes
 
 The shortest useful loop to remember is:
 

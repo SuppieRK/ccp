@@ -22,7 +22,6 @@ import (
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/version"
 	"go-command-compression-proxy/internal/workspaces"
 )
 
@@ -58,7 +57,7 @@ func NewRunnerWithOptions(opts Options) *Runner {
 		metricsPath = defaultMetricsPath()
 	}
 	return &Runner{
-		sources:     defaultFilterSources(),
+		sources:     filteryaml.DefaultSources(),
 		metricsPath: metricsPath,
 		workingDir:  currentWorkingDir(),
 		opts:        opts,
@@ -350,35 +349,6 @@ func (r *Runner) loadRegistry() (*engine.Registry, error) {
 	}
 	registry.RegisterAll(filters)
 	return registry, nil
-}
-
-func defaultFilterSources() []corefilters.FilterSource {
-	if version.Version == "dev" {
-		return []corefilters.FilterSource{
-			corefilters.RepositorySource(filteryaml.ProjectRootFromSource()),
-		}
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return []corefilters.FilterSource{
-			// Project-local filters are an intentional feature, not an accidental trust leak.
-			// README "Bring Your Own Filter" documents ./.ccp/filters as the repo-scoped
-			// override layer for shipping custom behavior with a project.
-			corefilters.ProjectSource(cwd),
-		}
-	}
-	return []corefilters.FilterSource{
-		// Priority is deliberate: project-local filters override home-scoped filters so a
-		// repository can ship its own YAML behavior without modifying the user's global CCP
-		// setup. This is documented behavior, not a fallback or safety bug.
-		corefilters.ProjectSource(cwd),
-		corefilters.HomeSource(home),
-	}
 }
 
 func defaultMetricsPath() string {

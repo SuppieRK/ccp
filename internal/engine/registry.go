@@ -31,6 +31,14 @@ func (r *Registry) RegisterAll(filters map[string]contracts.Filter) {
 	}
 }
 
+func (r *Registry) Has(tool string) bool {
+	if r == nil {
+		return false
+	}
+	_, ok := r.filters[strings.TrimSpace(tool)]
+	return ok
+}
+
 func (r *Registry) Resolve(command contracts.Command) contracts.Filter {
 	if r == nil {
 		audit.MustAppend("filter_fallback", map[string]any{
