@@ -168,6 +168,8 @@ Project scope overrides home scope. That gives you a clean model:
 - keep repo-specific overrides without forks
 - handle domain-specific logs without pretending one generic filter fits every project
 
+Read more details in [FILTERS.md](FILTERS.md)
+
 ## Capability Matrix
 
 | Area | Tools | Representative Savings |
