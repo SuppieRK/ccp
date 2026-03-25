@@ -644,6 +644,18 @@ h3 code {
 }
 
 @media (max-width: 720px) {
+  .header-row {
+    gap: var(--space-xs);
+  }
+
+  .site-nav {
+    gap: var(--space-xs);
+  }
+
+  .site-nav a + a::before {
+    margin-right: var(--space-xs);
+  }
+
   main,
   .anchor-target {
     scroll-margin-top: var(--header-offset-mobile);
