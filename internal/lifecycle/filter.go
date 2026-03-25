@@ -309,9 +309,17 @@ func compactPathFromRoot(path, root, prefix string) (string, bool) {
 	if root == "" {
 		return "", false
 	}
-	rel, err := filepath.Rel(root, path)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", false
+	rel, ok := relativeToRoot(root, path)
+	if !ok {
+		resolvedRoot, rootErr := filepath.EvalSymlinks(root)
+		resolvedPath, pathErr := filepath.EvalSymlinks(path)
+		if rootErr != nil || pathErr != nil {
+			return "", false
+		}
+		rel, ok = relativeToRoot(resolvedRoot, resolvedPath)
+		if !ok {
+			return "", false
+		}
 	}
 	if rel == "." {
 		return prefix, true
@@ -320,4 +328,12 @@ func compactPathFromRoot(path, root, prefix string) (string, bool) {
 		return "." + string(filepath.Separator) + rel, true
 	}
 	return prefix + string(filepath.Separator) + rel, true
+}
+
+func relativeToRoot(root, path string) (string, bool) {
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return rel, true
 }
