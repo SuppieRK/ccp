@@ -66,7 +66,7 @@ var _ = Describe("Runner", func() {
 		It("uses default filter sources when none are provided", func() {
 			runner := NewRunnerWithOptions(Options{})
 			Expect(runner).NotTo(BeNil())
-			Expect(runner.sources).To(Equal(defaultFilterSources()))
+			Expect(runner.sources).To(Equal(filteryaml.DefaultSources()))
 		})
 
 		It("uses repository filters by default in dev builds", func() {
@@ -76,7 +76,7 @@ var _ = Describe("Runner", func() {
 				version.Version = oldVersion
 			})
 
-			sources := defaultFilterSources()
+			sources := filteryaml.DefaultSources()
 
 			Expect(sources).To(HaveLen(1))
 			Expect(sources[0]).To(Equal(corefilters.RepositorySource(filteryaml.ProjectRootFromSource())))
@@ -89,7 +89,7 @@ var _ = Describe("Runner", func() {
 				version.Version = oldVersion
 			})
 
-			sources := defaultFilterSources()
+			sources := filteryaml.DefaultSources()
 
 			Expect(sources).To(HaveLen(2))
 			Expect(sources[0].Kind).To(Equal(corefilters.SourceProject))
@@ -109,7 +109,7 @@ var _ = Describe("Runner", func() {
 					Skip("platform keeps reporting a working directory after removal")
 				}
 
-				Expect(defaultFilterSources()).To(BeNil())
+				Expect(filteryaml.DefaultSources()).To(BeNil())
 				Expect(defaultMetricsPath()).To(BeEmpty())
 				Expect(currentWorkingDir()).To(BeEmpty())
 

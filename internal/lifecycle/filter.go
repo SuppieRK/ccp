@@ -8,6 +8,9 @@ import (
 	"slices"
 	"strings"
 
+	"go-command-compression-proxy/internal/engine"
+	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,9 +28,70 @@ func RunFilter(args []string) error {
 	switch args[0] {
 	case "new":
 		return RunFilterNew(args[1:])
+	case "status":
+		return RunFilterStatus(args[1:])
 	default:
 		return fmt.Errorf("unknown filter subcommand %q", args[0])
 	}
+}
+
+func RunFilterStatus(args []string) error {
+	fs := newLifecycleFlagSet("filter status")
+	setLifecycleUsage(
+		fs,
+		"show active, overridden, and broken filter registrations",
+		[]string{"ccp filter status"},
+		"status shows all discovered rows from the current filter sources.",
+		"project-local filters override home-scoped filters when both define the same tool or alias.",
+		"filter paths are compacted for readability; mappings show their target with '->'.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("filter status does not accept positional arguments")
+	}
+
+	sources := filteryaml.DefaultSources()
+	filters, rows, err := filteryaml.LoadRegistryStatusFromSources(sources)
+	if err != nil {
+		return err
+	}
+	registry := engine.NewRegistry()
+	registry.RegisterAll(filters)
+
+	fmt.Println("ccp filter status")
+	fmt.Println()
+	if len(rows) == 0 {
+		fmt.Println("No filters found.")
+		return nil
+	}
+	fmt.Printf("showing %d rows\n\n", len(rows))
+
+	tableRows := make([][]string, 0, len(rows))
+	for _, row := range rows {
+		if row.Status == "ok" && !registry.Has(row.Tool) {
+			continue
+		}
+		tableRows = append(tableRows, []string{
+			truncateForDisplay(displayFilterStatusTool(row.Tool), 10),
+			truncateTailForDisplay(displayFilterStatusPath(row), 38),
+			string(row.SourceKind),
+			truncateForDisplay(row.Status, 31),
+		})
+	}
+
+	fmt.Print(renderTextTable([]textTableColumn{
+		{header: "TOOL"},
+		{header: "FILTER"},
+		{header: "SOURCE"},
+		{header: "STATUS"},
+	}, tableRows))
+	return nil
 }
 
 func RunFilterNew(args []string) error {
@@ -205,4 +269,55 @@ cases:
 #   Build repeated grouped sections with:
 #   id, starts_with, starts_with_regex, matches_regex, variables, group_by, initially, lines, finally
 `, filterID)
+}
+
+func displayFilterStatusTool(tool string) string {
+	if strings.TrimSpace(tool) == "" {
+		return "-"
+	}
+	return tool
+}
+
+func displayFilterStatusPath(row filteryaml.RegistryStatusRow) string {
+	path := compactFilterStatusPath(row.FilterPath)
+	if strings.TrimSpace(row.Target) == "" {
+		return path
+	}
+	return path + " -> " + row.Target
+}
+
+func compactFilterStatusPath(path string) string {
+	path = filepath.Clean(strings.TrimSpace(path))
+	if path == "" || path == "." {
+		return path
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		if rel, ok := compactPathFromRoot(path, cwd, "."); ok {
+			return rel
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		if rel, ok := compactPathFromRoot(path, home, "~"); ok {
+			return rel
+		}
+	}
+	return path
+}
+
+func compactPathFromRoot(path, root, prefix string) (string, bool) {
+	root = filepath.Clean(strings.TrimSpace(root))
+	if root == "" {
+		return "", false
+	}
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	if rel == "." {
+		return prefix, true
+	}
+	if prefix == "." {
+		return "." + string(filepath.Separator) + rel, true
+	}
+	return prefix + string(filepath.Separator) + rel, true
 }

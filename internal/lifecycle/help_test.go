@@ -62,6 +62,8 @@ var _ = Describe("lifecycle help", func() {
 					return RunHistory([]string{"--help"}, "")
 				case "filter":
 					return RunFilter([]string{"new", "--help"})
+				case "filter-status":
+					return RunFilter([]string{"status", "--help"})
 				case "repair":
 					return RunRepair([]string{"--help"})
 				case "upgrade":
@@ -134,6 +136,16 @@ var _ = Describe("lifecycle help", func() {
 				"Notes:",
 				"./.ccp/filters/<name>.yaml",
 				".mappings.yaml",
+			},
+		}),
+		Entry("filter status", helpCase{
+			command: "filter-status",
+			parts: []string{
+				"ccp filter status - show active, overridden, and broken filter registrations",
+				"Usage:",
+				"Flags:",
+				"Notes:",
+				"status shows all discovered rows from the current filter sources.",
 			},
 		}),
 		Entry("upgrade", helpCase{
