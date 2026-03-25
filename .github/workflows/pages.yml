@@ -1,0 +1,108 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - site/**
+      - .github/workflows/pages.yml
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare site artifact
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import shutil
+          import urllib.request
+
+          source = pathlib.Path("site")
+          target = pathlib.Path(".site-build")
+          fixtures = list(pathlib.Path("testdata/benchmarks").glob("*/**/command.yaml"))
+          tool_count = len({path.parent.parent.name for path in fixtures})
+          fixture_count = len(fixtures)
+
+          if target.exists():
+              shutil.rmtree(target)
+          shutil.copytree(source, target)
+
+          version = ""
+
+          if os.environ.get("GITHUB_EVENT_NAME") == "release":
+              try:
+                  payload = json.loads(pathlib.Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+                  version = payload.get("release", {}).get("tag_name", "")
+              except Exception:
+                  version = ""
+
+          if not version:
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/releases/latest",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                      "User-Agent": "github-actions-pages",
+                  },
+              )
+
+              try:
+                  with urllib.request.urlopen(request) as response:
+                      payload = json.load(response)
+                      version = payload.get("tag_name", "")
+              except Exception:
+                  version = ""
+
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              version = ""
+
+          index_path = target / "index.html"
+          text = index_path.read_text(encoding="utf-8")
+          placeholder = "__SOFTWARE_VERSION_BLOCK__"
+          replacement = f'"softwareVersion": "{version}",' if version else ""
+          text = text.replace(placeholder, replacement)
+          text = re.sub(r'(<strong data-benchmark-tools>)([^<]+)(</strong>)', rf'\g<1>{tool_count}\g<3>', text)
+          text = re.sub(r'(<strong data-benchmark-fixtures>)([^<]+)(</strong>)', rf'\g<1>{fixture_count}\g<3>', text)
+          index_path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .site-build
+
+      - name: Deploy site
+        id: deployment
+        uses: actions/deploy-pages@v4

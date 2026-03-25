@@ -10,7 +10,6 @@ import (
 	core "go-command-compression-proxy/internal"
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/version"
 )
 
 type verifyRunner interface {
@@ -30,15 +29,6 @@ func RunVerify(args []string) error {
 			"error":   err.Error(),
 		})
 		return errors.Join(err, auditErr)
-	}
-
-	if version.Version != "dev" {
-		err := fmt.Errorf("ccp verify is only available in dev builds")
-		return errors.Join(err, audit.Append("verify_invocation_finish", map[string]any{
-			"success": false,
-			"stage":   "version_gate",
-			"error":   err.Error(),
-		}))
 	}
 
 	fs := newLifecycleFlagSet("verify")

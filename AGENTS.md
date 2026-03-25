@@ -55,6 +55,7 @@ Agents MUST NOT:
 - Load [TESTING](./docs/agent-rules/TESTING.md) when adding or changing tests, or when a change affects planner, runner, or cross-tool test coverage.
 - Load [BENCHMARKS](./docs/agent-rules/BENCHMARKS.md) on any filter change, and when changing benchmark fixtures, benchmark harness behavior, or tool benchmark expectations.
 - Load [RELEASE](./docs/agent-rules/RELEASE.md) when modifying release, installer, or distribution logic.
+- Load [SITE](./docs/agent-rules/SITE.md) when modifying the GitHub Pages site, landing-page copy, site assets, or `site/` CSS/JS/layout.
 - Load `use-modern-go` when adding, editing, or reviewing Go code and Go tests.
 - Load `bdd` when adding or changing Ginkgo/Gomega coverage.
 - If a referenced skill is unavailable, continue with the repository conventions in this file and the linked docs instead of blocking on the missing skill.
