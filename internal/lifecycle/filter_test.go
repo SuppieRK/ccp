@@ -96,7 +96,9 @@ var _ = Describe("filter", func() {
 		Expect(os.Chdir(tmp)).To(Succeed())
 		DeferCleanup(func() { _ = os.Chdir(prev) })
 
-		Expect(compactFilterStatusPath(filepath.Join(tmp, ".ccp", "filters", "demo.yaml"))).To(Equal("." + string(filepath.Separator) + filepath.Join(".ccp", "filters", "demo.yaml")))
+		cwd, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(compactFilterStatusPath(filepath.Join(cwd, ".ccp", "filters", "demo.yaml"))).To(Equal("." + string(filepath.Separator) + filepath.Join(".ccp", "filters", "demo.yaml")))
 	})
 
 	It("compacts paths relative to the home directory when they are outside the working tree", func() {

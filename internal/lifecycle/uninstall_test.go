@@ -523,6 +523,10 @@ var _ = Describe("uninstall", func() {
 	It("drops blank scopes and resolves relative paths to absolute paths", func() {
 		base := GinkgoT().TempDir()
 		withWorkingDir(base)
+		repoPath, err := filepath.Abs(filepath.Join(".", "repo"))
+		Expect(err).NotTo(HaveOccurred())
+		nestedPath, err := filepath.Abs(filepath.Join(".", "repo", "nested"))
+		Expect(err).NotTo(HaveOccurred())
 
 		scopes := uninstallScopes(filepath.Join(".", "repo", "."), []workspaces.Workspace{
 			{CWD: "   "},
@@ -531,8 +535,8 @@ var _ = Describe("uninstall", func() {
 		})
 
 		Expect(scopes).To(Equal([]string{
-			filepath.Join(base, "repo"),
-			filepath.Join(base, "repo", "nested"),
+			repoPath,
+			nestedPath,
 		}))
 	})
 

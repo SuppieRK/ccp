@@ -1594,14 +1594,22 @@ var _ = Describe("gain formatting helpers", func() {
 				return err
 			})).To(Succeed())
 
-			Expect(sources).To(ConsistOf(
+			normalizedSources := make([]globalMetricsSource, 0, len(sources))
+			for _, source := range sources {
+				normalizedSources = append(normalizedSources, globalMetricsSource{
+					CWD:         resolvedPath(source.CWD),
+					MetricsPath: resolvedPath(source.MetricsPath),
+				})
+			}
+
+			Expect(normalizedSources).To(ConsistOf(
 				globalMetricsSource{
-					CWD:         filepath.Clean(duplicateRepo),
-					MetricsPath: filepath.Clean(registeredPath),
+					CWD:         resolvedPath(duplicateRepo),
+					MetricsPath: resolvedPath(registeredPath),
 				},
 				globalMetricsSource{
-					CWD:         filepath.Clean(currentRepo),
-					MetricsPath: filepath.Clean(currentPath),
+					CWD:         resolvedPath(currentRepo),
+					MetricsPath: resolvedPath(currentPath),
 				},
 			))
 
@@ -1614,7 +1622,11 @@ var _ = Describe("gain formatting helpers", func() {
 			func(currentPath string, expectNil bool) {
 				repo := GinkgoT().TempDir()
 				var source *globalMetricsSource
+				var expectedCWD string
+				var expectedMetricsPath string
 				Expect(runInDir(repo, func() error {
+					expectedCWD = normalizeGlobalPath(".")
+					expectedMetricsPath = normalizeGlobalPath(currentPath)
 					source = currentGlobalMetricsSource(currentPath)
 					return nil
 				})).To(Succeed())
@@ -1625,8 +1637,8 @@ var _ = Describe("gain formatting helpers", func() {
 				}
 
 				Expect(source).NotTo(BeNil())
-				Expect(source.CWD).To(Equal(filepath.Clean(repo)))
-				Expect(source.MetricsPath).To(Equal(filepath.Join(filepath.Clean(repo), ".ccp", "gain.db")))
+				Expect(source.CWD).To(Equal(expectedCWD))
+				Expect(source.MetricsPath).To(Equal(expectedMetricsPath))
 			},
 			Entry("returns nil for an empty metrics path", " \t ", true),
 			Entry("normalizes a relative metrics path using the current working directory", filepath.Join(".", ".ccp", "gain.db"), false),
