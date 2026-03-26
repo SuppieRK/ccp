@@ -1615,7 +1615,9 @@ var _ = Describe("gain formatting helpers", func() {
 
 			entries, err := workspaces.ListPath(registryPath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(entries).To(ContainElement(HaveField("CWD", resolvedPath(currentRepo))))
+			Expect(entries).To(ContainElement(WithTransform(func(entry workspaces.Workspace) string {
+				return resolvedPath(entry.CWD)
+			}, Equal(resolvedPath(currentRepo)))))
 		})
 
 		DescribeTable("builds the current global metrics source only when a metrics path is available",
