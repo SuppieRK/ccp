@@ -112,6 +112,14 @@ var _ = Describe("metrics queries", func() {
 			Expect(missed).NotTo(BeEmpty())
 			Expect(missed[0].Count >= missed[len(missed)-1].Count).To(BeTrue())
 		})
+
+		It("orders history rows newest first", func() {
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(3))
+			Expect(history[0].Timestamp.After(history[1].Timestamp)).To(BeTrue())
+			Expect(history[1].Timestamp.After(history[2].Timestamp)).To(BeTrue())
+		})
 	})
 
 	It("uses Monday-Sunday weekly buckets", func() {
@@ -140,6 +148,77 @@ var _ = Describe("metrics queries", func() {
 		for _, row := range rows {
 			Expect(row.BucketStart).NotTo(Equal(now.Add(-10 * 24 * time.Hour).Format("2006-01-02")))
 		}
+	})
+
+	It("returns an error for unsupported periods", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 100, KeptBytes: 40},
+		})
+
+		_, err := QueryPeriod(path, QueryOptions{Period: "year"})
+		Expect(err).To(MatchError(`invalid period "year"`))
+	})
+
+	It("orders summary rows by command frequency then command text", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-4 * time.Hour), Tool: "go", Command: "go build ./...", RawBytes: 500, KeptBytes: 200},
+			{Timestamp: now.Add(-3 * time.Hour), Tool: "go", Command: "go build ./...", RawBytes: 500, KeptBytes: 200},
+			{Timestamp: now.Add(-2 * time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 600, KeptBytes: 250},
+			{Timestamp: now.Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 600, KeptBytes: 250},
+			{Timestamp: now.Add(-30 * time.Minute), Tool: "go", Command: "go clean ./...", RawBytes: 100, KeptBytes: 100},
+		})
+
+		rows, err := QuerySummaryRows(path, QueryOptions{Tool: "go"})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(3))
+		Expect(rows[0].Command).To(Equal("go build ./..."))
+		Expect(rows[0].Commands).To(Equal(int64(2)))
+		Expect(rows[1].Command).To(Equal(goTestCommand))
+		Expect(rows[1].Commands).To(Equal(int64(2)))
+		Expect(rows[2].Command).To(Equal("go clean ./..."))
+		Expect(rows[2].Commands).To(Equal(int64(1)))
+	})
+
+	It("orders tool summaries by command frequency then tool name", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-4 * time.Hour), Tool: "go", Command: goTestCommand, RawBytes: 500, KeptBytes: 200},
+			{Timestamp: now.Add(-3 * time.Hour), Tool: "go", Command: "go build ./...", RawBytes: 500, KeptBytes: 200},
+			{Timestamp: now.Add(-2 * time.Hour), Tool: "git", Command: "git status", RawBytes: 120, KeptBytes: 120},
+			{Timestamp: now.Add(-time.Hour), Tool: "git", Command: "git branch", RawBytes: 120, KeptBytes: 120},
+			{Timestamp: now.Add(-30 * time.Minute), Tool: "node", Command: "node script.js", RawBytes: 200, KeptBytes: 80},
+		})
+
+		rows, err := QuerySummaryRowsByTool(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(3))
+		Expect(rows[0].Tool).To(Equal("git"))
+		Expect(rows[0].Commands).To(Equal(int64(2)))
+		Expect(rows[1].Tool).To(Equal("go"))
+		Expect(rows[1].Commands).To(Equal(int64(2)))
+		Expect(rows[2].Tool).To(Equal("node"))
+		Expect(rows[2].Commands).To(Equal(int64(1)))
+	})
+
+	It("uses the default missed opportunity limit for non-positive limits", func() {
+		appendSeedMetrics(path, []RunMetric{
+			{Timestamp: now.Add(-7 * time.Hour), Tool: "go", Command: "go test ./a", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-6 * time.Hour), Tool: "go", Command: "go test ./a", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-5 * time.Hour), Tool: "go", Command: "go test ./b", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-4 * time.Hour), Tool: "go", Command: "go test ./b", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-3 * time.Hour), Tool: "go", Command: "go test ./c", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-2 * time.Hour), Tool: "go", Command: "go test ./d", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-time.Hour), Tool: "go", Command: "go test ./e", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+			{Timestamp: now.Add(-30 * time.Minute), Tool: "go", Command: "go test ./f", RawBytes: 100, KeptBytes: 100, Passthrough: true},
+		})
+
+		rows, err := QueryMissedOpportunities(path, QueryOptions{}, 0)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(5))
+		Expect(rows[0]).To(Equal(MissedOpportunity{Command: "go test ./a", Count: 2}))
+		Expect(rows[1]).To(Equal(MissedOpportunity{Command: "go test ./b", Count: 2}))
+		Expect(rows[2].Command).To(Equal("go test ./c"))
+		Expect(rows[3].Command).To(Equal("go test ./d"))
+		Expect(rows[4].Command).To(Equal("go test ./e"))
 	})
 
 	It("keeps summary totals consistent with summary rows", func() {

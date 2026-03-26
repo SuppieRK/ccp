@@ -88,6 +88,32 @@ func (f *combinedExitFilter) OnStdoutExit(context contracts.Context) contracts.A
 	}
 }
 
+type scriptedFilter struct {
+	stdoutAction contracts.Action
+	stderrAction contracts.Action
+	exitAction   contracts.Action
+}
+
+func (f *scriptedFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
+	return command, nil
+}
+
+func (f *scriptedFilter) Dispatch(command contracts.Command) string {
+	return command.Tool
+}
+
+func (f *scriptedFilter) OnStdout(string, contracts.Context) contracts.Action {
+	return f.stdoutAction
+}
+
+func (f *scriptedFilter) OnStderr(string, contracts.Context) contracts.Action {
+	return f.stderrAction
+}
+
+func (f *scriptedFilter) OnStdoutExit(contracts.Context) contracts.Action {
+	return f.exitAction
+}
+
 var _ = Describe("Engine integration", func() {
 	Context("when a matching filter is registered", func() {
 		var (
@@ -238,6 +264,109 @@ var _ = Describe("Engine integration", func() {
 				Stream: contracts.StreamStdout,
 				Line:   "summary: out-1\nerr-1\n",
 			}}))
+		})
+	})
+
+	Context("when action helpers are used directly", func() {
+		var state *State
+
+		BeforeEach(func() {
+			registry := NewRegistry()
+			registry.Register("scripted", &scriptedFilter{
+				stdoutAction: contracts.Action{Kind: contracts.ActionEmit},
+				stderrAction: contracts.Action{Kind: contracts.ActionIgnore},
+				exitAction: contracts.Action{
+					Kind:         contracts.ActionReplace,
+					Stream:       contracts.StreamStdout,
+					ReplaceCount: 0,
+					Output:       "summary\n",
+				},
+			})
+			runtime := NewEngine(registry)
+			state = runtime.Start(contracts.Command{
+				CommandID: "cmd-6",
+				RawInput:  "scripted --flag",
+				Args:      []string{"scripted", "--flag"},
+				Tool:      "scripted",
+			})
+		})
+
+		It("returns the action and emitted entries for stdout", func() {
+			action, entries := state.StdoutAction("out\n")
+
+			Expect(action.Kind).To(Equal(contracts.ActionEmit))
+			Expect(entries).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "out\n",
+			}}))
+		})
+
+		It("returns the action and no entries for ignored stderr", func() {
+			action, entries := state.StderrAction("warn\n")
+
+			Expect(action.Kind).To(Equal(contracts.ActionIgnore))
+			Expect(entries).To(BeNil())
+		})
+
+		It("returns the exit action and buffered summary output", func() {
+			registry := NewRegistry()
+			registry.Register("scripted-exit", &scriptedFilter{
+				stdoutAction: contracts.Action{Kind: contracts.ActionKeep},
+				exitAction: contracts.Action{
+					Kind:         contracts.ActionReplace,
+					Stream:       contracts.StreamStdout,
+					ReplaceCount: 0,
+					Output:       "summary\n",
+				},
+			})
+			runtime := NewEngine(registry)
+			exitState := runtime.Start(contracts.Command{
+				CommandID: "cmd-6-exit",
+				Args:      []string{"scripted-exit"},
+				Tool:      "scripted-exit",
+			})
+			Expect(exitState.Stdout("kept\n")).To(BeEmpty())
+
+			action, entries := exitState.ExitAction(9)
+
+			Expect(action.Kind).To(Equal(contracts.ActionReplace))
+			Expect(action.ReplaceCount).To(BeZero())
+			Expect(entries).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "summary\n",
+			}}))
+			Expect(exitState.ExitCode()).To(Equal(9))
+		})
+
+		It("exposes the original command arguments", func() {
+			Expect(state.Args()).To(Equal([]string{"scripted", "--flag"}))
+		})
+	})
+
+	Context("when replace actions omit a replace count", func() {
+		It("replaces the current line by default", func() {
+			registry := NewRegistry()
+			registry.Register("replace-default", &scriptedFilter{
+				stdoutAction: contracts.Action{
+					Kind:   contracts.ActionReplace,
+					Output: "rewritten\n",
+				},
+			})
+			runtime := NewEngine(registry)
+			state := runtime.Start(contracts.Command{
+				CommandID: "cmd-7",
+				Args:      []string{"replace-default"},
+				Tool:      "replace-default",
+			})
+
+			action, entries := state.StdoutAction("before\n")
+
+			Expect(action.Kind).To(Equal(contracts.ActionReplace))
+			Expect(entries).To(Equal([]BufferEntry{{
+				Stream: contracts.StreamStdout,
+				Line:   "rewritten\n",
+			}}))
+			Expect(state.BufferedLines(contracts.StreamStdout)).To(BeEmpty())
 		})
 	})
 

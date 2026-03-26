@@ -239,4 +239,65 @@ var _ = Describe("init basic behavior", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+
+	It("reports a helpful error when no tools can be auto-detected", func() {
+		ws = newInitSpecWorkspace()
+
+		_, err := resolveInitTools("", map[string]agents.Adapter{"fake": &fakeInstallAdapter{}})
+
+		Expect(err).To(MatchError(ContainSubstring("no tools detected; specify --tools (fake)")))
+	})
+})
+
+var _ = Describe("init helper functions", func() {
+	DescribeTable("detecting all-noop tool states",
+		func(states []toolState, want bool) {
+			Expect(allToolStatesNoop(states)).To(Equal(want))
+		},
+		Entry("treats an empty state list as noop", nil, true),
+		Entry("treats only noop states as noop", []toolState{{Tool: "codex", Status: "noop"}}, true),
+		Entry("treats mixed states as non-noop", []toolState{{Tool: "codex", Status: "noop"}, {Tool: "cursor", Status: "applied"}}, false),
+	)
+
+	It("writes managed bytes once and becomes noop for unchanged content", func() {
+		path := filepath.Join(GinkgoT().TempDir(), "managed", "AGENTS.md")
+
+		changed, err := writeManagedBytes(path, []byte("managed\n"), 0o644)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(BeTrue())
+
+		changed, err = writeManagedBytes(path, []byte("managed\n"), 0o644)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(BeFalse())
+	})
+
+	It("returns read errors from non-file targets", func() {
+		path := filepath.Join(GinkgoT().TempDir(), "managed")
+		Expect(os.MkdirAll(path, 0o755)).To(Succeed())
+
+		changed, err := writeManagedBytes(path, []byte("managed\n"), 0o644)
+		Expect(err).To(HaveOccurred())
+		Expect(changed).To(BeFalse())
+	})
+
+	It("refuses to rewrite symlinked managed targets", func() {
+		tmpDir := GinkgoT().TempDir()
+		outsideDir := filepath.Join(tmpDir, "outside")
+		Expect(os.MkdirAll(outsideDir, 0o755)).To(Succeed())
+		outsideFile := filepath.Join(outsideDir, "AGENTS.md")
+		Expect(os.WriteFile(outsideFile, []byte("keep me\n"), 0o644)).To(Succeed())
+
+		linkDir := filepath.Join(tmpDir, ".agent")
+		if err := os.Symlink(outsideDir, linkDir); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		changed, err := writeManagedBytes(filepath.Join(linkDir, "AGENTS.md"), []byte("overwrite\n"), 0o644)
+		Expect(err).To(HaveOccurred())
+		Expect(changed).To(BeFalse())
+
+		body, readErr := os.ReadFile(outsideFile)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("keep me\n"))
+	})
 })

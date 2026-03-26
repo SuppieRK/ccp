@@ -9,6 +9,18 @@ import (
 )
 
 var _ = ginkgo.Describe("managed family support helpers", func() {
+	ginkgo.It("reports noop when no managed change needs to be applied", func() {
+		res, err := applyManagedFileChange(filepath.Join(ginkgo.GinkgoT().TempDir(), "settings.json"), "", false, false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(Equal(InstallResult{Noop: 1}))
+	})
+
+	ginkgo.It("reports noop when removing an already-missing managed file", func() {
+		res, err := applyManagedFileChange(filepath.Join(ginkgo.GinkgoT().TempDir(), "missing.json"), "", true, true)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(Equal(InstallResult{Noop: 1}))
+	})
+
 	ginkgo.It("refuses to rewrite managed files through symlinked paths", func() {
 		tmpDir := ginkgo.GinkgoT().TempDir()
 		outsideDir := filepath.Join(tmpDir, "outside")

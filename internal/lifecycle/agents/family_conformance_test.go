@@ -130,6 +130,25 @@ var _ = ginkgo.Describe("Family conformance", func() {
 			ginkgo.Entry("crush", crushContextLinkSpec),
 			ginkgo.Entry("qwen", qwenContextLinkSpec),
 		)
+
+		ginkgo.DescribeTable("fails verification when linked context files go missing",
+			func(spec ManagedContextLinkAdapterSpec) {
+				Expect(os.MkdirAll(ResolveRepoScopedPath(ctx.ScopeRoot, spec.DetectRootPath), 0o755)).To(Succeed())
+
+				adapter := NewManagedContextLinkAdapter(spec)
+				_, err := adapter.Install(ctx, writeFileWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				contextPlan := NewManagedContextAdapter(spec.ContextSpec).Plan(ctx)
+				Expect(contextPlan).To(HaveLen(1))
+				Expect(os.Remove(contextPlan[0].Path)).To(Succeed())
+
+				Expect(adapter.Verify(ctx)).To(HaveOccurred())
+			},
+			ginkgo.Entry("aider", aiderContextLinkSpec),
+			ginkgo.Entry("crush", crushContextLinkSpec),
+			ginkgo.Entry("qwen", qwenContextLinkSpec),
+		)
 	})
 
 	ginkgo.Describe("managed hook settings adapters", func() {
@@ -151,5 +170,76 @@ var _ = ginkgo.Describe("Family conformance", func() {
 			},
 			ginkgo.Entry("codebuddy", codebuddyHookSettingsSpec),
 		)
+
+		ginkgo.It("returns settings write failures after installing the hook artifact", func() {
+			adapter := NewManagedHookSettingsAdapter(ManagedHookSettingsAdapterSpec{
+				ID:             ID("broken-hook"),
+				DetectRootPath: ".broken-agent",
+				Root: func(ctx Context) string {
+					return filepath.Join(ctx.ScopeRoot, ".broken-agent")
+				},
+				HookScriptName: "rewrite.sh",
+				SettingsName:   "settings.json",
+				HookContent: func() string {
+					return "#!/bin/sh\nexit 0\n"
+				},
+				PlanSettingsContent: func(hookPath string) string {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n"
+				},
+				UpsertSettings: func(settingsPath, hookPath string) (string, error) {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n", nil
+				},
+				VerifySettings: nil,
+				UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
+					return InstallResult{}, nil
+				},
+				MissingHookFmt:     "missing hook: %s",
+				MissingSettingsFmt: "missing settings: %s",
+			})
+
+			calls := 0
+			_, err := adapter.Install(ctx, func(path string, data []byte, perm os.FileMode) (bool, error) {
+				calls++
+				if calls == 2 {
+					return false, os.ErrPermission
+				}
+				return writeFileWriter(path, data, perm)
+			})
+
+			Expect(err).To(MatchError(os.ErrPermission))
+			Expect(adapter.hookPath(ctx)).To(BeAnExistingFile())
+			Expect(adapter.Verify(ctx)).To(HaveOccurred())
+		})
+
+		ginkgo.It("skips custom settings verification when none is configured", func() {
+			adapter := NewManagedHookSettingsAdapter(ManagedHookSettingsAdapterSpec{
+				ID:             ID("verify-nil"),
+				DetectRootPath: ".verify-nil",
+				Root: func(ctx Context) string {
+					return filepath.Join(ctx.ScopeRoot, ".verify-nil")
+				},
+				HookScriptName: "rewrite.sh",
+				SettingsName:   "settings.json",
+				HookContent: func() string {
+					return "#!/bin/sh\nexit 0\n"
+				},
+				PlanSettingsContent: func(hookPath string) string {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n"
+				},
+				UpsertSettings: func(settingsPath, hookPath string) (string, error) {
+					return "{\n  \"hook\": \"" + hookPath + "\"\n}\n", nil
+				},
+				VerifySettings: nil,
+				UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
+					return InstallResult{}, nil
+				},
+				MissingHookFmt:     "missing hook: %s",
+				MissingSettingsFmt: "missing settings: %s",
+			})
+
+			_, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(adapter.Verify(ctx)).To(Succeed())
+		})
 	})
 })

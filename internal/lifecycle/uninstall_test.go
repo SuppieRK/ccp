@@ -520,6 +520,67 @@ var _ = Describe("uninstall", func() {
 		}))
 	})
 
+	It("drops blank scopes and resolves relative paths to absolute paths", func() {
+		base := GinkgoT().TempDir()
+		withWorkingDir(base)
+		repoPath, err := filepath.Abs(filepath.Join(".", "repo"))
+		Expect(err).NotTo(HaveOccurred())
+		nestedPath, err := filepath.Abs(filepath.Join(".", "repo", "nested"))
+		Expect(err).NotTo(HaveOccurred())
+
+		scopes := uninstallScopes(filepath.Join(".", "repo", "."), []workspaces.Workspace{
+			{CWD: "   "},
+			{CWD: filepath.Join(".", "repo")},
+			{CWD: filepath.Join(".", "repo", "nested", ".")},
+		})
+
+		Expect(scopes).To(Equal([]string{
+			repoPath,
+			nestedPath,
+		}))
+	})
+
+	DescribeTable("recognizing only canonical managed metrics paths",
+		func(entry workspaces.Workspace, expectedPath string, expectedOK bool) {
+			path, ok := managedWorkspaceMetricsPath(entry)
+
+			Expect(ok).To(Equal(expectedOK))
+			Expect(path).To(Equal(expectedPath))
+		},
+		Entry("accepts the canonical managed metrics path",
+			workspaces.Workspace{
+				CWD:         filepath.Join("/repo", "."),
+				MetricsPath: filepath.Join("/repo", ".ccp", "nested", "..", "gain.db"),
+			},
+			filepath.Join("/repo", ".ccp", "gain.db"),
+			true,
+		),
+		Entry("rejects blank workspace roots",
+			workspaces.Workspace{
+				CWD:         "   ",
+				MetricsPath: filepath.Join("/repo", ".ccp", "gain.db"),
+			},
+			"",
+			false,
+		),
+		Entry("rejects blank metrics paths",
+			workspaces.Workspace{
+				CWD:         "/repo",
+				MetricsPath: "   ",
+			},
+			"",
+			false,
+		),
+		Entry("rejects non-canonical external metrics paths",
+			workspaces.Workspace{
+				CWD:         "/repo",
+				MetricsPath: filepath.Join("/repo", "metrics", "gain.db"),
+			},
+			"",
+			false,
+		),
+	)
+
 	It("removes only CCP-owned workspace state helpers", func() {
 		ws := newUninstallWorkspace("root")
 		currentCCP := filepath.Join(ws.root, ".ccp")
@@ -556,6 +617,71 @@ var _ = Describe("uninstall", func() {
 		expectMissingPath(filepath.Join(ws.home, ".ccp"))
 	})
 
+	It("surfaces errors when removing canonical metrics paths fails", func() {
+		root := GinkgoT().TempDir()
+		metricsPath := filepath.Join(root, ".ccp", "gain.db")
+		Expect(os.MkdirAll(metricsPath, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(metricsPath, "nested.txt"), []byte("blocked"), 0o644)).To(Succeed())
+
+		err := removeWorkspaceState(nil, []workspaces.Workspace{{
+			CWD:         root,
+			MetricsPath: metricsPath,
+		}})
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`remove metrics path "`))
+		Expect(err.Error()).To(ContainSubstring(metricsPath))
+	})
+
+	It("joins workspace-state and metrics cleanup failures", func() {
+		root := GinkgoT().TempDir()
+		scope := filepath.Join(root, "workspace")
+		scopeMetricsPath := filepath.Join(scope, ".ccp", "gain.db")
+		Expect(os.MkdirAll(scopeMetricsPath, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(scopeMetricsPath, "nested.txt"), []byte("blocked"), 0o644)).To(Succeed())
+
+		metricsRoot := filepath.Join(root, "metrics")
+		metricsPath := filepath.Join(metricsRoot, ".ccp", "gain.db")
+		Expect(os.MkdirAll(metricsPath, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(metricsPath, "nested.txt"), []byte("blocked"), 0o644)).To(Succeed())
+
+		err := removeWorkspaceState([]string{scope}, []workspaces.Workspace{{
+			CWD:         metricsRoot,
+			MetricsPath: metricsPath,
+		}})
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`remove workspace state "`))
+		Expect(err.Error()).To(ContainSubstring(scopeMetricsPath))
+		Expect(err.Error()).To(ContainSubstring(`remove metrics path "`))
+		Expect(err.Error()).To(ContainSubstring(metricsPath))
+	})
+
+	It("removes only empty nested workspace directories", func() {
+		root := GinkgoT().TempDir()
+		emptyLeaf := filepath.Join(root, "filters", "nested")
+		keepDir := filepath.Join(root, "keep")
+		Expect(os.MkdirAll(emptyLeaf, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(keepDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(keepDir, "local.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+
+		Expect(removeEmptyDirsUnder(root)).To(Succeed())
+
+		expectMissingPath(filepath.Join(root, "filters"))
+		Expect(keepDir).To(BeADirectory())
+		Expect(filepath.Join(keepDir, "local.yaml")).To(BeAnExistingFile())
+		Expect(root).To(BeADirectory())
+	})
+
+	It("removes the root directory when cleanup leaves it empty", func() {
+		root := filepath.Join(GinkgoT().TempDir(), "workspace-state")
+		Expect(os.MkdirAll(filepath.Join(root, "filters", "nested"), 0o755)).To(Succeed())
+
+		Expect(removeEmptyDirsUnder(root)).To(Succeed())
+
+		expectMissingPath(root)
+	})
+
 	It("builds a detached uninstall removal script for the current platform", func() {
 		scriptPath, body, err := uninstallRemovalScript(filepath.Join(GinkgoT().TempDir(), `ccp "bin"`))
 		Expect(err).NotTo(HaveOccurred())
@@ -568,6 +694,31 @@ var _ = Describe("uninstall", func() {
 		Expect(body).To(ContainSubstring("rm -f -- '"))
 	})
 
+	It("renders the exact detached uninstall script body for the current platform", func() {
+		exePath := filepath.Join(GinkgoT().TempDir(), `ccp "bin"`)
+		scriptPath, body, err := uninstallRemovalScript(exePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		if runtime.GOOS == "windows" {
+			Expect(scriptPath).To(HaveSuffix(".cmd"))
+			Expect(body).To(Equal(strings.Join([]string{
+				"@echo off\r\n",
+				"ping 127.0.0.1 -n 3 >NUL\r\n",
+				"del /f /q " + windowsQuoteArg(exePath) + "\r\n",
+				"del /f /q \"%~f0\"\r\n",
+			}, "")))
+			return
+		}
+
+		Expect(scriptPath).To(HaveSuffix(".sh"))
+		Expect(body).To(Equal(strings.Join([]string{
+			"#!/bin/sh\n",
+			"sleep 1\n",
+			"rm -f -- " + shellQuoteArg(exePath) + "\n",
+			"rm -f -- \"$0\"\n",
+		}, "")))
+	})
+
 	It("uses a fixed safe PATH for self-removal commands", func() {
 		cmd := uninstallRemovalCommand(filepath.Join(GinkgoT().TempDir(), "cleanup"))
 		Expect(cmd.Env).NotTo(BeEmpty())
@@ -578,6 +729,29 @@ var _ = Describe("uninstall", func() {
 		}
 		Expect(cmd.Path).To(Equal("/bin/sh"))
 		Expect(cmd.Env).To(ContainElement("PATH=/usr/bin:/bin"))
+	})
+
+	It("uses the expected removal script mode and environment for the current platform", func() {
+		if runtime.GOOS == "windows" {
+			Expect(uninstallRemovalScriptMode()).To(Equal(os.FileMode(0o644)))
+			Expect(uninstallRemovalEnv()).To(Equal([]string{
+				"PATH=" + filepath.Join(windowsSystemRoot(), "System32"),
+				"SystemRoot=" + windowsSystemRoot(),
+				"WINDIR=" + windowsSystemRoot(),
+			}))
+			return
+		}
+
+		Expect(uninstallRemovalScriptMode()).To(Equal(os.FileMode(0o700)))
+		Expect(uninstallRemovalEnv()).To(Equal([]string{"PATH=/usr/bin:/bin"}))
+	})
+
+	It("quotes Windows paths for batch self-removal commands", func() {
+		Expect(windowsQuoteArg(`C:\tmp\ccp "bin"`)).To(Equal(`"C:\tmp\ccp ""bin"""`))
+	})
+
+	It("quotes POSIX paths for shell self-removal commands", func() {
+		Expect(shellQuoteArg(`/tmp/ccp'temp`)).To(Equal(`'/tmp/ccp'"'"'temp'`))
 	})
 
 	It("ignores injected Windows root environment variables when resolving cmd.exe", func() {
@@ -639,6 +813,26 @@ var _ = Describe("uninstall", func() {
 		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "ccp")}))
 	})
 
+	It("returns self-removal errors after cleaning managed state", func() {
+		ws := newUninstallWorkspace("root")
+		prevPath := uninstallExecutablePath
+		prevRemove := uninstallScheduleSelfRemoval
+		uninstallExecutablePath = func() (string, error) { return filepath.Join(ws.root, "bin", "ccp"), nil }
+		uninstallScheduleSelfRemoval = func(string) error { return errors.New("schedule failed") }
+		DeferCleanup(func() {
+			uninstallExecutablePath = prevPath
+			uninstallScheduleSelfRemoval = prevRemove
+		})
+
+		Expect(os.MkdirAll(filepath.Join(ws.home, ".config", "ccp", "audit"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".config", "ccp", "audit", "audit.log"), []byte("audit"), 0o644)).To(Succeed())
+
+		err := RunUninstall(nil)
+
+		Expect(err).To(MatchError(ContainSubstring("schedule failed")))
+		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
+	})
+
 	It("keeps full uninstall working when the workspace registry is unreadable", func() {
 		ws := newUninstallWorkspace("root")
 		scheduled := stubSelfRemoval(filepath.Join(ws.root, "bin", "ccp"))
@@ -691,6 +885,68 @@ var _ = Describe("uninstall", func() {
 		expectMissingPath(filepath.Join(ws.home, ".config", "ccp"))
 		expectMissingPath(filepath.Join(ws.home, ".ccp"))
 		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "ccp")}))
+	})
+
+	Context("self-removal helpers", func() {
+		It("builds the expected removal script for the current platform", func() {
+			scriptPath, body, err := uninstallRemovalScript(filepath.Join("tmp", "ccp tool"))
+			Expect(err).NotTo(HaveOccurred())
+
+			if runtime.GOOS == "windows" {
+				Expect(scriptPath).To(HaveSuffix(".cmd"))
+				Expect(body).To(ContainSubstring("@echo off\r\n"))
+				Expect(body).To(ContainSubstring("ping 127.0.0.1 -n 3 >NUL\r\n"))
+				Expect(body).To(ContainSubstring(`del /f /q "tmp\ccp tool"` + "\r\n"))
+				Expect(body).To(ContainSubstring("del /f /q \"%~f0\"\r\n"))
+				return
+			}
+
+			Expect(scriptPath).To(HaveSuffix(".sh"))
+			Expect(body).To(ContainSubstring("#!/bin/sh\n"))
+			Expect(body).To(ContainSubstring("sleep 1\n"))
+			Expect(body).To(ContainSubstring("rm -f -- 'tmp/ccp tool'\n"))
+			Expect(body).To(ContainSubstring("rm -f -- \"$0\"\n"))
+		})
+
+		It("builds the expected removal command and environment for the current platform", func() {
+			scriptPath := filepath.Join(GinkgoT().TempDir(), "remove-self")
+
+			cmd := uninstallRemovalCommand(scriptPath)
+
+			if runtime.GOOS == "windows" {
+				Expect(cmd.Path).To(Equal(windowsCmdPath()))
+				Expect(cmd.Args).To(Equal([]string{windowsCmdPath(), "/c", scriptPath}))
+				Expect(cmd.Env).To(Equal([]string{
+					"PATH=" + filepath.Join(windowsSystemRoot(), "System32"),
+					"SystemRoot=" + windowsSystemRoot(),
+					"WINDIR=" + windowsSystemRoot(),
+				}))
+				return
+			}
+
+			Expect(cmd.Path).To(Equal("/bin/sh"))
+			Expect(cmd.Args).To(Equal([]string{"/bin/sh", scriptPath}))
+			Expect(cmd.Env).To(Equal([]string{"PATH=/usr/bin:/bin"}))
+		})
+
+		DescribeTable("quotes self-removal arguments deterministically",
+			func(shellInput, shellExpected, windowsInput, windowsExpected string) {
+				Expect(shellQuoteArg(shellInput)).To(Equal(shellExpected))
+				Expect(windowsQuoteArg(windowsInput)).To(Equal(windowsExpected))
+			},
+			Entry("quotes plain paths",
+				"/tmp/ccp tool",
+				"'/tmp/ccp tool'",
+				`C:\Program Files\ccp.exe`,
+				`"C:\Program Files\ccp.exe"`,
+			),
+			Entry("escapes embedded quotes for each shell",
+				"/tmp/it's-ccp",
+				`'/tmp/it'"'"'s-ccp'`,
+				`C:\tmp\"quoted".exe`,
+				`"C:\tmp\""quoted"".exe"`,
+			),
+		)
 	})
 })
 

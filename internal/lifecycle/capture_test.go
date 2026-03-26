@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -40,6 +41,26 @@ func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Ev
 }
 
 var _ = Describe("capture", func() {
+	DescribeTable("resolving capture directories",
+		func(dir string, wantCurrentDir bool) {
+			resolved, err := resolveCaptureDir(dir, "demo")
+			Expect(err).NotTo(HaveOccurred())
+
+			if wantCurrentDir {
+				cwd, cwdErr := os.Getwd()
+				Expect(cwdErr).NotTo(HaveOccurred())
+				Expect(resolved).To(Equal(cwd))
+				return
+			}
+
+			expected, absErr := filepath.Abs(dir)
+			Expect(absErr).NotTo(HaveOccurred())
+			Expect(resolved).To(Equal(expected))
+		},
+		Entry("uses the current working directory when no dir is provided", "", true),
+		Entry("uses the provided directory when set", filepath.Join("testdata", "capture"), false),
+	)
+
 	It("writes command, sequenced streams, and CCP output artifacts", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{output: "proxy output\n"}
@@ -144,6 +165,11 @@ var _ = Describe("capture", func() {
 		}))
 	})
 
+	It("returns startup errors from native capture immediately", func() {
+		_, _, err := runNativeCaptureContext(context.Background(), []string{"ccp-command-that-does-not-exist"})
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("orders partial cross-stream lines by first observed byte", func() {
 		stdout := newScriptedCaptureReader()
 		stderr := newScriptedCaptureReader()
@@ -215,6 +241,106 @@ var _ = Describe("capture", func() {
 		Expect(recorded).To(Equal([]replay.Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "o"}}))
 	})
 
+	It("flushes the final buffered line when EOF arrives", func() {
+		stdout := newScriptedCaptureReader()
+
+		var (
+			recorded []replay.Event
+			sequence atomic.Int64
+		)
+		record := func(seq int, stream contracts.Stream, line string) {
+			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		}
+
+		done := make(chan error, 1)
+		go func() {
+			done <- readSequencedCapture(stdout, contracts.StreamStdout, &sequence, record)
+		}()
+
+		stdout.sendByte('o')
+		stdout.sendByte('k')
+		stdout.finish()
+
+		Expect(<-done).NotTo(HaveOccurred())
+		Expect(recorded).To(Equal([]replay.Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok"}}))
+	})
+
+	It("keeps an in-progress line sequence stable until the line is emitted", func() {
+		var (
+			recorded []replay.Event
+			sequence atomic.Int64
+			line     []byte
+			seq      = -1
+		)
+		record := func(seq int, stream contracts.Stream, line string) {
+			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		}
+
+		ensureSequencedCaptureLine(&line, &seq, &sequence)
+		Expect(seq).To(Equal(0))
+
+		appendSequencedCaptureByte(&line, &seq, 'o', contracts.StreamStdout, &sequence, record)
+		appendSequencedCaptureByte(&line, &seq, 'k', contracts.StreamStdout, &sequence, record)
+		ensureSequencedCaptureLine(&line, &seq, &sequence)
+		Expect(seq).To(Equal(0))
+
+		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
+
+		Expect(recorded).To(Equal([]replay.Event{{
+			Sequence: 0,
+			Stream:   contracts.StreamStdout,
+			Line:     "ok\n",
+		}}))
+		Expect(line).To(BeEmpty())
+		Expect(seq).To(Equal(-1))
+		Expect(sequence.Load()).To(Equal(int64(1)))
+	})
+
+	It("records newline-only events with a fresh sequence after a reset", func() {
+		var (
+			recorded []replay.Event
+			sequence atomic.Int64
+			line     []byte
+			seq      = -1
+		)
+		record := func(seq int, stream contracts.Stream, line string) {
+			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		}
+
+		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
+		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
+
+		Expect(recorded).To(Equal([]replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "\n"},
+			{Sequence: 1, Stream: contracts.StreamStdout, Line: "\n"},
+		}))
+		Expect(line).To(BeEmpty())
+		Expect(seq).To(Equal(-1))
+	})
+
+	It("does not emit an empty trailing line when EOF arrives without buffered bytes", func() {
+		recorded := make([]replay.Event, 0)
+		line := []byte{}
+		seq := -1
+
+		finishSequencedCaptureLine(&line, &seq, contracts.StreamStdout, func(seq int, stream contracts.Stream, line string) {
+			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
+		})
+
+		Expect(recorded).To(BeEmpty())
+		Expect(seq).To(Equal(-1))
+	})
+
+	It("counts bytes only from the requested stream", func() {
+		total := streamBytes([]replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok\n"},
+			{Sequence: 1, Stream: contracts.StreamStderr, Line: "warn\n"},
+			{Sequence: 2, Stream: contracts.StreamStdout, Line: "done"},
+		}, contracts.StreamStdout)
+
+		Expect(total).To(Equal(len("ok\n") + len("done")))
+	})
+
 	It("cancels captured subprocess trees when the execution context ends", func() {
 		if runtime.GOOS == "windows" {
 			Skip("uses unix process groups")
@@ -236,11 +362,32 @@ var _ = Describe("capture", func() {
 		}, time.Second).Should(Succeed())
 
 		cancel()
-		Eventually(done, 5*time.Second).Should(Receive(HaveOccurred()))
+		var err error
+		Eventually(done, 5*time.Second).Should(Receive(&err))
+		Expect(err).To(HaveOccurred())
+		Expect(errors.Is(err, context.Canceled)).To(BeTrue())
+		exitErr, ok := errors.AsType[*exec.ExitError](err)
+		Expect(ok).To(BeTrue())
+		Expect(exitErr.ExitCode()).NotTo(BeZero())
 		Consistently(func() bool {
 			_, err := os.Stat(markerPath)
 			return err == nil
 		}, 1500*time.Millisecond, 100*time.Millisecond).Should(BeFalse())
+	})
+
+	It("returns native capture events sorted by sequence after interleaved streams", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+
+		events, exitCode, err := runNativeCapture([]string{"sh", "-c", "printf 'o'; sleep 0.1; printf 'k\\n'; printf 'e\\n' >&2"})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exitCode).To(BeZero())
+		Expect(events).To(Equal([]replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok\n"},
+			{Sequence: 1, Stream: contracts.StreamStderr, Line: "e\n"},
+		}))
 	})
 
 	It("refuses to overwrite symlinked capture artifacts", func() {

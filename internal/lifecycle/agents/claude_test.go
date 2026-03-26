@@ -64,6 +64,17 @@ var _ = ginkgo.Describe("ClaudeAdapter", func() {
 		Expect(strings.Count(content, ccpManagedBlockStart)).To(Equal(1))
 	})
 
+	ginkgo.It("reports a second install as noop when artifacts are already current", func() {
+		first, err := adapter.Install(ctx, writeFileWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(first.Applied).To(Equal(len(adapter.Plan(ctx))))
+
+		second, err := adapter.Install(ctx, writeFileWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(second.Applied).To(Equal(0))
+		Expect(second.Noop).To(Equal(len(adapter.Plan(ctx))))
+	})
+
 	ginkgo.It("returns verification errors for an invalid guide block", func() {
 		root := filepath.Join(home, ".claude")
 		Expect(os.MkdirAll(filepath.Join(root, "hooks"), 0o755)).To(Succeed())
@@ -75,6 +86,12 @@ var _ = ginkgo.Describe("ClaudeAdapter", func() {
 		err := adapter.Verify(ctx)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("missing claude managed guide block markers"))
+	})
+
+	ginkgo.It("returns verification errors for missing managed artifacts", func() {
+		err := adapter.Verify(ctx)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("missing hook script"))
 	})
 
 	ginkgo.It("treats uninstall as noop when no managed artifacts exist", func() {
@@ -145,6 +162,18 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 		Expect(updated).To(ContainSubstring("# Team rules"))
 		Expect(updated).To(ContainSubstring("# Tail"))
 		Expect(updated).To(ContainSubstring("@CCP.md"))
+	})
+
+	ginkgo.It("replaces an empty managed guide block in place", func() {
+		initial := "# Team rules\n\n" + ccpManagedBlockStart + "\n" + ccpManagedBlockEnd + "\n# Tail\n"
+		Expect(os.WriteFile(guide, []byte(initial), 0o644)).To(Succeed())
+
+		updated, err := upsertClaudeGuideBlock(guide)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(strings.Count(updated, ccpManagedBlockStart)).To(Equal(1))
+		Expect(updated).To(ContainSubstring("@CCP.md"))
+		Expect(updated).To(ContainSubstring("# Team rules"))
+		Expect(updated).To(ContainSubstring("# Tail"))
 	})
 
 	ginkgo.It("returns an error when the guide path cannot be read as a file", func() {
@@ -248,6 +277,64 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 		err := uninstallClaudeGuide(&InstallResult{}, guideDir)
 		Expect(err).To(HaveOccurred())
 	})
+
+	ginkgo.It("returns an error when uninstalling Claude settings cannot read the settings file", func() {
+		settingsDir := filepath.Join(tmpDir, "settings")
+		Expect(os.MkdirAll(settingsDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(settingsDir, "nested"), []byte("x"), 0o644)).To(Succeed())
+
+		res := &InstallResult{}
+		err := uninstallClaudeSettings(res, settingsDir, filepath.Join(tmpDir, claudeHookScriptName))
+		Expect(err).To(HaveOccurred())
+		Expect(res.Applied).To(BeZero())
+		Expect(res.Noop).To(BeZero())
+	})
+
+	ginkgo.It("returns an error when uninstalling guide changes through a symlinked file", func() {
+		outside := filepath.Join(tmpDir, "outside-guide.md")
+		guideLink := filepath.Join(tmpDir, claudeGuideName)
+		Expect(os.WriteFile(outside, []byte("# Team rules\n\n"+claudeManagedGuideBlock()+"\n# Tail\n"), 0o644)).To(Succeed())
+		if err := os.Symlink(outside, guideLink); err != nil {
+			ginkgo.Skip("symlink creation unavailable: " + err.Error())
+		}
+
+		res := &InstallResult{}
+		err := uninstallClaudeGuide(res, guideLink)
+		Expect(err).To(HaveOccurred())
+		Expect(res.Applied).To(BeZero())
+		Expect(res.Noop).To(BeZero())
+	})
+
+	ginkgo.DescribeTable("propagates Claude uninstall helper failures",
+		func(setup func(root string), expected string) {
+			root := filepath.Join(tmpDir, ".claude")
+			Expect(os.MkdirAll(filepath.Join(root, "hooks"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(root, "hooks", claudeHookScriptName), []byte("#!/bin/sh\n"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(root, claudeAwarenessName), []byte("awareness\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(root, claudeSettingsName), []byte("{}\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(root, claudeGuideName), []byte("# Team rules\n\n"+claudeManagedGuideBlock()), 0o644)).To(Succeed())
+			setup(root)
+
+			_, err := (ClaudeAdapter{}).Uninstall(Context{HomeDir: tmpDir, ScopeRoot: filepath.Join(tmpDir, "repo")})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(expected))
+		},
+		ginkgo.Entry("from settings cleanup", func(root string) {
+			settingsPath := filepath.Join(root, claudeSettingsName)
+			Expect(os.Remove(settingsPath)).To(Succeed())
+			Expect(os.MkdirAll(settingsPath, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(settingsPath, "nested"), []byte("x"), 0o644)).To(Succeed())
+		}, "read"),
+		ginkgo.Entry("from guide cleanup", func(root string) {
+			guidePath := filepath.Join(root, claudeGuideName)
+			outside := filepath.Join(tmpDir, "outside-guide.md")
+			Expect(os.WriteFile(outside, []byte("# Team rules\n\n"+claudeManagedGuideBlock()+"\n# Tail\n"), 0o644)).To(Succeed())
+			Expect(os.Remove(guidePath)).To(Succeed())
+			if err := os.Symlink(outside, guidePath); err != nil {
+				ginkgo.Skip("symlink creation unavailable: " + err.Error())
+			}
+		}, "symlink"),
+	)
 })
 
 var _ = ginkgo.Describe("Claude hook script content", func() {

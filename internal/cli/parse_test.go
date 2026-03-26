@@ -23,6 +23,15 @@ var _ = Describe("Parse", func() {
 		Expect(opts.ConfidentialRedactions).To(Equal([]string{"com.foo"}))
 	})
 
+	DescribeTable("rejecting missing flag values",
+		func(args []string, expected string) {
+			_, err := Parse(args)
+
+			Expect(err).To(MatchError(expected))
+		},
+		Entry("missing confidential value", []string{"--confidential"}, "missing value for --confidential"),
+	)
+
 	DescribeTable("rejecting execution flags for lifecycle commands",
 		func(flag string, cmd string) {
 			expectParseFailure([]string{flag, cmd})
@@ -52,6 +61,13 @@ var _ = Describe("Parse", func() {
 		Entry("repair", "repair"),
 		Entry("filter", "filter"),
 	)
+
+	It("allows empty confidential redactions for managed commands", func() {
+		opts := mustParse([]string{"--confidential", " , , ", "init"})
+
+		Expect(opts.CommandArgs).To(Equal([]string{"init"}))
+		Expect(opts.ConfidentialRedactions).To(BeEmpty())
+	})
 
 	DescribeTable("allowing execution flags",
 		func(args []string) {
@@ -95,6 +111,15 @@ var _ = Describe("Parse", func() {
 		Expect(opts.Raw).To(BeTrue())
 	})
 
+	DescribeTable("normalizing confidential redactions",
+		func(raw string, expected []string) {
+			Expect(parseConfidentialRedactions(raw)).To(Equal(expected))
+		},
+		Entry("empty string", "", nil),
+		Entry("whitespace only", "   ", nil),
+		Entry("duplicates and blanks", " secret, secret , ,token ", []string{"secret", "token"}),
+	)
+
 	Describe("CCP command classification", func() {
 		DescribeTable("managed top-level commands",
 			func(token string) {
@@ -120,18 +145,35 @@ var _ = Describe("Parse", func() {
 			Entry("bash", "bash"),
 		)
 
-		It("skips metrics only for managed wrapped ccp commands", func() {
-			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "history"})).To(BeTrue())
-			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "repair"})).To(BeTrue())
-			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "filter", "new", "demo"})).To(BeTrue())
-			Expect(ShouldSkipMetrics("ccp", []string{"ccp", "capture", "--", "echo", "hi"})).To(BeTrue())
-			Expect(ShouldSkipMetrics("grep", []string{"grep", "-n", "foo"})).To(BeFalse())
-		})
+		DescribeTable("classifying managed argument slices",
+			func(args []string, expected bool) {
+				Expect(IsManagedArgs(args)).To(Equal(expected))
+			},
+			Entry("nil args", nil, false),
+			Entry("empty args", []string{}, false),
+			Entry("history command", []string{"history"}, true),
+			Entry("filter command", []string{"filter", "new"}, true),
+			Entry("wrapped command", []string{"grep", "-n"}, false),
+		)
+
+		DescribeTable("skipping metrics only for managed wrapped ccp commands",
+			func(tool string, args []string, expected bool) {
+				Expect(ShouldSkipMetrics(tool, args)).To(Equal(expected))
+			},
+			Entry("history command", "ccp", []string{"ccp", "history"}, true),
+			Entry("repair command", "ccp", []string{"ccp", "repair"}, true),
+			Entry("filter command", "ccp", []string{"ccp", "filter", "new", "demo"}, true),
+			Entry("capture command", "ccp", []string{"ccp", "capture", "--", "echo", "hi"}, true),
+			Entry("non-ccp tool", "grep", []string{"grep", "-n", "foo"}, false),
+			Entry("ccp without subcommand", "ccp", []string{"ccp"}, false),
+			Entry("ccp wrapped execution", "ccp", []string{"ccp", "echo", "hi"}, false),
+		)
 
 		DescribeTable("describing execution shape",
 			func(args []string, expected ExecutionShape) {
 				Expect(DescribeExecutionShape(args)).To(Equal(expected))
 			},
+			Entry("empty args", nil, ExecutionShape{}),
 			Entry("simple command", []string{"echo", "hi"}, ExecutionShape{}),
 			Entry("find exec nested ccp", []string{"find", ".", "-type", "f", "-exec", "ccp", "grep", "-nH", "--", "v2", "{}", "+"}, ExecutionShape{
 				HasFindExec: true,
@@ -148,6 +190,23 @@ var _ = Describe("Parse", func() {
 				HasChain:  true,
 				NestedCCP: true,
 			}),
+			Entry("bare shell control flag", []string{"bash", "-c"}, ExecutionShape{
+				UsesShell: true,
+			}),
+			Entry("shell find exec only", []string{"bash", "-lc", "find . -name '*.go' -exec grep -n foo {} +"}, ExecutionShape{
+				UsesShell:   true,
+				HasFindExec: true,
+			}),
+			Entry("shell xargs only", []string{"zsh", "-c", "printf '%s\n' file | xargs cat"}, ExecutionShape{
+				UsesShell:   true,
+				HasPipeline: true,
+				HasXargs:    true,
+			}),
+			Entry("non-shell find followed immediately by exec still marks find-exec", []string{"wrapper", "find", "-exec", "grep", "foo"}, ExecutionShape{
+				HasFindExec: true,
+			}),
+			Entry("non-shell find without exec", []string{"echo", "find", "."}, ExecutionShape{}),
+			Entry("non-shell c lookalike", []string{"python", "-c", "print('hi')"}, ExecutionShape{}),
 		)
 	})
 })

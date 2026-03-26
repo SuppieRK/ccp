@@ -2,12 +2,14 @@ package lifecycle
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -891,6 +893,97 @@ var _ = Describe("RunHistory", func() {
 })
 
 var _ = Describe("gain formatting helpers", func() {
+	DescribeTable("window and split helpers",
+		func(period string, n int, wantDays int, wantDuration time.Duration, wantSplit int) {
+			Expect(trendWindowDays(period)).To(Equal(wantDays))
+			Expect(durationForPeriod(period)).To(Equal(wantDuration))
+			Expect(trendSplitIndex(n, period)).To(Equal(wantSplit))
+		},
+		Entry("day windows split in half", "day", 6, 1, 24*time.Hour, 3),
+		Entry("short week windows do not split", "week", 2, 7, 7*24*time.Hour, 0),
+		Entry("three-week windows split at the minimum valid boundary", "week", 3, 7, 7*24*time.Hour, 1),
+		Entry("medium week windows split evenly", "week", 4, 7, 7*24*time.Hour, 2),
+		Entry("long week windows keep the trailing three buckets together", "week", 8, 7, 7*24*time.Hour, 5),
+		Entry("short month windows do not split", "month", 3, 30, 30*24*time.Hour, 0),
+		Entry("month windows begin splitting at four buckets", "month", 4, 30, 30*24*time.Hour, 2),
+		Entry("month windows up to seven buckets split evenly", "month", 7, 30, 30*24*time.Hour, 3),
+		Entry("long month windows keep the trailing seven buckets together", "month", 10, 30, 30*24*time.Hour, 3),
+		Entry("unknown periods disable windows and fall back to even splits", "custom", 5, 0, time.Duration(0), 2),
+	)
+
+	DescribeTable("effectiveWindowSince bounds summary lookbacks",
+		func(base time.Duration, period string, want time.Duration) {
+			Expect(effectiveWindowSince(base, period)).To(Equal(want))
+		},
+		Entry("keeps the original base for unknown periods", 2*time.Hour, "custom", 2*time.Hour),
+		Entry("uses the full window when no base is provided", time.Duration(0), "day", 24*time.Hour),
+		Entry("uses the full window when the base is negative", -24*time.Hour, "week", 7*24*time.Hour),
+		Entry("keeps smaller explicit bases", 2*time.Hour, "day", 2*time.Hour),
+		Entry("keeps explicit bases equal to the period window", 7*24*time.Hour, "week", 7*24*time.Hour),
+		Entry("caps larger bases at the period window", 14*24*time.Hour, "week", 7*24*time.Hour),
+	)
+
+	DescribeTable("display and status helpers",
+		func(value string, fallback string, row metrics.HistoryRow, wantFilter string, wantStatus string) {
+			Expect(displayFilter(value, fallback)).To(Equal(wantFilter))
+			Expect(historyStatus(row)).To(Equal(wantStatus))
+		},
+		Entry("uses fallbacks for blank filters and passthrough history", "", "*", metrics.HistoryRow{Passthrough: true}, "*", "passthrough"),
+		Entry("keeps explicit filters and reports failures", "go", "*", metrics.HistoryRow{Failed: true}, "go", "failed"),
+		Entry("reports successful proxied rows as ok", "git", "*", metrics.HistoryRow{}, "git", "ok"),
+	)
+
+	It("formats compact filter suffixes and tool summary text", func() {
+		Expect(compactFilterSuffix(filtersEnvelope{})).To(BeEmpty())
+		Expect(compactFilterSuffix(filtersEnvelope{Since: "2d", Tool: "go", Failed: true}, "", "global")).To(Equal(" [since=2d tool=go failed-only global]"))
+
+		rows := []metrics.SummaryToolRow{
+			{Tool: "git", Commands: 2, EstimatedSavingsPct: 12.0, EstimatedSavedTokens: 10},
+			{Tool: "go", Commands: 5, EstimatedSavingsPct: 72.0, EstimatedSavedTokens: 120},
+			{Tool: "grep", Commands: 4, EstimatedSavingsPct: 45.0, EstimatedSavedTokens: 40},
+		}
+		Expect(toolsSummaryText(rows)).To(Equal("go 72.0% · grep 45.0% · git 12.0%"))
+	})
+
+	DescribeTable("formats wins and drag tool summaries deterministically",
+		func(rows []metrics.SummaryToolRow, wantWins string, wantDrag string) {
+			Expect(topWinsText(rows)).To(Equal(wantWins))
+			Expect(dragToolsText(rows)).To(Equal(wantDrag))
+		},
+		Entry("drops zero-saved tools from wins and keeps only weak tools in drags", []metrics.SummaryToolRow{
+			{Tool: "git", Commands: 5, EstimatedSavingsPct: 12.0, EstimatedSavedTokens: 5},
+			{Tool: "go", Commands: 4, EstimatedSavingsPct: 72.0, EstimatedSavedTokens: 120},
+			{Tool: "grep", Commands: 4, EstimatedSavingsPct: 45.0, EstimatedSavedTokens: 40},
+			{Tool: "sed", Commands: 9, EstimatedSavingsPct: 60.0, EstimatedSavedTokens: 0},
+		}, "go 72.0% · grep 45.0% · git 12.0%", "git (5 cmds)"),
+		Entry("falls back to all tools for drags when none are weak", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 80.0, EstimatedSavedTokens: 100},
+			{Tool: "grep", Commands: 12, EstimatedSavingsPct: 40.0, EstimatedSavedTokens: 80},
+			{Tool: "git", Commands: 12, EstimatedSavingsPct: 60.0, EstimatedSavedTokens: 70},
+			{Tool: "awk", Commands: 2, EstimatedSavingsPct: 50.0, EstimatedSavedTokens: 10},
+		}, "go 80.0% · grep 40.0% · git 60.0%", "grep (12 cmds) · git (12 cmds) · go (10 cmds)"),
+	)
+
+	DescribeTable("summarizes insight lines with the correct fallback",
+		func(rows []metrics.SummaryToolRow, expected []labeledLine) {
+			Expect(summaryInsightLines(rows)).To(Equal(expected))
+		},
+		Entry("returns nil for empty rows", nil, nil),
+		Entry("returns wins and drags when the split is meaningful and both sides render", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 78.0, EstimatedSavedTokens: 100},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 4.0, EstimatedSavedTokens: 5},
+		}, []labeledLine{
+			{label: "Wins", value: "go 78.0% · git 4.0%"},
+			{label: "Drag", value: "git (8 cmds)"},
+		}),
+		Entry("falls back to the tools line when wins would be empty", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 78.0, EstimatedSavedTokens: 0},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 4.0, EstimatedSavedTokens: 0},
+		}, []labeledLine{
+			{label: "Tools", value: "go 78.0% · git 4.0%"},
+		}),
+	)
+
 	DescribeTable("splitting wins and drags only for meaningful contrast",
 		func(rows []metrics.SummaryToolRow, want bool) {
 			Expect(shouldSplitWinsDrags(rows)).To(Equal(want))
@@ -912,6 +1005,36 @@ var _ = Describe("gain formatting helpers", func() {
 			{Tool: "git", Commands: 7, EstimatedSavingsPct: 12, EstimatedSavedTokens: 10},
 		}, true),
 	)
+
+	DescribeTable("split boundaries stay exact at strong, weak, and spread thresholds",
+		func(rows []metrics.SummaryToolRow, want bool) {
+			Expect(shouldSplitWinsDrags(rows)).To(Equal(want))
+		},
+		Entry("two rows split exactly at the 35/20/20 thresholds", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 35, EstimatedSavedTokens: 100},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 15, EstimatedSavedTokens: 5},
+		}, true),
+		Entry("two rows do not split when the spread is just below twenty", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 35, EstimatedSavedTokens: 100},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 16, EstimatedSavedTokens: 5},
+		}, false),
+		Entry("three rows split exactly at the ten-point spread threshold", []metrics.SummaryToolRow{
+			{Tool: "go", Commands: 10, EstimatedSavingsPct: 35, EstimatedSavedTokens: 100},
+			{Tool: "grep", Commands: 9, EstimatedSavingsPct: 25, EstimatedSavedTokens: 50},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 20, EstimatedSavedTokens: 5},
+		}, true),
+	)
+
+	It("treats twenty-percent tools as drags and keeps top wins deterministic on exact ties", func() {
+		rows := []metrics.SummaryToolRow{
+			{Tool: "grep", Commands: 5, EstimatedSavingsPct: 60, EstimatedSavedTokens: 40},
+			{Tool: "go", Commands: 5, EstimatedSavingsPct: 70, EstimatedSavedTokens: 40},
+			{Tool: "git", Commands: 8, EstimatedSavingsPct: 20, EstimatedSavedTokens: 5},
+		}
+
+		Expect(topWinsText(rows)).To(Equal("go 70.0% · grep 60.0% · git 20.0%"))
+		Expect(dragToolsText(rows)).To(Equal("git (8 cmds)"))
+	})
 
 	It("formats trend summaries with one decimal precision", func() {
 		rows := []metrics.PeriodRow{
@@ -941,14 +1064,957 @@ var _ = Describe("gain formatting helpers", func() {
 		Expect(trendSummaryText(downRows, "week")).To(Equal("↓ -2.1 pts week over week (13.0% → 10.9%) · slipping"))
 	})
 
+	DescribeTable("trend labels and buckets",
+		func(period string, pct float64, diff float64, wantLabel string, wantSavings string, wantDelta string) {
+			Expect(trendLabel(period)).To(Equal(wantLabel))
+			Expect(trendSavingsBucket(pct)).To(Equal(wantSavings))
+			Expect(trendDeltaBucket(diff)).To(Equal(wantDelta))
+		},
+		Entry("day trends use day labels and no-savings buckets", "day", 0.0, 1.5, "day over day", "none", "small"),
+		Entry("month trends use month labels and medium deltas", "month", 35.0, 3.0, "month over month", "mid", "medium"),
+		Entry("other trends default to weeks and large deltas", "week", 75.0, 8.0, "week over week", "extreme", "large"),
+	)
+
+	DescribeTable("trend bucket boundaries stay stable",
+		func(pct float64, diff float64, wantSavings string, wantDelta string) {
+			Expect(trendSavingsBucket(pct)).To(Equal(wantSavings))
+			Expect(trendDeltaBucket(diff)).To(Equal(wantDelta))
+		},
+		Entry("zero savings stays in none and sub-two deltas are small", 0.0, 1.99, "none", "small"),
+		Entry("twenty percent starts mid and two-point deltas are medium", 20.0, 2.0, "mid", "medium"),
+		Entry("forty percent starts high and negative medium deltas stay medium", 40.0, -5.99, "high", "medium"),
+		Entry("sixty percent starts extreme and six-point deltas are large", 60.0, 6.0, "extreme", "large"),
+	)
+
+	DescribeTable("trend savings buckets cover every interval edge",
+		func(pct float64, want string) {
+			Expect(trendSavingsBucket(pct)).To(Equal(want))
+		},
+		Entry("negative savings stay none", -0.1, "none"),
+		Entry("exact zero stays none", 0.0, "none"),
+		Entry("positive savings below twenty are low", 19.9, "low"),
+		Entry("exactly twenty starts mid", 20.0, "mid"),
+		Entry("below forty stays mid", 39.9, "mid"),
+		Entry("exactly forty starts high", 40.0, "high"),
+		Entry("below sixty stays high", 59.9, "high"),
+		Entry("exactly sixty starts extreme", 60.0, "extreme"),
+	)
+
+	DescribeTable("trend delta buckets cover every interval edge",
+		func(diff float64, want string) {
+			Expect(trendDeltaBucket(diff)).To(Equal(want))
+		},
+		Entry("zero diff is small", 0.0, "small"),
+		Entry("just below two is small", 1.99, "small"),
+		Entry("exactly two is medium", 2.0, "medium"),
+		Entry("just below six is medium", 5.99, "medium"),
+		Entry("exactly six is large", 6.0, "large"),
+	)
+
+	DescribeTable("deterministic variant selection stays stable",
+		func(variants []string, earlier float64, recent float64, want string) {
+			Expect(deterministicVariant(variants, earlier, recent)).To(Equal(want))
+		},
+		Entry("empty variant sets return an empty string", nil, 10.0, 12.0, ""),
+		Entry("positive seeds choose a stable index", []string{"first", "second"}, 10.0, 10.1, "second"),
+		Entry("negative seeds wrap back into the variant list", []string{"first", "second"}, -10.0, -10.1, "second"),
+	)
+
+	DescribeTable("trend suffix helpers pick the expected vocabulary branches",
+		func(deltaBucket string, savingsBucket string, earlier float64, recent float64, wantUp string, wantDown string, wantFlat string) {
+			if wantUp != "" {
+				Expect(trendSuffixUp(deltaBucket, savingsBucket, earlier, recent)).To(Equal(wantUp))
+			}
+			if wantDown != "" {
+				Expect(trendSuffixDown(deltaBucket, savingsBucket, earlier, recent)).To(Equal(wantDown))
+			}
+			if wantFlat != "" {
+				Expect(trendSuffixFlat(savingsBucket, earlier, recent)).To(Equal(wantFlat))
+			}
+		},
+		Entry("medium gains in high savings use the high-gain vocabulary", "medium", "high", 50.0, 54.0, "gaining", "", ""),
+		Entry("large gains outside high savings use the general gain vocabulary", "large", "mid", 30.0, 37.0, "clear gain", "", ""),
+		Entry("large declines in low savings use the weak-decline vocabulary", "large", "low", 10.0, 3.0, "", "backslide", ""),
+		Entry("medium declines in high savings use the higher-savings decline vocabulary", "medium", "high", 50.0, 46.0, "", "losing ground", ""),
+		Entry("mid flat savings use the neutral flat vocabulary", "", "mid", 30.0, 30.0, "", "", "holding"),
+	)
+
+	DescribeTable("trend suffix branches are deterministic across buckets",
+		func(earlier float64, recent float64, want string) {
+			Expect(trendSuffix(earlier, recent)).To(Equal(want))
+		},
+		Entry("small upward moves use the small-up vocabulary", 40.0, 41.0, "uptick"),
+		Entry("medium upward moves in mid savings use the mid-up vocabulary", 30.0, 34.0, "gaining"),
+		Entry("large upward moves in extreme savings use the large-up vocabulary", 55.0, 62.0, "clear gain"),
+		Entry("small downward moves in low savings use the weak-down vocabulary", 10.0, 9.0, "thin"),
+		Entry("medium downward moves in higher savings use the high-down vocabulary", 50.0, 46.0, "losing ground"),
+		Entry("large downward moves in higher savings use the large-down vocabulary", 70.0, 60.0, "hard fade"),
+		Entry("flat low savings use the flat-low vocabulary", 10.0, 10.0, "stuck low"),
+		Entry("flat high savings use the flat-high vocabulary", 70.0, 70.0, "holding high"),
+		Entry("flat mid savings use the neutral flat vocabulary", 30.0, 30.0, "holding"),
+	)
+
+	DescribeTable("trend summaries handle ordering and boundary diffs",
+		func(rows []metrics.PeriodRow, period string, want string) {
+			Expect(trendSummaryText(rows, period)).To(Equal(want))
+		},
+		Entry("reports insufficient data with one row", []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 31.4},
+		}, "week", "insufficient data"),
+		Entry("reports insufficient data when the split index collapses", []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 31.4},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 31.4},
+			{BucketStart: "2026-03-03", EstimatedSavingsPct: 31.4},
+		}, "month", "insufficient data"),
+		Entry("sorts rows before summarizing two-row trends", []metrics.PeriodRow{
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 55.0},
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 45.0},
+		}, "day", "↑ +10.0 pts day over day (45.0% → 55.0%) · clear gain"),
+		Entry("treats a +0.05 diff as flat", []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 52.00},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 52.05},
+		}, "week", "→ flat week over week (52.0% → 52.0%) · dialed in"),
+		Entry("treats a -0.05 diff as flat", []metrics.PeriodRow{
+			{BucketStart: "2026-03-01", EstimatedSavingsPct: 52.05},
+			{BucketStart: "2026-03-02", EstimatedSavingsPct: 52.00},
+		}, "week", "→ flat week over week (52.0% → 52.0%) · dialed in"),
+	)
+
+	DescribeTable("formatTrendSummary keeps direct branch thresholds stable",
+		func(earlier float64, recent float64, period string, want string) {
+			Expect(formatTrendSummary(earlier, recent, period)).To(Equal(want))
+		},
+		Entry("uses the upward branch just above the threshold", 10.0, 10.06, "day", "↑ +0.1 pts day over day (10.0% → 10.1%) · firming"),
+		Entry("uses the downward branch just below the threshold", 10.06, 10.0, "day", "↓ -0.1 pts day over day (10.1% → 10.0%) · fading"),
+		Entry("keeps the flat branch at the exact positive threshold", 10.0, 10.05, "day", "→ flat day over day (10.0% → 10.1%) · flatline"),
+		Entry("keeps the flat branch at the exact negative threshold", 10.05, 10.0, "day", "→ flat day over day (10.1% → 10.0%) · flatline"),
+	)
+
+	DescribeTable("resolves text limits and row limiting consistently",
+		func(rows []int, limit int, expected []int, total int) {
+			limited, gotTotal := limitRows(rows, limit)
+			Expect(limited).To(Equal(expected))
+			Expect(gotTotal).To(Equal(total))
+		},
+		Entry("keeps all rows when limit is zero", []int{1, 2, 3}, 0, []int{1, 2, 3}, 3),
+		Entry("uses the default limit when a negative limit is provided", slices.Collect(func(yield func(int) bool) {
+			for i := range 16 {
+				if !yield(i) {
+					return
+				}
+			}
+		}), -1, slices.Collect(func(yield func(int) bool) {
+			for i := range defaultTextLimit {
+				if !yield(i) {
+					return
+				}
+			}
+		}), 16),
+		Entry("keeps all rows when the resolved limit exactly matches the row count", []int{1, 2, 3}, 3, []int{1, 2, 3}, 3),
+		Entry("keeps all rows when the resolved limit exceeds the row count", []int{1, 2, 3}, 5, []int{1, 2, 3}, 3),
+	)
+
+	DescribeTable("formats table summary lines",
+		func(displayed int, total int, noun string, want string) {
+			Expect(tableSummaryLine(displayed, total, noun)).To(Equal(want))
+		},
+		Entry("reports full tables without extra guidance", 3, 3, "rows", "showing 3 of 3 rows"),
+		Entry("reports truncated tables with follow-up guidance", 5, 20, "tools", "showing 5 of 20 tools, use --limit N to see more"),
+	)
+
+	It("sorts gain table rows by savings first and zero-savings rows by count", func() {
+		rows := []metrics.SummaryToolRow{
+			{Tool: "git", Commands: 10, EstimatedSavedTokens: 0},
+			{Tool: "go", Commands: 8, EstimatedSavedTokens: 20},
+			{Tool: "grep", Commands: 12, EstimatedSavedTokens: 20},
+			{Tool: "awk", Commands: 9, EstimatedSavedTokens: 0},
+		}
+
+		Expect(sortGainTableRows(rows)).To(Equal([]metrics.SummaryToolRow{
+			{Tool: "grep", Commands: 12, EstimatedSavedTokens: 20},
+			{Tool: "go", Commands: 8, EstimatedSavedTokens: 20},
+			{Tool: "git", Commands: 10, EstimatedSavedTokens: 0},
+			{Tool: "awk", Commands: 9, EstimatedSavedTokens: 0},
+		}))
+	})
+
+	It("pads cells and renders text tables with stable alignment", func() {
+		Expect(padTableCell("42", 4, true)).To(Equal("   42 "))
+		Expect(padTableCell("go", 4, false)).To(Equal(" go   "))
+		Expect(padTableCell("long-value", 4, false)).To(Equal(" long-value "))
+
+		table := renderTextTable([]textTableColumn{
+			{header: "TOOL"},
+			{header: "COUNT", right: true},
+		}, [][]string{{"go", "42"}})
+
+		Expect(table).To(Equal(strings.Join([]string{
+			"+------+-------+",
+			"| TOOL | COUNT |",
+			"+------+-------+",
+			"| go   |    42 |",
+			"+------+-------+",
+			"",
+		}, "\n")))
+	})
+
+	It("renders single-column text tables with stable borders", func() {
+		table := renderTextTable([]textTableColumn{
+			{header: "VALUE"},
+		}, [][]string{{"alpha"}, {"beta"}})
+
+		Expect(table).To(Equal(strings.Join([]string{
+			"+-------+",
+			"| VALUE |",
+			"+-------+",
+			"| alpha |",
+			"| beta  |",
+			"+-------+",
+			"",
+		}, "\n")))
+	})
+
+	It("prints labeled lines with aligned labels and no output for empty lists", func() {
+		out, err := captureStdout(func() error {
+			printLabeledLines(nil)
+			printLabeledLines([]labeledLine{
+				{label: "W", value: "one"},
+				{label: "Wide", value: "two"},
+			})
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).To(Equal("W    : one\nWide : two\n"))
+	})
+
+	DescribeTable("renders summary and history tables for empty and populated datasets",
+		func(run func() error, expected []string) {
+			out, err := captureStdout(run)
+			Expect(err).NotTo(HaveOccurred())
+			for _, fragment := range expected {
+				Expect(out).To(ContainSubstring(fragment))
+			}
+		},
+		Entry("prints the compact summary no-results branch", func() error {
+			return printCompactGainSummary(filtersEnvelope{Tool: "go"}, metrics.SummaryTotal{}, nil, nil, "week", "", false)
+		}, []string{
+			"0 cmds · 0 → 0 tokens (0.0% saved) [tool=go]",
+			noResultsMsg,
+		}),
+		Entry("prints the summary table no-results branch with global period tags", func() error {
+			return printSummaryTableText(filtersEnvelope{}, metrics.SummaryTotal{Commands: 1}, nil, 5, "week", true)
+		}, []string{
+			"1 cmds · 0 → 0 tokens (0.0% saved) [period=week global]",
+			noResultsMsg,
+		}),
+		Entry("prints the history table no-results branch", func() error {
+			return printHistoryTable(nil, filtersEnvelope{Failed: true}, 5)
+		}, []string{
+			"ccp history [failed-only]",
+			noResultsMsg,
+		}),
+		Entry("prints the global history table no-results branch", func() error {
+			return printGlobalHistoryTable(nil, filtersEnvelope{Tool: "go"}, 5)
+		}, []string{
+			"ccp history [tool=go global]",
+			noResultsMsg,
+		}),
+	)
+
+	It("prints populated summary and history tables with truncation notices", func() {
+		out, err := captureStdout(func() error {
+			err := printSummaryTableText(filtersEnvelope{}, metrics.SummaryTotal{
+				Commands:              2,
+				EstimatedInputTokens:  120,
+				EstimatedOutputTokens: 60,
+				EstimatedSavingsPct:   50,
+			}, []metrics.SummaryToolRow{
+				{Tool: "go", Commands: 2, EstimatedInputTokens: 120, EstimatedOutputTokens: 60, EstimatedSavedTokens: 60, EstimatedSavingsPct: 50},
+				{Tool: "git", Commands: 1, EstimatedInputTokens: 20, EstimatedOutputTokens: 20, EstimatedSavedTokens: 0, EstimatedSavingsPct: 0},
+			}, 1, "", false)
+			if err != nil {
+				return err
+			}
+			return printGlobalHistoryTable([]globalHistoryRow{
+				{
+					HistoryRow: metrics.HistoryRow{
+						Timestamp:             time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC),
+						Command:               "go test ./really/long/package/name",
+						EstimatedSavingsPct:   50,
+						EstimatedInputTokens:  10,
+						EstimatedOutputTokens: 5,
+						EstimatedSavedTokens:  5,
+					},
+					Source: "/very/long/source/path/for/project",
+				},
+				{
+					HistoryRow: metrics.HistoryRow{
+						Timestamp:           time.Date(2026, 3, 26, 11, 0, 0, 0, time.UTC),
+						Command:             "git status",
+						EstimatedSavingsPct: 0,
+					},
+					Source: "/short",
+				},
+			}, filtersEnvelope{}, 1)
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).To(ContainSubstring("showing 1 of 2 tools, use --limit N to see more"))
+		Expect(out).To(ContainSubstring("| TOOL | COUNT | NATIVE | PROXIED | SAVED | SAVINGS |"))
+		Expect(out).To(ContainSubstring("showing 1 of 2 rows, use --limit N to see more"))
+		Expect(out).To(ContainSubstring("| TIMESTAMP"))
+		Expect(out).To(ContainSubstring("...g/source/path/for/project"))
+	})
+
 	DescribeTable("truncateForDisplay branches",
 		func(input string, max int, want string) {
 			Expect(truncateForDisplay(input, max)).To(Equal(want))
 		},
+		Entry("negative max behaves like zero", "abcdef", -1, ""),
 		Entry("max<=0", "abcdef", 0, ""),
+		Entry("returns the original string when max matches the rune length", "abcdef", 6, "abcdef"),
 		Entry("max<=3", "abcdef", 3, "abc"),
 		Entry("ellipsis", "abcdef", 5, "ab..."),
 	)
+
+	DescribeTable("summary query options preserve or collapse periods correctly",
+		func(flags reportFlags, opts metrics.QueryOptions, want metrics.QueryOptions) {
+			Expect(summaryQueryOptions(flags, opts)).To(Equal(want))
+		},
+		Entry("collapses the period for compact text summaries", reportFlags{format: "text"}, metrics.QueryOptions{
+			Period: "week",
+			Since:  14 * 24 * time.Hour,
+			Tool:   "go",
+			Failed: true,
+		}, metrics.QueryOptions{
+			Since:  7 * 24 * time.Hour,
+			Tool:   "go",
+			Failed: true,
+		}),
+		Entry("keeps the period for text tables", reportFlags{format: "text", table: true}, metrics.QueryOptions{
+			Period: "week",
+			Since:  14 * 24 * time.Hour,
+		}, metrics.QueryOptions{
+			Period: "week",
+			Since:  14 * 24 * time.Hour,
+		}),
+		Entry("keeps the period for json output", reportFlags{format: "json"}, metrics.QueryOptions{
+			Period: "month",
+			Since:  48 * time.Hour,
+		}, metrics.QueryOptions{
+			Period: "month",
+			Since:  48 * time.Hour,
+		}),
+	)
+
+	DescribeTable("trend day query options prefer the narrower lookback",
+		func(opts metrics.QueryOptions, period string, want metrics.QueryOptions) {
+			now := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
+			Expect(trendDayQueryOptions(opts, period, now)).To(Equal(want))
+		},
+		Entry("returns a day query without changing unknown windows", metrics.QueryOptions{Since: 2 * time.Hour, Tool: "go"}, "custom", metrics.QueryOptions{
+			Period: "day",
+			Since:  2 * time.Hour,
+			Tool:   "go",
+		}),
+		Entry("uses the computed lookback when no explicit since is provided", metrics.QueryOptions{Tool: "go"}, "week", metrics.QueryOptions{
+			Period: "day",
+			Since:  13 * 24 * time.Hour,
+			Tool:   "go",
+		}),
+		Entry("uses the computed lookback when the explicit since exactly matches it", metrics.QueryOptions{Since: 13 * 24 * time.Hour}, "week", metrics.QueryOptions{
+			Period: "day",
+			Since:  13 * 24 * time.Hour,
+		}),
+		Entry("keeps a smaller explicit since value", metrics.QueryOptions{Since: 24 * time.Hour, Tool: "go"}, "week", metrics.QueryOptions{
+			Period: "day",
+			Since:  24 * time.Hour,
+			Tool:   "go",
+		}),
+		Entry("uses the full lookback when the explicit since is larger", metrics.QueryOptions{Since: 30 * 24 * time.Hour}, "week", metrics.QueryOptions{
+			Period: "day",
+			Since:  13 * 24 * time.Hour,
+		}),
+	)
+
+	It("aggregates trend rows into earlier and recent windows while ignoring invalid buckets", func() {
+		now := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
+		rows := aggregateTrendRows([]metrics.PeriodRow{
+			{BucketStart: "2026-03-07", Commands: 2, RawBytes: 8, KeptBytes: 4},
+			{BucketStart: "2026-03-16", Commands: 1, RawBytes: 4, KeptBytes: 4},
+			{BucketStart: "invalid-date", Commands: 9, RawBytes: 100, KeptBytes: 0},
+			{BucketStart: "2026-02-20", Commands: 3, RawBytes: 90, KeptBytes: 30},
+		}, "week", now)
+
+		Expect(rows).To(Equal([]metrics.PeriodRow{
+			{
+				Bucket:                "2026-03-07",
+				BucketStart:           "2026-03-07",
+				BucketEnd:             "2026-03-13",
+				Commands:              2,
+				RawBytes:              8,
+				KeptBytes:             4,
+				DroppedBytes:          4,
+				DropRatio:             0.5,
+				EstimatedInputTokens:  2,
+				EstimatedOutputTokens: 1,
+				EstimatedSavedTokens:  1,
+				EstimatedSavingsPct:   50,
+			},
+			{
+				Bucket:                "2026-03-14",
+				BucketStart:           "2026-03-14",
+				BucketEnd:             "2026-03-20",
+				Commands:              1,
+				RawBytes:              4,
+				KeptBytes:             4,
+				DroppedBytes:          0,
+				DropRatio:             0,
+				EstimatedInputTokens:  1,
+				EstimatedOutputTokens: 1,
+				EstimatedSavedTokens:  0,
+				EstimatedSavingsPct:   0,
+			},
+		}))
+		Expect(aggregateTrendRows(nil, "custom", now)).To(BeNil())
+	})
+
+	It("omits empty trend windows when only one side has data", func() {
+		now := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
+
+		earlierOnly := aggregateTrendRows([]metrics.PeriodRow{
+			{BucketStart: "2026-03-07", Commands: 2, RawBytes: 8, KeptBytes: 4},
+		}, "week", now)
+		Expect(earlierOnly).To(HaveLen(1))
+		Expect(earlierOnly[0].BucketStart).To(Equal("2026-03-07"))
+
+		recentOnly := aggregateTrendRows([]metrics.PeriodRow{
+			{BucketStart: "2026-03-20", Commands: 1, RawBytes: 4, KeptBytes: 0},
+		}, "week", now)
+		Expect(recentOnly).To(HaveLen(1))
+		Expect(recentOnly[0].BucketStart).To(Equal("2026-03-14"))
+	})
+
+	DescribeTable("parses --since values from durations and day or week shorthands",
+		func(raw string, want time.Duration, wantErr string) {
+			got, err := parseSince(raw)
+			if wantErr != "" {
+				Expect(err).To(MatchError(wantErr))
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(Equal(want))
+		},
+		Entry("accepts empty values", "", time.Duration(0), ""),
+		Entry("accepts native durations", "15m", 15*time.Minute, ""),
+		Entry("accepts zero day shorthands", "0d", time.Duration(0), ""),
+		Entry("accepts day shorthands", "2d", 48*time.Hour, ""),
+		Entry("accepts week shorthands", "3w", 21*24*time.Hour, ""),
+		Entry("rejects missing shorthand values", "d", time.Duration(0), "invalid --since \"d\""),
+		Entry("rejects negative shorthands", "-1d", time.Duration(0), "invalid --since \"-1d\""),
+		Entry("rejects unknown units", "4x", time.Duration(0), "invalid --since \"4x\""),
+	)
+
+	DescribeTable("formats integers with stable thousands separators",
+		func(value int64, want string) {
+			Expect(formatInt(value)).To(Equal(want))
+		},
+		Entry("keeps short positive numbers unchanged", int64(42), "42"),
+		Entry("keeps three-digit positive numbers unchanged", int64(999), "999"),
+		Entry("keeps short negative numbers unchanged", int64(-42), "-42"),
+		Entry("keeps three-digit negative numbers unchanged", int64(-999), "-999"),
+		Entry("formats positive thousands", int64(1234), "1,234"),
+		Entry("formats negative thousands", int64(-1234), "-1,234"),
+		Entry("formats larger values with repeated grouping", int64(1234567890), "1,234,567,890"),
+	)
+
+	Context("global metrics helpers", func() {
+		DescribeTable("normalizing global paths",
+			func(input string, expected string) {
+				Expect(normalizeGlobalPath(input)).To(Equal(expected))
+			},
+			Entry("trims empty whitespace to an empty path", " \t ", ""),
+			Entry("cleans relative paths to absolute paths", "./testdata/../filters", filepath.Clean(func() string {
+				abs, err := filepath.Abs("./filters")
+				Expect(err).NotTo(HaveOccurred())
+				return abs
+			}())),
+		)
+
+		DescribeTable("selecting warning source labels",
+			func(failure globalQueryFailure, expected string) {
+				Expect(globalQuerySourceLabel(failure)).To(Equal(expected))
+			},
+			Entry("prefers the workspace cwd", globalQueryFailure{CWD: "/repo", MetricsPath: "/repo/.ccp/gain.db"}, "/repo"),
+			Entry("falls back to the metrics path", globalQueryFailure{MetricsPath: "/repo/.ccp/gain.db"}, "/repo/.ccp/gain.db"),
+			Entry("uses an explicit unknown placeholder when no source exists", globalQueryFailure{}, "<unknown>"),
+		)
+
+		It("records failures once and falls back to cwd keys when the metrics path is empty", func() {
+			session := &globalQuerySession{failures: map[string]globalQueryFailure{}}
+
+			session.recordFailure(globalMetricsSource{CWD: "/repo-a"}, errors.New("first"))
+			session.recordFailure(globalMetricsSource{CWD: "/repo-a"}, errors.New("second"))
+			session.recordFailure(globalMetricsSource{CWD: "/repo-b", MetricsPath: "/repo-b/.ccp/gain.db"}, nil)
+
+			Expect(session.failures).To(HaveLen(1))
+			Expect(session.failures).To(HaveKey("/repo-a"))
+			Expect(session.failures["/repo-a"].Err).To(MatchError("first"))
+		})
+
+		It("discovers global sources from the registry and current workspace without duplicates", func() {
+			baseDir := GinkgoT().TempDir()
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+
+			registeredRepo := filepath.Join(baseDir, "registered-repo")
+			duplicateRepo := filepath.Join(baseDir, "duplicate-repo")
+			missingRepo := filepath.Join(baseDir, "missing-repo")
+			currentRepo := filepath.Join(baseDir, "current-repo")
+			registeredPath := filepath.Join(registeredRepo, ".ccp", "gain.db")
+			missingPath := filepath.Join(missingRepo, ".ccp", "gain.db")
+			currentPath := filepath.Join(currentRepo, ".ccp", "gain.db")
+
+			appendGainMetrics(registeredPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 8, 0, 0, 0, time.UTC), Tool: "go", Command: "go test ./...", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(currentPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 8, 1, 0, 0, time.UTC), Tool: "git", Command: "git status", RawBytes: 4, KeptBytes: 4},
+			})
+
+			registryPath := workspaces.PathForHome(home)
+			Expect(workspaces.UpsertPath(registryPath, registeredRepo, registeredPath)).To(Succeed())
+			Expect(workspaces.UpsertPath(registryPath, duplicateRepo, registeredPath)).To(Succeed())
+			Expect(workspaces.UpsertPath(registryPath, missingRepo, missingPath)).To(Succeed())
+
+			var sources []globalMetricsSource
+			Expect(runInDir(currentRepo, func() error {
+				var err error
+				sources, err = globalMetricsSources(filepath.Join(currentRepo, ".ccp", ".", "gain.db"))
+				return err
+			})).To(Succeed())
+
+			normalizedSources := make([]globalMetricsSource, 0, len(sources))
+			for _, source := range sources {
+				normalizedSources = append(normalizedSources, globalMetricsSource{
+					CWD:         resolvedPath(source.CWD),
+					MetricsPath: resolvedPath(source.MetricsPath),
+				})
+			}
+
+			Expect(normalizedSources).To(ConsistOf(
+				globalMetricsSource{
+					CWD:         resolvedPath(duplicateRepo),
+					MetricsPath: resolvedPath(registeredPath),
+				},
+				globalMetricsSource{
+					CWD:         resolvedPath(currentRepo),
+					MetricsPath: resolvedPath(currentPath),
+				},
+			))
+
+			entries, err := workspaces.ListPath(registryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(ContainElement(WithTransform(func(entry workspaces.Workspace) string {
+				return resolvedPath(entry.CWD)
+			}, Equal(resolvedPath(currentRepo)))))
+		})
+
+		DescribeTable("builds the current global metrics source only when a metrics path is available",
+			func(currentPath string, expectNil bool) {
+				repo := GinkgoT().TempDir()
+				var source *globalMetricsSource
+				var expectedCWD string
+				var expectedMetricsPath string
+				Expect(runInDir(repo, func() error {
+					expectedCWD = normalizeGlobalPath(".")
+					expectedMetricsPath = normalizeGlobalPath(currentPath)
+					source = currentGlobalMetricsSource(currentPath)
+					return nil
+				})).To(Succeed())
+
+				if expectNil {
+					Expect(source).To(BeNil())
+					return
+				}
+
+				Expect(source).NotTo(BeNil())
+				Expect(source.CWD).To(Equal(expectedCWD))
+				Expect(source.MetricsPath).To(Equal(expectedMetricsPath))
+			},
+			Entry("returns nil for an empty metrics path", " \t ", true),
+			Entry("normalizes a relative metrics path using the current working directory", filepath.Join(".", ".ccp", "gain.db"), false),
+		)
+
+		It("writes global warnings in cwd-then-metrics-path order", func() {
+			session := &globalQuerySession{
+				failures: map[string]globalQueryFailure{
+					"b": {CWD: "/repo-b", MetricsPath: "/repo-b/.ccp/gain.db", Err: errors.New("broken b")},
+					"z": {CWD: "/repo-a", MetricsPath: "/repo-a/.ccp/z.db", Err: errors.New("broken z")},
+					"a": {CWD: "/repo-a", MetricsPath: "/repo-a/.ccp/a.db", Err: errors.New("broken a")},
+				},
+			}
+
+			stderr, err := captureStderrOutput(func() error {
+				session.writeWarnings("gain")
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			first := strings.Index(stderr, "/repo-a (/repo-a/.ccp/a.db): broken a")
+			second := strings.Index(stderr, "/repo-a (/repo-a/.ccp/z.db): broken z")
+			third := strings.Index(stderr, "/repo-b (/repo-b/.ccp/gain.db): broken b")
+			Expect(first).To(BeNumerically(">=", 0))
+			Expect(second).To(BeNumerically(">", first))
+			Expect(third).To(BeNumerically(">", second))
+			Expect(stderr).To(ContainSubstring("results exclude 3 workspace(s)"))
+		})
+
+		It("sorts global summary rows by commands, then tokens, then command name", func() {
+			tmpDir := GinkgoT().TempDir()
+			alphaPath := filepath.Join(tmpDir, "alpha.db")
+			betaPath := filepath.Join(tmpDir, "beta.db")
+			appendGainMetrics(alphaPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 9, 0, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 9, 1, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(betaPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 9, 2, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 9, 3, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 9, 4, 0, 0, time.UTC), Tool: "go", Command: "gamma", RawBytes: 16, KeptBytes: 8},
+			})
+
+			rows, err := queryGlobalSummaryRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: alphaPath},
+					{CWD: "/repo-b", MetricsPath: betaPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Command).To(Equal("alpha"))
+			Expect(rows[1].Command).To(Equal("beta"))
+			Expect(rows[2].Command).To(Equal("gamma"))
+		})
+
+		It("prefers higher token totals before command-name ordering when global summary counts tie", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 9, 10, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 20, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 9, 11, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 9, 12, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 9, 13, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 4, KeptBytes: 4},
+			})
+
+			rows, err := queryGlobalSummaryRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].Command).To(Equal("beta"))
+			Expect(rows[0].EstimatedInputTokens).To(BeNumerically(">", rows[1].EstimatedInputTokens))
+			Expect(rows[1].Command).To(Equal("alpha"))
+		})
+
+		It("sorts global tool rows by commands, then tokens, then tool name", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 10, 0, 0, 0, time.UTC), Tool: "git", Command: "git status", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 10, 1, 0, 0, time.UTC), Tool: "go", Command: "go test", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 10, 2, 0, 0, time.UTC), Tool: "git", Command: "git diff", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 10, 3, 0, 0, time.UTC), Tool: "go", Command: "go vet", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 10, 4, 0, 0, time.UTC), Tool: "awk", Command: "awk", RawBytes: 16, KeptBytes: 8},
+			})
+
+			rows, err := queryGlobalSummaryToolRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Tool).To(Equal("git"))
+			Expect(rows[1].Tool).To(Equal("go"))
+			Expect(rows[2].Tool).To(Equal("awk"))
+		})
+
+		It("prefers higher token totals before tool-name ordering when global tool counts tie", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 10, 10, 0, 0, time.UTC), Tool: "beta", Command: "one", RawBytes: 20, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 10, 11, 0, 0, time.UTC), Tool: "alpha", Command: "two", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 26, 10, 12, 0, 0, time.UTC), Tool: "beta", Command: "three", RawBytes: 4, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 26, 10, 13, 0, 0, time.UTC), Tool: "alpha", Command: "four", RawBytes: 4, KeptBytes: 4},
+			})
+
+			rows, err := queryGlobalSummaryToolRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].Tool).To(Equal("beta"))
+			Expect(rows[0].EstimatedInputTokens).To(BeNumerically(">", rows[1].EstimatedInputTokens))
+			Expect(rows[1].Tool).To(Equal("alpha"))
+		})
+
+		It("merges global period rows by bucket and sorts by bucket start", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC), Tool: "go", Command: "one", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 2, 10, 0, 0, 0, time.UTC), Tool: "go", Command: "two", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 1, 11, 0, 0, 0, time.UTC), Tool: "go", Command: "three", RawBytes: 4, KeptBytes: 0},
+				{Timestamp: time.Date(2026, 3, 2, 11, 0, 0, 0, time.UTC), Tool: "go", Command: "four", RawBytes: 4, KeptBytes: 0},
+			})
+
+			rows, err := queryGlobalPeriodRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{Period: "day"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].BucketStart).To(Equal("2026-03-01"))
+			Expect(rows[0].Commands).To(Equal(int64(2)))
+			Expect(rows[1].BucketStart).To(Equal("2026-03-02"))
+			Expect(rows[1].Commands).To(Equal(int64(2)))
+		})
+
+		It("sorts global period rows across more than two buckets in ascending bucket order", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 2, 28, 10, 0, 0, 0, time.UTC), Tool: "go", Command: "one", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: time.Date(2026, 3, 2, 10, 0, 0, 0, time.UTC), Tool: "go", Command: "two", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: time.Date(2026, 3, 1, 11, 0, 0, 0, time.UTC), Tool: "go", Command: "three", RawBytes: 4, KeptBytes: 0},
+			})
+
+			rows, err := queryGlobalPeriodRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{Period: "day"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].BucketStart).To(Equal("2026-02-28"))
+			Expect(rows[1].BucketStart).To(Equal("2026-03-01"))
+			Expect(rows[2].BucketStart).To(Equal("2026-03-02"))
+		})
+
+		It("sorts global history rows by timestamp descending, then source, then command", func() {
+			tmpDir := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmpDir, "first.db")
+			secondPath := filepath.Join(tmpDir, "second.db")
+			ts := time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC)
+			appendGainMetrics(firstPath, []metrics.RunMetric{
+				{Timestamp: ts, Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: ts.Add(time.Minute), Tool: "go", Command: "latest", RawBytes: 8, KeptBytes: 4},
+			})
+			appendGainMetrics(secondPath, []metrics.RunMetric{
+				{Timestamp: ts, Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+			})
+
+			rows, err := queryGlobalHistoryRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-b", MetricsPath: firstPath},
+					{CWD: "/repo-a", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Command).To(Equal("latest"))
+			Expect(rows[1].Source).To(Equal("/repo-a"))
+			Expect(rows[1].Command).To(Equal("alpha"))
+			Expect(rows[2].Source).To(Equal("/repo-b"))
+			Expect(rows[2].Command).To(Equal("beta"))
+		})
+
+		It("sorts global history rows by command when timestamp and source match", func() {
+			tmpDir := GinkgoT().TempDir()
+			path := filepath.Join(tmpDir, "history.db")
+			ts := time.Date(2026, 3, 26, 13, 0, 0, 0, time.UTC)
+			appendGainMetrics(path, []metrics.RunMetric{
+				{Timestamp: ts, Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				{Timestamp: ts, Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+			})
+
+			rows, err := queryGlobalHistoryRows(&globalQuerySession{
+				sources:  []globalMetricsSource{{CWD: "/repo-a", MetricsPath: path}},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].Source).To(Equal("/repo-a"))
+			Expect(rows[0].Command).To(Equal("alpha"))
+			Expect(rows[1].Command).To(Equal("beta"))
+		})
+
+		It("writes global history CSV rows with exact filters and derived metrics", func() {
+			ts := time.Date(2026, 3, 26, 14, 15, 0, 0, time.UTC)
+			out, err := captureStdout(func() error {
+				return writeGlobalHistoryCSV([]globalHistoryRow{
+					{
+						HistoryRow: metrics.HistoryRow{
+							Timestamp:             ts,
+							Command:               "go test ./...",
+							Tool:                  "go",
+							DispatchKey:           "go:test",
+							ExitCode:              3,
+							Failed:                true,
+							Passthrough:           false,
+							DurationMS:            120,
+							RawBytes:              8,
+							KeptBytes:             4,
+							DroppedBytes:          4,
+							DropRatio:             0.5,
+							EstimatedInputTokens:  2,
+							EstimatedOutputTokens: 1,
+							EstimatedSavedTokens:  1,
+							EstimatedSavingsPct:   50,
+						},
+						Source: "/repo-a",
+					},
+				}, filtersEnvelope{Since: "7d", Tool: "go", Failed: true})
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			records, err := csv.NewReader(strings.NewReader(out)).ReadAll()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(records).To(HaveLen(2))
+			Expect(records[0]).To(Equal([]string{
+				"dataset", "period", "since", "tool_filter", "failed_filter", "row_kind",
+				"timestamp", "source", "command", "tool", "dispatch_key", "exit_code", "failed", "passthrough", "duration_ms",
+				"commands", "raw_bytes", "kept_bytes", "dropped_bytes", "drop_ratio",
+				"estimated_input_tokens", "estimated_output_tokens", "estimated_saved_tokens", "estimated_savings_pct",
+			}))
+			Expect(records[1]).To(Equal([]string{
+				"history", "", "7d", "go", "true", "data",
+				ts.Format(time.RFC3339), "/repo-a", "go test ./...", "go", "go:test", "3", "true", "false", "120",
+				"", "8", "4", "4", "0.5000", "2", "1", "1", "50.00",
+			}))
+		})
+
+		DescribeTable("local token and tail helpers",
+			func(bytes int64, input string, max int, wantTokens int64, wantTail string) {
+				Expect(localTokensFromBytes(bytes)).To(Equal(wantTokens))
+				Expect(truncateTailForDisplay(input, max)).To(Equal(wantTail))
+			},
+			Entry("clamps negative bytes and trims whitespace-free empty tails", int64(-1), "abcdef", 0, int64(0), ""),
+			Entry("clamps zero bytes and non-positive tails", int64(0), "abcdef", 0, int64(0), ""),
+			Entry("keeps a single byte at one token", int64(1), "abcdef", 6, int64(1), "abcdef"),
+			Entry("keeps exact four-byte boundaries at one token", int64(4), "abcdef", 6, int64(1), "abcdef"),
+			Entry("rounds token counts up in groups of four and keeps short tails", int64(5), "abcdef", 6, int64(2), "abcdef"),
+			Entry("uses raw tail slices when max is tiny", int64(8), "abcdef", 3, int64(2), "def"),
+			Entry("prefixes long tails with an ellipsis when space allows", int64(9), "abcdef", 5, int64(3), "...ef"),
+		)
+
+		It("fills local derived fields consistently across summary, total, and period rows", func() {
+			summaryRow := metrics.SummaryRow{RawBytes: 8, KeptBytes: 4}
+			fillLocalSummaryRowDerived(&summaryRow)
+			Expect(summaryRow.DroppedBytes).To(Equal(int64(4)))
+			Expect(summaryRow.DropRatio).To(Equal(0.5))
+			Expect(summaryRow.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(summaryRow.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(summaryRow.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(summaryRow.EstimatedSavingsPct).To(Equal(50.0))
+
+			toolRow := metrics.SummaryToolRow{RawBytes: 8, KeptBytes: 4}
+			fillLocalSummaryToolDerived(&toolRow)
+			Expect(toolRow.DroppedBytes).To(Equal(int64(4)))
+			Expect(toolRow.DropRatio).To(Equal(0.5))
+			Expect(toolRow.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(toolRow.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(toolRow.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(toolRow.EstimatedSavingsPct).To(Equal(50.0))
+
+			total := metrics.SummaryTotal{RawBytes: 8, KeptBytes: 4}
+			fillLocalSummaryTotalDerived(&total)
+			Expect(total.DroppedBytes).To(Equal(int64(4)))
+			Expect(total.DropRatio).To(Equal(0.5))
+			Expect(total.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(total.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(total.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(total.EstimatedSavingsPct).To(Equal(50.0))
+
+			periodRow := metrics.PeriodRow{RawBytes: 8, KeptBytes: 4}
+			fillLocalPeriodRowDerived(&periodRow)
+			Expect(periodRow.DroppedBytes).To(Equal(int64(4)))
+			Expect(periodRow.DropRatio).To(Equal(0.5))
+			Expect(periodRow.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(periodRow.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(periodRow.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(periodRow.EstimatedSavingsPct).To(Equal(50.0))
+		})
+
+		It("keeps local derived fields at zero when raw bytes are zero", func() {
+			summaryRow := metrics.SummaryRow{}
+			fillLocalSummaryRowDerived(&summaryRow)
+			Expect(summaryRow).To(Equal(metrics.SummaryRow{}))
+
+			toolRow := metrics.SummaryToolRow{}
+			fillLocalSummaryToolDerived(&toolRow)
+			Expect(toolRow).To(Equal(metrics.SummaryToolRow{}))
+
+			total := metrics.SummaryTotal{}
+			fillLocalSummaryTotalDerived(&total)
+			Expect(total).To(Equal(metrics.SummaryTotal{}))
+
+			periodRow := metrics.PeriodRow{}
+			fillLocalPeriodRowDerived(&periodRow)
+			Expect(periodRow).To(Equal(metrics.PeriodRow{}))
+		})
+
+		It("aggregates summary totals before deriving shared metrics", func() {
+			total := totalFromSummaryRows([]metrics.SummaryRow{
+				{Command: "go test", Commands: 2, RawBytes: 8, KeptBytes: 4},
+				{Command: "git status", Commands: 1, RawBytes: 4, KeptBytes: 4},
+			})
+
+			Expect(total.Commands).To(Equal(int64(3)))
+			Expect(total.RawBytes).To(Equal(int64(12)))
+			Expect(total.KeptBytes).To(Equal(int64(8)))
+			Expect(total.DroppedBytes).To(Equal(int64(4)))
+			Expect(total.DropRatio).To(BeNumerically("~", 4.0/12.0, 1e-12))
+			Expect(total.EstimatedInputTokens).To(Equal(int64(3)))
+			Expect(total.EstimatedOutputTokens).To(Equal(int64(2)))
+			Expect(total.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(total.EstimatedSavingsPct).To(BeNumerically("~", (1.0/3.0)*100, 1e-12))
+		})
+	})
 })
 
 func appendGainMetrics(path string, seed []metrics.RunMetric) {

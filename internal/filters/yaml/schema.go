@@ -164,12 +164,15 @@ func ParseDefinition(raw []byte) (*FilterDefinition, error) {
 }
 
 func consumeTrailingYAMLDocuments(dec *yaml.Decoder) error {
-	var tail struct{}
+	var tail yaml.Node
 	if err := dec.Decode(&tail); err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		return err
+	}
+	if tail.Kind == 0 {
+		return nil
 	}
 	return fmt.Errorf("unexpected additional YAML document")
 }
@@ -339,7 +342,7 @@ func validateOutput(out *OutputShape, path validationPath) error {
 	if out == nil {
 		return nil
 	}
-	scopeCount := 0
+	hasScope := false
 	for _, scope := range []struct {
 		name  string
 		value *OutputScope
@@ -351,12 +354,12 @@ func validateOutput(out *OutputShape, path validationPath) error {
 		if scope.value == nil {
 			continue
 		}
-		scopeCount++
+		hasScope = true
 		if err := validateOutputScope(scope.value, path.Path(scope.name)); err != nil {
 			return err
 		}
 	}
-	if scopeCount == 0 {
+	if !hasScope {
 		return ValidationError{Path: string(path), Message: "output must define at least one scope"}
 	}
 	if out.Combined != nil && (out.Stdout != nil || out.Stderr != nil) {
@@ -380,9 +383,6 @@ func validateGroup(g *OutputGroup, path validationPath) error {
 	}
 	if hasCollectFields {
 		return validateCollectGroup(g, path)
-	}
-	if len(g.Variables) > 0 || g.Initially != nil || g.Lines != nil || g.Finally != nil {
-		return ValidationError{Path: string(path), Message: "group must define starts_with, starts_with_regex, or matches_regex"}
 	}
 	return ValidationError{Path: string(path), Message: "group must define starts_with, starts_with_regex, or matches_regex"}
 }

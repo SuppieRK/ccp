@@ -9,6 +9,35 @@ import (
 )
 
 var _ = Describe("ParseDefinition", func() {
+	It("formats validation errors with and without a path", func() {
+		Expect((ValidationError{Message: "boom"}).Error()).To(Equal("boom"))
+		Expect((ValidationError{Path: "cases[0]", Message: "boom"}).Error()).To(Equal("cases[0]: boom"))
+	})
+
+	It("rejects additional YAML documents", func() {
+		raw := []byte(`
+version: 1
+filter: pytest
+cases:
+  - id: default
+    passthrough: true
+---
+version: 1
+filter: second
+cases:
+  - id: default
+    passthrough: true
+`)
+
+		_, err := ParseDefinition(raw)
+
+		Expect(err).To(MatchError("unexpected additional YAML document"))
+	})
+
+	It("builds nested validation paths", func() {
+		Expect(validationPath("cases").Path("0").Path("when_arguments")).To(Equal(validationPath("cases.0.when_arguments")))
+	})
+
 	It("accepts anchors inside one definition and validates the resolved shape", func() {
 		raw := []byte(`
 version: 1
@@ -120,6 +149,35 @@ cases:
     when_arguments: {}
     passthrough: true
 `, "cases[0].when_arguments: when_arguments must set at least one predicate"),
+		Entry("empty case finally print", `
+version: 1
+filter: python
+cases:
+  - id: default
+    passthrough: true
+    finally: {}
+`, "cases[0].finally: finally must define print"),
+		Entry("case variable type must be supported", `
+version: 1
+filter: python
+cases:
+  - id: default
+    variables:
+      - name: total
+        type: bool
+    passthrough: true
+`, "cases[0].variables[0].type: variable type must be number or string"),
+		Entry("case variables must not define regex groups", `
+version: 1
+filter: python
+cases:
+  - id: default
+    variables:
+      - name: total
+        type: string
+        regex_group: total
+    passthrough: true
+`, "cases[0].variables[0].regex_group: case variables must not define regex_group"),
 		Entry("valid negative short flag predicates", `
 version: 1
 filter: grep
@@ -415,6 +473,64 @@ cases:
                 - regex: '^.*$'
                   to: '  {{name}}'
 `, "cases[0].compress_output.combined.lines.max.groups_summary.suffix: template references undeclared variable \"count\""),
+		Entry("groups summary show must be positive", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "{{value}} {{groups_summary}}"
+            groups_summary:
+              show: 0
+              print: "{{key}}/({{count}})"
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+`, "cases[0].compress_output.combined.lines.max.groups_summary.show: groups_summary.show must be positive"),
+		Entry("groups summary print must not be empty", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        lines:
+          max:
+            count: 200
+            print: "{{value}} {{groups_summary}}"
+            groups_summary:
+              show: 1
+              print: ""
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?:(?P<dir>.+)/)?(?P<name>[^/]+)$'
+            variables:
+              - name: dir
+                type: string
+                regex_group: dir
+                default_value: '.'
+              - name: name
+                type: string
+                regex_group: name
+            group_by: '{{dir}}'
+            initially:
+              print: '{{dir}}/'
+`, "cases[0].compress_output.combined.lines.max.groups_summary.print: groups_summary.print must not be empty"),
 		Entry("replace rule without matcher", `
 version: 1
 filter: ls
@@ -559,6 +675,24 @@ cases:
             initially:
               print: '{{dir}}/'
 `, "cases[0].compress_output.combined.groups[0].variables[0].regex_group: regex_group must reference a named capture from matches_regex"),
+		Entry("collect group number variables must not define regex groups", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?P<count>[0-9]+)$'
+            variables:
+              - name: count
+                type: number
+                regex_group: count
+            group_by: 'all'
+            initially:
+              print: 'counts'
+`, "cases[0].compress_output.combined.groups[0].variables[0].regex_group: number variables must not define regex_group"),
 		Entry("collect group group_by references undeclared variable", `
 version: 1
 filter: find
@@ -640,6 +774,68 @@ cases:
             finally:
               print: '{{missing}}'
 `, "cases[0].compress_output.combined.groups[0].finally.print: template references undeclared variable \"missing\""),
+		Entry("collect group requires a lifecycle stage", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            matches_regex: '^\./(?P<name>[^/]+)$'
+            group_by: 'all'
+`, "cases[0].compress_output.combined.groups[0]: collect group must define initially, lines, or finally"),
+		Entry("group with variables but no selector is rejected explicitly", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            variables:
+              - name: dir
+                type: string
+`, "cases[0].compress_output.combined.groups[0]: group must define starts_with, starts_with_regex, or matches_regex"),
+		Entry("group with initially but no selector is rejected explicitly", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            initially:
+              print: '{{dir}}/'
+`, "cases[0].compress_output.combined.groups[0]: group must define starts_with, starts_with_regex, or matches_regex"),
+		Entry("group with lines but no selector is rejected explicitly", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            lines:
+              keep:
+                - regex: '^ok$'
+`, "cases[0].compress_output.combined.groups[0]: group must define starts_with, starts_with_regex, or matches_regex"),
+		Entry("group with finally but no selector is rejected explicitly", `
+version: 1
+filter: find
+cases:
+  - id: files
+    compress_output:
+      combined:
+        groups:
+          - id: by_parent_dir
+            finally:
+              print: done
+`, "cases[0].compress_output.combined.groups[0]: group must define starts_with, starts_with_regex, or matches_regex"),
 		Entry("boundary group is valid with starts_with and lines", `
 version: 1
 filter: pytest
@@ -693,6 +889,22 @@ cases:
             initially:
               print: '{{task}}'
 `, "cases[0].compress_output.combined.groups[0].variables[0].regex_group: boundary groups without starts_with_regex must not define regex_group"),
+		Entry("boundary group variables must use supported types", `
+version: 1
+filter: gradle
+cases:
+  - id: default
+    compress_output:
+      combined:
+        groups:
+          - id: task
+            starts_with: '> Task '
+            variables:
+              - name: task
+                type: bool
+            initially:
+              print: '{{task}}'
+`, "cases[0].compress_output.combined.groups[0].variables[0].type: variable type must be number or string"),
 		Entry("boundary group requires a lifecycle stage", `
 version: 1
 filter: gradle
@@ -704,5 +916,58 @@ cases:
           - id: task
             starts_with: '> Task '
 `, "cases[0].compress_output.combined.groups[0]: boundary group must define initially, lines, or finally"),
+	)
+})
+
+var _ = Describe("schema helper validation", func() {
+	It("accepts exactly one populated output scope and rejects mixed or empty outputs", func() {
+		Expect(validateOutput(&OutputShape{
+			Stdout: &OutputScope{
+				Lines: &OutputLines{
+					Keep: []SkipOrKeepRule{{Regex: "^ok$"}},
+				},
+			},
+		}, "compress_output")).To(Succeed())
+
+		err := validateOutput(&OutputShape{}, "compress_output")
+		Expect(err).To(MatchError("compress_output: output must define at least one scope"))
+
+		err = validateOutput(&OutputShape{
+			Combined: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^ok$"}}}},
+			Stdout:   &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^ok$"}}}},
+		}, "compress_output")
+		Expect(err).To(MatchError("compress_output: output.combined must not be mixed with stream-specific scopes"))
+	})
+
+	DescribeTable("rejects selector-less groups consistently",
+		func(group OutputGroup) {
+			err := validateGroup(&group, "cases[0].compress_output.combined.groups[0]")
+			Expect(err).To(MatchError("cases[0].compress_output.combined.groups[0]: group must define starts_with, starts_with_regex, or matches_regex"))
+		},
+		Entry("when variables are present without a selector", OutputGroup{
+			ID:        "group",
+			Variables: []Variable{{Name: "name", Type: "string"}},
+		}),
+		Entry("when lifecycle hooks are present without a selector", OutputGroup{
+			ID:        "group",
+			Initially: &OnExit{Print: "header"},
+		}),
+		Entry("when the group is otherwise empty", OutputGroup{
+			ID: "group",
+		}),
+	)
+
+	DescribeTable("validates template variables exactly",
+		func(template string, declared map[string]struct{}, expectedErr string) {
+			err := validateTemplateVariables(template, declared, "template")
+			if expectedErr == "" {
+				Expect(err).NotTo(HaveOccurred())
+				return
+			}
+			Expect(err).To(MatchError(expectedErr))
+		},
+		Entry("accepts templates when all variables are declared", "{{value}} {{groups_summary}}", map[string]struct{}{"value": {}, "groups_summary": {}}, ""),
+		Entry("ignores text without template captures", "{value}", map[string]struct{}{}, ""),
+		Entry("rejects the first undeclared variable it encounters", "{{value}} {{missing}}", map[string]struct{}{"value": {}}, `template: template references undeclared variable "missing"`),
 	)
 })

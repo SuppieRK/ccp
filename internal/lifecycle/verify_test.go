@@ -51,6 +51,26 @@ var _ = Describe("verify", func() {
 		return buf.String()
 	}
 
+	DescribeTable("resolving verify directories",
+		func(dir string, wantCurrentDir bool) {
+			resolved, err := resolveVerifyDir(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			if wantCurrentDir {
+				cwd, cwdErr := os.Getwd()
+				Expect(cwdErr).NotTo(HaveOccurred())
+				Expect(resolved).To(Equal(cwd))
+				return
+			}
+
+			expected, absErr := filepath.Abs(dir)
+			Expect(absErr).NotTo(HaveOccurred())
+			Expect(resolved).To(Equal(expected))
+		},
+		Entry("uses the current working directory when omitted", "", true),
+		Entry("uses the explicit fixture directory when provided", filepath.Join("testdata", "verify"), false),
+	)
+
 	It("renders help output", func() {
 		out := captureStderr(func() error { return RunVerify([]string{"--help"}) })
 		for _, part := range []string{

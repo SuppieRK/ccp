@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	defaultTextLimit = 15
-	textPercentFmt   = "%.1f%%"
+	defaultTextLimit  = 15
+	textPercentFmt    = "%.1f%%"
+	trendFlatCutoff   = 0.05
+	trendFloatEpsilon = 1e-9
 )
 
 type labeledLine struct {
@@ -313,9 +315,9 @@ func trendSuffix(earlier, recent float64) string {
 	savingsBucket := trendSavingsBucket(recent)
 
 	switch {
-	case diff > 0.05:
+	case diff > trendFlatCutoff+trendFloatEpsilon:
 		return trendSuffixUp(deltaBucket, savingsBucket, earlier, recent)
-	case diff < -0.05:
+	case diff < -trendFlatCutoff-trendFloatEpsilon:
 		return trendSuffixDown(deltaBucket, savingsBucket, earlier, recent)
 	default:
 		return trendSuffixFlat(savingsBucket, earlier, recent)
@@ -348,7 +350,7 @@ func formatTrendSummary(earlier, recent float64, period string) string {
 	label := trendLabel(period)
 
 	switch {
-	case diff > 0.05:
+	case diff > trendFlatCutoff+trendFloatEpsilon:
 		return fmt.Sprintf("↑ +%.1f pts %s (%s → %s) · %s",
 			diff,
 			label,
@@ -356,7 +358,7 @@ func formatTrendSummary(earlier, recent float64, period string) string {
 			formatPercentText(recent),
 			trendSuffix(earlier, recent),
 		)
-	case diff < -0.05:
+	case diff < -trendFlatCutoff-trendFloatEpsilon:
 		return fmt.Sprintf("↓ -%.1f pts %s (%s → %s) · %s",
 			-diff,
 			label,

@@ -427,4 +427,27 @@ var _ = Describe("splitCommandLine", func() {
 		Expect(err).To(MatchError("no command provided"))
 		Expect(args).To(BeNil())
 	})
+
+	DescribeTable("starts the expected unquoted parser mode",
+		func(input rune, expectSingle bool, expectDouble bool, expectEscaping bool) {
+			state := newCommandLineSplitState()
+
+			state.consumeUnquoted(input)
+
+			Expect(state.inSingle).To(Equal(expectSingle))
+			Expect(state.inDouble).To(Equal(expectDouble))
+			Expect(state.escaping).To(Equal(expectEscaping))
+			Expect(state.tokenStarted).To(BeTrue())
+			Expect(state.current.String()).To(BeEmpty())
+		},
+		Entry("single quote starts single-quoted mode", '\'', true, false, false),
+		Entry("double quote starts double-quoted mode", '"', false, true, false),
+		Entry("backslash starts escaping mode", '\\', false, false, true),
+	)
+})
+
+var _ = Describe("renderCommandArgs", func() {
+	It("returns an empty string for empty argv", func() {
+		Expect(renderCommandArgs(nil)).To(BeEmpty())
+	})
 })
