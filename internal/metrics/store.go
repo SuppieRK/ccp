@@ -165,13 +165,25 @@ func Append(path string, metric RunMetric) (err error) {
 	if err != nil {
 		return err
 	}
-	defer closeBoltDBWithErr(db, &err)
+	defer func() {
+		if db != nil {
+			closeBoltDBWithErr(db, &err)
+		}
+	}()
 
 	rec := normalizeMetric(metric)
-	if writeRunRecord(db, rec) == nil {
+	if err := writeRunRecord(db, rec); err == nil {
 		return nil
 	}
+	if err := db.Close(); err != nil {
+		return err
+	}
+	db = nil
 	if err := ensureSchema(path); err != nil {
+		return err
+	}
+	db, err = openDB(path, false)
+	if err != nil {
 		return err
 	}
 	return writeRunRecord(db, rec)

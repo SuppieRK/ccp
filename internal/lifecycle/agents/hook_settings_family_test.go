@@ -25,6 +25,14 @@ var _ = ginkgo.Describe("hook settings family", func() {
 		wantNoOutput bool
 	}
 
+	ginkgo.DescribeTable("resolving managed hook roots",
+		func(ctx Context, rel []string, expected string) {
+			Expect(homeOrScopePath(ctx, rel...)).To(Equal(expected))
+		},
+		ginkgo.Entry("prefers the home directory when present", Context{HomeDir: "home", ScopeRoot: "repo"}, []string{".codebuddy", "settings.json"}, filepath.Join("home", ".codebuddy", "settings.json")),
+		ginkgo.Entry("falls back to the scope root when home is empty", Context{ScopeRoot: "repo"}, []string{".codebuddy", "settings.json"}, filepath.Join("repo", ".codebuddy", "settings.json")),
+	)
+
 	ginkgo.DescribeTable("rendering canonical hook guidance",
 		func(name string, content string, needles []string) {
 			for _, needle := range needles {
@@ -90,6 +98,16 @@ var _ = ginkgo.Describe("hook settings family", func() {
 			hook = filepath.Join(tmpDir, codebuddyHookScriptName)
 		})
 
+		ginkgo.It("removes the settings file when persisting an empty root", func() {
+			Expect(os.WriteFile(settings, []byte("{}\n"), 0o644)).To(Succeed())
+
+			changed, err := persistJSONSettings(settings, map[string]any{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(changed).To(BeTrue())
+			_, err = os.Stat(settings)
+			Expect(err).To(MatchError(os.ErrNotExist))
+		})
+
 		ginkgo.It("detects the managed CodeBuddy hook in settings", func() {
 			escapedHook := strings.ReplaceAll(hook, "\\", "\\\\")
 			content := "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"" + escapedHook + "\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
@@ -99,5 +117,63 @@ var _ = ginkgo.Describe("hook settings family", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeTrue())
 		})
+
+		ginkgo.It("returns marshal errors when settings contain unsupported values", func() {
+			changed, err := persistJSONSettings(settings, map[string]any{
+				"hooks": map[string]any{
+					"PreToolUse": make(chan int),
+				},
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(changed).To(BeFalse())
+		})
+
+		ginkgo.It("returns write errors when the settings path is a symlink", func() {
+			target := filepath.Join(tmpDir, "outside-settings.json")
+			Expect(os.WriteFile(target, []byte("{}\n"), 0o644)).To(Succeed())
+			if err := os.Symlink(target, settings); err != nil {
+				ginkgo.Skip("symlink creation unavailable: " + err.Error())
+			}
+
+			changed, err := persistJSONSettings(settings, map[string]any{
+				"hooks": map[string]any{
+					"PreToolUse": []any{},
+				},
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(changed).To(BeFalse())
+		})
+
+		ginkgo.DescribeTable("matching managed CodeBuddy pre-tool-use hooks",
+			func(pre []any, hookPath string, expected bool) {
+				Expect(codebuddyPreToolUseContains(pre, hookPath)).To(Equal(expected))
+			},
+			ginkgo.Entry("matches bash command hooks", []any{
+				map[string]any{
+					"matcher": "Bash",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": filepath.Join("tmp", codebuddyHookScriptName)},
+					},
+				},
+			}, filepath.Join("tmp", codebuddyHookScriptName), true),
+			ginkgo.Entry("ignores non-bash matchers", []any{
+				map[string]any{
+					"matcher": "Python",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": filepath.Join("tmp", codebuddyHookScriptName)},
+					},
+				},
+			}, filepath.Join("tmp", codebuddyHookScriptName), false),
+			ginkgo.Entry("ignores non-command hook entries", []any{
+				map[string]any{
+					"matcher": "Bash",
+					"hooks": []any{
+						map[string]any{"type": "shell", "command": filepath.Join("tmp", codebuddyHookScriptName)},
+					},
+				},
+			}, filepath.Join("tmp", codebuddyHookScriptName), false),
+		)
 	})
 })

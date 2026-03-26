@@ -91,6 +91,64 @@ var _ = ginkgo.Describe("context link families", func() {
 			ginkgo.Entry("crush", crushContextLinkSpec, filepath.Join(".config", "crush", "crush.json"), filepath.Join(".config", "crush", "CRUSH.md")),
 			ginkgo.Entry("qwen", qwenContextLinkSpec, filepath.Join(".qwen", "settings.json"), filepath.Join(".qwen", "AGENTS.md")),
 		)
+
+		ginkgo.It("detects the managed root with the default filesystem check", func() {
+			adapter := NewManagedContextLinkAdapter(ManagedContextLinkAdapterSpec{
+				ID:             ID("detectable"),
+				DetectRootPath: ".detectable",
+			})
+
+			Expect(adapter.Detect(ctx.ScopeRoot)).To(BeFalse())
+			Expect(os.MkdirAll(filepath.Join(ctx.ScopeRoot, ".detectable"), 0o755)).To(Succeed())
+			Expect(adapter.Detect(ctx.ScopeRoot)).To(BeTrue())
+		})
+
+		ginkgo.It("installs, verifies, and uninstalls the config and linked context files", func() {
+			adapter := NewManagedContextLinkAdapter(ManagedContextLinkAdapterSpec{
+				ID:             ID("linked"),
+				DetectRootPath: ".linked",
+				ContextSpec: ManagedContextFileAdapterSpec{
+					ID:            ID("linked"),
+					TargetRelPath: filepath.Join(".linked", "AGENTS.md"),
+					TargetScope:   managedContextTargetRepo,
+					MissingFmt:    "missing linked agents file: %s",
+					MarkersFmt:    "missing linked managed markers in %s",
+				},
+				ConfigPath: func(ctx Context) string {
+					return filepath.Join(ctx.ScopeRoot, ".linked", "settings.json")
+				},
+				ConfigPlanContent: func(ctx Context) string {
+					return "{\n  \"context\": \"AGENTS.md\"\n}\n"
+				},
+				UpsertConfig: func(configPath string, ctx Context) (string, error) {
+					return "{\n  \"context\": \"AGENTS.md\"\n}\n", nil
+				},
+				VerifyConfig: func(configPath string, ctx Context) error {
+					raw, err := os.ReadFile(configPath)
+					if err != nil {
+						return err
+					}
+					Expect(string(raw)).To(ContainSubstring(`"context": "AGENTS.md"`))
+					return nil
+				},
+				RemoveConfig: func(configPath string, ctx Context) (updated string, changed bool, removeAll bool, err error) {
+					return "", true, true, nil
+				},
+			})
+
+			installRes, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(installRes.Applied).To(Equal(2))
+			Expect(adapter.Verify(ctx)).To(Succeed())
+
+			uninstallRes, err := adapter.Uninstall(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(uninstallRes.Applied).To(Equal(2))
+			_, err = os.Stat(filepath.Join(ctx.ScopeRoot, ".linked", "settings.json"))
+			Expect(err).To(MatchError(os.ErrNotExist))
+			_, err = os.Stat(filepath.Join(ctx.ScopeRoot, ".linked", "AGENTS.md"))
+			Expect(err).To(MatchError(os.ErrNotExist))
+		})
 	})
 
 	ginkgo.Describe("managed hook settings plans", func() {
@@ -242,6 +300,18 @@ var _ = ginkgo.Describe("context link families", func() {
 			Expect(updated).To(ContainSubstring("CONVENTIONS.md"))
 			Expect(updated).To(ContainSubstring("model: sonnet"))
 		})
+
+		ginkgo.DescribeTable("normalizes aider read entries",
+			func(input any, expected []string) {
+				Expect(normalizeAiderRead(input)).To(Equal(expected))
+			},
+			ginkgo.Entry("nil becomes nil", nil, []string(nil)),
+			ginkgo.Entry("an empty string is ignored", "", []string(nil)),
+			ginkgo.Entry("a single string becomes one entry", "RULES.md", []string{"RULES.md"}),
+			ginkgo.Entry("a string slice drops empty entries", []string{"RULES.md", "", "TEAM.md"}, []string{"RULES.md", "TEAM.md"}),
+			ginkgo.Entry("an any slice keeps only non-empty strings", []any{"RULES.md", 7, "", "TEAM.md"}, []string{"RULES.md", "TEAM.md"}),
+			ginkgo.Entry("unsupported types are ignored", 42, []string(nil)),
+		)
 	})
 
 	ginkgo.Describe("crush config helpers", func() {
@@ -286,6 +356,73 @@ var _ = ginkgo.Describe("context link families", func() {
 		ginkgo.It("ignores non-slice context path input", func() {
 			Expect(crushContextPaths("unexpected")).To(BeEmpty())
 		})
+
+		ginkgo.DescribeTable("removes managed crush context paths with the expected cleanup scope",
+			func(setup func() string, expectedChanged bool, expectedRemoveAll bool) {
+				expectedUpdated := setup()
+
+				updated, changed, removeAll, err := removeCrushContextPath(configPath, contextPath)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(changed).To(Equal(expectedChanged))
+				Expect(removeAll).To(Equal(expectedRemoveAll))
+				Expect(updated).To(Equal(expectedUpdated))
+			},
+			ginkgo.Entry("drops only the matching path and preserves other options", func() string {
+				root := map[string]any{
+					"options": map[string]any{
+						"context_paths": []any{contextPath, "/tmp/team.md"},
+						"theme":         "dark",
+					},
+				}
+				raw, err := json.MarshalIndent(root, "", "  ")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(configPath, append(raw, '\n'), 0o644)).To(Succeed())
+
+				root = map[string]any{
+					"options": map[string]any{
+						"context_paths": []string{"/tmp/team.md"},
+						"theme":         "dark",
+					},
+				}
+				raw, err = json.MarshalIndent(root, "", "  ")
+				Expect(err).NotTo(HaveOccurred())
+				return string(append(raw, '\n'))
+			},
+				true,
+				false,
+			),
+			ginkgo.Entry("removes the entire file when the managed path is the last option", func() string {
+				root := map[string]any{
+					"options": map[string]any{
+						"context_paths": []any{contextPath},
+					},
+				}
+				raw, err := json.MarshalIndent(root, "", "  ")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(configPath, append(raw, '\n'), 0o644)).To(Succeed())
+				return ""
+			},
+				true,
+				true,
+			),
+			ginkgo.Entry("does nothing when the managed path is absent", func() string {
+				Expect(os.WriteFile(configPath, []byte("{\n  \"options\": {\n    \"context_paths\": [\n      \"/tmp/team.md\"\n    ]\n  }\n}\n"), 0o644)).To(Succeed())
+				return ""
+			},
+				false,
+				false,
+			),
+		)
+
+		ginkgo.DescribeTable("normalizes crush context path inputs",
+			func(input any, expected []string) {
+				Expect(crushContextPaths(input)).To(Equal(expected))
+			},
+			ginkgo.Entry("treats nil as empty", nil, []string(nil)),
+			ginkgo.Entry("treats blank scalar input as empty", "   ", []string(nil)),
+			ginkgo.Entry("keeps only non-empty string entries", []any{"one", "", 7, "two"}, []string{"one", "two"}),
+		)
 	})
 
 	ginkgo.Describe("qwen settings helpers", func() {
@@ -330,5 +467,36 @@ var _ = ginkgo.Describe("context link families", func() {
 			Expect(removed).NotTo(ContainSubstring(`"fileName": "AGENTS.md"`))
 			Expect(removed).To(ContainSubstring(`"theme": "light"`))
 		})
+
+		ginkgo.DescribeTable("removes qwen settings with the expected cleanup scope",
+			func(initial string, expectedUpdated string, expectedChanged bool, expectedRemoveAll bool) {
+				Expect(os.WriteFile(settingsPath, []byte(initial), 0o644)).To(Succeed())
+
+				updated, changed, removeAll, err := removeQwenSettings(settingsPath)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(changed).To(Equal(expectedChanged))
+				Expect(removeAll).To(Equal(expectedRemoveAll))
+				Expect(updated).To(Equal(expectedUpdated))
+			},
+			ginkgo.Entry("drops only the managed fileName entry when context has other keys",
+				"{\n  \"theme\": \"light\",\n  \"context\": {\n    \"fileName\": \"AGENTS.md\",\n    \"mode\": \"repo\"\n  }\n}\n",
+				"{\n  \"context\": {\n    \"mode\": \"repo\"\n  },\n  \"theme\": \"light\"\n}\n",
+				true,
+				false,
+			),
+			ginkgo.Entry("removes the whole file when AGENTS.md is the only setting",
+				"{\n  \"context\": {\n    \"fileName\": \"AGENTS.md\"\n  }\n}\n",
+				"",
+				true,
+				true,
+			),
+			ginkgo.Entry("does nothing when the context uses a different file",
+				"{\n  \"context\": {\n    \"fileName\": \"RULES.md\"\n  }\n}\n",
+				"",
+				false,
+				false,
+			),
+		)
 	})
 })

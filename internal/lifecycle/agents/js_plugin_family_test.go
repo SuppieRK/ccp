@@ -55,11 +55,22 @@ var _ = ginkgo.Describe("OpenCode JS plugin family", func() {
 			Expect(configRoot).To(ContainSubstring(filepath.Join(".config", "opencode")))
 		})
 
+		ginkgo.It("falls back to the repo-scoped config root when home is empty", func() {
+			ctx = Context{ScopeRoot: tmpDir}
+			Expect(managedJSPluginConfigRoot(ctx, openCodeJSPluginSpec.ConfigDirName)).To(Equal(filepath.Join(tmpDir, ".opencode")))
+		})
+
 		ginkgo.It("fails verification for invalid plugin content", func() {
 			Expect(os.MkdirAll(filepath.Dir(pluginPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(pluginPath, []byte("export default {}"), 0o644)).To(Succeed())
 
 			Expect(NewManagedJSPluginAdapter(openCodeJSPluginSpec).Verify(ctx)).To(HaveOccurred())
+		})
+
+		ginkgo.It("treats uninstalling a missing plugin as noop", func() {
+			res, err := NewManagedJSPluginAdapter(openCodeJSPluginSpec).Uninstall(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(InstallResult{Noop: 1}))
 		})
 	})
 

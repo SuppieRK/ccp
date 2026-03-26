@@ -69,4 +69,32 @@ var _ = Describe("OrderedBuffer", func() {
 		buffer.Clear()
 		Expect(buffer.Joined(contracts.StreamStdout)).To(BeEmpty())
 	})
+
+	It("removes the last matching entries from a single stream", func() {
+		buffer := engine.NewOrderedBuffer()
+		Expect(buffer.Add(contracts.StreamStdout, "out-1\n")).To(BeTrue())
+		Expect(buffer.Add(contracts.StreamStderr, "err-1\n")).To(BeTrue())
+		Expect(buffer.Add(contracts.StreamStdout, "out-2\n")).To(BeTrue())
+
+		Expect(buffer.RemoveLast(contracts.StreamStdout, 1)).To(Equal(1))
+		Expect(buffer.Lines(contracts.StreamCombined)).To(Equal([]string{"out-1\n", "err-1\n"}))
+	})
+
+	It("removes entries across streams for the combined stream and re-enables re-adding", func() {
+		buffer := engine.NewOrderedBuffer()
+		Expect(buffer.Add(contracts.StreamStdout, "out-1\n")).To(BeTrue())
+		Expect(buffer.Add(contracts.StreamStderr, "err-1\n")).To(BeTrue())
+
+		Expect(buffer.RemoveLast(contracts.StreamCombined, 2)).To(Equal(2))
+		Expect(buffer.Len()).To(BeZero())
+		Expect(buffer.Add(contracts.StreamStdout, "out-1\n")).To(BeTrue())
+	})
+
+	It("returns zero when removing from an empty buffer or with a non-positive count", func() {
+		buffer := engine.NewOrderedBuffer()
+		Expect(buffer.RemoveLast(contracts.StreamStdout, 0)).To(BeZero())
+		Expect(buffer.Add(contracts.StreamStdout, "out-1\n")).To(BeTrue())
+		Expect(buffer.RemoveLast(contracts.StreamStdout, -1)).To(BeZero())
+		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("out-1\n"))
+	})
 })

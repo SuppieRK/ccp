@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -15,35 +16,39 @@ import (
 var lifecycleDispatch = runLifecycleCommand
 
 func main() {
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdout, stderr io.Writer) int {
 	// Audit is intentionally best-effort: startup must never fail before argument parsing
 	// or command execution just because the audit log path is blocked or unwritable.
 	_ = audit.ConfigureDefault()
 
-	opts, err := cli.Parse(os.Args[1:])
+	opts, err := cli.Parse(args)
 	if err != nil {
-		exitWithErr(2, err)
+		return writeErr(stderr, 2, err)
 	}
 
 	if opts.ShowHelp {
-		fmt.Println(usageText())
-		return
+		return writeMsg(stdout, 0, usageText())
 	}
 
 	if opts.ShowVersion {
-		fmt.Println(version.Version)
-		return
+		return writeMsg(stdout, 0, version.Version)
 	}
 
 	if len(opts.CommandArgs) == 0 {
-		exitWithMsg(2, usageText())
+		return writeMsg(stderr, 2, usageText())
 	}
 
 	if handled, exitCode, err := runInvocation(opts); handled {
 		if err != nil {
-			exitWithErr(exitCode, err)
+			return writeErr(stderr, exitCode, err)
 		}
-		return
+		return exitCode
 	}
+
+	return 0
 }
 
 func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
@@ -58,11 +63,7 @@ func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
 		return true, 1, err
 	}
 	code, err := r.Run(opts.CommandArgs)
-	if err != nil {
-		return true, code, err
-	}
-	os.Exit(code)
-	return true, 0, nil
+	return true, code, err
 }
 
 func runLifecycleCommand(args []string) (bool, error) {
@@ -103,10 +104,21 @@ func exitWithErr(code int, err error) {
 }
 
 func exitWithMsg(code int, msg string) {
-	if _, werr := fmt.Fprintln(os.Stderr, msg); werr != nil {
-		os.Exit(1)
+	os.Exit(writeMsg(os.Stderr, code, msg))
+}
+
+func writeErr(w io.Writer, code int, err error) int {
+	if err == nil {
+		return code
 	}
-	os.Exit(code)
+	return writeMsg(w, code, err.Error())
+}
+
+func writeMsg(w io.Writer, code int, msg string) int {
+	if _, err := fmt.Fprintln(w, msg); err != nil {
+		return 1
+	}
+	return code
 }
 
 func defaultMetricsPath() string {

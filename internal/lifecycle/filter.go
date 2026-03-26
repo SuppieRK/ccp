@@ -25,6 +25,23 @@ func RunFilter(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing filter subcommand")
 	}
+	if args[0] == "--help" || args[0] == "-h" {
+		fs := newLifecycleFlagSet("filter")
+		setLifecycleUsage(
+			fs,
+			"YAML filter authoring and inspection helpers",
+			[]string{"ccp filter <subcommand> [args...]"},
+			"subcommands: new, status",
+			"use 'ccp filter new --help' or 'ccp filter status --help' for subcommand details.",
+		)
+		handled, err := parseLifecycleFlags(fs, args)
+		if err != nil {
+			return err
+		}
+		if handled {
+			return nil
+		}
+	}
 	switch args[0] {
 	case "new":
 		return RunFilterNew(args[1:])

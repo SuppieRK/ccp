@@ -50,6 +50,16 @@ var _ = ginkgo.Describe("rule files family", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(adapter.Verify(ctx)).To(Succeed())
 		})
+
+		ginkgo.It("reports reinstalling unchanged managed content as noop", func() {
+			first, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(first.Applied).To(Equal(1))
+
+			second, err := adapter.Install(ctx, writeFileWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(second).To(Equal(InstallResult{Noop: 1}))
+		})
 	})
 
 	ginkgo.Describe("ManagedRepoRuleFileAdapter", func() {
@@ -87,6 +97,15 @@ var _ = ginkgo.Describe("rule files family", func() {
 			got, err := os.ReadFile(sibling)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(got)).To(Equal("keep-me\n"))
+		})
+
+		ginkgo.It("fails verification when required managed guidance is missing", func() {
+			Expect(os.MkdirAll(filepath.Dir(target), 0o755)).To(Succeed())
+			Expect(os.WriteFile(target, []byte("user-only\n"), 0o644)).To(Succeed())
+
+			err := adapter.Verify(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing alpha managed guidance"))
 		})
 	})
 })

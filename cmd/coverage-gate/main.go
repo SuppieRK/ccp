@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,25 +12,46 @@ import (
 )
 
 func main() {
-	cfg := parseConfig()
-	report := loadCoverageReport(cfg.coverProfile, cfg.modulePath, cfg.internalPrefix, cfg.threshold)
-	out, summaryFile := prepareSummaryWriter(cfg.outPath)
-	if err := writeSummary(out, report); err != nil {
-		fail("write summary: %v", err)
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdout, stderr io.Writer) int {
+	cfg, code, err := parseConfig(args)
+	if err != nil {
+		return writeFailure(stderr, code, "%v", err)
+	}
+	report, err := loadCoverageReport(cfg.coverProfile, cfg.modulePath, cfg.internalPrefix, cfg.threshold)
+	if err != nil {
+		return writeFailure(stderr, 1, "%v", err)
+	}
+	out, summaryFile, err := prepareSummaryWriter(stdout, cfg.outPath)
+	if err != nil {
+		return writeFailure(stderr, 1, "%v", err)
 	}
 	if summaryFile != nil {
 		defer func() {
-			if err := summaryFile.Close(); err != nil {
-				fail("close summary file: %v", err)
+			if summaryFile != nil {
+				_ = summaryFile.Close()
 			}
 		}()
+	}
+	if err := writeSummary(out, report); err != nil {
+		return writeFailure(stderr, 1, "write summary: %v", err)
+	}
+	if summaryFile != nil {
 		if err := summaryFile.Sync(); err != nil {
-			fail("flush summary file: %v", err)
+			return writeFailure(stderr, 1, "flush summary file: %v", err)
 		}
+		if err := summaryFile.Close(); err != nil {
+			return writeFailure(stderr, 1, "close summary file: %v", err)
+		}
+		summaryFile = nil
 	}
 	if err := validateGate(report, cfg.threshold, cfg.internalPrefix); err != nil {
-		fail("%v", err)
+		return writeFailure(stderr, 1, "%v", err)
 	}
+
+	return 0
 }
 
 type config struct {
@@ -40,47 +62,51 @@ type config struct {
 	outPath        string
 }
 
-func parseConfig() config {
+func parseConfig(args []string) (config, int, error) {
 	cfg := config{}
-	flag.StringVar(&cfg.coverProfile, "coverprofile", "", "path to go coverage profile")
-	flag.StringVar(&cfg.modulePath, "module", "go-command-compression-proxy", "go module path")
-	flag.StringVar(&cfg.internalPrefix, "internal-prefix", "internal/", "required package prefix")
-	flag.Float64Var(&cfg.threshold, "threshold", 80.0, "required minimum coverage percentage")
-	flag.StringVar(&cfg.outPath, "summary-out", "", "optional file path to write markdown summary")
-	flag.Parse()
-	if strings.TrimSpace(cfg.coverProfile) == "" {
-		fail("coverprofile is required")
+	flags := flag.NewFlagSet("coverage-gate", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.StringVar(&cfg.coverProfile, "coverprofile", "", "path to go coverage profile")
+	flags.StringVar(&cfg.modulePath, "module", "go-command-compression-proxy", "go module path")
+	flags.StringVar(&cfg.internalPrefix, "internal-prefix", "internal/", "required package prefix")
+	flags.Float64Var(&cfg.threshold, "threshold", 80.0, "required minimum coverage percentage")
+	flags.StringVar(&cfg.outPath, "summary-out", "", "optional file path to write markdown summary")
+	if err := flags.Parse(args); err != nil {
+		return config{}, 2, err
 	}
-	return cfg
+	if strings.TrimSpace(cfg.coverProfile) == "" {
+		return config{}, 1, errors.New("coverprofile is required")
+	}
+	return cfg, 0, nil
 }
 
-func loadCoverageReport(coverProfile, modulePath, internalPrefix string, threshold float64) coverage.Report {
+func loadCoverageReport(coverProfile, modulePath, internalPrefix string, threshold float64) (report coverage.Report, err error) {
 	f, err := os.Open(coverProfile)
 	if err != nil {
-		fail("open coverprofile: %v", err)
+		return coverage.Report{}, fmt.Errorf("open coverprofile: %w", err)
 	}
 	defer func() {
-		if err := f.Close(); err != nil {
-			fail("close coverprofile: %v", err)
+		if closeErr := f.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close coverprofile: %w", closeErr)
 		}
 	}()
 
-	report, err := coverage.ParseProfile(f, modulePath, internalPrefix, threshold)
+	report, err = coverage.ParseProfile(f, modulePath, internalPrefix, threshold)
 	if err != nil {
-		fail("parse profile: %v", err)
+		return coverage.Report{}, fmt.Errorf("parse profile: %w", err)
 	}
-	return report
+	return report, nil
 }
 
-func prepareSummaryWriter(outPath string) (io.Writer, *os.File) {
+func prepareSummaryWriter(stdout io.Writer, outPath string) (io.Writer, *os.File, error) {
 	if outPath == "" {
-		return os.Stdout, nil
+		return stdout, nil, nil
 	}
 	summaryFile, err := os.Create(outPath)
 	if err != nil {
-		fail("open summary output: %v", err)
+		return nil, nil, fmt.Errorf("open summary output: %w", err)
 	}
-	return io.MultiWriter(os.Stdout, summaryFile), summaryFile
+	return io.MultiWriter(stdout, summaryFile), summaryFile, nil
 }
 
 func renderSummary(report coverage.Report) string {
@@ -140,9 +166,9 @@ func (ow *orderedWriter) writes(s string) {
 	_, ow.err = io.WriteString(ow.w, s)
 }
 
-func fail(format string, args ...any) {
-	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
+func writeFailure(w io.Writer, code int, format string, args ...any) int {
+	_, _ = fmt.Fprintf(w, format+"\n", args...)
+	return code
 }
 
 func validateGate(report coverage.Report, threshold float64, internalPrefix string) error {

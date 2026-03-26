@@ -139,6 +139,25 @@ var _ = Describe("Runner", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("lets RunContext fall back to Run when the parent is nil", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+			nilParent := func() context.Context { return nil }
+
+			code, err := runner.RunContext(nilParent(), nil)
+
+			Expect(code).To(Equal(2))
+			Expect(err).To(MatchError("no command provided"))
+		})
+
+		It("runs with an explicit parent context", func() {
+			runner := &Runner{sources: []corefilters.FilterSource{}}
+
+			code, err := runner.RunContext(context.Background(), nil)
+
+			Expect(code).To(Equal(2))
+			Expect(err).To(MatchError("no command provided"))
+		})
+
 		It("routes direct emitted entries to the correct streams", func() {
 			runner := &Runner{sources: []corefilters.FilterSource{}}
 
@@ -691,6 +710,72 @@ var _ = Describe("Runner", func() {
 	})
 
 	Context("when exercising runner helpers", func() {
+		DescribeTable("classifies filtered run outcomes",
+			func(
+				setupCtx func() (context.Context, context.CancelFunc),
+				waitErr error,
+				outputErr error,
+				exitCode int,
+				expectedCode int,
+				expectedErr string,
+			) {
+				ctx, cancel := setupCtx()
+				DeferCleanup(cancel)
+
+				code, err := filteredRunResult(ctx, waitErr, outputErr, exitCode)
+
+				Expect(code).To(Equal(expectedCode))
+				if expectedErr == "" {
+					Expect(err).NotTo(HaveOccurred())
+					return
+				}
+				Expect(err).To(MatchError(ContainSubstring(expectedErr)))
+			},
+			Entry("returns cancellation errors first",
+				func() (context.Context, context.CancelFunc) {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					return ctx, func() {}
+				},
+				nil, errors.New("write failed"), 0, 1, "context canceled",
+			),
+			Entry("returns wait errors before exit codes",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithCancel(context.Background())
+				},
+				errors.New("wait failed"), errors.New("write failed"), 7, 1, "wait failed",
+			),
+			Entry("returns the native exit code on success",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithCancel(context.Background())
+				},
+				nil, nil, 7, 7, "",
+			),
+			Entry("maps output failures on zero exits to code one",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithCancel(context.Background())
+				},
+				nil, errors.New("write failed"), 0, 1, "write failed",
+			),
+			Entry("preserves non-zero exits when output writing fails",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithCancel(context.Background())
+				},
+				nil, errors.New("write failed"), 7, 7, "write failed",
+			),
+		)
+
+		DescribeTable("maps audit failures onto exit semantics",
+			func(exitCode int, expectedCode int) {
+				code, err := auditFailureResult(exitCode, errors.New("audit failed"))
+
+				Expect(code).To(Equal(expectedCode))
+				Expect(err).To(MatchError("audit failed"))
+			},
+			Entry("for successful commands", 0, 1),
+			Entry("for non-zero exits", 7, 7),
+		)
+
 		It("covers replay collector helpers and action labels", func() {
 			collector := &replayCollector{}
 

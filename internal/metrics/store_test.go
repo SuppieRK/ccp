@@ -1,12 +1,17 @@
 package metrics
 
 import (
+	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -14,6 +19,15 @@ const (
 	gitignoreFileName    = ".gitignore"
 	gainDBFileName       = "gain.db"
 )
+
+type derivedExpectation struct {
+	dropped      int64
+	ratio        float64
+	inputTokens  int64
+	outputTokens int64
+	savedTokens  int64
+	savingsPct   float64
+}
 
 var _ = Describe("metrics storage", func() {
 	var tempDir string
@@ -91,6 +105,28 @@ var _ = Describe("metrics storage", func() {
 		Expect(db.NoSync).To(BeFalse())
 	})
 
+	It("repairs an existing database missing the metrics bucket", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+
+		db, err := bolt.Open(path, 0o600, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(db.Close()).To(Succeed())
+
+		Expect(Append(path, RunMetric{
+			Tool:      "go",
+			Command:   metricsGoTestCommand,
+			RawBytes:  10,
+			KeptBytes: 4,
+			ExitCode:  0,
+		})).To(Succeed())
+
+		summary, err := LoadSummary(path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(summary.Runs).To(Equal(1))
+		Expect(summary.RawLines).To(Equal(10))
+		Expect(summary.KeptLines).To(Equal(4))
+	})
+
 	It("truncates long command text deterministically", func() {
 		path := filepath.Join(tempDir, "metrics.db")
 		long := strings.Repeat("x", 2000)
@@ -126,6 +162,27 @@ var _ = Describe("metrics storage", func() {
 		Expect(failedHistory).To(HaveLen(1))
 		Expect(failedHistory[0].ExitCode).To(Equal(-1))
 		Expect(failedHistory[0].Failed).To(BeTrue())
+	})
+
+	It("preserves dispatch keys and durations in history rows", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+
+		Expect(Append(path, RunMetric{
+			Tool:        "go",
+			Command:     metricsGoTestCommand,
+			Dispatch:    "go:test",
+			RawBytes:    18,
+			KeptBytes:   6,
+			DurationMS:  275,
+			Passthrough: true,
+		})).To(Succeed())
+
+		history, err := QueryHistory(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(HaveLen(1))
+		Expect(history[0].DispatchKey).To(Equal("go:test"))
+		Expect(history[0].DurationMS).To(Equal(int64(275)))
+		Expect(history[0].Passthrough).To(BeTrue())
 	})
 
 	Context("when storing tool names", func() {
@@ -187,7 +244,680 @@ var _ = Describe("metrics storage", func() {
 		Entry("does not duplicate .ccp", ".ccp\n", ".ccp\n"),
 		Entry("skips when gitignore is missing", "", ""),
 	)
+
+	DescribeTable("encoding helper bounds",
+		func(value int, expected uint32) {
+			dst := make([]byte, 4)
+			putLengthU32(dst, value)
+			Expect(getU32(dst)).To(Equal(expected))
+		},
+		Entry("clamps negative lengths to zero", -1, uint32(0)),
+		Entry("preserves zero lengths", 0, uint32(0)),
+		Entry("preserves in-range lengths", 42, uint32(42)),
+		Entry("preserves the max uint32 boundary exactly", int(math.MaxUint32), uint32(math.MaxUint32)),
+		Entry("clamps oversized lengths to max uint32", int(math.MaxUint32)+1, uint32(math.MaxUint32)),
+	)
+
+	DescribeTable("non-negative integer helpers",
+		func(value int64, expected uint64) {
+			dst := make([]byte, 8)
+			putNonNegativeInt64AsU64(dst, value)
+			Expect(getU64(dst)).To(Equal(expected))
+		},
+		Entry("clamps negative values to zero", int64(-1), uint64(0)),
+		Entry("preserves zero values", int64(0), uint64(0)),
+		Entry("preserves positive values", int64(17), uint64(17)),
+	)
+
+	DescribeTable("token estimation rounds up every four bytes",
+		func(bytes int64, expected int64) {
+			Expect(tokensFromBytes(bytes)).To(Equal(expected))
+		},
+		Entry("clamps negative bytes to zero", int64(-5), int64(0)),
+		Entry("treats zero bytes as zero tokens", int64(0), int64(0)),
+		Entry("rounds one byte up to one token", int64(1), int64(1)),
+		Entry("keeps four bytes at one token", int64(4), int64(1)),
+		Entry("rounds five bytes up to two tokens", int64(5), int64(2)),
+	)
+
+	DescribeTable("clamping helpers floor negative values at zero",
+		func(value int, expected int) {
+			Expect(max0(value)).To(Equal(expected))
+		},
+		Entry("clamps a negative int", -1, 0),
+		Entry("keeps zero unchanged", 0, 0),
+		Entry("preserves a positive int", 7, 7),
+	)
+
+	DescribeTable("clamping int64 helpers floor negative values at zero",
+		func(value int64, expected int64) {
+			Expect(max0i64(value)).To(Equal(expected))
+		},
+		Entry("clamps a negative int64", int64(-1), int64(0)),
+		Entry("keeps a zero int64 unchanged", int64(0), int64(0)),
+		Entry("preserves a positive int64", int64(9), int64(9)),
+	)
+
+	DescribeTable("bounded integer decoders",
+		func(src []byte, decode func([]byte) int64, expected int64) {
+			Expect(decode(src)).To(Equal(expected))
+		},
+		Entry("clamps oversized int64 values", []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, getBoundedInt64FromU64, int64(math.MaxInt64)),
+		Entry("preserves the max int64 boundary exactly", encodedU64(uint64(math.MaxInt64)), getBoundedInt64FromU64, int64(math.MaxInt64)),
+		Entry("preserves smaller int64 values", []byte{0, 0, 0, 0, 0, 0, 0, 9}, getBoundedInt64FromU64, int64(9)),
+	)
+
+	DescribeTable("bounded signed int decoders",
+		func(src []byte, expected int) {
+			Expect(getBoundedSignedIntFromU64(src)).To(Equal(expected))
+		},
+		Entry("preserves the max int boundary exactly", encodedU64(uint64(int64(math.MaxInt))), math.MaxInt),
+		Entry("preserves the min int boundary exactly", encodedU64(uint64(1)<<63), math.MinInt),
+		Entry("preserves a positive exit code", []byte{0, 0, 0, 0, 0, 0, 0, 7}, 7),
+		Entry("preserves a negative exit code", []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd}, -3),
+	)
+
+	DescribeTable("bounded uint32 decoders",
+		func(src []byte, expected int) {
+			Expect(getBoundedIntFromU32(src)).To(Equal(expected))
+		},
+		Entry("preserves a small uint32", []byte{0, 0, 0, 9}, 9),
+		Entry("preserves max uint32 on 64-bit hosts", []byte{0xff, 0xff, 0xff, 0xff}, int(^uint32(0))),
+	)
+
+	DescribeTable("busy error detection",
+		func(err error, expected bool) {
+			Expect(IsTimeoutOrBusy(err)).To(Equal(expected))
+		},
+		Entry("ignores nil", nil, false),
+		Entry("matches timeout text", errors.New("write timeout"), true),
+		Entry("matches busy text", errors.New("resource busy"), true),
+		Entry("matches sqlite style lock text", errors.New("database is locked"), true),
+		Entry("ignores unrelated errors", errors.New("permission denied"), false),
+	)
+
+	Context("mutation hardening helpers", func() {
+		It("groups summary rows by command and sorts ties alphabetically", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 10, 0, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 10, 1, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 10, 2, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 10, 3, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 10, 4, 0, 0, time.UTC), Tool: "go", Command: "gamma", RawBytes: 4, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRows(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]SummaryRow{
+				{
+					Command:               "alpha",
+					Commands:              2,
+					RawBytes:              16,
+					KeptBytes:             8,
+					DroppedBytes:          8,
+					DropRatio:             0.5,
+					EstimatedInputTokens:  4,
+					EstimatedOutputTokens: 2,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   50,
+				},
+				{
+					Command:               "beta",
+					Commands:              2,
+					RawBytes:              16,
+					KeptBytes:             8,
+					DroppedBytes:          8,
+					DropRatio:             0.5,
+					EstimatedInputTokens:  4,
+					EstimatedOutputTokens: 2,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   50,
+				},
+				{
+					Command:               "gamma",
+					Commands:              1,
+					RawBytes:              4,
+					KeptBytes:             4,
+					DroppedBytes:          0,
+					DropRatio:             0,
+					EstimatedInputTokens:  1,
+					EstimatedOutputTokens: 1,
+					EstimatedSavedTokens:  0,
+					EstimatedSavingsPct:   0,
+				},
+			}))
+		})
+
+		It("groups summary rows by tool, normalizes unknown tools, and sorts ties alphabetically", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 0, 0, 0, time.UTC), Tool: "", Command: "echo alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 1, 0, 0, time.UTC), Tool: "git", Command: "git status", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 2, 0, 0, time.UTC), Tool: "", Command: "echo beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 3, 0, 0, time.UTC), Tool: "git", Command: "git diff", RawBytes: 8, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRowsByTool(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]SummaryToolRow{
+				{
+					Tool:                  "git",
+					Commands:              2,
+					RawBytes:              16,
+					KeptBytes:             8,
+					DroppedBytes:          8,
+					DropRatio:             0.5,
+					EstimatedInputTokens:  4,
+					EstimatedOutputTokens: 2,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   50,
+				},
+				{
+					Tool:                  "unknown",
+					Commands:              2,
+					RawBytes:              16,
+					KeptBytes:             8,
+					DroppedBytes:          8,
+					DropRatio:             0.5,
+					EstimatedInputTokens:  4,
+					EstimatedOutputTokens: 2,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   50,
+				},
+			}))
+		})
+
+		It("sorts summary rows by command count before alphabetical tiebreaks", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 10, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 11, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 12, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 13, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 14, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 15, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 16, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRows(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Command).To(Equal("zeta"))
+			Expect(rows[0].Commands).To(Equal(int64(3)))
+			Expect(rows[1].Command).To(Equal("alpha"))
+			Expect(rows[1].Commands).To(Equal(int64(2)))
+			Expect(rows[2].Command).To(Equal("beta"))
+			Expect(rows[2].Commands).To(Equal(int64(2)))
+		})
+
+		It("sorts summary rows with higher counts first before applying alphabetical tiebreaks", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 10, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 11, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 12, 0, 0, time.UTC), Tool: "go", Command: "zeta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 13, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 14, 0, 0, time.UTC), Tool: "go", Command: "beta", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 15, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 16, 0, 0, time.UTC), Tool: "go", Command: "alpha", RawBytes: 8, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRows(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Command).To(Equal("zeta"))
+			Expect(rows[1].Command).To(Equal("alpha"))
+			Expect(rows[2].Command).To(Equal("beta"))
+			Expect(rows[0].Commands).To(Equal(int64(3)))
+			Expect(rows[1].Commands).To(Equal(int64(2)))
+			Expect(rows[2].Commands).To(Equal(int64(2)))
+		})
+
+		It("sorts tool summary rows with higher counts first before applying alphabetical tiebreaks", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 20, 0, 0, time.UTC), Tool: "zeta", Command: "one", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 21, 0, 0, time.UTC), Tool: "zeta", Command: "two", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 22, 0, 0, time.UTC), Tool: "zeta", Command: "three", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 23, 0, 0, time.UTC), Tool: "beta", Command: "four", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 24, 0, 0, time.UTC), Tool: "beta", Command: "five", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 25, 0, 0, time.UTC), Tool: "alpha", Command: "six", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 11, 26, 0, 0, time.UTC), Tool: "alpha", Command: "seven", RawBytes: 8, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRowsByTool(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Tool).To(Equal("zeta"))
+			Expect(rows[1].Tool).To(Equal("alpha"))
+			Expect(rows[2].Tool).To(Equal("beta"))
+			Expect(rows[0].Commands).To(Equal(int64(3)))
+			Expect(rows[1].Commands).To(Equal(int64(2)))
+			Expect(rows[2].Commands).To(Equal(int64(2)))
+		})
+
+		It("ranks missed opportunities by count, breaks ties alphabetically, and applies the default limit", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 0, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 1, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 2, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 3, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 4, 0, 0, time.UTC), Tool: "go", Command: "delta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 5, 0, 0, time.UTC), Tool: "go", Command: "epsilon", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 6, 0, 0, time.UTC), Tool: "go", Command: "eta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 7, 0, 0, time.UTC), Tool: "go", Command: "gamma", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 8, 0, 0, time.UTC), Tool: "go", Command: "zeta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 9, 0, 0, time.UTC), Tool: "go", Command: "ignored", Passthrough: false},
+			)
+
+			rows, err := QueryMissedOpportunities(path, QueryOptions{}, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]MissedOpportunity{
+				{Command: "alpha", Count: 2},
+				{Command: "beta", Count: 2},
+				{Command: "delta", Count: 1},
+				{Command: "epsilon", Count: 1},
+				{Command: "eta", Count: 1},
+			}))
+		})
+
+		It("keeps all missed opportunities when the explicit limit matches the result count", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 0, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 1, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+			)
+
+			rows, err := QueryMissedOpportunities(path, QueryOptions{}, 2)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]MissedOpportunity{
+				{Command: "alpha", Count: 1},
+				{Command: "beta", Count: 1},
+			}))
+		})
+
+		It("treats negative limits as requests for the default missed-opportunity cap", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 0, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 1, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 2, 0, 0, time.UTC), Tool: "go", Command: "gamma", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 3, 0, 0, time.UTC), Tool: "go", Command: "delta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 4, 0, 0, time.UTC), Tool: "go", Command: "epsilon", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 5, 0, 0, time.UTC), Tool: "go", Command: "zeta", Passthrough: true},
+			)
+
+			rows, err := QueryMissedOpportunities(path, QueryOptions{}, -1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(defaultMissedTopLimit))
+			Expect(rows).NotTo(ContainElement(MissedOpportunity{Command: "zeta", Count: 1}))
+		})
+
+		DescribeTable("applies explicit missed-opportunity limits only when needed",
+			func(limit int, expected []MissedOpportunity) {
+				path := filepath.Join(tempDir, "metrics.db")
+				appendRunMetrics(path,
+					RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 0, 0, 0, time.UTC), Tool: "go", Command: "gamma", Passthrough: true},
+					RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 1, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+					RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 2, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+				)
+
+				rows, err := QueryMissedOpportunities(path, QueryOptions{}, limit)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(Equal(expected))
+			},
+			Entry("keeps all rows when the limit matches the result size", 3, []MissedOpportunity{
+				{Command: "alpha", Count: 1},
+				{Command: "beta", Count: 1},
+				{Command: "gamma", Count: 1},
+			}),
+			Entry("truncates rows when the limit is smaller than the result size", 2, []MissedOpportunity{
+				{Command: "alpha", Count: 1},
+				{Command: "beta", Count: 1},
+			}),
+		)
+
+		It("keeps all missed opportunities when the explicit limit matches the result count", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 10, 0, 0, time.UTC), Tool: "go", Command: "beta", Passthrough: true},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 12, 11, 0, 0, time.UTC), Tool: "go", Command: "alpha", Passthrough: true},
+			)
+
+			rows, err := QueryMissedOpportunities(path, QueryOptions{}, 2)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]MissedOpportunity{
+				{Command: "alpha", Count: 1},
+				{Command: "beta", Count: 1},
+			}))
+		})
+
+		It("groups period rows by bucket and sorts the newest bucket first", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC), Tool: "go", Command: "day-two-a", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 2, 9, 1, 0, 0, time.UTC), Tool: "go", Command: "day-two-b", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC), Tool: "go", Command: "day-one-a", RawBytes: 4, KeptBytes: 0},
+				RunMetric{Timestamp: time.Date(2026, 3, 1, 9, 1, 0, 0, time.UTC), Tool: "go", Command: "day-one-b", RawBytes: 4, KeptBytes: 0},
+			)
+
+			rows, err := QueryPeriod(path, QueryOptions{Period: "day"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(Equal([]PeriodRow{
+				{
+					Bucket:                "2026-03-02",
+					BucketStart:           "2026-03-02",
+					BucketEnd:             "2026-03-02",
+					Commands:              2,
+					RawBytes:              16,
+					KeptBytes:             8,
+					DroppedBytes:          8,
+					DropRatio:             0.5,
+					EstimatedInputTokens:  4,
+					EstimatedOutputTokens: 2,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   50,
+				},
+				{
+					Bucket:                "2026-03-01",
+					BucketStart:           "2026-03-01",
+					BucketEnd:             "2026-03-01",
+					Commands:              2,
+					RawBytes:              8,
+					KeptBytes:             0,
+					DroppedBytes:          8,
+					DropRatio:             1,
+					EstimatedInputTokens:  2,
+					EstimatedOutputTokens: 0,
+					EstimatedSavedTokens:  2,
+					EstimatedSavingsPct:   100,
+				},
+			}))
+		})
+
+		It("sorts tool summaries by command count before alphabetical tiebreaks", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 0, 0, 0, time.UTC), Tool: "zeta", Command: "zeta one", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 1, 0, 0, time.UTC), Tool: "beta", Command: "beta one", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 2, 0, 0, time.UTC), Tool: "alpha", Command: "alpha one", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 3, 0, 0, time.UTC), Tool: "zeta", Command: "zeta two", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 4, 0, 0, time.UTC), Tool: "beta", Command: "beta two", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 5, 0, 0, time.UTC), Tool: "alpha", Command: "alpha two", RawBytes: 8, KeptBytes: 4},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 13, 6, 0, 0, time.UTC), Tool: "zeta", Command: "zeta three", RawBytes: 8, KeptBytes: 4},
+			)
+
+			rows, err := QuerySummaryRowsByTool(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+			Expect(rows[0].Tool).To(Equal("zeta"))
+			Expect(rows[0].Commands).To(Equal(int64(3)))
+			Expect(rows[1].Tool).To(Equal("alpha"))
+			Expect(rows[1].Commands).To(Equal(int64(2)))
+			Expect(rows[2].Tool).To(Equal("beta"))
+			Expect(rows[2].Commands).To(Equal(int64(2)))
+		})
+
+		It("returns invalid period errors from period queries", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path, RunMetric{
+				Timestamp: time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC),
+				Tool:      "go",
+				Command:   metricsGoTestCommand,
+				RawBytes:  8,
+				KeptBytes: 4,
+			})
+
+			_, err := QueryPeriod(path, QueryOptions{Period: "quarter"})
+			Expect(err).To(MatchError(`invalid period "quarter"`))
+		})
+
+		It("returns filtered history in reverse chronological order", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 9, 0, 0, 0, time.UTC), Tool: "go", Command: "old success", RawBytes: 8, KeptBytes: 4, ExitCode: 0},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 9, 1, 0, 0, time.UTC), Tool: "go", Command: "new failure", RawBytes: 8, KeptBytes: 4, ExitCode: 2},
+				RunMetric{Timestamp: time.Date(2026, 3, 25, 9, 2, 0, 0, time.UTC), Tool: "git", Command: "ignored tool", RawBytes: 8, KeptBytes: 4, ExitCode: 3},
+			)
+
+			history, err := QueryHistory(path, QueryOptions{Tool: "go"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(2))
+			Expect(history[0].Command).To(Equal("new failure"))
+			Expect(history[1].Command).To(Equal("old success"))
+		})
+
+		DescribeTable("derives history rows exactly",
+			func(rec runRecord, expectedFailed bool, expected derivedExpectation) {
+				got := historyRowFromRecord(rec)
+
+				Expect(got.Timestamp).To(Equal(time.Unix(rec.TimestampUnix, 0).UTC()))
+				Expect(got.Command).To(Equal(rec.Command))
+				Expect(got.Tool).To(Equal(rec.Tool))
+				Expect(got.DispatchKey).To(Equal(rec.Dispatch))
+				Expect(got.ExitCode).To(Equal(rec.ExitCode))
+				Expect(got.Failed).To(Equal(expectedFailed))
+				Expect(got.Passthrough).To(Equal(rec.Passthrough))
+				Expect(got.DurationMS).To(Equal(rec.DurationMS))
+				Expect(got.DroppedBytes).To(Equal(expected.dropped))
+				Expect(got.DropRatio).To(Equal(expected.ratio))
+				Expect(got.EstimatedInputTokens).To(Equal(expected.inputTokens))
+				Expect(got.EstimatedOutputTokens).To(Equal(expected.outputTokens))
+				Expect(got.EstimatedSavedTokens).To(Equal(expected.savedTokens))
+				Expect(got.EstimatedSavingsPct).To(Equal(expected.savingsPct))
+			},
+			Entry("handles zero raw bytes without ratios or token estimates",
+				runRecord{TimestampUnix: 1_700_000_000, Command: "echo", Tool: "go", Dispatch: "go:test", RawBytes: 0, KeptBytes: 0, ExitCode: 0},
+				false,
+				derivedExpectation{},
+			),
+			Entry("derives dropped bytes, ratios, and token savings from compressed output",
+				runRecord{TimestampUnix: 1_700_000_010, Command: metricsGoTestCommand, Tool: "go", Dispatch: "go:test", RawBytes: 8, KeptBytes: 4, ExitCode: 2, DurationMS: 25, Passthrough: true},
+				true,
+				derivedExpectation{dropped: 4, ratio: 0.5, inputTokens: 2, outputTokens: 1, savedTokens: 1, savingsPct: 50},
+			),
+		)
+
+		It("fills derived summary fields consistently across summary row types", func() {
+			row := SummaryRow{RawBytes: 8, KeptBytes: 4}
+			fillSummaryDerived(&row)
+			Expect(row.DroppedBytes).To(Equal(int64(4)))
+			Expect(row.DropRatio).To(Equal(0.5))
+			Expect(row.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(row.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(row.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(row.EstimatedSavingsPct).To(Equal(50.0))
+
+			tool := SummaryToolRow{RawBytes: 8, KeptBytes: 4}
+			fillSummaryToolDerived(&tool)
+			Expect(tool.DroppedBytes).To(Equal(int64(4)))
+			Expect(tool.DropRatio).To(Equal(0.5))
+			Expect(tool.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(tool.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(tool.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(tool.EstimatedSavingsPct).To(Equal(50.0))
+
+			total := SummaryTotal{RawBytes: 8, KeptBytes: 4}
+			fillTotalDerived(&total)
+			Expect(total.DroppedBytes).To(Equal(int64(4)))
+			Expect(total.DropRatio).To(Equal(0.5))
+			Expect(total.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(total.EstimatedOutputTokens).To(Equal(int64(1)))
+			Expect(total.EstimatedSavedTokens).To(Equal(int64(1)))
+			Expect(total.EstimatedSavingsPct).To(Equal(50.0))
+		})
+
+		It("leaves summary ratios and token savings at zero when raw bytes are zero", func() {
+			row := SummaryRow{RawBytes: 0, KeptBytes: 0}
+			fillSummaryDerived(&row)
+			Expect(row).To(Equal(SummaryRow{}))
+
+			tool := SummaryToolRow{RawBytes: 0, KeptBytes: 0}
+			fillSummaryToolDerived(&tool)
+			Expect(tool).To(Equal(SummaryToolRow{}))
+
+			total := SummaryTotal{RawBytes: 0, KeptBytes: 0}
+			fillTotalDerived(&total)
+			Expect(total).To(Equal(SummaryTotal{}))
+		})
+
+		DescribeTable("derives period rows exactly",
+			func(acc *periodAcc, expected derivedExpectation) {
+				got := periodRowFromAcc(acc)
+
+				Expect(got.Bucket).To(Equal(acc.bucket))
+				Expect(got.BucketStart).To(Equal(acc.start))
+				Expect(got.BucketEnd).To(Equal(acc.end))
+				Expect(got.Commands).To(Equal(acc.count))
+				Expect(got.DroppedBytes).To(Equal(expected.dropped))
+				Expect(got.DropRatio).To(Equal(expected.ratio))
+				Expect(got.EstimatedInputTokens).To(Equal(expected.inputTokens))
+				Expect(got.EstimatedOutputTokens).To(Equal(expected.outputTokens))
+				Expect(got.EstimatedSavedTokens).To(Equal(expected.savedTokens))
+				Expect(got.EstimatedSavingsPct).To(Equal(expected.savingsPct))
+			},
+			Entry("handles empty raw bytes without derived ratios",
+				&periodAcc{bucket: "2026-03-26", start: "2026-03-26", end: "2026-03-26", count: 1},
+				derivedExpectation{},
+			),
+			Entry("derives dropped bytes, ratios, and token savings for compressed rows",
+				&periodAcc{bucket: "2026-03-26", start: "2026-03-26", end: "2026-03-26", count: 2, raw: 8, kept: 4},
+				derivedExpectation{dropped: 4, ratio: 0.5, inputTokens: 2, outputTokens: 1, savedTokens: 1, savingsPct: 50},
+			),
+		)
+
+		It("treats malformed encoded records as empty records", func() {
+			shortRecord := make([]byte, 8+4+4+4+8+8+8+8)
+
+			truncatedCommand := make([]byte, 12)
+			putU32(truncatedCommand[8:12], 5)
+
+			truncatedTool := make([]byte, 19)
+			putU32(truncatedTool[8:12], 3)
+			copy(truncatedTool[12:15], []byte("cmd"))
+			putU32(truncatedTool[15:19], 2)
+
+			truncatedDispatch := make([]byte, 25)
+			putU32(truncatedDispatch[8:12], 3)
+			copy(truncatedDispatch[12:15], []byte("cmd"))
+			putU32(truncatedDispatch[15:19], 2)
+			copy(truncatedDispatch[19:21], []byte("go"))
+			putU32(truncatedDispatch[21:25], 4)
+
+			truncatedTail := make([]byte, 20)
+			putU32(truncatedTail[8:12], 0)
+			putU32(truncatedTail[12:16], 0)
+			putU32(truncatedTail[16:20], 0)
+
+			for _, encoded := range [][]byte{shortRecord, truncatedCommand, truncatedTool, truncatedDispatch, truncatedTail} {
+				Expect(decodeRunRecord(encoded)).To(Equal(runRecord{}))
+			}
+		})
+
+		DescribeTable("rejects encoded records truncated at exact field boundaries",
+			func(chop int) {
+				encoded := encodeRunRecord(runRecord{
+					TimestampUnix: 1_700_000_123,
+					Command:       "cmd",
+					Tool:          "go",
+					Dispatch:      "go:test",
+					RawBytes:      12,
+					KeptBytes:     4,
+					ExitCode:      2,
+					DurationMS:    25,
+					Passthrough:   true,
+				})
+
+				Expect(decodeRunRecord(encoded[:len(encoded)-chop])).To(Equal(runRecord{}))
+			},
+			Entry("when the command payload is short by one byte", 1+8+8+8+8+1+len("go:test")+4+len("go")+4),
+			Entry("when the tool payload is short by one byte", 1+8+8+8+8+1+len("go:test")+4),
+			Entry("when the dispatch payload is short by one byte", 1+8+8+8+8+1),
+			Entry("when the fixed-width tail is short by one byte", 1),
+		)
+
+		DescribeTable("reverses history rows in place",
+			func(rows []HistoryRow, expected []HistoryRow) {
+				reverseHistoryRows(rows)
+				Expect(rows).To(Equal(expected))
+			},
+			Entry("keeps an empty slice unchanged", []HistoryRow{}, []HistoryRow{}),
+			Entry("keeps a single row unchanged", []HistoryRow{{Command: "one"}}, []HistoryRow{{Command: "one"}}),
+			Entry("reverses two rows", []HistoryRow{{Command: "one"}, {Command: "two"}}, []HistoryRow{{Command: "two"}, {Command: "one"}}),
+			Entry("reverses multiple rows", []HistoryRow{{Command: "one"}, {Command: "two"}, {Command: "three"}}, []HistoryRow{{Command: "three"}, {Command: "two"}, {Command: "one"}}),
+		)
+
+		DescribeTable("truncates commands only when they exceed the rune limit",
+			func(cmd string, expected string) {
+				Expect(truncateCommand(cmd)).To(Equal(expected))
+			},
+			Entry("keeps exact-limit commands unchanged", strings.Repeat("x", maxCommandTextRunes), strings.Repeat("x", maxCommandTextRunes)),
+			Entry("truncates commands longer than the limit", strings.Repeat("x", maxCommandTextRunes+1), strings.Repeat("x", maxCommandTextRunes-3)+"..."),
+		)
+
+		DescribeTable("matches query options exactly",
+			func(rec runRecord, opts QueryOptions, sinceUnix int64, expected bool) {
+				Expect(matchesOptions(rec, opts, sinceUnix)).To(Equal(expected))
+			},
+			Entry("accepts a record when all filters match", runRecord{TimestampUnix: 200, Tool: "go", ExitCode: 1}, QueryOptions{Tool: "go", Failed: true}, int64(100), true),
+			Entry("rejects older records when since is active", runRecord{TimestampUnix: 99, Tool: "go"}, QueryOptions{}, int64(100), false),
+			Entry("rejects non-matching tools", runRecord{TimestampUnix: 200, Tool: "git"}, QueryOptions{Tool: "go"}, int64(0), false),
+			Entry("rejects successful commands when failed-only is requested", runRecord{TimestampUnix: 200, Tool: "go", ExitCode: 0}, QueryOptions{Failed: true}, int64(0), false),
+		)
+
+		DescribeTable("builds period buckets exactly",
+			func(ts time.Time, period string, expectedBucket string, expectedStart string, expectedEnd string, wantErr string) {
+				bucket, start, end, err := bucketFor(ts, period)
+				if wantErr != "" {
+					Expect(err).To(MatchError(wantErr))
+					return
+				}
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(bucket).To(Equal(expectedBucket))
+				Expect(start).To(Equal(expectedStart))
+				Expect(end).To(Equal(expectedEnd))
+			},
+			Entry("groups by day", time.Date(2026, 3, 26, 14, 0, 0, 0, time.UTC), "day", "2026-03-26", "2026-03-26", "2026-03-26", ""),
+			Entry("groups by week using ISO boundaries", time.Date(2026, 1, 1, 14, 0, 0, 0, time.UTC), "week", "2026-W01", "2025-12-29", "2026-01-04", ""),
+			Entry("groups by month using month boundaries", time.Date(2024, 2, 20, 14, 0, 0, 0, time.UTC), "month", "2024-02", "2024-02-01", "2024-02-29", ""),
+			Entry("rejects invalid periods", time.Date(2026, 3, 26, 14, 0, 0, 0, time.UTC), "quarter", "", "", "", `invalid period "quarter"`),
+		)
+
+		It("round-trips encoded run records and defaults blank tools to unknown", func() {
+			rec := runRecord{
+				TimestampUnix: 1_700_000_123,
+				Command:       metricsGoTestCommand,
+				Tool:          "",
+				Dispatch:      "go:test",
+				RawBytes:      12,
+				KeptBytes:     4,
+				ExitCode:      -3,
+				DurationMS:    17,
+				Passthrough:   true,
+			}
+
+			got := decodeRunRecord(encodeRunRecord(rec))
+			Expect(got.TimestampUnix).To(Equal(rec.TimestampUnix))
+			Expect(got.Command).To(Equal(rec.Command))
+			Expect(got.Tool).To(Equal("unknown"))
+			Expect(got.Dispatch).To(Equal(rec.Dispatch))
+			Expect(got.RawBytes).To(Equal(rec.RawBytes))
+			Expect(got.KeptBytes).To(Equal(rec.KeptBytes))
+			Expect(got.ExitCode).To(Equal(rec.ExitCode))
+			Expect(got.DurationMS).To(Equal(rec.DurationMS))
+			Expect(got.Passthrough).To(BeTrue())
+		})
+	})
 })
+
+func appendRunMetrics(path string, metrics ...RunMetric) {
+	for _, metric := range metrics {
+		Expect(Append(path, metric)).To(Succeed())
+	}
+}
 
 func initGitProjectForMetrics(project string, gitignoreContent string) string {
 	Expect(os.Mkdir(filepath.Join(project, ".git"), 0o755)).To(Succeed())
@@ -195,4 +925,10 @@ func initGitProjectForMetrics(project string, gitignoreContent string) string {
 		Expect(os.WriteFile(filepath.Join(project, gitignoreFileName), []byte(gitignoreContent), 0o644)).To(Succeed())
 	}
 	return project
+}
+
+func encodedU64(v uint64) []byte {
+	dst := make([]byte, 8)
+	putU64(dst, v)
+	return dst
 }

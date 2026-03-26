@@ -70,5 +70,16 @@ var _ = Describe("process helpers", func() {
 			Expect(stderr).NotTo(BeNil())
 			closePipes(stdout, stderr)
 		})
+
+		It("configures managed cancellation on the returned command", func() {
+			name, args := successCommand()
+
+			cmd, stdout, stderr, err := CommandWithPipesContext(context.Background(), name, args)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cmd.Cancel).NotTo(BeNil())
+			Expect(cmd.SysProcAttr).NotTo(BeNil())
+			closePipes(stdout, stderr)
+		})
 	})
 })

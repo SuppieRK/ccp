@@ -5,6 +5,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"go-command-compression-proxy/internal/lifecycle/agents"
 )
 
 var _ = Describe("init argument parsing", func() {
@@ -12,6 +14,7 @@ var _ = Describe("init argument parsing", func() {
 		func(input string, expected []string) {
 			Expect(parseTools(input)).To(Equal(expected))
 		},
+		Entry("ignoring empty input", "", []string(nil)),
 		Entry("sorting and deduplicating mixed-case input", " Git , go ,git,  ,DOCKER,go ", []string{"docker", "git", "go"}),
 		Entry("normalizing aliases", " costrict , roocode ", []string{"roocode"}),
 	)
@@ -35,5 +38,15 @@ var _ = Describe("init argument parsing", func() {
 			err := RunInit([]string{"--tools", "unknown"})
 			Expect(err).To(MatchError(ContainSubstring("unsupported tool")))
 		})
+	})
+
+	It("returns explicit tools without requiring repository detection", func() {
+		tools, err := resolveInitTools(" costrict , codex ", map[string]agents.Adapter{
+			"codex":   &fakeInstallAdapter{},
+			"roocode": &fakeInstallAdapter{},
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tools).To(Equal([]string{"codex", "roocode"}))
 	})
 })

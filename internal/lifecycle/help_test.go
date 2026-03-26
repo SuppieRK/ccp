@@ -60,6 +60,8 @@ var _ = Describe("lifecycle help", func() {
 					return RunGain([]string{"--help"}, "")
 				case "history":
 					return RunHistory([]string{"--help"}, "")
+				case "filter-root":
+					return RunFilter([]string{"--help"})
 				case "filter":
 					return RunFilter([]string{"new", "--help"})
 				case "filter-status":
@@ -125,6 +127,17 @@ var _ = Describe("lifecycle help", func() {
 				"Notes:",
 				"--since",
 				"--tool",
+			},
+		}),
+		Entry("filter root", helpCase{
+			command: "filter-root",
+			parts: []string{
+				"ccp filter - YAML filter authoring and inspection helpers",
+				"Usage:",
+				"Flags:",
+				"Notes:",
+				"ccp filter <subcommand> [args...]",
+				"subcommands: new, status",
 			},
 		}),
 		Entry("filter new", helpCase{

@@ -25,6 +25,8 @@ var _ = Describe("EnsureGitignoreEntry", func() {
 		},
 		Entry("appends", "node_modules\n", "node_modules\n.ccp\n"),
 		Entry("avoids duplicates", ".ccp\n", ".ccp\n"),
+		Entry("avoids duplicates with surrounding whitespace", "  .ccp  \n", "  .ccp  \n"),
+		Entry("appends to an empty file without a leading blank line", "", ".ccp\n"),
 		Entry("appends without trailing newline", "node_modules", "node_modules\n.ccp\n"),
 	)
 
@@ -59,6 +61,17 @@ var _ = Describe("EnsureGitignoreEntry", func() {
 			body, readErr := os.ReadFile(outside)
 			Expect(readErr).NotTo(HaveOccurred())
 			Expect(string(body)).To(Equal("node_modules\n"))
+		})
+	})
+
+	Context("when .gitignore is a directory", func() {
+		It("returns the read error", func() {
+			root := GinkgoT().TempDir()
+			Expect(os.Mkdir(filepath.Join(root, gitignorePathName), 0o755)).To(Succeed())
+
+			err := EnsureGitignoreEntry(root, ".ccp")
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 

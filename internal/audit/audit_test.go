@@ -1,6 +1,9 @@
 package audit
 
 import (
+	"context"
+	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -40,6 +43,42 @@ var _ = Describe("audit logging", func() {
 			path, err := DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path).To(Equal(filepath.Join(home, ".config", "ccp", "audit", "audit.log")))
+		})
+
+		It("returns the home directory error", func() {
+			prevHome := userHomeDir
+			userHomeDir = func() (string, error) { return "", os.ErrPermission }
+			DeferCleanup(func() { userHomeDir = prevHome })
+
+			_, err := DefaultPath()
+
+			Expect(err).To(MatchError(os.ErrPermission))
+		})
+	})
+
+	Context("when configuring the default logger", func() {
+		It("degrades to a no-op logger when the home directory cannot be resolved", func() {
+			prevHome := userHomeDir
+			userHomeDir = func() (string, error) { return "", os.ErrPermission }
+			DeferCleanup(func() { userHomeDir = prevHome })
+
+			Expect(ConfigureDefault()).To(Succeed())
+			Expect(currentHandler).To(BeNil())
+			Expect(currentWriter).To(BeNil())
+			Expect(MustAppend).NotTo(BeNil())
+			Expect(Append("fallback", map[string]any{"ok": true})).To(Succeed())
+		})
+	})
+
+	Context("when configuring a specific audit path", func() {
+		It("creates the configured log file on first append", func() {
+			path := filepath.Join(home, "logs", "audit.log")
+
+			Expect(ConfigurePath(path, maxSizeMB, maxBackups)).To(Succeed())
+			Expect(Append("configured", map[string]any{"ok": true})).To(Succeed())
+
+			_, err := os.Stat(path)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -120,7 +159,55 @@ var _ = Describe("audit logging", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("when appending through the must helper", func() {
+		It("writes without surfacing errors", func() {
+			Expect(ConfigureDefault()).To(Succeed())
+
+			Expect(func() {
+				MustAppend("must", map[string]any{"value": 1})
+			}).NotTo(Panic())
+
+			body, err := os.ReadFile(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring(`"msg":"must"`))
+		})
+	})
+
+	Context("when test helpers configure deterministic time", func() {
+		It("advances the synthetic clock on each read", func() {
+			first := nowUTC()
+			second := nowUTC()
+
+			Expect(first).To(Equal(time.Unix(1, 0).UTC()))
+			Expect(second).To(Equal(time.Unix(2, 0).UTC()))
+		})
+	})
+
+	Context("when the handler fails during append", func() {
+		It("degrades back to the disabled state", func() {
+			boom := errors.New("handler boom")
+			currentHandler = failingAuditHandler{err: boom}
+			currentWriter = newRollingWriter(filepath.Join(home, "logs", "audit.log"), maxSizeMB, maxBackups)
+
+			Expect(Append("broken", map[string]any{"ok": false})).To(Succeed())
+			Expect(currentHandler).To(BeNil())
+			Expect(currentWriter).To(BeNil())
+		})
+	})
 })
+
+type failingAuditHandler struct {
+	err error
+}
+
+func (h failingAuditHandler) Enabled(context.Context, slog.Level) bool { return true }
+
+func (h failingAuditHandler) Handle(context.Context, slog.Record) error { return h.err }
+
+func (h failingAuditHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+
+func (h failingAuditHandler) WithGroup(string) slog.Handler { return h }
 
 func cleanupAuditHome(home string) error {
 	Reset()

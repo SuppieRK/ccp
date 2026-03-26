@@ -1,14 +1,21 @@
 package coverage
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"math"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/cover"
+)
+
+const (
+	coverModePrefix = "mode: "
+	malformedLine   = "malformed line %q"
 )
 
 type PackageStat struct {
@@ -55,12 +62,159 @@ func ParseProfile(r io.Reader, modulePath, internalPrefix string, threshold floa
 		return Report{}, fmt.Errorf("internal prefix is required")
 	}
 
-	profiles, err := cover.ParseProfilesFromReader(r)
+	profiles, err := parseProfiles(r)
 	if err != nil {
 		return Report{}, fmt.Errorf("parse coverprofile: %w", err)
 	}
 	byPackage := aggregateByPackage(profiles, modulePath)
 	return buildReport(byPackage, modulePath, internalPrefix, threshold), nil
+}
+
+func parseProfiles(r io.Reader) ([]*cover.Profile, error) {
+	reader := bufio.NewReader(r)
+	mode, err := readProfileMode(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	byFile := make(map[string]*cover.Profile, 128)
+	files := make([]string, 0, 128)
+	for lineNo := 2; ; lineNo++ {
+		line, readErr := readProfileLine(reader)
+		if readErr != nil && readErr != io.EOF {
+			return nil, readErr
+		}
+		if line != "" {
+			if err := appendProfileBlock(byFile, &files, mode, line); err != nil {
+				return nil, fmt.Errorf("line %d: %w", lineNo, err)
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+	}
+
+	profiles := make([]*cover.Profile, 0, len(files))
+	for _, fileName := range files {
+		profiles = append(profiles, byFile[fileName])
+	}
+	return profiles, nil
+}
+
+func readProfileLine(reader *bufio.Reader) (string, error) {
+	line, err := reader.ReadString('\n')
+	return strings.TrimSpace(line), err
+}
+
+func appendProfileBlock(byFile map[string]*cover.Profile, files *[]string, mode string, line string) error {
+	fileName, block, err := parseProfileBlock(line)
+	if err != nil {
+		return err
+	}
+	profile, ok := byFile[fileName]
+	if !ok {
+		profile = &cover.Profile{
+			FileName: fileName,
+			Mode:     mode,
+			Blocks:   make([]cover.ProfileBlock, 0, 16),
+		}
+		byFile[fileName] = profile
+		*files = append(*files, fileName)
+	}
+	profile.Blocks = append(profile.Blocks, block)
+	return nil
+}
+
+func readProfileMode(reader *bufio.Reader) (string, error) {
+	line, err := readProfileLine(reader)
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	if !strings.HasPrefix(line, coverModePrefix) {
+		return "", fmt.Errorf("first line must start with %q", coverModePrefix)
+	}
+	mode := strings.TrimSpace(strings.TrimPrefix(line, coverModePrefix))
+	if mode == "" {
+		return "", fmt.Errorf("coverage mode is required")
+	}
+	return mode, nil
+}
+
+func parseProfileBlock(line string) (string, cover.ProfileBlock, error) {
+	countSep := strings.LastIndexByte(line, ' ')
+	if countSep <= 0 {
+		return "", cover.ProfileBlock{}, fmt.Errorf(malformedLine, line)
+	}
+	numStmtSep := strings.LastIndexByte(line[:countSep], ' ')
+	if numStmtSep <= 0 {
+		return "", cover.ProfileBlock{}, fmt.Errorf(malformedLine, line)
+	}
+
+	count, err := strconv.Atoi(line[countSep+1:])
+	if err != nil {
+		return "", cover.ProfileBlock{}, err
+	}
+	numStmt, err := strconv.Atoi(line[numStmtSep+1 : countSep])
+	if err != nil {
+		return "", cover.ProfileBlock{}, err
+	}
+
+	location := line[:numStmtSep]
+	fileSep := strings.LastIndexByte(location, ':')
+	if fileSep <= 0 || fileSep == len(location)-1 {
+		return "", cover.ProfileBlock{}, fmt.Errorf(malformedLine, line)
+	}
+	fileName := location[:fileSep]
+	start, end, err := parseProfileRange(location[fileSep+1:])
+	if err != nil {
+		return "", cover.ProfileBlock{}, err
+	}
+
+	return fileName, cover.ProfileBlock{
+		StartLine: start.line,
+		StartCol:  start.col,
+		EndLine:   end.line,
+		EndCol:    end.col,
+		NumStmt:   numStmt,
+		Count:     count,
+	}, nil
+}
+
+type profilePoint struct {
+	line int
+	col  int
+}
+
+func parseProfileRange(raw string) (profilePoint, profilePoint, error) {
+	comma := strings.IndexByte(raw, ',')
+	if comma <= 0 || comma == len(raw)-1 {
+		return profilePoint{}, profilePoint{}, fmt.Errorf("malformed position %q", raw)
+	}
+	start, err := parseProfilePoint(raw[:comma])
+	if err != nil {
+		return profilePoint{}, profilePoint{}, err
+	}
+	end, err := parseProfilePoint(raw[comma+1:])
+	if err != nil {
+		return profilePoint{}, profilePoint{}, err
+	}
+	return start, end, nil
+}
+
+func parseProfilePoint(raw string) (profilePoint, error) {
+	dot := strings.IndexByte(raw, '.')
+	if dot <= 0 || dot == len(raw)-1 {
+		return profilePoint{}, fmt.Errorf("malformed position %q", raw)
+	}
+	line, err := strconv.Atoi(raw[:dot])
+	if err != nil {
+		return profilePoint{}, err
+	}
+	col, err := strconv.Atoi(raw[dot+1:])
+	if err != nil {
+		return profilePoint{}, err
+	}
+	return profilePoint{line: line, col: col}, nil
 }
 
 func aggregateByPackage(profiles []*cover.Profile, modulePath string) map[string]totals {

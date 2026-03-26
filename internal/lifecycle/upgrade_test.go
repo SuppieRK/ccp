@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"go-command-compression-proxy/internal/version"
 
@@ -41,15 +42,27 @@ var _ = Describe("replaceBinary", func() {
 	Context("when the source and destination are valid", func() {
 		BeforeEach(func() {
 			Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
-			Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(dst, []byte("old-binary"), 0o644)).To(Succeed())
 		})
 
-		It("replaces the destination binary", func() {
+		It("replaces the destination binary and applies the source permissions", func() {
 			Expect(replaceBinary(dst, src)).To(Succeed())
 
 			b, err := os.ReadFile(dst)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(b)).To(Equal(newBinaryContent))
+
+			info, err := os.Stat(dst)
+			Expect(err).NotTo(HaveOccurred())
+			if runtime.GOOS == "windows" {
+				Expect(info.Mode().IsRegular()).To(BeTrue())
+				Expect(info.Mode() & 0o111).To(BeZero())
+			} else {
+				Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o755)))
+			}
+
+			_, err = os.Stat(dst + ".new")
+			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 	})
 
@@ -72,6 +85,20 @@ var _ = Describe("replaceBinary", func() {
 		It("returns an error", func() {
 			err := replaceBinary(filepath.Join(tmpDir, "missing", "dst"), src)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Context("when the destination path is a directory", func() {
+		BeforeEach(func() {
+			Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(dst, 0o755)).To(Succeed())
+		})
+
+		It("returns the rename error and keeps the staged file", func() {
+			err := replaceBinary(dst, src)
+			Expect(err).To(HaveOccurred())
+			Expect(dst).To(BeADirectory())
+			Expect(dst + ".new").To(BeAnExistingFile())
 		})
 	})
 })
@@ -135,6 +162,167 @@ var _ = Describe("selectedUpgradeRepairMode", func() {
 	)
 })
 
+var _ = Describe("upgrade helper functions", func() {
+	It("uses the default HTTP timeout for release downloads", func() {
+		Expect(upgradeHTTPClient.Timeout).To(Equal(30 * time.Second))
+	})
+
+	It("rejects latest releases with empty tags", func() {
+		prev := upgradeHTTPClient
+		upgradeHTTPClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return jsonHTTPResponse(http.StatusOK, `{"tag_name":""}`), nil
+		})}
+		DeferCleanup(func() { upgradeHTTPClient = prev })
+
+		_, err := latestReleaseTag(defaultUpgradeRepo)
+		Expect(err).To(MatchError("latest release has empty tag_name"))
+	})
+
+	DescribeTable("finding checksums for assets",
+		func(contents string, asset string, expected string) {
+			sum, err := checksumForAsset(contents, asset)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sum).To(Equal(expected))
+		},
+		Entry("matches plain filenames", "abc123  ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "abc123"),
+		Entry("matches starred checksum entries", "def456 *ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "def456"),
+		Entry("matches dot-slash checksum entries", "fedcba  ./ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "fedcba"),
+		Entry("ignores uppercase checksum text differences during later verification", "ABC123  ./ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "ABC123"),
+	)
+
+	It("returns an error when the archive does not contain the binary", func() {
+		tmpDir := GinkgoT().TempDir()
+		zipPath := filepath.Join(tmpDir, "asset.zip")
+		Expect(os.WriteFile(zipPath, makeZipArchive("other-binary", []byte("x")), 0o644)).To(Succeed())
+
+		zr, err := zip.OpenReader(zipPath)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = zr.Close() })
+
+		_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
+		Expect(err).To(MatchError(ContainSubstring("binary ccp not found in archive")))
+	})
+
+	It("preserves an existing error when a closer also fails", func() {
+		baseErr := errors.New("base error")
+		closeWithErr(errorCloser{err: errors.New("close error")}, &baseErr)
+		Expect(baseErr).To(MatchError("base error"))
+	})
+
+	It("captures closer errors when no prior error exists", func() {
+		var err error
+		closeWithErr(errorCloser{err: errors.New("close error")}, &err)
+		Expect(err).To(MatchError("close error"))
+	})
+
+	DescribeTable("running installed repair with the expected flag",
+		func(mode repairMode, expectedFlag string) {
+			if runtime.GOOS == "windows" {
+				Skip("repair helper script uses unix sh")
+			}
+
+			tmpDir := GinkgoT().TempDir()
+			logPath := filepath.Join(tmpDir, "repair.log")
+			exePath := filepath.Join(tmpDir, "ccp")
+			script := "#!/bin/sh\nprintf '%s %s' \"$1\" \"$2\" >" + shellQuoteArg(logPath) + "\n"
+			Expect(os.WriteFile(exePath, []byte(script), 0o755)).To(Succeed())
+
+			Expect(runInstalledRepair(exePath, mode)).To(Succeed())
+
+			body, err := os.ReadFile(logPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("repair " + expectedFlag))
+		},
+		Entry("preserve mode uses --no", repairModePreserve, "--no"),
+		Entry("rewrite mode uses --yes", repairModeRewrite, "--yes"),
+	)
+})
+
+var _ = Describe("verifyDownloadedAssetChecksum", func() {
+	var (
+		tmpDir        string
+		assetPath     string
+		checksumsPath string
+		assetName     string
+		assetBody     []byte
+	)
+
+	BeforeEach(func() {
+		tmpDir = GinkgoT().TempDir()
+		assetName = "ccp_1.2.3_linux_amd64.zip"
+		assetBody = makeZipArchive("ccp", []byte(newBinaryContent))
+		assetPath = filepath.Join(tmpDir, assetName)
+		checksumsPath = filepath.Join(tmpDir, releaseChecksumsAsset)
+		Expect(os.WriteFile(assetPath, assetBody, 0o644)).To(Succeed())
+	})
+
+	It("accepts checksum files whose hex digest casing differs", func() {
+		sum := sha256.Sum256(assetBody)
+		Expect(os.WriteFile(checksumsPath, []byte(fmt.Sprintf("%X  ./%s\n", sum[:], assetName)), 0o644)).To(Succeed())
+
+		err := verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	DescribeTable("returns underlying checksum verification errors",
+		func(setup func(), assertErr func(error)) {
+			setup()
+
+			err := verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName)
+
+			Expect(err).To(HaveOccurred())
+			assertErr(err)
+		},
+		Entry("when the checksum file is missing", func() {}, func(err error) {
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		}),
+		Entry("when the asset is absent from the checksum file", func() {
+			Expect(os.WriteFile(checksumsPath, []byte("deadbeef  ./other.zip\n"), 0o644)).To(Succeed())
+		}, func(err error) {
+			Expect(err.Error()).To(ContainSubstring(`checksum for asset "ccp_1.2.3_linux_amd64.zip" not found`))
+		}),
+		Entry("when the downloaded asset cannot be hashed", func() {
+			Expect(os.WriteFile(checksumsPath, checksumFixtureBody(assetName, assetBody, false), 0o644)).To(Succeed())
+			Expect(os.Remove(assetPath)).To(Succeed())
+		}, func(err error) {
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		}),
+	)
+})
+
+var _ = Describe("upgrade permission helpers", func() {
+	DescribeTable("keeps permission changes platform-aware",
+		func(osName string, ensure func(string) error, expectExecutable bool) {
+			if runtime.GOOS == "windows" && expectExecutable {
+				Skip("unix executable bits are not observable on Windows filesystems")
+			}
+
+			path := filepath.Join(GinkgoT().TempDir(), "ccp")
+			Expect(os.WriteFile(path, []byte("binary"), 0o644)).To(Succeed())
+
+			prevOS := upgradeRuntimeOS
+			upgradeRuntimeOS = func() string { return osName }
+			DeferCleanup(func() { upgradeRuntimeOS = prevOS })
+
+			Expect(ensure(path)).To(Succeed())
+
+			info, err := os.Stat(path)
+			Expect(err).NotTo(HaveOccurred())
+			if expectExecutable {
+				Expect(info.Mode() & 0o111).NotTo(BeZero())
+				return
+			}
+			Expect(info.Mode().IsRegular()).To(BeTrue())
+			Expect(info.Mode() & 0o111).To(BeZero())
+		},
+		Entry("installed binaries stay unchanged on windows", "windows", ensureUpgradeExecutablePermissions, false),
+		Entry("extracted binaries stay unchanged on windows", "windows", ensureExecutableIfNeeded, false),
+		Entry("installed binaries become executable on unix", "linux", ensureUpgradeExecutablePermissions, true),
+		Entry("extracted binaries become executable on unix", "linux", ensureExecutableIfNeeded, true),
+	)
+})
+
 var _ = Describe("RunUpgrade", func() {
 	var (
 		tmpDir string
@@ -184,6 +372,18 @@ var _ = Describe("RunUpgrade", func() {
 
 			Expect(RunUpgrade(args)).To(Succeed())
 			Expect(printed).To(Equal(fmt.Sprintf("ccp upgrade: replaced %s with %s (%s)\n", dest, "ccp_1.2.3_linux_amd64.zip", "1.2.3")))
+		})
+
+		It("cleans up temporary extracted upgrade directories", func() {
+			pattern := filepath.Join(os.TempDir(), "ccp-upgrade-*")
+			before, err := filepath.Glob(pattern)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(RunUpgrade(args)).To(Succeed())
+
+			after, err := filepath.Glob(pattern)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(after).To(ConsistOf(before))
 		})
 	})
 
@@ -505,6 +705,14 @@ type roundTripFunc func(req *http.Request) (*http.Response, error)
 
 func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fn(req)
+}
+
+type errorCloser struct {
+	err error
+}
+
+func (e errorCloser) Close() error {
+	return e.err
 }
 
 func stubUpgradeRuntimeDeps(

@@ -8,6 +8,7 @@ import (
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
 	v2filters "go-command-compression-proxy/internal/filters"
+	"go-command-compression-proxy/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -214,6 +215,38 @@ cases:
 	})
 })
 
+var _ = Describe("DefaultSources", func() {
+	It("uses only the repository source in dev builds", func() {
+		prevVersion := version.Version
+		version.Version = "dev"
+		DeferCleanup(func() { version.Version = prevVersion })
+
+		sources := DefaultSources()
+
+		Expect(sources).To(Equal([]v2filters.FilterSource{
+			v2filters.RepositorySource(ProjectRootFromSource()),
+		}))
+	})
+
+	It("uses project and home sources in release builds", func() {
+		prevVersion := version.Version
+		version.Version = "1.2.3"
+		DeferCleanup(func() { version.Version = prevVersion })
+
+		cwd, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		home, err := os.UserHomeDir()
+		Expect(err).NotTo(HaveOccurred())
+
+		sources := DefaultSources()
+
+		Expect(sources).To(Equal([]v2filters.FilterSource{
+			v2filters.ProjectSource(cwd),
+			v2filters.HomeSource(home),
+		}))
+	})
+})
+
 var _ = Describe("LoadRegistryStatusFromSources", func() {
 	It("reports active, overridden, and broken entries while keeping runtime winners", func() {
 		root := GinkgoT().TempDir()
@@ -239,41 +272,108 @@ var _ = Describe("LoadRegistryStatusFromSources", func() {
 		Expect(filters).To(HaveKey("gs"))
 		Expect(filters).NotTo(HaveKey("py"))
 
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("git")),
-			HaveField("FilterPath", Equal(filepath.Join(projectDir, "git.yaml"))),
-			HaveField("Target", Equal("")),
-			HaveField("SourceKind", Equal(v2filters.SourceProject)),
-			HaveField("Status", Equal("ok")),
-		)))
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("gs")),
-			HaveField("FilterPath", Equal(filepath.Join(projectDir, ".mappings.yaml"))),
-			HaveField("Target", Equal("git")),
-			HaveField("SourceKind", Equal(v2filters.SourceProject)),
-			HaveField("Status", Equal("ok")),
-		)))
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("git")),
-			HaveField("FilterPath", Equal(filepath.Join(homeDir, "git.yaml"))),
-			HaveField("Target", Equal("")),
-			HaveField("SourceKind", Equal(v2filters.SourceHome)),
-			HaveField("Status", Equal("overridden")),
-		)))
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("py")),
-			HaveField("FilterPath", Equal(filepath.Join(homeDir, ".mappings.yaml"))),
-			HaveField("Target", Equal("python")),
-			HaveField("SourceKind", Equal(v2filters.SourceHome)),
-			HaveField("Status", Equal("missing target: python")),
-		)))
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("-")),
-			HaveField("FilterPath", Equal(filepath.Join(projectDir, "broken.yaml"))),
-			HaveField("Target", Equal("")),
-			HaveField("SourceKind", Equal(v2filters.SourceProject)),
-			HaveField("Status", ContainSubstring("invalid filter:")),
-		)))
+		Expect(rows).To(ContainElement(Equal(RegistryStatusRow{
+			Tool:       "git",
+			FilterPath: filepath.Join(projectDir, "git.yaml"),
+			Target:     "",
+			SourceKind: v2filters.SourceProject,
+			Status:     "ok",
+			order:      0,
+		})))
+		Expect(rows).To(ContainElement(Equal(RegistryStatusRow{
+			Tool:       "gs",
+			FilterPath: filepath.Join(projectDir, ".mappings.yaml"),
+			Target:     "git",
+			SourceKind: v2filters.SourceProject,
+			Status:     "ok",
+			order:      0,
+		})))
+		Expect(rows).To(ContainElement(Equal(RegistryStatusRow{
+			Tool:       "git",
+			FilterPath: filepath.Join(homeDir, "git.yaml"),
+			Target:     "",
+			SourceKind: v2filters.SourceHome,
+			Status:     "overridden",
+			order:      1,
+		})))
+		Expect(rows).To(ContainElement(Equal(RegistryStatusRow{
+			Tool:       "py",
+			FilterPath: filepath.Join(homeDir, ".mappings.yaml"),
+			Target:     "python",
+			SourceKind: v2filters.SourceHome,
+			Status:     "missing target: python",
+			order:      1,
+		})))
+
+		foundBroken := false
+		for _, row := range rows {
+			if row.Tool != "-" || row.FilterPath != filepath.Join(projectDir, "broken.yaml") || row.Target != "" || row.SourceKind != v2filters.SourceProject || row.order != 0 {
+				continue
+			}
+			Expect(row.Status).To(ContainSubstring("invalid filter:"))
+			foundBroken = true
+			break
+		}
+		Expect(foundBroken).To(BeTrue())
+	})
+
+	It("returns status rows in stable priority and source order", func() {
+		root := GinkgoT().TempDir()
+		projectRoot := filepath.Join(root, "project")
+		home := filepath.Join(root, "home")
+		projectDir := filepath.Join(projectRoot, ".ccp", "filters")
+		homeDir := filepath.Join(home, ".config", "ccp", "filters")
+		Expect(os.MkdirAll(projectDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
+
+		Expect(os.WriteFile(filepath.Join(projectDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(projectDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  gs: git\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(projectDir, "broken.yaml"), []byte("version: 1\nfilter: broken\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(homeDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(homeDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  py: python\n"), 0o644)).To(Succeed())
+
+		_, rows, err := LoadRegistryStatusFromSources([]v2filters.FilterSource{
+			v2filters.ProjectSource(projectRoot),
+			v2filters.HomeSource(home),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(5))
+		Expect(rows[0]).To(Equal(RegistryStatusRow{
+			Tool:       "git",
+			FilterPath: filepath.Join(projectDir, "git.yaml"),
+			SourceKind: v2filters.SourceProject,
+			Status:     "ok",
+			order:      0,
+		}))
+		Expect(rows[1]).To(Equal(RegistryStatusRow{
+			Tool:       "gs",
+			FilterPath: filepath.Join(projectDir, ".mappings.yaml"),
+			Target:     "git",
+			SourceKind: v2filters.SourceProject,
+			Status:     "ok",
+			order:      0,
+		}))
+		Expect(rows[2]).To(Equal(RegistryStatusRow{
+			Tool:       "git",
+			FilterPath: filepath.Join(homeDir, "git.yaml"),
+			SourceKind: v2filters.SourceHome,
+			Status:     "overridden",
+			order:      1,
+		}))
+		Expect(rows[3].Tool).To(Equal("-"))
+		Expect(rows[3].FilterPath).To(Equal(filepath.Join(projectDir, "broken.yaml")))
+		Expect(rows[3].Target).To(Equal(""))
+		Expect(rows[3].SourceKind).To(Equal(v2filters.SourceProject))
+		Expect(rows[3].Status).To(ContainSubstring("invalid filter:"))
+		Expect(rows[3].order).To(Equal(0))
+		Expect(rows[4]).To(Equal(RegistryStatusRow{
+			Tool:       "py",
+			FilterPath: filepath.Join(homeDir, ".mappings.yaml"),
+			Target:     "python",
+			SourceKind: v2filters.SourceHome,
+			Status:     "missing target: python",
+			order:      1,
+		}))
 	})
 
 	It("reports source-level errors without failing the overall status load", func() {
@@ -287,13 +387,348 @@ var _ = Describe("LoadRegistryStatusFromSources", func() {
 		}})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(filters).To(BeEmpty())
-		Expect(rows).To(ContainElement(SatisfyAll(
-			HaveField("Tool", Equal("-")),
-			HaveField("FilterPath", Equal(sourceFile)),
-			HaveField("Target", Equal("")),
-			HaveField("SourceKind", Equal(v2filters.SourceHome)),
-			HaveField("Status", ContainSubstring("source error:")),
-		)))
+		foundSourceError := false
+		for _, row := range rows {
+			if row.Tool != "-" || row.FilterPath != sourceFile || row.Target != "" || row.SourceKind != v2filters.SourceHome {
+				continue
+			}
+			Expect(row.Status).To(ContainSubstring("source error:"))
+			foundSourceError = true
+			break
+		}
+		Expect(foundSourceError).To(BeTrue())
+	})
+})
+
+var _ = Describe("loader status helpers", func() {
+	DescribeTable("assigns stable status priorities",
+		func(status string, expected int) {
+			Expect(statusPriority(status)).To(Equal(expected))
+		},
+		Entry("active filters sort first", "ok", 0),
+		Entry("overridden filters sort after active filters", "overridden", 1),
+		Entry("errors sort last", "missing target: demo", 2),
+	)
+
+	DescribeTable("compares source precedence",
+		func(left, right, expected int) {
+			Expect(compareSourceOrder(left, right)).To(Equal(expected))
+		},
+		Entry("lower order sorts before higher order", 0, 1, -1),
+		Entry("higher order sorts after lower order", 2, 1, 1),
+		Entry("matching order stays equal", 3, 3, 0),
+	)
+
+	DescribeTable("compares status rows deterministically",
+		func(left, right RegistryStatusRow, expected int) {
+			Expect(compareStatusRows(left, right)).To(Equal(expected))
+		},
+		Entry("status priority wins first",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Status: "overridden", order: 0},
+			-1,
+		),
+		Entry("source order breaks ties after status",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Status: "ok", order: 1},
+			-1,
+		),
+		Entry("tool name sorts lexicographically",
+			RegistryStatusRow{Tool: "alpha", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "beta", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			-1,
+		),
+		Entry("filter path sorts after tool name",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/a.yaml", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/b.yaml", Status: "ok", order: 0},
+			-1,
+		),
+		Entry("target sorts last when the rest matches",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "alpha", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "beta", Status: "ok", order: 0},
+			-1,
+		),
+		Entry("tool ordering returns a positive comparison in reverse lexicographic cases",
+			RegistryStatusRow{Tool: "beta", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "alpha", FilterPath: "/filters/demo.yaml", Status: "ok", order: 0},
+			1,
+		),
+		Entry("target ordering returns a positive comparison in reverse lexicographic cases",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "beta", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "alpha", Status: "ok", order: 0},
+			1,
+		),
+		Entry("identical rows compare equal",
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "beta", Status: "ok", order: 0},
+			RegistryStatusRow{Tool: "demo", FilterPath: "/filters/demo.yaml", Target: "beta", Status: "ok", order: 0},
+			0,
+		),
+	)
+})
+
+var _ = Describe("registerCompiledFilterStatuses", func() {
+	It("marks existing filters as overridden and emits rows in tool order", func() {
+		registered := map[string]contracts.Filter{
+			"alpha": nil,
+		}
+		rows := make([]RegistryStatusRow, 0)
+
+		registerCompiledFilterStatuses(registered, map[string]compiledStatusFilter{
+			"beta":  {tool: "beta", path: filepath.Join("/filters", "02-beta.yaml")},
+			"alpha": {tool: "alpha", path: filepath.Join("/filters", "01-alpha.yaml")},
+		}, v2filters.FilterSource{Kind: v2filters.SourceProject}, 2, &rows)
+
+		Expect(rows).To(Equal([]RegistryStatusRow{
+			{
+				Tool:       "alpha",
+				FilterPath: filepath.Join("/filters", "01-alpha.yaml"),
+				SourceKind: v2filters.SourceProject,
+				Status:     "overridden",
+				order:      2,
+			},
+			{
+				Tool:       "beta",
+				FilterPath: filepath.Join("/filters", "02-beta.yaml"),
+				SourceKind: v2filters.SourceProject,
+				Status:     "ok",
+				order:      2,
+			},
+		}))
+		Expect(registered).To(HaveKey("alpha"))
+		Expect(registered).To(HaveKey("beta"))
+	})
+})
+
+var _ = Describe("registerMappedFilterStatuses", func() {
+	var (
+		root         string
+		mappingsPath string
+		source       v2filters.FilterSource
+	)
+
+	BeforeEach(func() {
+		root = GinkgoT().TempDir()
+		mappingsPath = filepath.Join(root, ".mappings.yaml")
+		source = v2filters.FilterSource{
+			Kind:      v2filters.SourceProject,
+			Directory: root,
+		}
+	})
+
+	It("reports invalid mapping files without mutating the registry", func() {
+		Expect(os.WriteFile(mappingsPath, []byte("version: 2\nmap:\n  demo: target\n"), 0o644)).To(Succeed())
+
+		registered := map[string]contracts.Filter{}
+		rows := make([]RegistryStatusRow, 0)
+		registerMappedFilterStatuses(registered, nil, source, 3, &rows)
+
+		Expect(registered).To(BeEmpty())
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].Tool).To(Equal("-"))
+		Expect(rows[0].FilterPath).To(Equal(mappingsPath))
+		Expect(rows[0].SourceKind).To(Equal(v2filters.SourceProject))
+		Expect(rows[0].Status).To(ContainSubstring("invalid mappings:"))
+		Expect(rows[0].order).To(Equal(3))
+	})
+
+	It("sorts aliases while distinguishing overridden and missing targets", func() {
+		Expect(os.WriteFile(mappingsPath, []byte("version: 1\nmap:\n  gamma: missing\n  beta: demo\n  alpha: demo\n"), 0o644)).To(Succeed())
+
+		registered := map[string]contracts.Filter{
+			"alpha": nil,
+		}
+		rows := make([]RegistryStatusRow, 0)
+		registerMappedFilterStatuses(registered, map[string]compiledStatusFilter{
+			"demo": {tool: "demo", path: filepath.Join(root, "demo.yaml")},
+		}, source, 1, &rows)
+
+		Expect(rows).To(Equal([]RegistryStatusRow{
+			{
+				Tool:       "alpha",
+				FilterPath: mappingsPath,
+				Target:     "demo",
+				SourceKind: v2filters.SourceProject,
+				Status:     "overridden",
+				order:      1,
+			},
+			{
+				Tool:       "beta",
+				FilterPath: mappingsPath,
+				Target:     "demo",
+				SourceKind: v2filters.SourceProject,
+				Status:     "ok",
+				order:      1,
+			},
+			{
+				Tool:       "gamma",
+				FilterPath: mappingsPath,
+				Target:     "missing",
+				SourceKind: v2filters.SourceProject,
+				Status:     "missing target: missing",
+				order:      1,
+			},
+		}))
+		Expect(registered).To(HaveKey("alpha"))
+		Expect(registered).To(HaveKey("beta"))
+		Expect(registered).NotTo(HaveKey("gamma"))
+	})
+})
+
+var _ = Describe("readMappingsFile", func() {
+	var path string
+
+	BeforeEach(func() {
+		path = filepath.Join(GinkgoT().TempDir(), ".mappings.yaml")
+	})
+
+	It("returns an empty map when no mappings are declared", func() {
+		Expect(os.WriteFile(path, []byte("version: 1\n"), 0o644)).To(Succeed())
+
+		mappings, err := readMappingsFile(path)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mappings).To(BeEmpty())
+	})
+
+	It("trims aliases and targets before returning them", func() {
+		Expect(os.WriteFile(path, []byte("version: 1\nmap:\n  \"  pyright  \": \"  basedpyright  \"\n"), 0o644)).To(Succeed())
+
+		mappings, err := readMappingsFile(path)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mappings).To(Equal(map[string]string{"pyright": "basedpyright"}))
+	})
+
+	DescribeTable("rejects invalid mapping payloads",
+		func(body, expected string) {
+			Expect(os.WriteFile(path, []byte(body), 0o644)).To(Succeed())
+
+			_, err := readMappingsFile(path)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(expected))
+		},
+		Entry("unsupported versions", "version: 2\nmap:\n  demo: target\n", "version must be exactly 1"),
+		Entry("blank aliases after trimming", "version: 1\nmap:\n  \"  \": target\n", "mapping keys and values must be non-empty"),
+		Entry("blank targets after trimming", "version: 1\nmap:\n  demo: \"   \"\n", "mapping keys and values must be non-empty"),
+	)
+})
+
+var _ = Describe("loadFilterDefinitionsFromDir", func() {
+	It("sorts loaded definitions by path while skipping invalid definitions", func() {
+		root := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(root, "zeta.yaml"), []byte(validLoaderStatusFilterYAML("zeta")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "broken.yaml"), []byte("version: 1\nfilter: broken\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "alpha.yaml"), []byte(validLoaderStatusFilterYAML("alpha")), 0o644)).To(Succeed())
+
+		loaded, err := loadFilterDefinitionsFromDir(root)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(loaded).To(HaveLen(2))
+		Expect(loaded[0].Path).To(Equal(filepath.Join(root, "alpha.yaml")))
+		Expect(loaded[0].Spec.Filter).To(Equal("alpha"))
+		Expect(loaded[1].Path).To(Equal(filepath.Join(root, "zeta.yaml")))
+		Expect(loaded[1].Spec.Filter).To(Equal("zeta"))
+	})
+})
+
+var _ = Describe("compileFilters", func() {
+	It("returns an empty registry when no definitions are loaded", func() {
+		filters, err := compileFilters(nil)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(BeEmpty())
+	})
+
+	It("lets later loaded definitions override earlier duplicates deterministically", func() {
+		stringPtr := func(v string) *string { return &v }
+		loaded := []LoadedFilter{
+			{
+				Path: filepath.Join("/filters", "00-first.yaml"),
+				Spec: &FilterDefinition{
+					Version: 1,
+					Filter:  "demo",
+					Cases: []CaseClause{{
+						ID: "first",
+						CompressOutput: &OutputShape{
+							Stdout: &OutputScope{
+								Lines: &OutputLines{
+									Keep: []SkipOrKeepRule{{Contains: "keep-me"}},
+								},
+							},
+						},
+					}},
+				},
+			},
+			{
+				Path: filepath.Join("/filters", "99-second.yaml"),
+				Spec: &FilterDefinition{
+					Version: 1,
+					Filter:  "demo",
+					Cases: []CaseClause{{
+						ID: "second",
+						CompressOutput: &OutputShape{
+							Stdout: &OutputScope{
+								Lines: &OutputLines{
+									Replace: []ReplaceRule{{
+										Regex: `^.*$`,
+										To:    stringPtr("rewritten"),
+									}},
+								},
+							},
+						},
+					}},
+				},
+			},
+		}
+
+		filters, err := compileFilters(loaded)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("demo"))
+		action := filters["demo"].OnStdout("keep-me\n", yamlFilterContext{args: []string{"demo"}})
+		Expect(action.Kind).To(Equal(contracts.ActionReplace))
+		Expect(action.Output).To(Equal("rewritten\n"))
+	})
+})
+
+var _ = Describe("matchedFilterFiles", func() {
+	It("returns nil when the source directory does not exist", func() {
+		paths, err := matchedFilterFiles(filepath.Join(GinkgoT().TempDir(), "missing"))
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(paths).To(BeNil())
+	})
+
+	It("returns only visible YAML files in sorted order", func() {
+		root := GinkgoT().TempDir()
+		Expect(os.Mkdir(filepath.Join(root, "nested"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "b.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "a.yml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, ".hidden.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "notes.txt"), []byte("ignore"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "nested", "child.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+
+		paths, err := matchedFilterFiles(root)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(paths).To(Equal([]string{
+			filepath.Join(root, "a.yml"),
+			filepath.Join(root, "b.yaml"),
+		}))
+	})
+})
+
+var _ = Describe("loadFilterDefinitionsFromDir", func() {
+	It("returns no loaded filters when every discovered definition is invalid", func() {
+		root := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(root, "broken-a.yaml"), []byte("version: 1\nfilter: broken-a\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "broken-b.yaml"), []byte("version: 1\nfilter: broken-b\n"), 0o644)).To(Succeed())
+
+		loaded, err := loadFilterDefinitionsFromDir(root)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(loaded).To(BeEmpty())
 	})
 })
 

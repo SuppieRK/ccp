@@ -1,6 +1,8 @@
 package filters
 
 import (
+	"path/filepath"
+
 	"go-command-compression-proxy/internal/contracts"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -57,4 +59,24 @@ var _ = Describe("Passthrough", func() {
 		filter := Passthrough{}
 		Expect(filter.OnStdoutExit(context)).To(Equal(contracts.Action{Kind: contracts.ActionEmit}))
 	})
+})
+
+var _ = Describe("filter sources", func() {
+	DescribeTable("building source directories",
+		func(source func(string) FilterSource, root string, expected FilterSource) {
+			Expect(source(root)).To(Equal(expected))
+		},
+		Entry("repository source", RepositorySource, "/repo", FilterSource{
+			Kind:      SourceRepository,
+			Directory: filepath.Join("/repo", "filters"),
+		}),
+		Entry("project source", ProjectSource, "/repo", FilterSource{
+			Kind:      SourceProject,
+			Directory: filepath.Join("/repo", ".ccp", "filters"),
+		}),
+		Entry("home source", HomeSource, "/home/user", FilterSource{
+			Kind:      SourceHome,
+			Directory: filepath.Join("/home/user", ".config", "ccp", "filters"),
+		}),
+	)
 })

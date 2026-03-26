@@ -53,6 +53,41 @@ func (registryFilter) OnStdoutExit(contracts.Context) contracts.Action {
 }
 
 var _ = Describe("Registry", func() {
+	Describe("registration helpers", func() {
+		DescribeTable("tracking registered tools",
+			func(tool string, filter contracts.Filter, expected bool) {
+				registry := NewRegistry()
+
+				registry.Register(tool, filter)
+
+				Expect(registry.Has(tool)).To(Equal(expected))
+			},
+			Entry("registered tool", "demo", registryFilter{}, true),
+			Entry("blank tool", "   ", registryFilter{}, false),
+			Entry("nil filter", "demo", nil, false),
+		)
+
+		It("registers multiple filters at once", func() {
+			registry := NewRegistry()
+
+			registry.RegisterAll(map[string]contracts.Filter{
+				"demo": registryFilter{},
+				" ls ": registryFilter{},
+				"   ":  registryFilter{},
+			})
+
+			Expect(registry.Has("demo")).To(BeTrue())
+			Expect(registry.Has("ls")).To(BeTrue())
+			Expect(registry.Has("missing")).To(BeFalse())
+		})
+
+		It("reports false when checking a nil registry", func() {
+			var registry *Registry
+
+			Expect(registry.Has("demo")).To(BeFalse())
+		})
+	})
+
 	It("returns a registered filter for the command tool", func() {
 		registry := NewRegistry()
 		expected := registryFilter{}

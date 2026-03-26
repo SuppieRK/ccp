@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	"go-command-compression-proxy/internal/contracts"
+	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/workspaces"
 )
@@ -58,6 +59,15 @@ var _ = Describe("benchmark replay runner", func() {
 				dir:  fixtureDir,
 			}}))
 		})
+
+		It("ignores directories without command fixtures", func() {
+			Expect(os.MkdirAll(filepath.Join(root, "grep", "empty"), 0o755)).To(Succeed())
+
+			cases, err := discoverFixtures(root)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cases).To(BeEmpty())
+		})
 	})
 
 	DescribeTable("compares expected files when present",
@@ -99,6 +109,16 @@ var _ = Describe("benchmark replay runner", func() {
 			ArtifactsDir: "artifacts",
 			ProxyBinary:  "proxy",
 			Timeout:      5 * time.Second,
+		}),
+		Entry("treats whitespace-only string options as unset", RunOptions{
+			FixturesRoot: "  ",
+			ArtifactsDir: "\t",
+			ProxyBinary:  " ",
+		}, RunOptions{
+			FixturesRoot: filepath.Join("testdata", "benchmarks"),
+			ArtifactsDir: filepath.Join(".artifacts", "benchmark"),
+			ProxyBinary:  "ccp",
+			Timeout:      2 * time.Minute,
 		}),
 	)
 
@@ -297,6 +317,79 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(filepath.Join(artifacts, "report.json")).To(BeAnExistingFile())
 		})
 
+		It("sorts benchmark results by tool and case before returning and writing report json", func() {
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "command.yaml", "argv: [\"zeta\"]\n")
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "stdout.txt", "00000|line\n")
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "output.txt", "ok\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "gamma"), "command.yaml", "argv: [\"alpha\"]\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "gamma"), "stdout.txt", "00000|line\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "gamma"), "output.txt", "ok\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "command.yaml", "argv: [\"alpha\"]\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "stdout.txt", "00000|line\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "output.txt", "ok\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("ok\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			report, err := Run(RunOptions{
+				FixturesRoot: root,
+				ArtifactsDir: artifacts,
+				ProxyBinary:  "ccp",
+				Timeout:      time.Second,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Results).To(HaveLen(3))
+			Expect([]string{
+				report.Results[0].Tool + "/" + report.Results[0].Case,
+				report.Results[1].Tool + "/" + report.Results[1].Case,
+				report.Results[2].Tool + "/" + report.Results[2].Case,
+			}).To(Equal([]string{"alpha/beta", "alpha/gamma", "zeta/beta"}))
+
+			written, err := readRunReport(filepath.Join(artifacts, "report.json"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect([]string{
+				written.Results[0].Tool + "/" + written.Results[0].Case,
+				written.Results[1].Tool + "/" + written.Results[1].Case,
+				written.Results[2].Tool + "/" + written.Results[2].Case,
+			}).To(Equal([]string{"alpha/beta", "alpha/gamma", "zeta/beta"}))
+		})
+
+		It("returns the accumulated sorted report when writing report json fails", func() {
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "command.yaml", "argv: [\"zeta\"]\n")
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "stdout.txt", "00000|line\n")
+			writeFixtureFile(filepath.Join(root, "zeta", "beta"), "output.txt", "ok\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "command.yaml", "argv: [\"alpha\"]\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "stdout.txt", "00000|line\n")
+			writeFixtureFile(filepath.Join(root, "alpha", "beta"), "output.txt", "ok\n")
+			Expect(os.Mkdir(filepath.Join(artifacts, "report.json"), 0o755)).To(Succeed())
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("ok\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			report, err := Run(RunOptions{
+				FixturesRoot: root,
+				ArtifactsDir: artifacts,
+				ProxyBinary:  "ccp",
+				Timeout:      time.Second,
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(report.Results).To(HaveLen(2))
+			Expect([]string{
+				report.Results[0].Tool + "/" + report.Results[0].Case,
+				report.Results[1].Tool + "/" + report.Results[1].Case,
+			}).To(Equal([]string{"alpha/beta", "zeta/beta"}))
+		})
+
 		It("warns when token compaction ratio drops from the previous report", func() {
 			fixtureDir := filepath.Join(root, "grep", "recursive-match")
 			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
@@ -389,6 +482,55 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(estimateTokens("")).To(BeZero())
 			Expect(estimateTokens("abcd")).To(Equal(1))
 			Expect(estimateTokens("abcde")).To(Equal(2))
+		})
+
+		DescribeTable("classifies summary helpers deterministically",
+			func(result CaseResult, input string, expectedStatus, expectedSanitized string) {
+				Expect(summaryStatusCell(result)).To(Equal(expectedStatus))
+				Expect(sanitizeSummaryCell(input)).To(Equal(expectedSanitized))
+			},
+			Entry("uses red status for failed cases and sanitizes markdown delimiters", CaseResult{Success: false}, " bad | row \n", "🔴", "bad / row"),
+			Entry("uses yellow status for warning-only compaction drops", CaseResult{Success: true, Warnings: []string{"token compaction ratio dropped from 2.00 to 1.80"}}, "ok", "🟡", "ok"),
+			Entry("uses green status for clean successes", CaseResult{Success: true}, " clean ", "🟢", "clean"),
+		)
+
+		It("detects whether a summary table header already exists", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "summary.md")
+
+			Expect(summaryTableExists(path)).To(BeFalse())
+			Expect(os.WriteFile(path, []byte("intro\n"+summaryTableHeaderRow()+"\n"), 0o644)).To(Succeed())
+			Expect(summaryTableExists(path)).To(BeTrue())
+		})
+
+		It("writes summary rows in sorted tool and case order", func() {
+			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
+			prev := os.Getenv("GITHUB_STEP_SUMMARY")
+			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
+			DeferCleanup(func() {
+				if prev == "" {
+					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
+					return
+				}
+				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
+			})
+
+			Expect(WriteSummary(RunReport{
+				Results: []CaseResult{
+					{Tool: "zeta", Case: "beta", Command: "zeta", NativeTokens: 1, ProxyTokens: 1, Success: true},
+					{Tool: "alpha", Case: "gamma", Command: "alpha gamma", NativeTokens: 2, ProxyTokens: 1, Success: true},
+					{Tool: "alpha", Case: "beta", Command: "alpha beta", NativeTokens: 3, ProxyTokens: 1, Success: true},
+				},
+			})).To(Succeed())
+
+			body, err := os.ReadFile(summaryPath)
+			Expect(err).NotTo(HaveOccurred())
+			text := string(body)
+			first := strings.Index(text, "| 🟢 | alpha/beta |")
+			second := strings.Index(text, "| 🟢 | alpha/gamma |")
+			third := strings.Index(text, "| 🟢 | zeta/beta |")
+			Expect(first).To(BeNumerically(">=", 0))
+			Expect(second).To(BeNumerically(">", first))
+			Expect(third).To(BeNumerically(">", second))
 		})
 
 		It("writes markdown summary to GITHUB_STEP_SUMMARY when set", func() {
@@ -505,6 +647,36 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(<-output).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 0 | 0 | 0.00 | output mismatch |"))
 		})
 
+		It("renders warning-only rows with a yellow status", func() {
+			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
+			prev := os.Getenv("GITHUB_STEP_SUMMARY")
+			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
+			DeferCleanup(func() {
+				if prev == "" {
+					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
+					return
+				}
+				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
+			})
+
+			Expect(WriteSummary(RunReport{
+				Results: []CaseResult{{
+					Tool:                 "grep",
+					Case:                 "warning-only",
+					Command:              "grep warning",
+					NativeTokens:         10,
+					ProxyTokens:          9,
+					Success:              true,
+					Warnings:             []string{"token compaction ratio dropped from 10.00 to 1.11"},
+					TokenCompactionRatio: 1.11,
+				}},
+			})).To(Succeed())
+
+			body, err := os.ReadFile(summaryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring("| 🟡 | grep/warning-only | `grep warning` | 10 | 9 | 10.00 | token compaction ratio dropped from 10.00 to 1.11 |"))
+		})
+
 		DescribeTable("loads previous results",
 			func(contents string, useMissingPath bool, expectKey bool, matcher OmegaMatcher) {
 				path := ""
@@ -540,7 +712,11 @@ var _ = Describe("benchmark replay runner", func() {
 			Entry("ignores missing previous ratio", &CaseResult{InputHash: "same", Success: true}, CaseResult{InputHash: "same"}, nil, true),
 			Entry("ignores legacy previous reports without input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, nil, true),
 			Entry("ignores changed input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "previous", TokenCompactionRatio: 10}, nil, true),
+			Entry("ignores non-positive previous ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 0}, nil, true),
+			Entry("ignores negative previous ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: -1}, nil, true),
+			Entry("does not warn at the exact five percent threshold", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
 			Entry("ignores stable ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
+			Entry("warns once the drop moves just past the five percent threshold", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.89, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, []string{"token compaction ratio dropped from 2.00 to 1.89"}, true),
 			Entry("warns on material drop", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, true),
 		)
 
@@ -550,6 +726,21 @@ var _ = Describe("benchmark replay runner", func() {
 			},
 			Entry("uses native to proxy ratio", 10, 4, 2.5),
 			Entry("treats zero proxy tokens as best-case improvement", 10, 0, 10.0),
+			Entry("returns a neutral ratio when both token counts are zero", 0, 0, 1.0),
+		)
+
+		DescribeTable("normalizing token savings percentages",
+			func(result CaseResult, expected float64) {
+				Expect(tokenSavingsPct(result)).To(BeNumerically("~", expected, 1e-12))
+			},
+			Entry("returns zero for no native tokens", CaseResult{NativeTokens: 0, ProxyTokens: 10}, 0.0),
+			Entry("rounds tiny regressions to zero", CaseResult{NativeTokens: 100, ProxyTokens: 103}, 0.0),
+			Entry("rounds tiny improvements to zero", CaseResult{NativeTokens: 100, ProxyTokens: 96}, 0.0),
+			Entry("keeps exact five percent savings", CaseResult{NativeTokens: 100, ProxyTokens: 95}, 5.0),
+			Entry("keeps exact five percent regressions", CaseResult{NativeTokens: 100, ProxyTokens: 105}, -5.0),
+			Entry("keeps improvements just past the flat threshold", CaseResult{NativeTokens: 100, ProxyTokens: 94}, 6.0),
+			Entry("keeps regressions just past the flat threshold", CaseResult{NativeTokens: 100, ProxyTokens: 106}, -6.0),
+			Entry("preserves meaningful regressions", CaseResult{NativeTokens: 100, ProxyTokens: 110}, -10.000000000000009),
 		)
 
 		It("hashes fixture input from command and replayed streams", func() {
@@ -570,6 +761,21 @@ var _ = Describe("benchmark replay runner", func() {
 	})
 
 	Describe("file helpers", func() {
+		It("persists benchmark metric bytes from token counts", func() {
+			artifactDir := GinkgoT().TempDir()
+
+			Expect(appendCaseMetrics(artifactDir, []string{"grep", "-r", "needle", "."}, 7, 3)).To(Succeed())
+
+			history, err := metrics.QueryHistory(filepath.Join(artifactDir, ".ccp", "gain.db"), metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Command).To(Equal("grep -r needle ."))
+			Expect(history[0].Tool).To(Equal("grep"))
+			Expect(history[0].DispatchKey).To(Equal("grep"))
+			Expect(history[0].RawBytes).To(Equal(int64(28)))
+			Expect(history[0].KeptBytes).To(Equal(int64(12)))
+		})
+
 		It("copies fixture inputs when present", func() {
 			srcDir := GinkgoT().TempDir()
 			dstDir := GinkgoT().TempDir()
@@ -606,6 +812,14 @@ var _ = Describe("benchmark replay runner", func() {
 		It("reports writeReportJSON errors for invalid destinations", func() {
 			err := writeReportJSON(filepath.Join(GinkgoT().TempDir(), "missing", "nested"), RunReport{})
 			Expect(err).To(MatchError(ContainSubstring("open")))
+		})
+
+		It("reports appendSummaryToFile errors for invalid destinations", func() {
+			dir := GinkgoT().TempDir()
+
+			err := appendSummaryToFile(dir, "| row |\n")
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

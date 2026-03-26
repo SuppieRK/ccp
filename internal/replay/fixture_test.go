@@ -44,6 +44,19 @@ var _ = Describe("replay fixtures", func() {
 			Expect(spec.Argv).To(Equal([]string{"git", "show"}))
 			Expect(spec.ExitCode).To(Equal(128))
 		})
+
+		DescribeTable("rejecting malformed command fixtures",
+			func(body string, expected string) {
+				path := filepath.Join(GinkgoT().TempDir(), CommandFileName)
+				Expect(os.WriteFile(path, []byte(body), 0o644)).To(Succeed())
+
+				_, err := ReadCommand(path)
+
+				Expect(err).To(MatchError(ContainSubstring(expected)))
+			},
+			Entry("missing argv", "exit_code: 1\n", "argv is required"),
+			Entry("blank argv entry", "argv: [\"\"]\n", "argv[0] must be non-empty"),
+		)
 	})
 
 	Describe("sequenced streams", func() {
@@ -61,6 +74,10 @@ var _ = Describe("replay fixtures", func() {
 			Entry("drops a trailing bare carriage return", "spinner\r", "", io.EOF),
 			Entry("keeps only the final overwritten line at EOF", "spinner\rdone", "done", nil),
 		)
+
+		It("preserves the separator when resetting a replay line payload", func() {
+			Expect(string(resetReplayLinePayload([]byte("|spinner")))).To(Equal("|"))
+		})
 
 		DescribeTable("preserving sequenced prefixes across carriage-return redraws",
 			func(raw string, expected []Event) {
@@ -104,6 +121,24 @@ var _ = Describe("replay fixtures", func() {
 			}))
 		})
 
+		It("writes only the selected stream events", func() {
+			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
+			events := []Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-0\n"},
+				{Sequence: 1, Stream: contracts.StreamStderr, Line: "err-1\n"},
+				{Sequence: 2, Stream: contracts.StreamStdout, Line: "out-2\n"},
+			}
+
+			Expect(WriteSequencedEvents(path, events, contracts.StreamStdout)).To(Succeed())
+
+			loaded, err := ReadSequenced(path, contracts.StreamStdout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(Equal([]Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-0\n"},
+				{Sequence: 2, Stream: contracts.StreamStdout, Line: "out-2\n"},
+			}))
+		})
+
 		It("round-trips sequence numbers beyond five digits", func() {
 			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
 			events := []Event{
@@ -134,6 +169,36 @@ var _ = Describe("replay fixtures", func() {
 			}))
 		})
 
+		It("treats missing sequenced files as absent events", func() {
+			loaded, err := ReadSequenced(filepath.Join(GinkgoT().TempDir(), "missing.txt"), contracts.StreamStdout)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(BeNil())
+		})
+
+		It("reads sequenced events from readers", func() {
+			loaded, err := ReadSequencedReader(strings.NewReader("00000|one\n00001|two\n"), contracts.StreamStdout)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(Equal([]Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "one\n"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two\n"},
+			}))
+		})
+
+		It("treats nil readers as absent events", func() {
+			loaded, err := ReadSequencedReader(nil, contracts.StreamStdout)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(BeNil())
+		})
+
+		It("rejects sequenced lines with an empty prefix", func() {
+			_, err := ReadSequencedReader(strings.NewReader("|line\n"), contracts.StreamStdout)
+
+			Expect(err).To(MatchError(ContainSubstring(`invalid prefix "|line`)))
+		})
+
 		DescribeTable("validating merged stream sequences",
 			func(stdout, stderr []Event, expected []Event, wantErr string) {
 				merged, err := MergeAndValidate(stdout, stderr)
@@ -161,6 +226,35 @@ var _ = Describe("replay fixtures", func() {
 				"expected 00001, got 00002",
 			),
 		)
+
+		It("reads and merges sequenced event files", func() {
+			dir := GinkgoT().TempDir()
+			stdoutPath := filepath.Join(dir, StdoutFileName)
+			stderrPath := filepath.Join(dir, StderrFileName)
+			Expect(os.WriteFile(stdoutPath, []byte("00000|out-0\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(stderrPath, []byte("00001|err-1\n"), 0o644)).To(Succeed())
+
+			events, err := ReadEvents(stdoutPath, stderrPath)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(events).To(Equal([]Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-0\n"},
+				{Sequence: 1, Stream: contracts.StreamStderr, Line: "err-1\n"},
+			}))
+		})
+
+		It("reads and merges sequenced event readers", func() {
+			events, err := ReadEventReaders(
+				strings.NewReader("00000|out-0\n"),
+				strings.NewReader("00001|err-1\n"),
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(events).To(Equal([]Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "out-0\n"},
+				{Sequence: 1, Stream: contracts.StreamStderr, Line: "err-1\n"},
+			}))
+		})
 	})
 
 	It("treats any of stdout, stderr, or output as a valid fixture footprint", func() {
@@ -221,5 +315,31 @@ var _ = Describe("replay fixtures", func() {
 		Expect(err).To(HaveOccurred())
 		_, statErr := os.Stat(outsidePath)
 		Expect(os.IsNotExist(statErr)).To(BeTrue())
+	})
+
+	Describe("LoadFixture", func() {
+		It("loads fixture metadata and resolves absolute paths", func() {
+			dir := GinkgoT().TempDir()
+			Expect(WriteCommandWithExitCode(filepath.Join(dir, CommandFileName), []string{"git", "status"}, 7)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, OutputFileName), []byte("output"), 0o644)).To(Succeed())
+
+			fixture, err := LoadFixture(dir)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fixture.Dir).To(Equal(dir))
+			Expect(fixture.Command.Argv).To(Equal([]string{"git", "status"}))
+			Expect(fixture.Command.ExitCode).To(Equal(7))
+			Expect(fixture.CommandPath).To(Equal(filepath.Join(dir, CommandFileName)))
+			Expect(fixture.OutputPath).To(Equal(filepath.Join(dir, OutputFileName)))
+		})
+
+		It("rejects fixture directories without replay footprint files", func() {
+			dir := GinkgoT().TempDir()
+			Expect(WriteCommandWithExitCode(filepath.Join(dir, CommandFileName), []string{"git", "status"}, 0)).To(Succeed())
+
+			_, err := LoadFixture(dir)
+
+			Expect(err).To(MatchError(ContainSubstring("must contain at least one of")))
+		})
 	})
 })

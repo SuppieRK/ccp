@@ -15,6 +15,15 @@ const (
 )
 
 var _ = ginkgo.Describe("ParseProfile", func() {
+	ginkgo.DescribeTable("rejecting missing required inputs",
+		func(modulePath string, internalPrefix string, expected string) {
+			_, err := ParseProfile(strings.NewReader("mode: set\n"), modulePath, internalPrefix, 80)
+			Expect(err).To(MatchError(expected))
+		},
+		ginkgo.Entry("missing module path", "   ", internalPrefixTest, "module path is required"),
+		ginkgo.Entry("missing internal prefix", modulePathTest, "   ", "internal prefix is required"),
+	)
+
 	ginkgo.It("builds internal and other package stats", func() {
 		raw := strings.Join([]string{
 			"mode: atomic",
@@ -75,6 +84,37 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 		Expect(pkg.Percent).To(Equal(60.0))
 	})
 
+	ginkgo.It("keeps repeated uncovered blocks uncovered", func() {
+		raw := strings.Join([]string{
+			"mode: atomic",
+			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+		}, "\n")
+
+		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(report.InternalPackages).To(HaveLen(1))
+		Expect(report.InternalPackages[0].Covered).To(BeZero())
+		Expect(report.InternalPackages[0].Statements).To(Equal(int64(3)))
+		Expect(report.InternalPackages[0].Percent).To(BeZero())
+	})
+
+	ginkgo.It("keeps repeated covered blocks covered even when uncovered duplicates follow", func() {
+		raw := strings.Join([]string{
+			"mode: atomic",
+			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
+			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+		}, "\n")
+
+		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(report.InternalPackages).To(HaveLen(1))
+		Expect(report.InternalPackages[0].Covered).To(Equal(int64(3)))
+		Expect(report.InternalPackages[0].Statements).To(Equal(int64(3)))
+		Expect(report.InternalPackages[0].Percent).To(Equal(100.0))
+	})
+
 	ginkgo.It("handles Windows-style paths", func() {
 		raw := strings.Join([]string{
 			"mode: set",
@@ -86,4 +126,67 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 		Expect(report.InternalPackages).To(HaveLen(1))
 		Expect(report.InternalPackages[0].Package).To(Equal("internal/runner"))
 	})
+
+	ginkgo.It("parses oversized coverage lines without hitting scanner limits", func() {
+		longPath := modulePathTest + "/internal/" + strings.Repeat("very/deep/path/", 6000) + "run.go"
+		raw := strings.Join([]string{
+			"mode: set",
+			longPath + ":1.1,2.2 2 1",
+		}, "\n")
+
+		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(report.InternalPackages).To(HaveLen(1))
+		Expect(report.InternalPackages[0].Package).To(HavePrefix("internal/very/deep/path/"))
+		Expect(report.InternalPackages[0].Covered).To(Equal(int64(2)))
+		Expect(report.InternalPackages[0].Statements).To(Equal(int64(2)))
+		Expect(report.InternalPackages[0].Percent).To(Equal(100.0))
+	})
+})
+
+var _ = ginkgo.Describe("buildReport", func() {
+	ginkgo.It("sorts internal and other packages independently", func() {
+		report := buildReport(map[string]totals{
+			"pkg/zeta":        {covered: 1, stmts: 2},
+			"internal/zeta":   {covered: 3, stmts: 4},
+			"internal/alpha":  {covered: 2, stmts: 2},
+			"pkg/alpha":       {covered: 4, stmts: 5},
+			"internal/middle": {covered: 1, stmts: 2},
+			"pkg/middle":      {covered: 1, stmts: 3},
+		}, modulePathTest, internalPrefixTest, 87.5)
+
+		Expect(report.Threshold).To(Equal(87.5))
+		Expect(report.InternalPackages).To(Equal([]PackageStat{
+			{Package: "internal/alpha", Covered: 2, Statements: 2, Percent: 100},
+			{Package: "internal/middle", Covered: 1, Statements: 2, Percent: 50},
+			{Package: "internal/zeta", Covered: 3, Statements: 4, Percent: 75},
+		}))
+		Expect(report.OtherPackages).To(Equal([]PackageStat{
+			{Package: "pkg/alpha", Covered: 4, Statements: 5, Percent: 80},
+			{Package: "pkg/middle", Covered: 1, Statements: 3, Percent: 33.33},
+			{Package: "pkg/zeta", Covered: 1, Statements: 2, Percent: 50},
+		}))
+	})
+})
+
+var _ = ginkgo.Describe("packageForFile", func() {
+	ginkgo.DescribeTable("normalizing package paths",
+		func(filePath string, expected string) {
+			Expect(packageForFile(filePath, modulePathTest)).To(Equal(expected))
+		},
+		ginkgo.Entry("drops module-root files", "go-command-compression-proxy/main.go", ""),
+		ginkgo.Entry("normalizes windows separators", `go-command-compression-proxy\internal\runner\run.go`, "internal/runner"),
+		ginkgo.Entry("cleans nested relative segments", " go-command-compression-proxy/internal/runner/../engine/run.go ", "internal/engine"),
+	)
+})
+
+var _ = ginkgo.Describe("percent", func() {
+	ginkgo.DescribeTable("rounding coverage percentages",
+		func(covered int64, statements int64, expected float64) {
+			Expect(percent(covered, statements)).To(Equal(expected))
+		},
+		ginkgo.Entry("returns zero for empty totals", int64(0), int64(0), 0.0),
+		ginkgo.Entry("rounds to two decimals", int64(1), int64(3), 33.33),
+		ginkgo.Entry("preserves whole percentages", int64(4), int64(5), 80.0),
+	)
 })
