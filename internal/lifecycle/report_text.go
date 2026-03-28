@@ -9,14 +9,20 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/fatih/color"
+
 	"go-command-compression-proxy/internal/metrics"
 )
 
 const (
-	defaultTextLimit  = 15
-	textPercentFmt    = "%.1f%%"
-	trendFlatCutoff   = 0.05
-	trendFloatEpsilon = 1e-9
+	defaultTextLimit          = 15
+	textPercentFmt            = "%.1f%%"
+	compactWinsPercentFmt     = "%.0f%%"
+	trendInsufficientData     = "insufficient data"
+	trendFlatCutoff           = 0.05
+	trendFloatEpsilon         = 1e-9
+	compactVerdictGrayCutoff  = 10.0
+	compactVerdictAmberCutoff = 30.0
 )
 
 type labeledLine struct {
@@ -27,6 +33,32 @@ type labeledLine struct {
 type textTableColumn struct {
 	header string
 	right  bool
+}
+
+var compactGainColors = struct {
+	bold         *color.Color
+	gray         *color.Color
+	verdictGray  *color.Color
+	verdictAmber *color.Color
+	verdictGreen *color.Color
+	trendUp      *color.Color
+	trendDown    *color.Color
+	trendFlat    *color.Color
+}{
+	bold:         enabledGainColor(color.Bold),
+	gray:         enabledGainColor(color.FgHiBlack),
+	verdictGray:  enabledGainColor(color.FgHiBlack),
+	verdictAmber: enabledGainColor(color.FgYellow),
+	verdictGreen: enabledGainColor(color.FgGreen),
+	trendUp:      enabledGainColor(color.FgGreen, color.Bold),
+	trendDown:    enabledGainColor(color.FgYellow, color.Bold),
+	trendFlat:    enabledGainColor(color.Bold),
+}
+
+func enabledGainColor(attrs ...color.Attribute) *color.Color {
+	c := color.New(attrs...)
+	c.EnableColor()
+	return c
 }
 
 func defaultGainTrendPeriod(period string) string {
@@ -78,8 +110,39 @@ func formatPercentText(v float64) string {
 	return fmt.Sprintf(textPercentFmt, v)
 }
 
-func summaryPercentText(row metrics.SummaryToolRow) string {
-	return fmt.Sprintf("%s %s", row.Tool, formatPercentText(row.EstimatedSavingsPct))
+func formatCompactWinsPercentText(v float64) string {
+	return fmt.Sprintf(compactWinsPercentFmt, v)
+}
+
+func formatCompactSavedTokens(v int64) string {
+	abs := v
+	if abs < 0 {
+		abs = -abs
+	}
+	formatScaled := func(value float64, suffix string) string {
+		formatted := fmt.Sprintf("%.1f%s", value, suffix)
+		formatted = strings.Replace(formatted, ".0"+suffix, suffix, 1)
+		if v < 0 {
+			return "-" + formatted
+		}
+		return formatted
+	}
+	switch {
+	case abs < 1_000:
+		return formatInt(v)
+	case abs < 10_000:
+		return formatScaled(float64(abs)/1_000, "k")
+	case abs < 1_000_000:
+		return fmt.Sprintf("%dk", int(math.Round(float64(v)/1_000)))
+	case abs < 10_000_000:
+		return formatScaled(float64(abs)/1_000_000, "m")
+	default:
+		return fmt.Sprintf("%dm", int(math.Round(float64(v)/1_000_000)))
+	}
+}
+
+func summaryWinsText(row metrics.SummaryToolRow) string {
+	return fmt.Sprintf("%s (%s / %s)", row.Tool, formatCompactSavedTokens(row.EstimatedSavedTokens), formatCompactWinsPercentText(row.EstimatedSavingsPct))
 }
 
 func summaryCountText(row metrics.SummaryToolRow) string {
@@ -132,7 +195,7 @@ func topWinsText(rows []metrics.SummaryToolRow) string {
 		if row.EstimatedSavedTokens <= 0 {
 			continue
 		}
-		parts = append(parts, summaryPercentText(row))
+		parts = append(parts, summaryWinsText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -184,7 +247,7 @@ func toolsSummaryText(rows []metrics.SummaryToolRow) string {
 
 	parts := make([]string, 0, 3)
 	for _, row := range sorted {
-		parts = append(parts, summaryPercentText(row))
+		parts = append(parts, summaryWinsText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -326,7 +389,7 @@ func trendSuffix(earlier, recent float64) string {
 
 func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 	if len(rows) < 2 {
-		return "insufficient data"
+		return trendInsufficientData
 	}
 	sorted := append([]metrics.PeriodRow(nil), rows...)
 	slices.SortFunc(sorted, func(a, b metrics.PeriodRow) int {
@@ -337,7 +400,7 @@ func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 	}
 	split := trendSplitIndex(len(sorted), period)
 	if split <= 0 || split >= len(sorted) {
-		return "insufficient data"
+		return trendInsufficientData
 	}
 
 	earlier := averageSavings(sorted[:split])
@@ -389,6 +452,125 @@ func printLabeledLines(lines []labeledLine) {
 	}
 }
 
+func compactGainVerdictColor(pct float64) *color.Color {
+	switch {
+	case pct < compactVerdictGrayCutoff:
+		return compactGainColors.verdictGray
+	case pct < compactVerdictAmberCutoff:
+		return compactGainColors.verdictAmber
+	default:
+		return compactGainColors.verdictGreen
+	}
+}
+
+func styleCompactGainHeadline(total metrics.SummaryTotal, filters filtersEnvelope, extraTags ...string) string {
+	verdict := compactGainVerdictColor(total.EstimatedSavingsPct).Sprintf("%s saved", formatPercentText(total.EstimatedSavingsPct))
+	return fmt.Sprintf("%s cmds · %s → %s tokens (%s)%s",
+		compactGainColors.bold.Sprint(formatInt(total.Commands)),
+		compactGainColors.bold.Sprint(formatInt(total.EstimatedInputTokens)),
+		compactGainColors.bold.Sprint(formatInt(total.EstimatedOutputTokens)),
+		verdict,
+		compactFilterSuffix(filters, extraTags...),
+	)
+}
+
+func styleCompactGainLabel(label string, width int) string {
+	return compactGainColors.bold.Sprint(fmt.Sprintf("%-*s", width, label))
+}
+
+func styleCompactGainWinsValue(value string) string {
+	parts := strings.Split(value, " · ")
+	for i, part := range parts {
+		tool, rest, ok := strings.Cut(part, " (")
+		if !ok {
+			continue
+		}
+		inner := strings.TrimSuffix(rest, ")")
+		tokens, pct, ok := strings.Cut(inner, " / ")
+		if !ok {
+			continue
+		}
+		parts[i] = compactGainColors.bold.Sprint(tool) +
+			" " + compactGainColors.gray.Sprint("(") +
+			compactGainColors.gray.Sprint(tokens) +
+			compactGainColors.gray.Sprint(" / ") +
+			compactGainColors.gray.Sprint(pct) +
+			compactGainColors.gray.Sprint(")")
+	}
+	return strings.Join(parts, " · ")
+}
+
+func styleCompactGainDragValue(value string) string {
+	parts := strings.Split(value, " · ")
+	for i, part := range parts {
+		tool, rest, ok := strings.Cut(part, " ")
+		if !ok {
+			parts[i] = compactGainColors.bold.Sprint(part)
+			continue
+		}
+		parts[i] = compactGainColors.bold.Sprint(tool) + " " + compactGainColors.gray.Sprint(rest)
+	}
+	return strings.Join(parts, " · ")
+}
+
+func styleCompactTrendDelta(prefix string) string {
+	switch {
+	case strings.HasPrefix(prefix, "↑"):
+		return compactGainColors.trendUp.Sprint(prefix)
+	case strings.HasPrefix(prefix, "↓"):
+		return compactGainColors.trendDown.Sprint(prefix)
+	default:
+		return compactGainColors.trendFlat.Sprint(prefix)
+	}
+}
+
+func styleCompactGainTrendValue(value string) string {
+	if value == trendInsufficientData {
+		return value
+	}
+	for _, label := range []string{"day over day", "week over week", "month over month"} {
+		prefix, rest, ok := strings.Cut(value, " "+label+" ")
+		if !ok {
+			continue
+		}
+		compare, suffix, ok := strings.Cut(rest, " · ")
+		if !ok {
+			return styleCompactTrendDelta(prefix) + " " + label + " " + compactGainColors.gray.Sprint(rest)
+		}
+		return styleCompactTrendDelta(prefix) + " " + label + " " + compactGainColors.gray.Sprint(compare) + " · " + suffix
+	}
+	return value
+}
+
+func styleCompactGainLines(lines []labeledLine) []labeledLine {
+	styled := make([]labeledLine, 0, len(lines))
+	for _, line := range lines {
+		switch line.label {
+		case "Wins", "Tools":
+			line.value = styleCompactGainWinsValue(line.value)
+		case "Drag":
+			line.value = styleCompactGainDragValue(line.value)
+		case "Trend":
+			line.value = styleCompactGainTrendValue(line.value)
+		}
+		styled = append(styled, line)
+	}
+	return styled
+}
+
+func printCompactGainLines(lines []labeledLine) {
+	if len(lines) == 0 {
+		return
+	}
+	width := 0
+	for _, line := range lines {
+		width = max(width, len(line.label))
+	}
+	for _, line := range lines {
+		fmt.Printf("%s : %s\n", styleCompactGainLabel(line.label, width), line.value)
+	}
+}
+
 func printCompactGainSummary(filters filtersEnvelope, total metrics.SummaryTotal, rows []metrics.SummaryToolRow, trendRows []metrics.PeriodRow, trendPeriod, requestedPeriod string, global bool) error {
 	extraTags := make([]string, 0, 2)
 	if requestedPeriod != "" {
@@ -398,7 +580,7 @@ func printCompactGainSummary(filters filtersEnvelope, total metrics.SummaryTotal
 		extraTags = append(extraTags, "global")
 	}
 
-	fmt.Println(gainHeadline(total, filters, extraTags...))
+	fmt.Println(styleCompactGainHeadline(total, filters, extraTags...))
 	fmt.Println()
 	if total.Commands == 0 {
 		fmt.Println(noResultsMsg)
@@ -407,7 +589,7 @@ func printCompactGainSummary(filters filtersEnvelope, total metrics.SummaryTotal
 
 	lines := summaryInsightLines(rows)
 	lines = append(lines, labeledLine{label: "Trend", value: trendSummaryText(trendRows, trendPeriod)})
-	printLabeledLines(lines)
+	printCompactGainLines(styleCompactGainLines(lines))
 	return nil
 }
 

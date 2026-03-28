@@ -34,6 +34,9 @@
   --line: rgba(255, 255, 255, 0.16);
   --cyan: #d6d6d6;
   --green: #4ade80;
+  --gain-gray: #8d95a8;
+  --gain-amber: #d6b26f;
+  --gain-green: #7fd39a;
   --yaml-key-color: #cf8e6d;
   --yaml-string-color: #6aab73;
   --yaml-number-color: #2aacb8;
@@ -391,7 +394,6 @@ pre {
   max-width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  white-space: pre;
   color: #ededed;
   font-size: var(--font-code);
   line-height: var(--lh-dense);
@@ -519,6 +521,44 @@ h3 code {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-sm);
+}
+
+.gain-report .gain-line {
+  display: block;
+}
+
+.gain-report .gain-label,
+.gain-report .gain-tool {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gain-report .gain-detail,
+.gain-report .gain-shell,
+.gain-report .gain-trend-compare {
+  color: var(--gain-gray);
+}
+
+.gain-report .gain-verdict-high {
+  color: var(--gain-green);
+}
+
+.gain-report .gain-verdict-mid {
+  color: var(--gain-amber);
+}
+
+.gain-report .gain-verdict-low {
+  color: var(--gain-gray);
+}
+
+.gain-report .gain-trend-positive-delta {
+  color: var(--gain-green);
+  font-weight: 600;
+}
+
+.gain-report .gain-trend-negative-delta {
+  color: var(--gain-amber);
+  font-weight: 600;
 }
 
 .filter-demo-source pre,
