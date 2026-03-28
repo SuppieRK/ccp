@@ -113,6 +113,8 @@ Two real `ccp gain` snapshots from day-to-day work:
 
 - Refactoring tests in a Java project with Gradle (Claude Code):
 
+> Here Claude heavily uses `find` in a suboptimal way and runs Gradle builds to implement the task - good noise reduction opportunity
+
 ```text
 88 cmds · 5,330,571 → 90,127 tokens (98.3% saved)
 
@@ -122,6 +124,8 @@ Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
 ```
 
 - Current repository snapshot from `ccp gain` (Codex):
+
+> Here Codex heavily uses `sed` to read files and runs `grep`/`go`/`git` - reading files is passthrough by default, only some outputs were safe to reduce
 
 ```text
 1,825 cmds · 2,461,959 → 2,160,427 tokens (12.3% saved)
