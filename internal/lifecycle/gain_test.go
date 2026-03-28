@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"go-command-compression-proxy/internal/engine"
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/workspaces"
 )
@@ -88,15 +89,18 @@ var _ = Describe("RunGain", func() {
 
 		It("renders default gain output as text", func() {
 			out := runGain()
-			Expect(out).To(ContainSubstring("2 cmds · 425 → 225 tokens (47.1% saved)"))
-			Expect(out).To(ContainSubstring("Wins  : go 66.7%"))
-			Expect(out).To(ContainSubstring("Drag  : git (1 cmds)"))
-			Expect(out).To(ContainSubstring("Trend : insufficient data"))
+			plain := engine.StripANSI(out)
+			Expect(out).To(ContainSubstring("\x1b["))
+			Expect(plain).To(ContainSubstring("2 cmds · 425 → 225 tokens (47.1% saved)"))
+			Expect(plain).To(ContainSubstring("Wins  : go (200 / 67%)"))
+			Expect(plain).To(ContainSubstring("Drag  : git (1 cmds)"))
+			Expect(plain).To(ContainSubstring("Trend : insufficient data"))
 		})
 
 		It("renders the compact gain table", func() {
 			out := runGain(flagTable)
 			Expect(out).To(ContainSubstring("2 cmds · 425 → 225 tokens (47.1% saved)"))
+			Expect(out).NotTo(ContainSubstring("\x1b["))
 			Expect(out).To(ContainSubstring("showing 2 of 2 tools"))
 			Expect(out).To(ContainSubstring("+------+"))
 			Expect(out).To(ContainSubstring("TOOL"))
@@ -124,11 +128,13 @@ var _ = Describe("RunGain", func() {
 			})
 
 			out := runGain(flagGlobal)
-			Expect(out).To(ContainSubstring("4 cmds · 850 → 450 tokens (47.1% saved) [global]"))
-			Expect(out).To(ContainSubstring("Wins  : go 66.7%"))
-			Expect(out).To(ContainSubstring("Drag  : git (2 cmds)"))
-			Expect(out).To(ContainSubstring("go"))
-			Expect(out).To(ContainSubstring("git"))
+			plain := engine.StripANSI(out)
+			Expect(out).To(ContainSubstring("\x1b["))
+			Expect(plain).To(ContainSubstring("4 cmds · 850 → 450 tokens (47.1% saved) [global]"))
+			Expect(plain).To(ContainSubstring("Wins  : go (400 / 67%)"))
+			Expect(plain).To(ContainSubstring("Drag  : git (2 cmds)"))
+			Expect(plain).To(ContainSubstring("go"))
+			Expect(plain).To(ContainSubstring("git"))
 		})
 
 		It("compares adjacent global week windows for compact trends", func() {
@@ -158,7 +164,9 @@ var _ = Describe("RunGain", func() {
 			})
 
 			out := runGain(flagGlobal)
-			Expect(out).To(ContainSubstring("Trend : \u2191 +25.0 pts week over week (50.0% \u2192 75.0%)"))
+			plain := engine.StripANSI(out)
+			Expect(out).To(ContainSubstring("\x1b["))
+			Expect(plain).To(ContainSubstring("Trend : \u2191 +25.0 pts week over week (50.0% \u2192 75.0%)"))
 		})
 
 		It("weights global trend windows by actual volume instead of averaging bucket percentages", func() {
@@ -202,7 +210,9 @@ var _ = Describe("RunGain", func() {
 			})
 
 			out := runGain(flagGlobal)
-			Expect(out).To(ContainSubstring("Trend : \u2191 +23.8 pts week over week (50.5% \u2192 74.3%)"))
+			plain := engine.StripANSI(out)
+			Expect(out).To(ContainSubstring("\x1b["))
+			Expect(plain).To(ContainSubstring("Trend : \u2191 +23.8 pts week over week (50.5% \u2192 74.3%)"))
 		})
 
 		It("warns when skipping corrupt registered workspaces during global gain aggregation", func() {
@@ -343,10 +353,11 @@ var _ = Describe("RunGain", func() {
 			})
 
 			textOut := runGain(flagGlobal, flagPeriod, "week")
-			Expect(textOut).To(ContainSubstring("[period=week global]"))
-			Expect(textOut).To(ContainSubstring("Wins  :"))
-			Expect(textOut).To(ContainSubstring("Drag  :"))
-			Expect(textOut).To(ContainSubstring("Trend :"))
+			plainTextOut := engine.StripANSI(textOut)
+			Expect(plainTextOut).To(ContainSubstring("[period=week global]"))
+			Expect(plainTextOut).To(ContainSubstring("Wins  :"))
+			Expect(plainTextOut).To(ContainSubstring("Drag  :"))
+			Expect(plainTextOut).To(ContainSubstring("Trend :"))
 
 			jsonOut := runGain(flagGlobal, flagPeriod, "day", flagFormat, "json")
 			Expect(jsonOut).To(ContainSubstring(`"dataset": "period"`))
@@ -370,10 +381,11 @@ var _ = Describe("RunGain", func() {
 
 		It("formats grouped numbers and zero-savings text in default output", func() {
 			out := runGain()
-			Expect(out).To(ContainSubstring("5,002,000"))
-			Expect(out).To(ContainSubstring("27,000"))
-			Expect(out).To(ContainSubstring("Wins  : gradle 99.5%"))
-			Expect(out).To(ContainSubstring("Drag  : jar (1 cmds)"))
+			plain := engine.StripANSI(out)
+			Expect(plain).To(ContainSubstring("5,002,000"))
+			Expect(plain).To(ContainSubstring("27,000"))
+			Expect(plain).To(ContainSubstring("Wins  : gradle (5m / 100%)"))
+			Expect(plain).To(ContainSubstring("Drag  : jar (1 cmds)"))
 		})
 
 		It("formats grouped numbers in the table output", func() {
@@ -447,10 +459,11 @@ var _ = Describe("RunGain", func() {
 			Expect(csvOut).To(ContainSubstring("summary"))
 
 			periodText := runGain(flagPeriod, "day")
-			Expect(periodText).To(ContainSubstring("[period=day]"))
-			Expect(periodText).To(ContainSubstring("Wins  :"))
-			Expect(periodText).To(ContainSubstring("Drag  :"))
-			Expect(periodText).To(ContainSubstring("Trend :"))
+			plainPeriodText := engine.StripANSI(periodText)
+			Expect(plainPeriodText).To(ContainSubstring("[period=day]"))
+			Expect(plainPeriodText).To(ContainSubstring("Wins  :"))
+			Expect(plainPeriodText).To(ContainSubstring("Drag  :"))
+			Expect(plainPeriodText).To(ContainSubstring("Trend :"))
 
 			periodTable := runGain(flagPeriod, "day", flagTable)
 			Expect(periodTable).To(ContainSubstring("ccp gain (estimated tokens: 4B/token)"))
@@ -533,9 +546,10 @@ var _ = Describe("RunGain", func() {
 
 		It("includes filters and no-results markers in empty text output", func() {
 			gainOut := runGain(flagFormat, "text")
-			Expect(gainOut).To(ContainSubstring("0 cmds · 0 → 0 tokens (0.0% saved)"))
-			Expect(gainOut).NotTo(ContainSubstring("filters:"))
-			Expect(gainOut).To(ContainSubstring(noResultsMsg))
+			plain := engine.StripANSI(gainOut)
+			Expect(plain).To(ContainSubstring("0 cmds · 0 → 0 tokens (0.0% saved)"))
+			Expect(plain).NotTo(ContainSubstring("filters:"))
+			Expect(plain).To(ContainSubstring(noResultsMsg))
 		})
 	})
 
@@ -942,7 +956,138 @@ var _ = Describe("gain formatting helpers", func() {
 			{Tool: "go", Commands: 5, EstimatedSavingsPct: 72.0, EstimatedSavedTokens: 120},
 			{Tool: "grep", Commands: 4, EstimatedSavingsPct: 45.0, EstimatedSavedTokens: 40},
 		}
-		Expect(toolsSummaryText(rows)).To(Equal("go 72.0% · grep 45.0% · git 12.0%"))
+		Expect(toolsSummaryText(rows)).To(Equal("go (120 / 72%) · grep (40 / 45%) · git (10 / 12%)"))
+	})
+
+	DescribeTable("formats compact saved-token values across display ranges",
+		func(input int64, want string) {
+			Expect(formatCompactSavedTokens(input)).To(Equal(want))
+		},
+		Entry("leaves small values unscaled", int64(999), "999"),
+		Entry("uses one decimal for low thousands", int64(1500), "1.5k"),
+		Entry("rounds higher thousands to whole k values", int64(12_345), "12k"),
+		Entry("uses one decimal for low millions", int64(1_250_000), "1.2m"),
+		Entry("rounds higher millions to whole m values", int64(15_400_000), "15m"),
+		Entry("preserves sign for scaled negatives", int64(-1500), "-1.5k"),
+	)
+
+	DescribeTable("styles compact gain headlines with threshold-based verdict colors",
+		func(pct float64, wantVerdict string) {
+			headline := styleCompactGainHeadline(metrics.SummaryTotal{
+				Commands:              1,
+				EstimatedInputTokens:  400,
+				EstimatedOutputTokens: 200,
+				EstimatedSavingsPct:   pct,
+			}, filtersEnvelope{Tool: "go"}, "global")
+
+			Expect(headline).To(ContainSubstring(wantVerdict))
+			Expect(engine.StripANSI(headline)).To(Equal(fmt.Sprintf("1 cmds · 400 → 200 tokens (%s saved) [tool=go global]", formatPercentText(pct))))
+		},
+		Entry("uses gray below ten percent", 9.9, compactGainColors.verdictGray.Sprint("9.9% saved")),
+		Entry("uses amber at ten percent", 10.0, compactGainColors.verdictAmber.Sprint("10.0% saved")),
+		Entry("keeps amber below thirty percent", 29.9, compactGainColors.verdictAmber.Sprint("29.9% saved")),
+		Entry("uses green at thirty percent", 30.0, compactGainColors.verdictGreen.Sprint("30.0% saved")),
+	)
+
+	It("styles compact wins values with bold tool names and gray payloads", func() {
+		styled := styleCompactGainWinsValue("go (249k / 18%) · find (41k / 75%)")
+
+		Expect(styled).To(ContainSubstring(compactGainColors.bold.Sprint("go")))
+		Expect(styled).To(ContainSubstring(compactGainColors.bold.Sprint("find")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("(")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("249k")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint(" / ")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("18%")))
+		Expect(engine.StripANSI(styled)).To(Equal("go (249k / 18%) · find (41k / 75%)"))
+	})
+
+	It("leaves malformed compact wins values unchanged", func() {
+		value := "go 18% · find 75%"
+		Expect(styleCompactGainWinsValue(value)).To(Equal(value))
+	})
+
+	It("styles compact drag values with bold tool names and gray command counts", func() {
+		styled := styleCompactGainDragValue("sed (1,398 cmds) · git (397 cmds)")
+
+		Expect(styled).To(ContainSubstring(compactGainColors.bold.Sprint("sed")))
+		Expect(styled).To(ContainSubstring(compactGainColors.bold.Sprint("git")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("(1,398 cmds)")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("(397 cmds)")))
+		Expect(engine.StripANSI(styled)).To(Equal("sed (1,398 cmds) · git (397 cmds)"))
+	})
+
+	It("styles drag values without command suffixes as bold-only tools", func() {
+		styled := styleCompactGainDragValue("sed (1,398 cmds) · misc")
+
+		Expect(styled).To(ContainSubstring(compactGainColors.bold.Sprint("misc")))
+		Expect(engine.StripANSI(styled)).To(Equal("sed (1,398 cmds) · misc"))
+	})
+
+	DescribeTable("styles compact trend lines by direction",
+		func(input string, wantDelta string, wantCompare string) {
+			styled := styleCompactGainTrendValue(input)
+
+			Expect(styled).To(ContainSubstring(wantDelta))
+			Expect(styled).To(ContainSubstring(wantCompare))
+			Expect(engine.StripANSI(styled)).To(Equal(input))
+		},
+		Entry(
+			"upward trends use the up style",
+			"↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll",
+			compactGainColors.trendUp.Sprint("↑ +12.4 pts"),
+			compactGainColors.gray.Sprint("(85.9% → 98.3%)"),
+		),
+		Entry(
+			"downward trends use the down style",
+			"↓ -0.3 pts week over week (6.0% → 5.7%) · fading",
+			compactGainColors.trendDown.Sprint("↓ -0.3 pts"),
+			compactGainColors.gray.Sprint("(6.0% → 5.7%)"),
+		),
+		Entry(
+			"flat trends use the flat style",
+			"→ flat week over week (52.0% → 52.0%) · holding high",
+			compactGainColors.trendFlat.Sprint("→ flat"),
+			compactGainColors.gray.Sprint("(52.0% → 52.0%)"),
+		),
+	)
+
+	It("keeps insufficient trend data plain", func() {
+		Expect(styleCompactGainTrendValue(trendInsufficientData)).To(Equal(trendInsufficientData))
+	})
+
+	It("styles trend lines without suffixes by fading the comparison block", func() {
+		input := "↑ +1.5 pts week over week (40.0% → 41.5%)"
+		styled := styleCompactGainTrendValue(input)
+
+		Expect(styled).To(ContainSubstring(compactGainColors.trendUp.Sprint("↑ +1.5 pts")))
+		Expect(styled).To(ContainSubstring(compactGainColors.gray.Sprint("(40.0% → 41.5%)")))
+		Expect(engine.StripANSI(styled)).To(Equal(input))
+	})
+
+	It("leaves unrecognized trend text unchanged", func() {
+		input := "custom trend text"
+		Expect(styleCompactGainTrendValue(input)).To(Equal(input))
+	})
+
+	It("prints compact gain lines with styled labels and aligned output", func() {
+		out, err := captureStdout(func() error {
+			printCompactGainLines([]labeledLine{{label: "Wins", value: "go (120 / 72%)"}, {label: "Trend", value: "↑ +1.5 pts week over week (40.0% → 41.5%) · uptick"}})
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).To(ContainSubstring(compactGainColors.bold.Sprint("Wins ")))
+		Expect(out).To(ContainSubstring(compactGainColors.bold.Sprint("Trend")))
+		Expect(engine.StripANSI(out)).To(ContainSubstring("Wins  : go (120 / 72%)"))
+		Expect(engine.StripANSI(out)).To(ContainSubstring("Trend : ↑ +1.5 pts week over week (40.0% → 41.5%) · uptick"))
+	})
+
+	It("prints nothing for empty compact gain lines", func() {
+		out, err := captureStdout(func() error {
+			printCompactGainLines(nil)
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).To(BeEmpty())
 	})
 
 	DescribeTable("formats wins and drag tool summaries deterministically",
@@ -955,13 +1100,13 @@ var _ = Describe("gain formatting helpers", func() {
 			{Tool: "go", Commands: 4, EstimatedSavingsPct: 72.0, EstimatedSavedTokens: 120},
 			{Tool: "grep", Commands: 4, EstimatedSavingsPct: 45.0, EstimatedSavedTokens: 40},
 			{Tool: "sed", Commands: 9, EstimatedSavingsPct: 60.0, EstimatedSavedTokens: 0},
-		}, "go 72.0% · grep 45.0% · git 12.0%", "git (5 cmds)"),
+		}, "go (120 / 72%) · grep (40 / 45%) · git (5 / 12%)", "git (5 cmds)"),
 		Entry("falls back to all tools for drags when none are weak", []metrics.SummaryToolRow{
 			{Tool: "go", Commands: 10, EstimatedSavingsPct: 80.0, EstimatedSavedTokens: 100},
 			{Tool: "grep", Commands: 12, EstimatedSavingsPct: 40.0, EstimatedSavedTokens: 80},
 			{Tool: "git", Commands: 12, EstimatedSavingsPct: 60.0, EstimatedSavedTokens: 70},
 			{Tool: "awk", Commands: 2, EstimatedSavingsPct: 50.0, EstimatedSavedTokens: 10},
-		}, "go 80.0% · grep 40.0% · git 60.0%", "grep (12 cmds) · git (12 cmds) · go (10 cmds)"),
+		}, "go (100 / 80%) · grep (80 / 40%) · git (70 / 60%)", "grep (12 cmds) · git (12 cmds) · go (10 cmds)"),
 	)
 
 	DescribeTable("summarizes insight lines with the correct fallback",
@@ -973,14 +1118,14 @@ var _ = Describe("gain formatting helpers", func() {
 			{Tool: "go", Commands: 10, EstimatedSavingsPct: 78.0, EstimatedSavedTokens: 100},
 			{Tool: "git", Commands: 8, EstimatedSavingsPct: 4.0, EstimatedSavedTokens: 5},
 		}, []labeledLine{
-			{label: "Wins", value: "go 78.0% · git 4.0%"},
+			{label: "Wins", value: "go (100 / 78%) · git (5 / 4%)"},
 			{label: "Drag", value: "git (8 cmds)"},
 		}),
 		Entry("falls back to the tools line when wins would be empty", []metrics.SummaryToolRow{
 			{Tool: "go", Commands: 10, EstimatedSavingsPct: 78.0, EstimatedSavedTokens: 0},
 			{Tool: "git", Commands: 8, EstimatedSavingsPct: 4.0, EstimatedSavedTokens: 0},
 		}, []labeledLine{
-			{label: "Tools", value: "go 78.0% · git 4.0%"},
+			{label: "Tools", value: "go (0 / 78%) · git (0 / 4%)"},
 		}),
 	)
 
@@ -1032,7 +1177,7 @@ var _ = Describe("gain formatting helpers", func() {
 			{Tool: "git", Commands: 8, EstimatedSavingsPct: 20, EstimatedSavedTokens: 5},
 		}
 
-		Expect(topWinsText(rows)).To(Equal("go 70.0% · grep 60.0% · git 20.0%"))
+		Expect(topWinsText(rows)).To(Equal("go (40 / 70%) · grep (40 / 60%) · git (5 / 20%)"))
 		Expect(dragToolsText(rows)).To(Equal("git (8 cmds)"))
 	})
 
@@ -1291,8 +1436,9 @@ var _ = Describe("gain formatting helpers", func() {
 		func(run func() error, expected []string) {
 			out, err := captureStdout(run)
 			Expect(err).NotTo(HaveOccurred())
+			plain := engine.StripANSI(out)
 			for _, fragment := range expected {
-				Expect(out).To(ContainSubstring(fragment))
+				Expect(plain).To(ContainSubstring(fragment))
 			}
 		},
 		Entry("prints the compact summary no-results branch", func() error {

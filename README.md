@@ -118,7 +118,7 @@ Two real `ccp gain` snapshots from day-to-day work:
 ```text
 88 cmds · 5,330,571 → 90,127 tokens (98.3% saved)
 
-Wins  : find 98.7% · gradle 87.1% · grep 1.4%
+Wins  : find (4.8m / 99%) · gradle (367k / 87%) · grep (6k / 1%)
 Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
 Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
 ```
@@ -130,7 +130,7 @@ Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
 ```text
 1,825 cmds · 2,461,959 → 2,160,427 tokens (12.3% saved)
 
-Wins  : grep 59.5% · go 90.3% · git 59.3%
+Wins  : grep (67k / 60%) · go (54k / 90%) · git (16k / 59%)
 Drag  : sed (765 cmds) · openspec (245 cmds)
 Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
 ```

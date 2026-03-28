@@ -27,7 +27,7 @@ func NewOrderedBuffer() *OrderedBuffer {
 }
 
 func (b *OrderedBuffer) Add(stream contracts.Stream, line string) bool {
-	line = stripANSI(line)
+	line = StripANSI(line)
 	if strings.TrimSpace(line) == "" {
 		return false
 	}
