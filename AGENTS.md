@@ -11,7 +11,7 @@ CI is the canonical definition of release build mechanics.
 
 # Validation
 
-- All commands executed from repository root.
+- All commands are executed from the repository root.
 - MUST use Go 1.26+.
 - MUST run `./scripts/validate.sh` from repository root ONLY if Go source code was changed.
 - MUST treat any non-zero exit from the validation script as a failed validation.
@@ -26,10 +26,10 @@ CI is the canonical definition of release build mechanics.
 
 - Preserve native execution semantics: exit code, critical diagnostics, exact `--raw` behavior unless explicit redaction is enabled, and 0-byte output semantics.
 - Fall back to passthrough on ambiguity, low confidence, or unsafe interactive/TTY-sensitive shapes.
-- Favor shape-preserving compaction over representational rewrites when filtering is sufficient.
+- Favor shape-preserving compaction over representational rewrites when filtering is enough.
 - Avoid re-implementing native tools when filtering suffices.
 - Produce stable deterministic output with command-context isolation.
-- MUST execute command shape exactly as typed unless filter contract defines normalization.
+- MUST execute the command shape exactly as typed unless the filter contract defines normalization.
 - MUST preserve native output affordances when possible, especially line-oriented forms that coding agents can reuse in follow-up shell expressions.
 - MUST treat structured/precision modes as byte-preserving passthrough when required.
 - `ccp capture` MUST preserve native command execution semantics while recording sequenced replay fixtures.
@@ -60,7 +60,7 @@ Agents MUST NOT:
 - Load `bdd` when adding or changing Ginkgo/Gomega coverage.
 - If a referenced skill is unavailable, continue with the repository conventions in this file and the linked docs instead of blocking on the missing skill.
 
-Cold-path governance rules are intentionally separated to reduce working-memory load.
+Cold-path governance rules are intentionally separated to reduce a working-memory load.
 
 ## Skills
 

@@ -4,7 +4,8 @@
 
 This project is currently in an incubating state.
 
-It follows zerover-style semantic versioning (0.y.z). All versions prior to 1.0.0 MUST be considered unstable. Backward compatibility is not guaranteed, and internal or external interfaces may change without notice.
+It follows zerover-style semantic versioning (0.y.z). All versions prior to 1.0.0 MUST be considered unstable. Backward
+compatibility is not guaranteed, and internal or external interfaces may change without notice.
 
 Consumers MUST assume that any 0.x release may introduce breaking changes.
 
@@ -14,10 +15,10 @@ Consumers MUST assume that any 0.x release may introduce breaking changes.
 
 Only the latest released binary is supported.
 
-| Version | Supported |
-|---------|-----------|
+| Version | Supported          |
+|---------|--------------------|
 | latest  | :white_check_mark: |
-| older   | :x: |
+| older   | :x:                |
 
 There are no security patches for previous versions.
 
@@ -49,7 +50,8 @@ Security considerations therefore include:
 - Avoidance of command injection via filter logic.
 - Preservation of native exit codes and diagnostics.
 
-The project intentionally falls back to passthrough execution for ambiguous or unsafe command shapes to reduce risk amplification.
+The project intentionally falls back to passthrough execution for ambiguous or unsafe command shapes to reduce risk
+amplification.
 
 ---
 
@@ -60,10 +62,10 @@ If you discover a security vulnerability:
 1. Do NOT open a public issue.
 2. Open a private GitHub security advisory.
 3. Provide:
-   - A clear description of the issue.
-   - Reproduction steps.
-   - Impact assessment.
-   - Affected version (if known).
+    - A clear description of the issue.
+    - Reproduction steps.
+    - Impact assessment.
+    - Affected version (if known).
 
 Response expectations:
 
@@ -84,7 +86,8 @@ After a fix is published:
 - No backports will be created.
 - Users are expected to upgrade immediately.
 
-If a vulnerability affects runtime behavior guarantees (exit code parity, diagnostic preservation, raw-mode integrity, or deterministic execution), it will be treated as high severity.
+If a vulnerability affects runtime behavior guarantees (exit code parity, diagnostic preservation, raw-mode integrity,
+or deterministic execution), it will be treated as high severity.
 
 ---
 

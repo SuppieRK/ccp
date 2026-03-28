@@ -1,6 +1,7 @@
 # Agent Rule – Filters
 
-CCP filters are ordinary YAML files. You can inspect shipped filters, override them locally, and iterate on new filters without rebuilding CCP.
+CCP filters are ordinary YAML files. You can inspect shipped filters, override them locally, and iterate on new filters
+without rebuilding CCP.
 
 ## Authoring Model
 
@@ -11,20 +12,25 @@ CCP filters are ordinary YAML files. You can inspect shipped filters, override t
 - Release builds load `./.ccp/filters` first and `~/.config/ccp/filters` second.
 - Project-local filter definitions override home-scoped definitions with the same canonical filter id.
 - Project-local `.mappings.yaml` aliases override home-scoped aliases with the same key.
-- Shipped filters are embedded from `filters/` and materialized into `~/.config/ccp/filters` by `ccp repair` and startup maintenance. `ccp init` installs integrations; it does not own home filter materialization.
+- Shipped filters are embedded from `filters/` and materialized into `~/.config/ccp/filters` by `ccp repair` and startup
+  maintenance. `ccp init` installs integrations; it does not own home filter materialization.
 
 Use the existing YAML DSL as-is whenever possible.
 
 - Be extremely hesitant to change the DSL.
-- If a concise implementation is not possible without a DSL change, stop and get explicit confirmation before changing it.
+- If a concise implementation is not possible without a DSL change, stop and get explicit confirmation before changing
+  it.
 - Keep authored behavior in YAML whenever the current runtime vocabulary can express it.
-- Put shared runtime behavior in `internal/filters`, `internal/engine`, or `internal/contracts`, not in bespoke per-tool Go filters.
+- Put shared runtime behavior in `internal/filters`, `internal/engine`, or `internal/contracts`, not in bespoke per-tool
+  Go filters.
 
 Family-level guidance:
 
 - Single-entity tools typically use one YAML file such as `filters/npm.yaml`.
-- Family tools should prefer one YAML file when the commands share one logical behavior surface, for example `filters/git.yaml`.
-- Direct-tool and wrapper-tool pairs that intentionally share one logical behavior should prefer one canonical filter plus mappings.
+- Family tools should prefer one YAML file when the commands share one logical behavior surface, for example
+  `filters/git.yaml`.
+- Direct-tool and wrapper-tool pairs that intentionally share one logical behavior should prefer one canonical filter
+  plus mappings.
 
 ## Scaffolds, Schema, And Mappings
 
@@ -45,7 +51,8 @@ The scaffold includes:
 - a `yaml-language-server` schema directive
 - a valid passthrough-safe initial case
 
-Use project-local scaffolds first. Promote the finished result into `filters/<tool>.yaml` and `filters/.mappings.yaml` only when the behavior belongs in the shipped built-in set.
+Use project-local scaffolds first. Promote the finished result into `filters/<tool>.yaml` and `filters/.mappings.yaml`
+only when the behavior belongs in the shipped built-in set.
 
 The current schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
 
@@ -53,7 +60,8 @@ Schema notes:
 
 - the JSON Schema is structural
 - Go validation remains authoritative for runtime-only rules
-- examples include cross-field semantic checks, regex capture references, template references, and unsupported declared shapes
+- examples include cross-field semantic checks, regex capture references, template references, and unsupported declared
+  shapes
 
 Mappings live in:
 
@@ -87,7 +95,8 @@ Recommended iteration loop:
 5. compare `output.txt` with `verify-output.txt`
 6. inspect `verify-decisions.txt` when behavior is unclear
 
-If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local filter acts as the active override.
+If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local
+filter acts as the active override.
 
 ### Capture
 
@@ -107,7 +116,8 @@ Capture writes:
 Capture rules:
 
 - `stdout.txt` and `stderr.txt` use `00000|` sequence prefixes to preserve cross-stream ordering
-- capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap `output.txt`
+- capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap
+  `output.txt`
 - non-zero exits still write artifacts so failures can be iterated locally
 
 ### Verify
@@ -155,21 +165,29 @@ or:
 ccp repair --yes
 ```
 
-`ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`. It does not touch project-local `./.ccp/filters`.
+`ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`.
+It does not touch project-local `./.ccp/filters`.
 
-When the interactive prompt is declined, `ccp repair` falls back to additive sync: it adds only missing shipped filters and missing shipped `.mappings.yaml` entries.
+When the interactive prompt is declined, `ccp repair` falls back to additive sync: it adds only missing shipped filters
+and missing shipped `.mappings.yaml` entries.
 
 ## Authoring Guardrails
 
-- Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously unrepresentative.
+- Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously
+  unrepresentative.
 - Prefer one hypothesis at a time.
-- Use real command output whenever feasible, ideally from `ccp capture` or an existing research corpus that reflects native output.
+- Use real command output whenever possible, ideally from `ccp capture` or an existing research corpus that reflects
+  native output.
 - Treat warning-bearing success paths as first-class behavior. Clean success fixtures alone are often misleading.
-- Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the current filter contract already defines normalization.
+- Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the current filter
+  contract already defines normalization.
 - Be skeptical of table rewrites. Many native tables are already near the token floor.
-- Be skeptical of log compression. Tool-defined build/test output is often compressible; user application logs usually are not.
-- Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably not worth it.
-- Prefer promoting verified output from `verify-output.txt` or fresh `ccp capture` output instead of hand-editing expectations by guesswork.
+- Be skeptical of log compression. Tool-defined build/test output is often compressible; user application logs usually
+  are not.
+- Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably
+  not worth it.
+- Prefer promoting verified output from `verify-output.txt` or fresh `ccp capture` output instead of hand-editing
+  expectations by guesswork.
 
 ## Benchmark And Test Alignment
 
@@ -177,6 +195,8 @@ When the interactive prompt is declined, `ccp repair` falls back to additive syn
 - Follow `docs/agent-rules/TESTING.md` for test-layer selection and placement rules.
 - New filters MUST add benchmark fixtures under `testdata/benchmarks/<tool>/`.
 - Existing filters with behavior changes MUST update benchmark coverage for the changed behavior.
-- Family filters should keep sibling replay fixture directories under the family benchmark root, each with `command.yaml` and any required replay artifacts.
-- Benchmark verification is exercised through the benchmark-related Ginkgo/Gomega suites rather than a separate manual `ccp-ci` workflow.
+- Family filters should keep sibling replay fixture directories under the family benchmark root, each with
+  `command.yaml` and any required replay artifacts.
+- Benchmark verification is exercised through the benchmark-related Ginkgo/Gomega suites rather than a separate manual
+  `ccp-ci` workflow.
 - New runtime/filter features MUST add command-specific or runtime-specific coverage in the narrowest relevant package.

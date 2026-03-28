@@ -68,7 +68,7 @@ If output gets compacted too aggressively, the model ends up reconstructing miss
 - Leave `--raw` available when exact output matters.
 - Let teams tune domain-specific logs with YAML instead of relying on guessed summaries.
 
-The goal is not maximum compression. The goal is smaller output you can still use.
+The goal is not maximum compression. The goal is a smaller output you can still use.
 
 ## Quick Start
 
@@ -135,14 +135,14 @@ Drag  : sed (765 cmds) · openspec (245 cmds)
 Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
 ```
 
-Detailed views stay bounded by default so they do not take over the terminal:
+Detailed views stay bounded by default, so they do not take over the terminal:
 
 ```bash
 ccp gain --table
 ccp history
 ```
 
-Use `--limit 0` when you want the full text table. JSON and CSV exports ignore `--limit`.
+Use `--limit 0` when you want the full-text table. JSON and CSV exports ignore `--limit`.
 
 That mix is the point. CCP can save a lot, and it also knows when not to fake it.
 
@@ -176,22 +176,22 @@ Read more details in [FILTERS.md](FILTERS.md)
 
 ## Capability Matrix
 
-| Area | Tools | Representative Savings |
-|---|---|---:|
-| Files/search | `find`, `grep`, `ls` | up to `95%+` |
-| Source control | `git` | `10-60%+` |
-| Build systems | `maven`, `gradle`, `sbt`, `bazel` | `50-95%+` |
-| JS/TS | `biome`, `bun`, `eslint`, `jest`, `npm`, `nx`, `oxlint`, `pnpm`, `turbo`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc`, `vitest` | `15-85%+` |
-| PHP | `composer` | `10-30%+` |
-| Python | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff`, `ty`, `uv` | `25-85%+` |
-| Config lint | `yamllint`, `shellcheck`, `hadolint` | `10-40%+` |
-| Infra and IaC | `helm`, `terraform`, `tofu`, `tflint` | `5-90%+` |
-| Go/Rust | `go`, `golangci-lint`, `cargo`, `trunk` | `35-90%+` |
-| Dart/Flutter | `dart`, `flutter` | `35-85%+` |
-| Containers | `docker` | `95%+` for build surfaces |
-| Embedded/Firmware | `pio` | `10-40%+` |
-| Elixir | `mix` | `5-80%+` |
-| Other runtimes | `deno` | `5-80%+` |
+| Area              | Tools                                                                                                                                                        |    Representative Savings |
+|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------:|
+| Files/search      | `find`, `grep`, `ls`                                                                                                                                         |              up to `95%+` |
+| Source control    | `git`                                                                                                                                                        |                 `10-60%+` |
+| Build systems     | `maven`, `gradle`, `sbt`, `bazel`                                                                                                                            |                 `50-95%+` |
+| JS/TS             | `biome`, `bun`, `eslint`, `jest`, `npm`, `nx`, `oxlint`, `pnpm`, `turbo`, `yarn`, `npx`, `node`, `next`, `prettier`, `playwright`, `prisma`, `tsc`, `vitest` |                 `15-85%+` |
+| PHP               | `composer`                                                                                                                                                   |                 `10-30%+` |
+| Python            | `basedpyright`, `pip`, `poetry`, `pytest`, `mypy`, `ruff`, `ty`, `uv`                                                                                        |                 `25-85%+` |
+| Config lint       | `yamllint`, `shellcheck`, `hadolint`                                                                                                                         |                 `10-40%+` |
+| Infra and IaC     | `helm`, `terraform`, `tofu`, `tflint`                                                                                                                        |                  `5-90%+` |
+| Go/Rust           | `go`, `golangci-lint`, `cargo`, `trunk`                                                                                                                      |                 `35-90%+` |
+| Dart/Flutter      | `dart`, `flutter`                                                                                                                                            |                 `35-85%+` |
+| Containers        | `docker`                                                                                                                                                     | `95%+` for build surfaces |
+| Embedded/Firmware | `pio`                                                                                                                                                        |                 `10-40%+` |
+| Elixir            | `mix`                                                                                                                                                        |                  `5-80%+` |
+| Other runtimes    | `deno`                                                                                                                                                       |                  `5-80%+` |
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 

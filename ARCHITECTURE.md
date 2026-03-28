@@ -78,9 +78,10 @@ That order matters because registration is first-wins:
 
 - project YAML filter definitions override home-scoped definitions with the same canonical filter id
 - project `.mappings.yaml` aliases override home-scoped aliases with the same key
-- mappings are resolved within their own source, so an alias only binds to a target filter that compiled successfully in the same directory
+- mappings are resolved within their own source, so an alias only binds to a target filter that compiled successfully in
+  the same directory
 
-Current YAML override order in release builds is therefore source-based:
+The current YAML override order in release builds is therefore source-based:
 
 1. load project-local filter definitions from `./.ccp/filters/*.yaml`
 2. apply project-local aliases from `./.ccp/filters/.mappings.yaml`
@@ -182,4 +183,5 @@ projects by default.
 - deterministic output and deterministic benchmark evaluation
 - authored YAML is the source of truth for filter behavior and alias routing within each source
 - project-local YAML overrides home-scoped YAML in release builds
-- Go owns the bounded runtime semantics: parsing, source ordering, stream handling, metrics, audit, and lifecycle behavior
+- Go owns the bounded runtime semantics: parsing, source ordering, stream handling, metrics, audit, and lifecycle
+  behavior

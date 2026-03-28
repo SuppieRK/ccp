@@ -38,7 +38,8 @@ It shows all discovered rows from the active filter scopes and helps answer:
 
 ## What We Will Build
 
-We will create a tiny fake command called `demo-tool` so you can follow the tutorial end to end without touching a real tool first.
+We will create a tiny fake command called `demo-tool` so you can follow the tutorial end to end without touching a real
+tool first.
 
 Its raw `run` output looks like this:
 
@@ -135,12 +136,13 @@ Run:
 ccp filter new demo-tool
 ```
 
-CCP writes the scaffold file and ensures the mappings file contains an identity mapping:
+CCP writes the scaffold file and ensures the `.mappings.yaml` file contains an identity mapping:
 
 - `./.ccp/filters/demo-tool.yaml`
 - `./.ccp/filters/.mappings.yaml`
 
-The scaffold starts safe. It contains a passthrough case so nothing breaks while you are still authoring the real behavior.
+The scaffold starts safe. It contains a passthrough case, so nothing breaks while you are still authoring the real
+behavior.
 
 The generated mapping file also includes an identity mapping:
 
@@ -180,7 +182,8 @@ As you add more filters over time, this command also shows:
 - broken filter files with parse or validation errors
 - broken `.mappings.yaml` rows and missing mapping targets
 
-Use `ccp filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether CCP is using the filter you think it is.
+Use `ccp filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether CCP
+is using the filter you think it is.
 
 ## Step 3: Start With A Minimal Real Filter
 
@@ -284,7 +287,7 @@ CCP writes these files into `fixture-run/`:
 In this tutorial, `command.yaml` looks like this:
 
 ```yaml
-argv: ["./demo-tool", "run"]
+argv: [ "./demo-tool", "run" ]
 ```
 
 And `stdout.txt` contains the native sequenced output:
@@ -347,7 +350,8 @@ This is the basic authoring loop:
 4. verify the fixture
 5. compare `output.txt` with `verify-output.txt`
 
-If the new behavior is correct and you want a checked-in expectation, copy `verify-output.txt` over `output.txt` instead of rewriting it by hand.
+If the new behavior is correct and you want a checked-in expectation, copy `verify-output.txt` over `output.txt` instead
+of rewriting it by hand.
 
 ## Step 7: Capture A Passthrough Boundary Too
 
@@ -391,7 +395,8 @@ Avoid trying to model an entire tool in one pass.
 
 Use this section as a quick lookup while authoring.
 
-You do not need the whole schema on day one. Most personal filters start with a small set of fields and only grow when the simple version stops being enough.
+You do not need the whole schema on day one. Most personal filters start with a small set of fields and only grow when
+the simple version stops being enough.
 
 ### The Top-Level Fields You Start With
 
@@ -453,7 +458,8 @@ Important matching rules:
 
 - matching happens against the command arguments after the executable name
 - for `ccp ./demo-tool run`, `first_is: run` matches because CCP matches `run`, not `./demo-tool`
-- if you specify multiple predicates in one `when_arguments` block, they are all required; CCP treats them as AND, not OR
+- if you specify multiple predicates in one `when_arguments` block, they are all required; CCP treats them as AND, not
+  OR
 
 The most useful matchers are:
 
@@ -476,32 +482,32 @@ when_arguments:
 
 ```yaml
 when_arguments:
-  first_in: ["run", "start"]
+  first_in: [ "run", "start" ]
 ```
 
 ```yaml
 when_arguments:
-  have_any: ["--json", "--format=json"]
+  have_any: [ "--json", "--format=json" ]
 ```
 
 ```yaml
 when_arguments:
-  lack_any: ["--help", "--verbose"]
+  lack_any: [ "--help", "--verbose" ]
 ```
 
 ```yaml
 when_arguments:
-  have_sequence: ["config", "list"]
+  have_sequence: [ "config", "list" ]
 ```
 
 ```yaml
 when_arguments:
-  have_short_flag: ["-v"]
+  have_short_flag: [ "-v" ]
 ```
 
 ```yaml
 when_arguments:
-  positionals_lack_any: ["node_modules"]
+  positionals_lack_any: [ "node_modules" ]
 ```
 
 ```yaml
@@ -521,7 +527,7 @@ Good practice:
 ```yaml
 - id: json-passthrough
   when_arguments:
-    have_any: ["--json"]
+    have_any: [ "--json" ]
   passthrough: true
 ```
 
@@ -534,7 +540,8 @@ Use passthrough for:
 Important:
 
 - a passthrough case cannot also define `compress_output`
-- a passthrough case can still define `finally`, so it is more accurate to think of passthrough as "no filtering" rather than "absolutely untouched bytes"
+- a passthrough case can still define `finally`, so it is more accurate to think of passthrough as "no filtering" rather
+  than "absolutely untouched bytes"
 
 ### `compress_output`: Choose Which Stream To Transform
 
@@ -672,7 +679,7 @@ If you omit `print`, CCP still truncates at the requested count; you just do not
 
 Use `max` when:
 
-- the first few lines are useful but the tail is repetitive
+- the first few lines are useful, but the tail is repetitive
 - you want predictable bounded output without inventing a synthetic summary format
 
 ### `normalize_command`: Add Safe Defaults When Needed
@@ -697,17 +704,17 @@ Examples:
 
 ```yaml
 normalize_command:
-  append_if_missing: ["--no-color"]
+  append_if_missing: [ "--no-color" ]
 ```
 
 ```yaml
 normalize_command:
-  append_if_no_positionals: ["status"]
+  append_if_no_positionals: [ "status" ]
 ```
 
 ```yaml
 normalize_command:
-  add_short_flags: ["-a"]
+  add_short_flags: [ "-a" ]
 ```
 
 Only use normalization when it preserves the expected meaning of the command and gives you a more stable output shape.
@@ -744,7 +751,8 @@ Concrete example:
 my-tool --output report.txt
 ```
 
-If `--output` is not listed in `flags_consuming_next_arg`, CCP may incorrectly treat `report.txt` as a positional argument.
+If `--output` is not listed in `flags_consuming_next_arg`, CCP may incorrectly treat `report.txt` as a positional
+argument.
 
 That means this case can fail to match when you expected it to match:
 
@@ -753,11 +761,11 @@ when_arguments:
   no_positionals: true
 ```
 
-And this normalization can fail to run when you expected it to run:
+And this normalization can fail to run when you expect it to run:
 
 ```yaml
 normalize_command:
-  append_if_no_positionals: ["status"]
+  append_if_no_positionals: [ "status" ]
 ```
 
 Another useful example:
@@ -766,7 +774,8 @@ Another useful example:
 my-tool -C packages/app run test
 ```
 
-If `-C` consumes the next token, then `packages/app` is not a real positional argument. Without `flags_consuming_next_arg`, CCP can misread that command shape too.
+If `-C` consumes the next token, then `packages/app` is not a real positional argument. Without
+`flags_consuming_next_arg`, CCP can misread that command shape too.
 
 Example filter snippet:
 
@@ -780,7 +789,7 @@ cases:
     when_arguments:
       no_positionals: true
     normalize_command:
-      append_if_no_positionals: ["status"]
+      append_if_no_positionals: [ "status" ]
     compress_output:
       combined:
         lines:
@@ -807,7 +816,8 @@ Common signs you forgot it:
 - `append_if_no_positionals` does not fire when it should
 - the same command matches when written one way, but not when written with a split flag value
 
-Most first filters do not need this field. Add it when argument matching starts behaving strangely because a flag value is being mistaken for a real positional argument.
+Most first filters do not need this field. Add it when argument matching starts behaving strangely because a flag value
+is being mistaken for a real positional argument.
 
 ### Advanced Fields You Can Ignore At First
 
@@ -855,7 +865,7 @@ Preserve structured output:
 ```yaml
 - id: json
   when_arguments:
-    have_any: ["--json"]
+    have_any: [ "--json" ]
   passthrough: true
 ```
 
@@ -922,7 +932,7 @@ Keep mappings small and explicit.
 - prefer small line filtering over aggressive rewrites
 - capture real command output instead of inventing fixtures by hand
 - use `verify-decisions.txt` when you are unsure why a line changed
-- keep one hypothesis per edit so it is obvious what improved or broke
+- keep one hypothesis per edit, so it is clear what improved or broke
 
 ## Common Mistakes
 
@@ -940,9 +950,10 @@ Check these first:
 
 Add an explicit passthrough case above the more general case.
 
-### I changed the YAML but the fixture still looks old
+### I changed the YAML, but the fixture still looks old
 
-Run `ccp verify --dir ...` again. `output.txt` is what capture wrote earlier; `verify-output.txt` is what the current filter produces now.
+Run `ccp verify --dir ...` again. `output.txt` is what capture wrote earlier; `verify-output.txt` is what the current
+filter produces now.
 
 ### The replay files have broken sequence numbers
 
