@@ -109,7 +109,7 @@ ccp --raw git status
 
 ## Reporting And Real-World Proof
 
-Two example `ccp gain` snapshots from day-to-day work:
+Two real `ccp gain` snapshots from day-to-day work:
 
 - Refactoring tests in a Java project with Gradle (Claude Code):
 
