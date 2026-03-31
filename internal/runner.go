@@ -148,7 +148,7 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	}
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
-	r.appendMetrics(command, isPassthroughFilter(resolved), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
+	r.appendMetrics(command, isPassthroughFilter(resolved, command), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
 	auditErr := audit.Append("execution_finish", map[string]any{
 		"command":     auditCommand,
 		"tool":        command.Tool,
@@ -579,10 +579,16 @@ func waitExitCode(cmd *exec.Cmd) (int, error) {
 	return 0, nil
 }
 
-func isPassthroughFilter(filter any) bool {
-	switch filter.(type) {
+type commandPassthroughReporter interface {
+	ReportsPassthrough(command contracts.Command) bool
+}
+
+func isPassthroughFilter(filter any, command contracts.Command) bool {
+	switch f := filter.(type) {
 	case corefilters.Passthrough, *corefilters.Passthrough:
 		return true
+	case commandPassthroughReporter:
+		return f.ReportsPassthrough(command)
 	default:
 		return false
 	}

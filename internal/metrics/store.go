@@ -513,16 +513,16 @@ func historyRowFromRecord(rec runRecord) HistoryRow {
 		RawBytes:    rec.RawBytes,
 		KeptBytes:   rec.KeptBytes,
 	}
-	r.DroppedBytes = r.RawBytes - r.KeptBytes
-	if r.RawBytes > 0 {
-		r.DropRatio = float64(r.DroppedBytes) / float64(r.RawBytes)
-	}
-	r.EstimatedInputTokens = tokensFromBytes(r.RawBytes)
-	r.EstimatedOutputTokens = tokensFromBytes(r.KeptBytes)
-	r.EstimatedSavedTokens = r.EstimatedInputTokens - r.EstimatedOutputTokens
-	if r.EstimatedInputTokens > 0 {
-		r.EstimatedSavingsPct = (float64(r.EstimatedSavedTokens) / float64(r.EstimatedInputTokens)) * 100
-	}
+	fillDerivedMetrics(
+		r.RawBytes,
+		r.KeptBytes,
+		&r.DroppedBytes,
+		&r.DropRatio,
+		&r.EstimatedInputTokens,
+		&r.EstimatedOutputTokens,
+		&r.EstimatedSavedTokens,
+		&r.EstimatedSavingsPct,
+	)
 	return r
 }
 
@@ -558,16 +558,16 @@ func periodRowFromAcc(acc *periodAcc) PeriodRow {
 		RawBytes:    acc.raw,
 		KeptBytes:   acc.kept,
 	}
-	r.DroppedBytes = r.RawBytes - r.KeptBytes
-	if r.RawBytes > 0 {
-		r.DropRatio = float64(r.DroppedBytes) / float64(r.RawBytes)
-	}
-	r.EstimatedInputTokens = tokensFromBytes(r.RawBytes)
-	r.EstimatedOutputTokens = tokensFromBytes(r.KeptBytes)
-	r.EstimatedSavedTokens = r.EstimatedInputTokens - r.EstimatedOutputTokens
-	if r.EstimatedInputTokens > 0 {
-		r.EstimatedSavingsPct = (float64(r.EstimatedSavedTokens) / float64(r.EstimatedInputTokens)) * 100
-	}
+	fillDerivedMetrics(
+		r.RawBytes,
+		r.KeptBytes,
+		&r.DroppedBytes,
+		&r.DropRatio,
+		&r.EstimatedInputTokens,
+		&r.EstimatedOutputTokens,
+		&r.EstimatedSavedTokens,
+		&r.EstimatedSavingsPct,
+	)
 	return r
 }
 
@@ -798,41 +798,79 @@ func startOfISOWeek(t time.Time) time.Time {
 }
 
 func fillSummaryDerived(r *SummaryRow) {
-	r.DroppedBytes = r.RawBytes - r.KeptBytes
-	if r.RawBytes > 0 {
-		r.DropRatio = float64(r.DroppedBytes) / float64(r.RawBytes)
-	}
-	r.EstimatedInputTokens = tokensFromBytes(r.RawBytes)
-	r.EstimatedOutputTokens = tokensFromBytes(r.KeptBytes)
-	r.EstimatedSavedTokens = r.EstimatedInputTokens - r.EstimatedOutputTokens
-	if r.EstimatedInputTokens > 0 {
-		r.EstimatedSavingsPct = (float64(r.EstimatedSavedTokens) / float64(r.EstimatedInputTokens)) * 100
-	}
+	fillDerivedMetrics(
+		r.RawBytes,
+		r.KeptBytes,
+		&r.DroppedBytes,
+		&r.DropRatio,
+		&r.EstimatedInputTokens,
+		&r.EstimatedOutputTokens,
+		&r.EstimatedSavedTokens,
+		&r.EstimatedSavingsPct,
+	)
 }
 
 func fillSummaryToolDerived(r *SummaryToolRow) {
-	r.DroppedBytes = r.RawBytes - r.KeptBytes
-	if r.RawBytes > 0 {
-		r.DropRatio = float64(r.DroppedBytes) / float64(r.RawBytes)
-	}
-	r.EstimatedInputTokens = tokensFromBytes(r.RawBytes)
-	r.EstimatedOutputTokens = tokensFromBytes(r.KeptBytes)
-	r.EstimatedSavedTokens = r.EstimatedInputTokens - r.EstimatedOutputTokens
-	if r.EstimatedInputTokens > 0 {
-		r.EstimatedSavingsPct = (float64(r.EstimatedSavedTokens) / float64(r.EstimatedInputTokens)) * 100
-	}
+	fillDerivedMetrics(
+		r.RawBytes,
+		r.KeptBytes,
+		&r.DroppedBytes,
+		&r.DropRatio,
+		&r.EstimatedInputTokens,
+		&r.EstimatedOutputTokens,
+		&r.EstimatedSavedTokens,
+		&r.EstimatedSavingsPct,
+	)
 }
 
 func fillTotalDerived(total *SummaryTotal) {
-	total.DroppedBytes = total.RawBytes - total.KeptBytes
-	if total.RawBytes > 0 {
-		total.DropRatio = float64(total.DroppedBytes) / float64(total.RawBytes)
+	fillDerivedMetrics(
+		total.RawBytes,
+		total.KeptBytes,
+		&total.DroppedBytes,
+		&total.DropRatio,
+		&total.EstimatedInputTokens,
+		&total.EstimatedOutputTokens,
+		&total.EstimatedSavedTokens,
+		&total.EstimatedSavingsPct,
+	)
+}
+
+func fillDerivedMetrics(
+	rawBytes, keptBytes int64,
+	droppedBytes *int64,
+	dropRatio *float64,
+	inputTokens *int64,
+	outputTokens *int64,
+	savedTokens *int64,
+	savingsPct *float64,
+) {
+	effectiveKeptBytes := max(int64(0), min(rawBytes, keptBytes))
+	input := tokensFromBytes(rawBytes)
+	output := tokensFromBytes(effectiveKeptBytes)
+	if droppedBytes != nil {
+		*droppedBytes = rawBytes - effectiveKeptBytes
 	}
-	total.EstimatedInputTokens = tokensFromBytes(total.RawBytes)
-	total.EstimatedOutputTokens = tokensFromBytes(total.KeptBytes)
-	total.EstimatedSavedTokens = total.EstimatedInputTokens - total.EstimatedOutputTokens
-	if total.EstimatedInputTokens > 0 {
-		total.EstimatedSavingsPct = (float64(total.EstimatedSavedTokens) / float64(total.EstimatedInputTokens)) * 100
+	if dropRatio != nil {
+		*dropRatio = 0
+		if rawBytes > 0 {
+			*dropRatio = float64(rawBytes-effectiveKeptBytes) / float64(rawBytes)
+		}
+	}
+	if inputTokens != nil {
+		*inputTokens = input
+	}
+	if outputTokens != nil {
+		*outputTokens = output
+	}
+	if savedTokens != nil {
+		*savedTokens = input - output
+	}
+	if savingsPct != nil {
+		*savingsPct = 0
+		if input > 0 {
+			*savingsPct = (float64(input-output) / float64(input)) * 100
+		}
 	}
 }
 

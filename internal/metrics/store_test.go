@@ -718,6 +718,11 @@ var _ = Describe("metrics storage", func() {
 				true,
 				derivedExpectation{dropped: 4, ratio: 0.5, inputTokens: 2, outputTokens: 1, savedTokens: 1, savingsPct: 50},
 			),
+			Entry("clamps derived savings when kept bytes exceed raw bytes",
+				runRecord{TimestampUnix: 1_700_000_020, Command: "synthetic-summary", Tool: "sh", Dispatch: "sh|summary", RawBytes: 8, KeptBytes: 42, ExitCode: 0},
+				false,
+				derivedExpectation{dropped: 0, ratio: 0, inputTokens: 2, outputTokens: 2, savedTokens: 0, savingsPct: 0},
+			),
 		)
 
 		It("fills derived summary fields consistently across summary row types", func() {

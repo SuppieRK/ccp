@@ -152,6 +152,11 @@ func (f *YamlFilter) Dispatch(command contracts.Command) string {
 	return f.spec.Filter + "|" + cs.id
 }
 
+func (f *YamlFilter) ReportsPassthrough(command contracts.Command) bool {
+	cs, ok := f.caseForArgs(command.Args)
+	return ok && cs.passthrough
+}
+
 type compiledCase struct {
 	id          string
 	passthrough bool

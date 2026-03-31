@@ -409,6 +409,53 @@ var _ = Describe("Runner", func() {
 			Expect(history[0].Passthrough).To(BeTrue())
 		})
 
+		It("marks yaml-authored grep invert-match cases as passthrough", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses unix grep")
+			}
+
+			tmpDir, err := os.MkdirTemp("", "core-runner-grep-passthrough-*")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(os.RemoveAll(tmpDir)).To(Succeed())
+			})
+
+			oldStdin := os.Stdin
+			stdinReader, stdinWriter, err := os.Pipe()
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.WriteString(stdinWriter, "keep\nfiltered\nalso keep\n")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stdinWriter.Close()).To(Succeed())
+			os.Stdin = stdinReader
+			DeferCleanup(func() {
+				os.Stdin = oldStdin
+				_ = stdinReader.Close()
+			})
+
+			runner := &Runner{
+				sources: []corefilters.FilterSource{
+					corefilters.RepositorySource(filteryaml.ProjectRootFromSource()),
+				},
+				metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+			}
+
+			code, err := runner.Run([]string{"grep", "-v", "filtered"})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(Equal(0))
+			Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("keep\nalso keep\n"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+			history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Tool).To(Equal("grep"))
+			Expect(history[0].DispatchKey).To(Equal("grep|precision_short_passthrough"))
+			Expect(history[0].Passthrough).To(BeTrue())
+			Expect(history[0].DroppedBytes).To(BeZero())
+			Expect(history[0].EstimatedSavedTokens).To(BeZero())
+		})
+
 		DescribeTable("does not record wrapped ccp lifecycle metrics",
 			func(rawInput string, args []string) {
 				tmpDir, err := os.MkdirTemp("", "core-runner-ccp-metrics-*")
@@ -1315,6 +1362,55 @@ cases:
 				Expect(code).To(Equal(1))
 				Expect(closeAndRead(stdoutReader, stdoutWriter)).To(BeEmpty())
 				Expect(normalizeNL(closeAndRead(stderrReader, stderrWriter))).To(Equal("TS2367 [ERROR]: boom\nerror: fail\n"))
+			})
+
+			It("does not report negative savings when exit handling emits synthetic output", func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix sh")
+				}
+
+				repoRoot, err := os.MkdirTemp("", "core-runner-exit-metrics-*")
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(func() {
+					Expect(os.RemoveAll(repoRoot)).To(Succeed())
+				})
+
+				filterDir := filepath.Join(repoRoot, "filters")
+				Expect(os.MkdirAll(filterDir, 0o755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(filterDir, "sh.yaml"), []byte(`
+version: 1
+filter: sh
+cases:
+  - id: final_summary
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^'
+    finally:
+      print: 'summary: synthetic exit expansion'
+`), 0o644)).To(Succeed())
+
+				runner := &Runner{
+					sources: []corefilters.FilterSource{
+						corefilters.RepositorySource(repoRoot),
+					},
+					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+				}
+
+				code, err := runner.Run([]string{"sh", "-c", "printf 'x\\n'"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(code).To(Equal(0))
+				Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("x\nsummary: synthetic exit expansion\n"))
+				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+				history, queryErr := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
+				Expect(queryErr).NotTo(HaveOccurred())
+				Expect(history).To(HaveLen(1))
+				Expect(history[0].DroppedBytes).To(BeNumerically(">=", 0))
+				Expect(history[0].DropRatio).To(BeNumerically(">=", 0))
+				Expect(history[0].EstimatedSavedTokens).To(BeNumerically(">=", 0))
 			})
 
 			DescribeTable("preserves output semantics for direct execution modes",

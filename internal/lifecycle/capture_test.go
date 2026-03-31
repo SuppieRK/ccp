@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -347,17 +348,31 @@ var _ = Describe("capture", func() {
 		}
 
 		startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
+		childStartedPath := filepath.Join(GinkgoT().TempDir(), "child-started.txt")
 		markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
+		originalHelper := os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER")
+		Expect(os.Setenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER", "1")).To(Succeed())
+		DeferCleanup(func() {
+			if originalHelper == "" {
+				Expect(os.Unsetenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER")).To(Succeed())
+				return
+			}
+			Expect(os.Setenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER", originalHelper)).To(Succeed())
+		})
 		ctx, cancel := context.WithCancel(context.Background())
 
 		done := make(chan error, 1)
 		go func() {
-			_, _, err := runNativeCaptureContext(ctx, []string{"sh", "-c", "printf started > \"$1\"; (sleep 1; printf orphan > \"$2\") & wait", "sh", startedPath, markerPath})
+			_, _, err := runNativeCaptureContext(ctx, []string{os.Args[0], "-test.run=TestCaptureManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath})
 			done <- err
 		}()
 
 		Eventually(func() error {
 			_, err := os.Stat(startedPath)
+			return err
+		}, time.Second).Should(Succeed())
+		Eventually(func() error {
+			_, err := os.Stat(childStartedPath)
 			return err
 		}, time.Second).Should(Succeed())
 
@@ -436,6 +451,43 @@ func captureStdoutOnlyCommand() ([]string, string, string) {
 
 func normalizeCaptureLineEndings(v string) string {
 	return strings.ReplaceAll(v, "\r\n", "\n")
+}
+
+func TestCaptureManagedDescendantHelper(t *testing.T) {
+	if os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER") != "1" {
+		return
+	}
+
+	sep := slices.Index(os.Args, "--")
+	if sep < 0 || len(os.Args) < sep+4 {
+		os.Exit(2)
+	}
+	startedPath := os.Args[sep+1]
+	childStartedPath := os.Args[sep+2]
+	markerPath := os.Args[sep+3]
+	if os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
+		if err := os.WriteFile(childStartedPath, []byte("started"), 0o644); err != nil {
+			os.Exit(5)
+		}
+		time.Sleep(3 * time.Second)
+		if err := os.WriteFile(markerPath, []byte("orphan"), 0o644); err != nil {
+			os.Exit(6)
+		}
+		os.Exit(0)
+	}
+	if err := os.WriteFile(startedPath, []byte("started"), 0o644); err != nil {
+		os.Exit(3)
+	}
+	child := exec.Command(os.Args[0], "-test.run=TestCaptureManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath)
+	child.Env = append(os.Environ(), "CCP_CAPTURE_MANAGED_DESCENDANT_HELPER=1", "CCP_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE=child")
+	child.Stdout = os.Stdout
+	child.Stderr = os.Stderr
+	child.Stdin = os.Stdin
+	if err := child.Start(); err != nil {
+		os.Exit(4)
+	}
+	time.Sleep(30 * time.Second)
+	os.Exit(0)
 }
 
 type scriptedCaptureReader struct {
