@@ -79,6 +79,7 @@ var _ = Describe("audit logging", func() {
 
 			_, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
+			Reset()
 		})
 	})
 
