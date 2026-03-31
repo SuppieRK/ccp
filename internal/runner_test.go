@@ -1317,6 +1317,55 @@ cases:
 				Expect(normalizeNL(closeAndRead(stderrReader, stderrWriter))).To(Equal("TS2367 [ERROR]: boom\nerror: fail\n"))
 			})
 
+			It("does not report negative savings when exit handling emits synthetic output", func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix sh")
+				}
+
+				repoRoot, err := os.MkdirTemp("", "core-runner-exit-metrics-*")
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(func() {
+					Expect(os.RemoveAll(repoRoot)).To(Succeed())
+				})
+
+				filterDir := filepath.Join(repoRoot, "filters")
+				Expect(os.MkdirAll(filterDir, 0o755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(filterDir, "sh.yaml"), []byte(`
+version: 1
+filter: sh
+cases:
+  - id: final_summary
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^'
+    finally:
+      print: 'summary: synthetic exit expansion'
+`), 0o644)).To(Succeed())
+
+				runner := &Runner{
+					sources: []corefilters.FilterSource{
+						corefilters.RepositorySource(repoRoot),
+					},
+					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+				}
+
+				code, err := runner.Run([]string{"sh", "-c", "printf 'x\\n'"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(code).To(Equal(0))
+				Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("x\nsummary: synthetic exit expansion\n"))
+				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+				history, queryErr := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
+				Expect(queryErr).NotTo(HaveOccurred())
+				Expect(history).To(HaveLen(1))
+				Expect(history[0].DroppedBytes).To(BeNumerically(">=", 0))
+				Expect(history[0].DropRatio).To(BeNumerically(">=", 0))
+				Expect(history[0].EstimatedSavedTokens).To(BeNumerically(">=", 0))
+			})
+
 			DescribeTable("preserves output semantics for direct execution modes",
 				func(runner *Runner, command []string, expectedStdout string, expectedStderr string) {
 					if runtime.GOOS == "windows" {
