@@ -1,13 +1,17 @@
 package operations
 
-import "go-command-compression-proxy/internal/contracts"
+import (
+	"slices"
+
+	"go-command-compression-proxy/internal/contracts"
+)
 
 func MatchesFirstIs(args []string, first string) bool {
 	return first == "" || (len(args) > 0 && args[0] == first)
 }
 
 func MatchesFirstIn(args, options []string) bool {
-	return len(options) == 0 || (len(args) > 0 && sliceContains(options, args[0]))
+	return len(options) == 0 || (len(args) > 0 && slices.Contains(options, args[0]))
 }
 
 func MatchesHaveAny(args, wants []string) bool {
@@ -73,18 +77,9 @@ func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T)
 	return combined, combined != nil
 }
 
-func sliceContains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
-}
-
 func containsAny(args, wants []string) bool {
 	for _, arg := range args {
-		if sliceContains(wants, arg) {
+		if slices.Contains(wants, arg) {
 			return true
 		}
 	}
@@ -183,5 +178,5 @@ func positionals(args, valueFlags []string) []string {
 }
 
 func takesStandaloneValue(arg string, flags []string) bool {
-	return sliceContains(flags, arg)
+	return slices.Contains(flags, arg)
 }

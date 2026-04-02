@@ -375,7 +375,6 @@ func canonicalRuleVerificationSnippets() []string {
 func builtInRuleFileAdapterCatalog() []BuiltInAdapterSpec {
 	catalog := make([]BuiltInAdapterSpec, 0, len(managedRuleFileAdapterSpecs))
 	for _, spec := range managedRuleFileAdapterSpecs {
-		spec := spec
 		catalog = append(catalog, BuiltInAdapterSpec{
 			ID: spec.ID,
 			New: func() Adapter {
@@ -389,7 +388,6 @@ func builtInRuleFileAdapterCatalog() []BuiltInAdapterSpec {
 func builtInJSPluginAdapterCatalog() []BuiltInAdapterSpec {
 	catalog := make([]BuiltInAdapterSpec, 0, len(managedJSPluginAdapterSpecs))
 	for _, spec := range managedJSPluginAdapterSpecs {
-		spec := spec
 		catalog = append(catalog, BuiltInAdapterSpec{
 			ID: spec.ID,
 			New: func() Adapter {
@@ -403,7 +401,6 @@ func builtInJSPluginAdapterCatalog() []BuiltInAdapterSpec {
 func builtInContextAdapterCatalog() []BuiltInAdapterSpec {
 	catalog := make([]BuiltInAdapterSpec, 0, len(simpleContextAdapterSpecs))
 	for _, spec := range simpleContextAdapterSpecs {
-		spec := spec
 		catalog = append(catalog, BuiltInAdapterSpec{
 			ID: spec.ID,
 			New: func() Adapter {
@@ -417,7 +414,6 @@ func builtInContextAdapterCatalog() []BuiltInAdapterSpec {
 func builtInContextLinkAdapterCatalog() []BuiltInAdapterSpec {
 	catalog := make([]BuiltInAdapterSpec, 0, len(managedContextLinkAdapterSpecs))
 	for _, spec := range managedContextLinkAdapterSpecs {
-		spec := spec
 		catalog = append(catalog, BuiltInAdapterSpec{
 			ID: spec.ID,
 			New: func() Adapter {
@@ -431,7 +427,6 @@ func builtInContextLinkAdapterCatalog() []BuiltInAdapterSpec {
 func builtInHookSettingsAdapterCatalog() []BuiltInAdapterSpec {
 	catalog := make([]BuiltInAdapterSpec, 0, len(managedHookSettingsAdapterSpecs))
 	for _, spec := range managedHookSettingsAdapterSpecs {
-		spec := spec
 		catalog = append(catalog, BuiltInAdapterSpec{
 			ID: spec.ID,
 			New: func() Adapter {

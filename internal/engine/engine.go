@@ -122,10 +122,7 @@ func (s *State) applyAction(stream contracts.Stream, line string, action contrac
 		}
 		return action, nil
 	case contracts.ActionReplace:
-		count := action.ReplaceCount
-		if count < 1 {
-			count = 1
-		}
+		count := max(action.ReplaceCount, 1)
 		if added {
 			s.buffer.RemoveLast(stream, count)
 		}

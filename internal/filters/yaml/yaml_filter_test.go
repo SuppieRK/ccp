@@ -2,6 +2,7 @@ package yaml
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"go-command-compression-proxy/internal/contracts"
@@ -218,7 +219,7 @@ var _ = Describe("YamlFilter", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var rendered strings.Builder
-			for _, input := range strings.Split("KEEP\nREPLACE\nSKIP\nvalue\n", "\n") {
+			for input := range strings.SplitSeq("KEEP\nREPLACE\nSKIP\nvalue\n", "\n") {
 				if input == "" {
 					continue
 				}
@@ -1066,7 +1067,7 @@ var _ = Describe("YamlFilter", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			for _, input := range strings.Split("./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n", "\n") {
+			for input := range strings.SplitSeq("./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n", "\n") {
 				if input == "" {
 					continue
 				}
@@ -1667,7 +1668,7 @@ var _ = Describe("YamlFilter", func() {
 		DescribeTable("classifies atomic argument helpers deterministically",
 			func(arg string, want string, shortExpected, argExpected bool) {
 				Expect(isShortFlag(arg)).To(Equal(shortExpected))
-				Expect(containsArg([]string{"go", "test", "./..."}, want)).To(Equal(argExpected))
+				Expect(slices.Contains([]string{"go", "test", "./..."}, want)).To(Equal(argExpected))
 			},
 			Entry("accepts single short flags and present args", "-a", "./...", true, true),
 			Entry("rejects long flags while still finding present args", "--all", "test", false, true),

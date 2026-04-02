@@ -29,7 +29,7 @@ func EnsureGitignoreEntry(projectRoot, entry string) error {
 		return err
 	}
 
-	for _, line := range strings.Split(string(content), "\n") {
+	for line := range strings.SplitSeq(string(content), "\n") {
 		if strings.TrimSpace(line) == entry {
 			return nil
 		}

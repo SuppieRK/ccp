@@ -92,7 +92,7 @@ var _ = Describe("audit logging", func() {
 		})
 
 		It("rotates once the active log reaches the configured size limit", func() {
-			for i := 0; i < 6; i++ {
+			for i := range 6 {
 				Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
 			}
 			Reset()
@@ -119,7 +119,7 @@ var _ = Describe("audit logging", func() {
 			})
 
 			It("retains a bounded number of backup files", func() {
-				for i := 0; i < 18; i++ {
+				for i := range 18 {
 					Expect(Append("bulk", map[string]any{"index": i, "payload": payload})).To(Succeed())
 				}
 				Reset()

@@ -282,7 +282,7 @@ func verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName string) e
 }
 
 func checksumForAsset(contents, assetName string) (string, error) {
-	for _, line := range strings.Split(contents, "\n") {
+	for line := range strings.SplitSeq(contents, "\n") {
 		fields := strings.Fields(strings.TrimSpace(line))
 		if len(fields) < 2 {
 			continue
