@@ -1275,6 +1275,7 @@ var _ = Describe("YamlFilter", func() {
 			Expect(applyCommandMutations(args, when, flagsWithValues, command)).To(Equal(expected))
 		},
 		Entry("returns the original args when no command mutation is defined", []string{"go", "test"}, compiledWhen{}, nil, nil, []string{"go", "test"}),
+		Entry("returns empty args unchanged when a mutation is configured", nil, compiledWhen{}, nil, &compiledCommand{appendIfNoPositionals: []string{"./..."}}, nil),
 		Entry("skips append_if_missing when the arg already exists", []string{"go", "test", "./..."}, compiledWhen{}, nil, &compiledCommand{appendIfMissing: []string{"./..."}}, []string{"go", "test", "./..."}),
 		Entry("does not re-add an already grouped short flag", []string{"ls", "-la"}, compiledWhen{}, nil, &compiledCommand{addShortFlags: []string{"-a"}}, []string{"ls", "-la"}),
 		Entry("ignores non-short flags in add_short_flags", []string{"ls"}, compiledWhen{}, nil, &compiledCommand{addShortFlags: []string{"--all"}}, []string{"ls"}),
