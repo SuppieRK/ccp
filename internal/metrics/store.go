@@ -152,6 +152,15 @@ type periodAcc struct {
 	count  int64
 }
 
+type derivedMetricTargets struct {
+	droppedBytes *int64
+	dropRatio    *float64
+	inputTokens  *int64
+	outputTokens *int64
+	savedTokens  *int64
+	savingsPct   *float64
+}
+
 func Append(path string, metric RunMetric) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
@@ -513,16 +522,14 @@ func historyRowFromRecord(rec runRecord) HistoryRow {
 		RawBytes:    rec.RawBytes,
 		KeptBytes:   rec.KeptBytes,
 	}
-	fillDerivedMetrics(
-		r.RawBytes,
-		r.KeptBytes,
-		&r.DroppedBytes,
-		&r.DropRatio,
-		&r.EstimatedInputTokens,
-		&r.EstimatedOutputTokens,
-		&r.EstimatedSavedTokens,
-		&r.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
+		droppedBytes: &r.DroppedBytes,
+		dropRatio:    &r.DropRatio,
+		inputTokens:  &r.EstimatedInputTokens,
+		outputTokens: &r.EstimatedOutputTokens,
+		savedTokens:  &r.EstimatedSavedTokens,
+		savingsPct:   &r.EstimatedSavingsPct,
+	})
 	return r
 }
 
@@ -558,16 +565,14 @@ func periodRowFromAcc(acc *periodAcc) PeriodRow {
 		RawBytes:    acc.raw,
 		KeptBytes:   acc.kept,
 	}
-	fillDerivedMetrics(
-		r.RawBytes,
-		r.KeptBytes,
-		&r.DroppedBytes,
-		&r.DropRatio,
-		&r.EstimatedInputTokens,
-		&r.EstimatedOutputTokens,
-		&r.EstimatedSavedTokens,
-		&r.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
+		droppedBytes: &r.DroppedBytes,
+		dropRatio:    &r.DropRatio,
+		inputTokens:  &r.EstimatedInputTokens,
+		outputTokens: &r.EstimatedOutputTokens,
+		savedTokens:  &r.EstimatedSavedTokens,
+		savingsPct:   &r.EstimatedSavingsPct,
+	})
 	return r
 }
 
@@ -798,16 +803,14 @@ func startOfISOWeek(t time.Time) time.Time {
 }
 
 func fillSummaryDerived(r *SummaryRow) {
-	fillDerivedMetrics(
-		r.RawBytes,
-		r.KeptBytes,
-		&r.DroppedBytes,
-		&r.DropRatio,
-		&r.EstimatedInputTokens,
-		&r.EstimatedOutputTokens,
-		&r.EstimatedSavedTokens,
-		&r.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
+		droppedBytes: &r.DroppedBytes,
+		dropRatio:    &r.DropRatio,
+		inputTokens:  &r.EstimatedInputTokens,
+		outputTokens: &r.EstimatedOutputTokens,
+		savedTokens:  &r.EstimatedSavedTokens,
+		savingsPct:   &r.EstimatedSavingsPct,
+	})
 }
 
 func FillSummaryDerived(r *SummaryRow) {
@@ -815,16 +818,14 @@ func FillSummaryDerived(r *SummaryRow) {
 }
 
 func fillSummaryToolDerived(r *SummaryToolRow) {
-	fillDerivedMetrics(
-		r.RawBytes,
-		r.KeptBytes,
-		&r.DroppedBytes,
-		&r.DropRatio,
-		&r.EstimatedInputTokens,
-		&r.EstimatedOutputTokens,
-		&r.EstimatedSavedTokens,
-		&r.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
+		droppedBytes: &r.DroppedBytes,
+		dropRatio:    &r.DropRatio,
+		inputTokens:  &r.EstimatedInputTokens,
+		outputTokens: &r.EstimatedOutputTokens,
+		savedTokens:  &r.EstimatedSavedTokens,
+		savingsPct:   &r.EstimatedSavingsPct,
+	})
 }
 
 func FillSummaryToolDerived(r *SummaryToolRow) {
@@ -832,16 +833,14 @@ func FillSummaryToolDerived(r *SummaryToolRow) {
 }
 
 func fillTotalDerived(total *SummaryTotal) {
-	fillDerivedMetrics(
-		total.RawBytes,
-		total.KeptBytes,
-		&total.DroppedBytes,
-		&total.DropRatio,
-		&total.EstimatedInputTokens,
-		&total.EstimatedOutputTokens,
-		&total.EstimatedSavedTokens,
-		&total.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(total.RawBytes, total.KeptBytes, derivedMetricTargets{
+		droppedBytes: &total.DroppedBytes,
+		dropRatio:    &total.DropRatio,
+		inputTokens:  &total.EstimatedInputTokens,
+		outputTokens: &total.EstimatedOutputTokens,
+		savedTokens:  &total.EstimatedSavedTokens,
+		savingsPct:   &total.EstimatedSavingsPct,
+	})
 }
 
 func FillTotalDerived(total *SummaryTotal) {
@@ -849,52 +848,42 @@ func FillTotalDerived(total *SummaryTotal) {
 }
 
 func FillPeriodDerived(r *PeriodRow) {
-	fillDerivedMetrics(
-		r.RawBytes,
-		r.KeptBytes,
-		&r.DroppedBytes,
-		&r.DropRatio,
-		&r.EstimatedInputTokens,
-		&r.EstimatedOutputTokens,
-		&r.EstimatedSavedTokens,
-		&r.EstimatedSavingsPct,
-	)
+	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
+		droppedBytes: &r.DroppedBytes,
+		dropRatio:    &r.DropRatio,
+		inputTokens:  &r.EstimatedInputTokens,
+		outputTokens: &r.EstimatedOutputTokens,
+		savedTokens:  &r.EstimatedSavedTokens,
+		savingsPct:   &r.EstimatedSavingsPct,
+	})
 }
 
-func fillDerivedMetrics(
-	rawBytes, keptBytes int64,
-	droppedBytes *int64,
-	dropRatio *float64,
-	inputTokens *int64,
-	outputTokens *int64,
-	savedTokens *int64,
-	savingsPct *float64,
-) {
+func fillDerivedMetrics(rawBytes, keptBytes int64, targets derivedMetricTargets) {
 	effectiveKeptBytes := max(int64(0), min(rawBytes, keptBytes))
 	input := tokensFromBytes(rawBytes)
 	output := tokensFromBytes(effectiveKeptBytes)
-	if droppedBytes != nil {
-		*droppedBytes = rawBytes - effectiveKeptBytes
+	if targets.droppedBytes != nil {
+		*targets.droppedBytes = rawBytes - effectiveKeptBytes
 	}
-	if dropRatio != nil {
-		*dropRatio = 0
+	if targets.dropRatio != nil {
+		*targets.dropRatio = 0
 		if rawBytes > 0 {
-			*dropRatio = float64(rawBytes-effectiveKeptBytes) / float64(rawBytes)
+			*targets.dropRatio = float64(rawBytes-effectiveKeptBytes) / float64(rawBytes)
 		}
 	}
-	if inputTokens != nil {
-		*inputTokens = input
+	if targets.inputTokens != nil {
+		*targets.inputTokens = input
 	}
-	if outputTokens != nil {
-		*outputTokens = output
+	if targets.outputTokens != nil {
+		*targets.outputTokens = output
 	}
-	if savedTokens != nil {
-		*savedTokens = input - output
+	if targets.savedTokens != nil {
+		*targets.savedTokens = input - output
 	}
-	if savingsPct != nil {
-		*savingsPct = 0
+	if targets.savingsPct != nil {
+		*targets.savingsPct = 0
 		if input > 0 {
-			*savingsPct = (float64(input-output) / float64(input)) * 100
+			*targets.savingsPct = (float64(input-output) / float64(input)) * 100
 		}
 	}
 }
