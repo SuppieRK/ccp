@@ -3,6 +3,7 @@ package yaml
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"sort"
@@ -389,9 +390,7 @@ func cloneVariableValues(values map[string]string) map[string]string {
 		return nil
 	}
 	cloned := make(map[string]string, len(values))
-	for key, value := range values {
-		cloned[key] = value
-	}
+	maps.Copy(cloned, values)
 	return cloned
 }
 
@@ -694,12 +693,7 @@ func compileGroupVariables(variables []Variable) ([]compiledVariable, error) {
 }
 
 func regexpHasNamedCapture(re *regexp.Regexp, name string) bool {
-	for _, current := range re.SubexpNames() {
-		if current == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(re.SubexpNames(), name)
 }
 
 func (f *YamlFilter) onStream(stream contracts.Stream, line string, context contracts.Context) contracts.Action {
@@ -751,9 +745,7 @@ func (f *YamlFilter) prepareInvocation(args []string) {
 }
 
 func (c *compiledCase) resetState() {
-	for name, value := range c.initials {
-		c.variables[name] = value
-	}
+	maps.Copy(c.variables, c.initials)
 	c.shared.resetState()
 	c.stdout.resetState()
 	c.stderr.resetState()
@@ -1316,12 +1308,7 @@ func addShortFlagIfMissing(args []string, flag string) []string {
 }
 
 func containsArg(args []string, want string) bool {
-	for _, arg := range args {
-		if arg == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, want)
 }
 
 func isShortFlag(flag string) bool {

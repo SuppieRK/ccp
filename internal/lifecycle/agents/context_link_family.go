@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -337,12 +338,7 @@ func normalizeAiderRead(v any) []string {
 }
 
 func containsAiderReadEntry(items []string, needle string) bool {
-	for _, item := range items {
-		if item == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, needle)
 }
 
 func upsertCrushConfig(configPath, contextPath string) (string, error) {

@@ -630,7 +630,7 @@ var _ = Describe("RunHistory", func() {
 			Expect(out).To(ContainSubstring("TIMESTAMP"))
 			Expect(out).To(ContainSubstring("STATUS"))
 			Expect(out).To(ContainSubstring("SAVINGS"))
-			for _, line := range strings.Split(out, "\n") {
+			for line := range strings.SplitSeq(out, "\n") {
 				if strings.Contains(line, "TIMESTAMP") {
 					Expect(line).NotTo(ContainSubstring("TOOL"))
 					break

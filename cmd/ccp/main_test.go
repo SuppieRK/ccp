@@ -195,8 +195,8 @@ var _ = Describe("ccp main", func() {
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
-				var exitErr *exec.ExitError
-				Expect(errors.As(err, &exitErr)).To(BeTrue())
+				exitErr, ok := errors.AsType[*exec.ExitError](err)
+				Expect(ok).To(BeTrue())
 				Expect(exitErr.ExitCode()).NotTo(Equal(0))
 				Expect(stderr.String()).To(ContainSubstring("Usage:"))
 				Expect(stderr.String()).To(ContainSubstring("Execution flags:"))
@@ -270,8 +270,8 @@ var _ = Describe("ccp main", func() {
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
-				var exitErr *exec.ExitError
-				Expect(errors.As(err, &exitErr)).To(BeTrue())
+				exitErr, ok := errors.AsType[*exec.ExitError](err)
+				Expect(ok).To(BeTrue())
 				Expect(exitErr.ExitCode()).To(Equal(7))
 				Expect(stderr.String()).To(ContainSubstring("boom"))
 			})
@@ -282,8 +282,8 @@ var _ = Describe("ccp main", func() {
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
-				var exitErr *exec.ExitError
-				Expect(errors.As(err, &exitErr)).To(BeTrue())
+				exitErr, ok := errors.AsType[*exec.ExitError](err)
+				Expect(ok).To(BeTrue())
 				Expect(exitErr.ExitCode()).To(Equal(9))
 				Expect(stderr.String()).To(BeEmpty())
 			})

@@ -218,7 +218,7 @@ var _ = Describe("YamlFilter", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var rendered strings.Builder
-			for _, input := range strings.Split("KEEP\nREPLACE\nSKIP\nvalue\n", "\n") {
+			for input := range strings.SplitSeq("KEEP\nREPLACE\nSKIP\nvalue\n", "\n") {
 				if input == "" {
 					continue
 				}
@@ -1066,7 +1066,7 @@ var _ = Describe("YamlFilter", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			for _, input := range strings.Split("./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n", "\n") {
+			for input := range strings.SplitSeq("./pkg/a/KEEP\n./pkg/a/REPLACE\n./pkg/a/SKIP\n./pkg/a/value\n", "\n") {
 				if input == "" {
 					continue
 				}
