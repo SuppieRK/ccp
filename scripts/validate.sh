@@ -63,22 +63,22 @@ collect_go_files() {
 }
 
 run_validation() {
-  local summary_out GO_FILES GO_FILE_COUNT
+  local summary_out go_files go_file_count
   cd "$ROOT_DIR"
   export GOCACHE="${GOCACHE:-$ROOT_DIR/.gocache}"
   export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$ROOT_DIR/.cache}"
   mkdir -p "$GOCACHE" "$XDG_CACHE_HOME"
   summary_out="${SUMMARY_OUT:-$ROOT_DIR/.artifacts/coverage/summary.md}"
 
-  GO_FILES="$(collect_go_files)"
-  if [[ -n "$GO_FILES" ]]; then
-    GO_FILE_COUNT="$(printf '%s\n' "$GO_FILES" | wc -l | tr -d '[:space:]')"
-    echo "[validate] gofmt -w ${GO_FILE_COUNT} files"
+  go_files="$(collect_go_files)"
+  if [[ -n "$go_files" ]]; then
+    go_file_count="$(printf '%s\n' "$go_files" | wc -l | tr -d '[:space:]')"
+    echo "[validate] gofmt -w ${go_file_count} files"
     while IFS= read -r go_file; do
       [[ -z "$go_file" ]] && continue
       gofmt -w "$go_file"
     done <<EOF
-$GO_FILES
+$go_files
 EOF
   fi
 
@@ -141,6 +141,7 @@ EOF
 
   echo "[validate] go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80 -summary-out ${summary_out}"
   go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80 -summary-out "$summary_out"
+  return 0
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
