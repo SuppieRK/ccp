@@ -1285,7 +1285,7 @@ func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []s
 		mutated = addShortFlagIfMissing(mutated, flag)
 	}
 	for _, arg := range command.appendIfMissing {
-		if containsArg(mutated, arg) {
+		if slices.Contains(mutated, arg) {
 			continue
 		}
 		mutated = append(mutated, arg)
@@ -1305,10 +1305,6 @@ func addShortFlagIfMissing(args []string, flag string) []string {
 		return args
 	}
 	return append(args, flag)
-}
-
-func containsArg(args []string, want string) bool {
-	return slices.Contains(args, want)
 }
 
 func isShortFlag(flag string) bool {
