@@ -48,6 +48,9 @@ func setLifecycleUsage(fs *flag.FlagSet, summary string, usageLines []string, no
 
 func lifecycleHelpRequested(args []string) bool {
 	for _, arg := range args {
+		if arg == "--" {
+			return false
+		}
 		if arg == "--help" || arg == "-h" {
 			return true
 		}
