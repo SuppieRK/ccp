@@ -810,6 +810,10 @@ func fillSummaryDerived(r *SummaryRow) {
 	)
 }
 
+func FillSummaryDerived(r *SummaryRow) {
+	fillSummaryDerived(r)
+}
+
 func fillSummaryToolDerived(r *SummaryToolRow) {
 	fillDerivedMetrics(
 		r.RawBytes,
@@ -823,6 +827,10 @@ func fillSummaryToolDerived(r *SummaryToolRow) {
 	)
 }
 
+func FillSummaryToolDerived(r *SummaryToolRow) {
+	fillSummaryToolDerived(r)
+}
+
 func fillTotalDerived(total *SummaryTotal) {
 	fillDerivedMetrics(
 		total.RawBytes,
@@ -833,6 +841,23 @@ func fillTotalDerived(total *SummaryTotal) {
 		&total.EstimatedOutputTokens,
 		&total.EstimatedSavedTokens,
 		&total.EstimatedSavingsPct,
+	)
+}
+
+func FillTotalDerived(total *SummaryTotal) {
+	fillTotalDerived(total)
+}
+
+func FillPeriodDerived(r *PeriodRow) {
+	fillDerivedMetrics(
+		r.RawBytes,
+		r.KeptBytes,
+		&r.DroppedBytes,
+		&r.DropRatio,
+		&r.EstimatedInputTokens,
+		&r.EstimatedOutputTokens,
+		&r.EstimatedSavedTokens,
+		&r.EstimatedSavingsPct,
 	)
 }
 
@@ -879,6 +904,10 @@ func tokensFromBytes(v int64) int64 {
 		return 0
 	}
 	return (v + 3) / 4
+}
+
+func TokensFromBytes(v int64) int64 {
+	return tokensFromBytes(v)
 }
 
 func truncateCommand(cmd string) string {

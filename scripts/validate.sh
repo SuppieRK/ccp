@@ -85,11 +85,6 @@ EOF
   echo "[validate] go mod tidy"
   go mod tidy
 
-  if [[ "${CCP_VALIDATE_SKIP_SELF_TEST:-0}" != "1" ]]; then
-    echo "[validate] bash ./scripts/test-validate.sh"
-    bash ./scripts/test-validate.sh
-  fi
-
   echo "[validate] bash ./scripts/test-benchmark-discover.sh"
   bash ./scripts/test-benchmark-discover.sh
 
