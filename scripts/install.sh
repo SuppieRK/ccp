@@ -263,10 +263,11 @@ if [ "$VERSION" = "latest" ]; then
   fi
 fi
 
-VERSION="$(validate_release_version "$VERSION")" || {
+RESOLVED_VERSION="$(validate_release_version "$VERSION")" || {
   echo "release version must be exact semantic version (X.Y.Z): ${VERSION}" >&2
   exit 1
 }
+VERSION="$RESOLVED_VERSION"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM

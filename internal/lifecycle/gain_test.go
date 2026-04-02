@@ -137,6 +137,34 @@ var _ = Describe("RunGain", func() {
 			Expect(plain).To(ContainSubstring("git"))
 		})
 
+		It("clamps anomalous global kept bytes to canonical derived totals", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+			Expect(os.Remove(path)).To(Succeed())
+
+			repo := filepath.Join(tmpDir, "repo-clamped-global")
+			appendGlobalWorkspaceMetrics(home, repo, []metrics.RunMetric{
+				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 8, KeptBytes: 42},
+			})
+
+			out := runGain(flagGlobal, flagFormat, "json")
+
+			var env summaryEnvelope
+			Expect(json.Unmarshal([]byte(out), &env)).To(Succeed())
+			Expect(env.Total.RawBytes).To(Equal(int64(8)))
+			Expect(env.Total.KeptBytes).To(Equal(int64(42)))
+			Expect(env.Total.DroppedBytes).To(Equal(int64(0)))
+			Expect(env.Total.DropRatio).To(Equal(0.0))
+			Expect(env.Total.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(env.Total.EstimatedOutputTokens).To(Equal(int64(2)))
+			Expect(env.Total.EstimatedSavedTokens).To(Equal(int64(0)))
+			Expect(env.Total.EstimatedSavingsPct).To(Equal(0.0))
+			Expect(env.Rows).To(HaveLen(1))
+			Expect(env.Rows[0].DroppedBytes).To(Equal(int64(0)))
+			Expect(env.Rows[0].EstimatedOutputTokens).To(Equal(int64(2)))
+		})
+
 		It("compares adjacent global week windows for compact trends", func() {
 			home := GinkgoT().TempDir()
 			restore := workspaces.WithTestConfig(home, nil)
@@ -2142,6 +2170,32 @@ var _ = Describe("gain formatting helpers", func() {
 			periodRow := metrics.PeriodRow{}
 			fillLocalPeriodRowDerived(&periodRow)
 			Expect(periodRow).To(Equal(metrics.PeriodRow{}))
+		})
+
+		It("clamps local derived fields when kept bytes exceed raw bytes", func() {
+			summaryRow := metrics.SummaryRow{RawBytes: 8, KeptBytes: 42}
+			fillLocalSummaryRowDerived(&summaryRow)
+			Expect(summaryRow.DroppedBytes).To(Equal(int64(0)))
+			Expect(summaryRow.DropRatio).To(Equal(0.0))
+			Expect(summaryRow.EstimatedInputTokens).To(Equal(int64(2)))
+			Expect(summaryRow.EstimatedOutputTokens).To(Equal(int64(2)))
+			Expect(summaryRow.EstimatedSavedTokens).To(Equal(int64(0)))
+			Expect(summaryRow.EstimatedSavingsPct).To(Equal(0.0))
+
+			toolRow := metrics.SummaryToolRow{RawBytes: 8, KeptBytes: 42}
+			fillLocalSummaryToolDerived(&toolRow)
+			Expect(toolRow.DroppedBytes).To(Equal(int64(0)))
+			Expect(toolRow.EstimatedOutputTokens).To(Equal(int64(2)))
+
+			total := metrics.SummaryTotal{RawBytes: 8, KeptBytes: 42}
+			fillLocalSummaryTotalDerived(&total)
+			Expect(total.DroppedBytes).To(Equal(int64(0)))
+			Expect(total.EstimatedOutputTokens).To(Equal(int64(2)))
+
+			periodRow := metrics.PeriodRow{RawBytes: 8, KeptBytes: 42}
+			fillLocalPeriodRowDerived(&periodRow)
+			Expect(periodRow.DroppedBytes).To(Equal(int64(0)))
+			Expect(periodRow.EstimatedOutputTokens).To(Equal(int64(2)))
 		})
 
 		It("aggregates summary totals before deriving shared metrics", func() {

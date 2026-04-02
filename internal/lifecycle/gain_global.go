@@ -414,62 +414,23 @@ func totalFromSummaryRows(rows []metrics.SummaryRow) metrics.SummaryTotal {
 }
 
 func fillLocalSummaryRowDerived(row *metrics.SummaryRow) {
-	row.DroppedBytes = row.RawBytes - row.KeptBytes
-	if row.RawBytes > 0 {
-		row.DropRatio = float64(row.DroppedBytes) / float64(row.RawBytes)
-	}
-	row.EstimatedInputTokens = localTokensFromBytes(row.RawBytes)
-	row.EstimatedOutputTokens = localTokensFromBytes(row.KeptBytes)
-	row.EstimatedSavedTokens = row.EstimatedInputTokens - row.EstimatedOutputTokens
-	if row.EstimatedInputTokens > 0 {
-		row.EstimatedSavingsPct = (float64(row.EstimatedSavedTokens) / float64(row.EstimatedInputTokens)) * 100
-	}
+	metrics.FillSummaryDerived(row)
 }
 
 func fillLocalSummaryToolDerived(row *metrics.SummaryToolRow) {
-	row.DroppedBytes = row.RawBytes - row.KeptBytes
-	if row.RawBytes > 0 {
-		row.DropRatio = float64(row.DroppedBytes) / float64(row.RawBytes)
-	}
-	row.EstimatedInputTokens = localTokensFromBytes(row.RawBytes)
-	row.EstimatedOutputTokens = localTokensFromBytes(row.KeptBytes)
-	row.EstimatedSavedTokens = row.EstimatedInputTokens - row.EstimatedOutputTokens
-	if row.EstimatedInputTokens > 0 {
-		row.EstimatedSavingsPct = (float64(row.EstimatedSavedTokens) / float64(row.EstimatedInputTokens)) * 100
-	}
+	metrics.FillSummaryToolDerived(row)
 }
 
 func fillLocalSummaryTotalDerived(total *metrics.SummaryTotal) {
-	total.DroppedBytes = total.RawBytes - total.KeptBytes
-	if total.RawBytes > 0 {
-		total.DropRatio = float64(total.DroppedBytes) / float64(total.RawBytes)
-	}
-	total.EstimatedInputTokens = localTokensFromBytes(total.RawBytes)
-	total.EstimatedOutputTokens = localTokensFromBytes(total.KeptBytes)
-	total.EstimatedSavedTokens = total.EstimatedInputTokens - total.EstimatedOutputTokens
-	if total.EstimatedInputTokens > 0 {
-		total.EstimatedSavingsPct = (float64(total.EstimatedSavedTokens) / float64(total.EstimatedInputTokens)) * 100
-	}
+	metrics.FillTotalDerived(total)
 }
 
 func fillLocalPeriodRowDerived(row *metrics.PeriodRow) {
-	row.DroppedBytes = row.RawBytes - row.KeptBytes
-	if row.RawBytes > 0 {
-		row.DropRatio = float64(row.DroppedBytes) / float64(row.RawBytes)
-	}
-	row.EstimatedInputTokens = localTokensFromBytes(row.RawBytes)
-	row.EstimatedOutputTokens = localTokensFromBytes(row.KeptBytes)
-	row.EstimatedSavedTokens = row.EstimatedInputTokens - row.EstimatedOutputTokens
-	if row.EstimatedInputTokens > 0 {
-		row.EstimatedSavingsPct = (float64(row.EstimatedSavedTokens) / float64(row.EstimatedInputTokens)) * 100
-	}
+	metrics.FillPeriodDerived(row)
 }
 
 func localTokensFromBytes(v int64) int64 {
-	if v <= 0 {
-		return 0
-	}
-	return (v + 3) / 4
+	return metrics.TokensFromBytes(v)
 }
 
 func writeGlobalHistoryCSV(rows []globalHistoryRow, filters filtersEnvelope) error {
