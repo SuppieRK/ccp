@@ -78,8 +78,10 @@ var _ = ginkgo.Describe("ClaudeAdapter", func() {
 	ginkgo.It("returns verification errors for an invalid guide block", func() {
 		root := filepath.Join(home, ".claude")
 		Expect(os.MkdirAll(filepath.Join(root, "hooks"), 0o755)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(root, "hooks", claudeHookScriptName), []byte("#!/bin/bash\n"), 0o755)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(root, claudeSettingsName), []byte("{}\n"), 0o644)).To(Succeed())
+		hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
+		Expect(os.WriteFile(hookPath, []byte("#!/bin/bash\n"), 0o755)).To(Succeed())
+		settings := preToolUseCommandSettingsContent(hookPath)
+		Expect(os.WriteFile(filepath.Join(root, claudeSettingsName), []byte(settings), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(root, claudeAwarenessName), []byte("awareness\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(root, claudeGuideName), []byte("# custom guide\n"), 0o644)).To(Succeed())
 

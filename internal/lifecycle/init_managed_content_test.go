@@ -294,6 +294,38 @@ var _ = Describe("init managed content and integrations", func() {
 			Expect(string(guideBody)).To(ContainSubstring("@CCP.md"))
 		})
 
+		It("preserves unrelated Claude settings", func() {
+			Expect(os.MkdirAll(filepath.Dir(settingsPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(settingsPath, []byte("{\n  \"theme\": \"light\",\n  \"editor\": {\n    \"vimMode\": true\n  }\n}\n"), 0o644)).To(Succeed())
+
+			Expect(RunInit([]string{initToolsFlag, "claude"})).To(Succeed())
+
+			settings, err := os.ReadFile(settingsPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			settingsText := string(settings)
+			Expect(settingsText).To(ContainSubstring(`"theme": "light"`))
+			Expect(settingsText).To(ContainSubstring(`"vimMode": true`))
+			Expect(settingsText).To(ContainSubstring(`"PreToolUse"`))
+
+			escapedHook := strings.ReplaceAll(hookPath, "\\", "\\\\")
+			Expect(strings.Count(settingsText, escapedHook)).To(Equal(1))
+		})
+
+		It("fails without overwriting invalid Claude settings", func() {
+			Expect(os.MkdirAll(filepath.Dir(settingsPath), 0o755)).To(Succeed())
+			original := []byte("{invalid\n")
+			Expect(os.WriteFile(settingsPath, original, 0o644)).To(Succeed())
+
+			err := RunInit([]string{initToolsFlag, "claude"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid claude settings file"))
+
+			current, readErr := os.ReadFile(settingsPath)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(current).To(Equal(original))
+		})
+
 		It("keeps managed artifacts stable on rerun", func() {
 			Expect(RunInit([]string{initToolsFlag, "claude"})).To(Succeed())
 
