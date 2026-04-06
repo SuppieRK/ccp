@@ -15,6 +15,7 @@ const (
 	claudeSettingsName   = "settings.json"
 	claudeAwarenessName  = "CCP.md"
 	claudeGuideName      = "CLAUDE.md"
+	claudeSettingsErrFmt = "invalid claude settings file: %s"
 )
 
 func (a ClaudeAdapter) ID() string { return "claude" }
@@ -47,12 +48,47 @@ func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 }
 
 func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
-	plan := a.Plan(ctx)
+	root := claudeRoot(ctx)
 	var res InstallResult
-	for _, item := range plan {
-		changed, err := installClaudeArtifact(item, write)
-		if err != nil {
-			return res, err
+	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
+	settingsPath := filepath.Join(root, claudeSettingsName)
+
+	hookChanged, err := write(hookPath, []byte(bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")), 0o755)
+	if err != nil {
+		return res, err
+	}
+	if err := ensureHookArtifactExecutable(hookPath); err != nil {
+		return res, err
+	}
+	updateInstallResult(&res, hookChanged)
+
+	settingsContent, err := upsertClaudeSettings(settingsPath, hookPath)
+	if err != nil {
+		return res, err
+	}
+	settingsChanged, err := write(settingsPath, []byte(settingsContent), 0o644)
+	if err != nil {
+		return res, err
+	}
+	updateInstallResult(&res, settingsChanged)
+
+	for _, item := range []PlannedArtifact{
+		{
+			Kind:    ArtifactAwareness,
+			Path:    filepath.Join(root, claudeAwarenessName),
+			Content: awarenessContent(a.ID()),
+			Perm:    0o644,
+		},
+		{
+			Kind:    ArtifactAwareness,
+			Path:    filepath.Join(root, claudeGuideName),
+			Content: claudeManagedGuideBlock(),
+			Perm:    0o644,
+		},
+	} {
+		changed, installErr := installClaudeArtifact(item, write)
+		if installErr != nil {
+			return res, installErr
 		}
 		updateInstallResult(&res, changed)
 	}
@@ -67,6 +103,9 @@ func (a ClaudeAdapter) Verify(ctx Context) error {
 		artifactCheck{path: filepath.Join(root, claudeAwarenessName), msg: "missing awareness file: %s"},
 		artifactCheck{path: filepath.Join(root, claudeGuideName), msg: "missing claude guide file: %s"},
 	); err != nil {
+		return err
+	}
+	if err := verifyClaudeSettings(filepath.Join(root, claudeSettingsName), filepath.Join(root, "hooks", claudeHookScriptName)); err != nil {
 		return err
 	}
 	if err := verifyClaudeGuideBlock(filepath.Join(root, claudeGuideName)); err != nil {
@@ -160,6 +199,25 @@ func uninstallClaudeGuide(res *InstallResult, guidePath string) error {
 	}
 	res.Applied += guideRes.Applied
 	res.Noop += guideRes.Noop
+	return nil
+}
+
+func upsertClaudeSettings(settingsPath, hookPath string) (string, error) {
+	return upsertPreToolUseCommandSettings(settingsPath, hookPath, claudeSettingsErrFmt)
+}
+
+func claudeSettingsUseHook(settingsPath, hookPath string) (bool, error) {
+	return hookSettingsUseHook(settingsPath, hookPath, claudeSettingsErrFmt)
+}
+
+func verifyClaudeSettings(settingsPath, hookPath string) error {
+	ok, err := claudeSettingsUseHook(settingsPath, hookPath)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("missing claude managed hook contribution in %s", settingsPath)
+	}
 	return nil
 }
 

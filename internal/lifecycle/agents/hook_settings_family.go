@@ -193,47 +193,28 @@ func persistJSONSettings(settingsPath string, root map[string]any) (bool, error)
 	return true, nil
 }
 
-const (
-	codebuddyHookScriptName = "ccp-rewrite.sh"
-	codebuddySettingsName   = "settings.json"
-)
-
-func codebuddyRoot(ctx Context) string {
-	return ResolveHomeScopedPath(ctx.HomeDir, ".codebuddy")
-}
-
-func codebuddySettingsUseHook(settingsPath, hookPath string) (bool, error) {
+func hookSettingsUseHook(settingsPath, hookPath, invalidFmt string) (bool, error) {
 	raw, err := os.ReadFile(settingsPath)
 	if err != nil {
 		return false, err
 	}
 	root, ok := decodeHookSettings(raw)
 	if !ok {
-		return false, fmt.Errorf("invalid codebuddy settings file: %s", settingsPath)
+		return false, fmt.Errorf(invalidFmt, settingsPath)
 	}
 	_, pre, ok := preToolUseEntries(root)
 	if !ok {
 		return false, nil
 	}
-	for _, entry := range pre {
-		m, ok := entry.(map[string]any)
-		if !ok || !isBashMatcher(m) {
-			continue
-		}
-		hooks, _ := m["hooks"].([]any)
-		if hasMatchingCommandHook(hooks, filepath.Clean(strings.TrimSpace(hookPath))) {
-			return true, nil
-		}
-	}
-	return false, nil
+	return preToolUseContains(pre, hookPath), nil
 }
 
-func upsertCodeBuddySettings(settingsPath, hookPath string) (string, error) {
+func upsertPreToolUseCommandSettings(settingsPath, hookPath, invalidFmt string) (string, error) {
 	root := map[string]any{}
 	if raw, err := os.ReadFile(settingsPath); err == nil {
 		decoded, ok := decodeHookSettings(raw)
 		if !ok {
-			return "", fmt.Errorf("invalid codebuddy settings file: %s", settingsPath)
+			return "", fmt.Errorf(invalidFmt, settingsPath)
 		}
 		root = decoded
 	} else if !os.IsNotExist(err) {
@@ -246,7 +227,7 @@ func upsertCodeBuddySettings(settingsPath, hookPath string) (string, error) {
 		root["hooks"] = hooks
 	}
 	pre, _ := hooks["PreToolUse"].([]any)
-	if !codebuddyPreToolUseContains(pre, hookPath) {
+	if !preToolUseContains(pre, hookPath) {
 		pre = append(pre, map[string]any{
 			"matcher": "Bash",
 			"hooks": []any{
@@ -265,7 +246,24 @@ func upsertCodeBuddySettings(settingsPath, hookPath string) (string, error) {
 	return string(append(out, '\n')), nil
 }
 
-func codebuddyPreToolUseContains(pre []any, hookPath string) bool {
+const (
+	codebuddyHookScriptName = "ccp-rewrite.sh"
+	codebuddySettingsName   = "settings.json"
+)
+
+func codebuddyRoot(ctx Context) string {
+	return ResolveHomeScopedPath(ctx.HomeDir, ".codebuddy")
+}
+
+func codebuddySettingsUseHook(settingsPath, hookPath string) (bool, error) {
+	return hookSettingsUseHook(settingsPath, hookPath, "invalid codebuddy settings file: %s")
+}
+
+func upsertCodeBuddySettings(settingsPath, hookPath string) (string, error) {
+	return upsertPreToolUseCommandSettings(settingsPath, hookPath, "invalid codebuddy settings file: %s")
+}
+
+func preToolUseContains(pre []any, hookPath string) bool {
 	normalizedHook := filepath.Clean(strings.TrimSpace(hookPath))
 	for _, entry := range pre {
 		m, ok := entry.(map[string]any)
@@ -278,4 +276,8 @@ func codebuddyPreToolUseContains(pre []any, hookPath string) bool {
 		}
 	}
 	return false
+}
+
+func codebuddyPreToolUseContains(pre []any, hookPath string) bool {
+	return preToolUseContains(pre, hookPath)
 }
