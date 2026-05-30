@@ -599,8 +599,8 @@ var _ = Describe("repair", func() {
 					surface: migrationSurfaceRepo,
 					version: "0.1.0",
 					run: func(ctx migrationContext) error {
-						Expect(ctx.homeDir).To(Equal(ws.home))
-						Expect(ctx.cwd).To(Equal(ws.work))
+						Expect(resolvedPath(ctx.homeDir)).To(Equal(resolvedPath(ws.home)))
+						Expect(resolvedPath(ctx.cwd)).To(Equal(resolvedPath(ws.work)))
 						Expect(ctx.mode).To(Equal(expectedMode))
 						return os.WriteFile(marker, []byte("ok"), 0o644)
 					},
