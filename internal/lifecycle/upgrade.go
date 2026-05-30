@@ -22,7 +22,6 @@ import (
 const (
 	defaultUpgradeRepo    = "SuppieRK/ccp"
 	releaseChecksumsAsset = "ccp_checksums.txt"
-	upgradeRepairCutover  = "0.6.0"
 )
 
 var (
@@ -54,7 +53,8 @@ func RunUpgrade(args []string) error {
 		[]string{"ccp upgrade [--version <tag>]"},
 		"When --version is omitted, the latest release is selected.",
 		"Upgrade always resolves releases from the canonical repository.",
-		"After replacement, the old binary immediately executes the new binary's repair path.",
+		"After replacement, the old binary immediately executes the new binary's rewrite repair path.",
+		"Forward upgrades may run guarded current-repository CCP migrations; downgrades are rejected and require reinstalling the older version explicitly.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -78,6 +78,9 @@ func RunUpgrade(args []string) error {
 		return fmt.Errorf("invalid release version %q: must be X.Y.Z; manual download: %s", tag, manualURL)
 	}
 	tag = releaseVersion.String()
+	if err := rejectDowngrade(version.Version, releaseVersion); err != nil {
+		return err
+	}
 
 	assetName, binaryName, err := releaseAssetName(tag, upgradeRuntimeOS(), upgradeRuntimeArch())
 	if err != nil {
@@ -135,7 +138,7 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 		return err
 	}
 	restoreBackup = false
-	repairMode := selectedUpgradeRepairMode(version.Version)
+	repairMode := repairModeRewrite
 	if err := upgradeRunRepair(exePath, repairMode); err != nil {
 		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", err, repairMode.flag())
 	}
@@ -154,16 +157,15 @@ func printUpgradeSuccess(exePath, assetName, tag string) error {
 	return err
 }
 
-func selectedUpgradeRepairMode(currentVersion string) repairMode {
+func rejectDowngrade(currentVersion string, target version.Semantic) error {
 	current, ok := version.Parse(currentVersion)
 	if !ok {
-		return repairModePreserve
+		return nil
 	}
-	cutover, ok := version.Parse(upgradeRepairCutover)
-	if !ok || current.Less(cutover) {
-		return repairModePreserve
+	if target.Less(current) {
+		return fmt.Errorf("ccp upgrade: refusing downgrade from %s to %s; forward migrations are not reversible. To install an older version, uninstall CCP and install that version explicitly", current.String(), target.String())
 	}
-	return repairModeRewrite
+	return nil
 }
 
 func latestReleaseTag(repo string) (string, error) {

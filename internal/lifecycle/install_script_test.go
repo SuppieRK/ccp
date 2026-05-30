@@ -20,6 +20,9 @@ var _ = Describe("install script", func() {
 	var scriptPath string
 
 	BeforeEach(func() {
+		if _, err := exec.LookPath("sh"); err != nil {
+			Skip("sh unavailable: " + err.Error())
+		}
 		var err error
 		scriptPath, err = filepath.Abs(filepath.Join("..", "..", "scripts", "install.sh"))
 		Expect(err).NotTo(HaveOccurred())

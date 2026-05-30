@@ -2,6 +2,8 @@ module go-command-compression-proxy
 
 go 1.26.0
 
+toolchain go1.26.3
+
 require (
 	github.com/fatih/color v1.19.0
 	github.com/onsi/ginkgo/v2 v2.28.3

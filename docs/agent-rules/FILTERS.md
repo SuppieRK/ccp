@@ -8,6 +8,7 @@ without rebuilding CCP.
 - Built-in filters belong in `filters/<tool>.yaml`.
 - Wrapper or alias spellings belong in `filters/.mappings.yaml`.
 - Local iteration happens in `./.ccp/filters`.
+- Project-local filters are committable; generated repo-local CCP state is ignored through CCP-owned `./.ccp/.gitignore`.
 - Managed home-scoped filters live in `~/.config/ccp/filters`.
 - Release builds load `./.ccp/filters` first and `~/.config/ccp/filters` second.
 - Project-local filter definitions override home-scoped definitions with the same canonical filter id.
@@ -166,10 +167,11 @@ ccp repair --yes
 ```
 
 `ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`.
-It does not touch project-local `./.ccp/filters`.
+It does not touch project-local `./.ccp/filters`. Rewrite repair may refresh CCP-owned repo-local ignore state in
+`./.ccp/.gitignore` so generated metrics remain ignored without hiding project-local filters.
 
 When the interactive prompt is declined, `ccp repair` falls back to additive sync: it adds only missing shipped filters
-and missing shipped `.mappings.yaml` entries.
+and missing shipped `.mappings.yaml` entries without mutating repository files.
 
 ## Authoring Guardrails
 

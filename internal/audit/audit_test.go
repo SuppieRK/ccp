@@ -212,10 +212,9 @@ func (h failingAuditHandler) WithGroup(string) slog.Handler { return h }
 
 func cleanupAuditHome(home string) error {
 	Reset()
-	auditDir := filepath.Join(home, ".config", "ccp", "audit")
 	var lastErr error
 	for range 10 {
-		if err := os.RemoveAll(auditDir); err == nil || os.IsNotExist(err) {
+		if err := os.RemoveAll(home); err == nil || os.IsNotExist(err) {
 			return nil
 		} else {
 			lastErr = err

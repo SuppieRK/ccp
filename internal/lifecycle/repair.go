@@ -33,7 +33,8 @@ func RunRepair(args []string) error {
 		[]string{"ccp repair [--yes|--no]"},
 		"Repair rewrites the fully managed ~/.config/ccp directory and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
 		"Repair also removes obsolete managed ~/.ccp remnants.",
-		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings.",
+		"Rewrite repair also runs guarded current-repository CCP migrations, including repo-local .ccp ignore migration.",
+		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings without mutating repository files.",
 		"Use --yes for destructive rewrite automation; use --no for additive preserve-existing automation.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -75,10 +76,34 @@ func executeRepair(mode repairMode) error {
 			mode = repairModeRewrite
 		}
 	}
-	if mode == repairModePreserve {
-		return addMissingPackagedFilters()
+	ctx, err := newMigrationContext(mode)
+	if err != nil {
+		return err
 	}
-	return rewriteManagedRepairState()
+	return withLifecycleLock(func() error {
+		if mode == repairModePreserve {
+			return addMissingPackagedFilters()
+		}
+		if err := runMigrations(migrationSurfaceRepo, "", ctx); err != nil {
+			return err
+		}
+		if err := runMigrations(migrationSurfaceHome, "", ctx); err != nil {
+			return err
+		}
+		return rewriteManagedRepairStateLocked()
+	})
+}
+
+func newMigrationContext(mode repairMode) (migrationContext, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return migrationContext{}, err
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return migrationContext{}, err
+	}
+	return migrationContext{homeDir: homeDir, cwd: cwd, mode: mode}, nil
 }
 
 func addMissingPackagedFilters() error {
@@ -94,6 +119,19 @@ func addMissingPackagedFilters() error {
 }
 
 func rewriteManagedRepairState() error {
+	return withLifecycleLock(rewriteManagedRepairStateLocked)
+}
+
+func rewriteManagedRepairStateLocked() error {
+	if err := syncCanonicalHomeLayout(); err != nil {
+		return err
+	}
+
+	_, err := fmt.Fprintln(repairStdout, "ccp repair: rewrote managed CCP home state")
+	return err
+}
+
+func withLifecycleLock(fn func() error) error {
 	lockPath, err := startupMaintenanceLockPath()
 	if err != nil {
 		return err
@@ -103,13 +141,7 @@ func rewriteManagedRepairState() error {
 		return err
 	}
 	defer release()
-
-	if err := syncCanonicalHomeLayout(); err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintln(repairStdout, "ccp repair: rewrote managed CCP home state")
-	return err
+	return fn()
 }
 
 func confirmRepair() (bool, error) {

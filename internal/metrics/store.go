@@ -165,6 +165,9 @@ func Append(path string, metric RunMetric) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
+	if err := ensureLocalCCPGitignore(path); err != nil {
+		return err
+	}
 	if !fileExists(path) {
 		if err := ensureSchema(path); err != nil {
 			return err
@@ -949,7 +952,10 @@ func closeBoltDBWithErr(db *bolt.DB, retErr *error) {
 }
 
 func ensureLocalCCPGitignore(path string) error {
-	cleanPath := filepath.Clean(path)
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return nil
+	}
 	if filepath.Base(cleanPath) != "gain.db" {
 		return nil
 	}
@@ -958,12 +964,37 @@ func ensureLocalCCPGitignore(path string) error {
 		return nil
 	}
 	projectRoot := filepath.Dir(ccpDir)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	cwd, err = canonicalExistingPath(cwd)
+	if err != nil {
+		return nil
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
+	if err != nil || cwd != canonicalProjectRoot {
+		return nil
+	}
 	gitMeta := filepath.Join(projectRoot, ".git")
-	if _, err := os.Stat(gitMeta); err != nil {
+	info, err := os.Stat(gitMeta)
+	if err != nil || !info.IsDir() {
 		return nil
 	}
 
-	return projectfiles.EnsureGitignoreEntry(projectRoot, ".ccp")
+	return projectfiles.EnsureNestedCCPGitignore(projectRoot)
+}
+
+func canonicalExistingPath(path string) (string, error) {
+	abs, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(resolved), nil
 }
 
 func Bootstrap(path string) error {

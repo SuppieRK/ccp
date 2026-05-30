@@ -169,6 +169,8 @@ var _ = Describe("lifecycle help", func() {
 				"Flags:",
 				"Notes:",
 				"--version",
+				"rewrite repair",
+				"downgrades are rejected",
 			},
 		}),
 		Entry("repair", helpCase{
@@ -181,6 +183,8 @@ var _ = Describe("lifecycle help", func() {
 				"--yes",
 				"--no",
 				"~/.config/ccp",
+				"current-repository CCP migrations",
+				"without mutating repository files",
 			},
 		}),
 		Entry("uninstall", helpCase{

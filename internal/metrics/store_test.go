@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -223,27 +224,116 @@ var _ = Describe("metrics storage", func() {
 		})
 	})
 
-	DescribeTable("updating local project gitignore for metrics db",
-		func(initialGitignore string, expectedGitignore string) {
-			project := initGitProjectForMetrics(tempDir, initialGitignore)
+	Describe("updating local project gitignore for metrics db", func() {
+		It("ensures nested CCP gitignore and leaves the parent gitignore unchanged", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n.ccp\n")
+			withMetricsWorkingDir(project)
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+
+			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(project, ".ccp", gitignoreFileName), []byte("user-edit\n"), 0o644)).To(Succeed())
+			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+
+			parent, err := os.ReadFile(filepath.Join(project, gitignoreFileName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(parent)).To(Equal("node_modules/\n.ccp\n"))
+			nested, err := os.ReadFile(filepath.Join(project, ".ccp", gitignoreFileName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(nested)).To(Equal("gain.db\n.gitignore\n"))
+		})
+
+		It("overwrites stale nested CCP gitignore contents", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
+			withMetricsWorkingDir(project)
+			ccpDir := filepath.Join(project, ".ccp")
+			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(ccpDir, gitignoreFileName), []byte("custom\n"), 0o644)).To(Succeed())
+
+			Expect(Append(filepath.Join(ccpDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+
+			nested, err := os.ReadFile(filepath.Join(ccpDir, gitignoreFileName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(nested)).To(Equal("gain.db\n.gitignore\n"))
+		})
+
+		It("skips nested ignore management when current directory is not the git root", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
+			subdir := filepath.Join(project, "subdir")
+			Expect(os.MkdirAll(subdir, 0o755)).To(Succeed())
+			withMetricsWorkingDir(subdir)
+			path := filepath.Join(subdir, ".ccp", gainDBFileName)
+
+			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+
+			_, err := os.Stat(filepath.Join(subdir, ".ccp", gitignoreFileName))
+			Expect(err).To(MatchError(os.ErrNotExist))
+			parent, err := os.ReadFile(filepath.Join(project, gitignoreFileName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(parent)).To(Equal("node_modules/\n"))
+		})
+
+		It("skips nested ignore management outside git repositories", func() {
+			project := tempDir
+			withMetricsWorkingDir(project)
 			path := filepath.Join(project, ".ccp", gainDBFileName)
 
 			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			if expectedGitignore == "" {
-				_, err := os.Stat(filepath.Join(project, gitignoreFileName))
-				Expect(err).To(MatchError(os.ErrNotExist))
-				return
+			_, err := os.Stat(filepath.Join(project, ".ccp", gitignoreFileName))
+			Expect(err).To(MatchError(os.ErrNotExist))
+		})
+
+		It("skips non-CCP metrics paths", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
+			withMetricsWorkingDir(project)
+
+			Expect(Append(filepath.Join(project, "metrics", gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+
+			_, err := os.Stat(filepath.Join(project, ".ccp", gitignoreFileName))
+			Expect(err).To(MatchError(os.ErrNotExist))
+		})
+
+		It("leaves filters visible to git while ignoring generated metrics state", func() {
+			if _, err := exec.LookPath("git"); err != nil {
+				Skip("git unavailable: " + err.Error())
+			}
+			project := tempDir
+			cmd := exec.Command("git", "init")
+			cmd.Dir = project
+			out, err := cmd.CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), string(out))
+			withMetricsWorkingDir(project)
+			filtersDir := filepath.Join(project, ".ccp", "filters")
+			Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(filtersDir, "local.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+
+			Expect(Append(filepath.Join(project, ".ccp", gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+
+			ignored := metricsGitCheckIgnore(project, ".ccp/gain.db", ".ccp/.gitignore")
+			Expect(ignored).To(ContainElement(".ccp/gain.db"))
+			Expect(ignored).To(ContainElement(".ccp/.gitignore"))
+			Expect(metricsGitCheckIgnore(project, ".ccp/filters/local.yaml")).To(BeEmpty())
+		})
+
+		It("propagates nested ignore symlink errors", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
+			withMetricsWorkingDir(project)
+			outside := filepath.Join(GinkgoT().TempDir(), "outside-gitignore")
+			ccpDir := filepath.Join(project, ".ccp")
+			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(outside, []byte("keep\n"), 0o644)).To(Succeed())
+			if err := os.Symlink(outside, filepath.Join(ccpDir, gitignoreFileName)); err != nil {
+				Skip("symlink creation unavailable: " + err.Error())
 			}
 
-			b, err := os.ReadFile(filepath.Join(project, gitignoreFileName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(b)).To(Equal(expectedGitignore))
-		},
-		Entry("appends .ccp", "node_modules/\n", "node_modules/\n.ccp\n"),
-		Entry("does not duplicate .ccp", ".ccp\n", ".ccp\n"),
-		Entry("skips when gitignore is missing", "", ""),
-	)
+			err := Append(filepath.Join(ccpDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})
+
+			Expect(err).To(HaveOccurred())
+			body, readErr := os.ReadFile(outside)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("keep\n"))
+		})
+	})
 
 	DescribeTable("encoding helper bounds",
 		func(value int, expected uint32) {
@@ -924,12 +1014,38 @@ func appendRunMetrics(path string, metrics ...RunMetric) {
 	}
 }
 
+func withMetricsWorkingDir(dir string) {
+	oldWd, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(os.Chdir(dir)).To(Succeed())
+	DeferCleanup(func() { _ = os.Chdir(oldWd) })
+}
+
 func initGitProjectForMetrics(project string, gitignoreContent string) string {
 	Expect(os.Mkdir(filepath.Join(project, ".git"), 0o755)).To(Succeed())
 	if gitignoreContent != "" {
 		Expect(os.WriteFile(filepath.Join(project, gitignoreFileName), []byte(gitignoreContent), 0o644)).To(Succeed())
 	}
 	return project
+}
+
+func metricsGitCheckIgnore(root string, paths ...string) []string {
+	args := append([]string{"-C", root, "check-ignore"}, paths...)
+	cmd := exec.Command("git", args...)
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return nil
+		}
+		Expect(err).NotTo(HaveOccurred())
+	}
+	var ignored []string
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			ignored = append(ignored, line)
+		}
+	}
+	return ignored
 }
 
 func encodedU64(v uint64) []byte {
