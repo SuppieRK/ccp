@@ -968,8 +968,12 @@ func ensureLocalCCPGitignore(path string) error {
 	if err != nil {
 		return nil
 	}
-	cwd, err = filepath.Abs(filepath.Clean(cwd))
-	if err != nil || cwd != projectRoot {
+	cwd, err = canonicalExistingPath(cwd)
+	if err != nil {
+		return nil
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
+	if err != nil || cwd != canonicalProjectRoot {
 		return nil
 	}
 	gitMeta := filepath.Join(projectRoot, ".git")
@@ -979,6 +983,18 @@ func ensureLocalCCPGitignore(path string) error {
 	}
 
 	return projectfiles.EnsureNestedCCPGitignore(projectRoot)
+}
+
+func canonicalExistingPath(path string) (string, error) {
+	abs, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(resolved), nil
 }
 
 func Bootstrap(path string) error {
