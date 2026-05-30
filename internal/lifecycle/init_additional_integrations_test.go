@@ -46,7 +46,7 @@ var _ = Describe("init additional integration coverage", func() {
 			tool:         "pi",
 			markerPath:   initPiDir,
 			artifactRoot: "root",
-			artifactRel:  initAgentsFileName,
+			artifactRel:  initPiAppendSystemRel,
 		}),
 		Entry("roocode", additionalDetectionCase{
 			tool:        "roocode",
@@ -115,9 +115,21 @@ var _ = Describe("init additional integration coverage", func() {
 			tool:       "pi",
 			markerPath: initPiDir,
 			targetRoot: "work",
-			targetRel:  initAgentsFileName,
+			targetRel:  initPiAppendSystemRel,
 		}),
 	)
+
+	It("does not create root AGENTS.md for the pi integration", func() {
+		ws := newInitManagedWorkspace()
+		Expect(os.MkdirAll(filepath.Join(ws.work, initPiDir), 0o755)).To(Succeed())
+
+		Expect(RunInit([]string{initToolsFlag, "pi"})).To(Succeed())
+
+		_, err := os.Stat(filepath.Join(ws.work, initAgentsFileName))
+		Expect(err).To(MatchError(os.ErrNotExist))
+		_, err = os.Stat(filepath.Join(ws.work, initPiAppendSystemRel))
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	DescribeTable("replaces only the managed region for additional file-backed integrations",
 		func(tc additionalManagedFileCase) {
@@ -162,7 +174,7 @@ var _ = Describe("init additional integration coverage", func() {
 			tool:       "pi",
 			markerPath: initPiDir,
 			targetRoot: "work",
-			targetRel:  initAgentsFileName,
+			targetRel:  initPiAppendSystemRel,
 		}),
 	)
 

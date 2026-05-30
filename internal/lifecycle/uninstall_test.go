@@ -136,7 +136,7 @@ var _ = Describe("uninstall", func() {
 			tool:      "pi",
 			scope:     "root",
 			setupDirs: []string{"{root}/.pi"},
-			removed:   []string{"{root}/AGENTS.md"},
+			removed:   []string{"{root}/.pi/APPEND_SYSTEM.md"},
 		}),
 		Entry("cursor", uninstallRemovalCase{
 			name:      "cursor",
@@ -286,8 +286,23 @@ var _ = Describe("uninstall", func() {
 			Expect(os.MkdirAll(filepath.Join(ws.home, ".gemini"), 0o755)).To(Succeed())
 			return filepath.Join(ws.home, ".gemini", "GEMINI.md")
 		})),
-		Entry("pi preserves non-CCP content", uninstallPreserveCase{
-			name:  "pi preserves non-CCP content",
+		Entry("pi preserves non-CCP append-system content", uninstallPreserveCase{
+			name:  "pi preserves non-CCP append-system content",
+			tool:  "pi",
+			scope: "root",
+			setup: func(ws lifecycleWorkspace) {
+				path := filepath.Join(ws.root, ".pi", "APPEND_SYSTEM.md")
+				Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+				Expect(os.WriteFile(path, []byte("team notes\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
+			},
+			assert: func(ws lifecycleWorkspace) {
+				got, err := os.ReadFile(filepath.Join(ws.root, ".pi", "APPEND_SYSTEM.md"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(strings.TrimSpace(string(got))).To(Equal("team notes"))
+			},
+		}),
+		Entry("pi removes legacy root AGENTS managed block", uninstallPreserveCase{
+			name:  "pi removes legacy root AGENTS managed block",
 			tool:  "pi",
 			scope: "root",
 			setup: func(ws lifecycleWorkspace) {
