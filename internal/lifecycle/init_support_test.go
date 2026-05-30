@@ -25,6 +25,7 @@ const (
 	initCodeBuddyDir      = ".codebuddy"
 	initCrushDir          = ".crush"
 	initPiDir             = ".pi"
+	initPiAppendSystemRel = ".pi/APPEND_SYSTEM.md"
 	initFactoryDir        = ".factory"
 	initKiroDir           = ".kiro"
 	initKiroRuleName      = "AGENTS.md"
