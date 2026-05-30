@@ -145,23 +145,6 @@ var _ = Describe("selectAssetURL", func() {
 	})
 })
 
-var _ = Describe("selectedUpgradeRepairMode", func() {
-	DescribeTable("selecting repair mode from the running version",
-		func(currentVersion string, expected repairMode) {
-			Expect(selectedUpgradeRepairMode(currentVersion)).To(Equal(expected))
-		},
-		Entry("older plain version preserves existing filters", "0.5.0", repairModePreserve),
-		Entry("pre-cutover patch version preserves existing filters", "0.5.9", repairModePreserve),
-		Entry("cutover version rewrites managed state", "0.6.0", repairModeRewrite),
-		Entry("newer version rewrites managed state", "1.2.3", repairModeRewrite),
-		Entry("v-prefixed versions preserve existing filters", "v0.6.0", repairModePreserve),
-		Entry("pre-release versions preserve existing filters", "0.6.0-rc.1", repairModePreserve),
-		Entry("whitespace versions preserve existing filters", " 1.2.3 ", repairModePreserve),
-		Entry("dev preserves existing filters", "dev", repairModePreserve),
-		Entry("invalid version preserves existing filters", "not-a-version", repairModePreserve),
-	)
-})
-
 var _ = Describe("upgrade helper functions", func() {
 	It("uses the default HTTP timeout for release downloads", func() {
 		Expect(upgradeHTTPClient.Timeout).To(Equal(30 * time.Second))
@@ -407,6 +390,33 @@ var _ = Describe("RunUpgrade", func() {
 		})
 	})
 
+	Context("when the requested version is older than the current version", func() {
+		BeforeEach(func() {
+			version.Version = "2.0.0"
+			args = []string{flagVersion, "1.2.3"}
+		})
+
+		It("rejects the downgrade before replacing the binary", func() {
+			err := RunUpgrade(args)
+
+			Expect(err).To(MatchError(ContainSubstring("refusing downgrade from 2.0.0 to 1.2.3")))
+			body, readErr := os.ReadFile(dest)
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(body)).To(Equal("old"))
+		})
+	})
+
+	Context("when the current version is not a strict release version", func() {
+		BeforeEach(func() {
+			version.Version = "dev"
+			args = []string{flagVersion, "1.2.3"}
+		})
+
+		It("allows the upgrade", func() {
+			Expect(RunUpgrade(args)).To(Succeed())
+		})
+	})
+
 	Context("when the requested version is not strict X.Y.Z", func() {
 		BeforeEach(func() {
 			args = []string{flagVersion, "v1.2.3"}
@@ -615,9 +625,9 @@ var _ = Describe("RunUpgrade", func() {
 			DeferCleanup(restore)
 		})
 
-		It("runs preserve repair through the new binary", func() {
+		It("runs rewrite repair through the new binary", func() {
 			Expect(RunUpgrade(args)).To(Succeed())
-			Expect(seenMode).To(Equal(repairModePreserve))
+			Expect(seenMode).To(Equal(repairModeRewrite))
 		})
 	})
 })

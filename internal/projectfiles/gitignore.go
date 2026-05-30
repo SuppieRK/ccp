@@ -1,21 +1,38 @@
 package projectfiles
 
 import (
-	"fmt"
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func EnsureGitignoreEntry(projectRoot, entry string) error {
+const nestedCCPGitignoreContents = "gain.db\n.gitignore\n"
+
+func EnsureNestedCCPGitignore(projectRoot string) error {
 	projectRoot = strings.TrimSpace(projectRoot)
-	entry = strings.TrimSpace(entry)
-	if projectRoot == "" || entry == "" {
+	if projectRoot == "" {
+		return nil
+	}
+
+	gitignorePath := filepath.Join(projectRoot, ".ccp", ".gitignore")
+	if err := RejectSymlinkPath(gitignorePath); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(gitignorePath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(gitignorePath, []byte(nestedCCPGitignoreContents), 0o644)
+}
+
+func RemoveLegacyRootCCPGitignoreEntries(projectRoot string) error {
+	projectRoot = strings.TrimSpace(projectRoot)
+	if projectRoot == "" {
 		return nil
 	}
 
 	gitignorePath := filepath.Join(projectRoot, ".gitignore")
-	if err := rejectSymlinkGitignore(gitignorePath); err != nil {
+	if err := RejectSymlinkPath(gitignorePath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
@@ -29,35 +46,35 @@ func EnsureGitignoreEntry(projectRoot, entry string) error {
 		return err
 	}
 
-	for line := range strings.SplitSeq(string(content), "\n") {
-		if strings.TrimSpace(line) == entry {
-			return nil
-		}
+	updated, changed := removeLegacyCCPIgnoreLines(content)
+	if !changed {
+		return nil
 	}
-
-	suffix := entry + "\n"
-	if len(content) > 0 && content[len(content)-1] != '\n' {
-		suffix = "\n" + suffix
-	}
-	f, err := os.OpenFile(gitignorePath, os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return err
-	}
-	_, writeErr := f.WriteString(suffix)
-	closeErr := f.Close()
-	if writeErr != nil {
-		return writeErr
-	}
-	return closeErr
+	return os.WriteFile(gitignorePath, updated, 0o644)
 }
 
-func rejectSymlinkGitignore(path string) error {
-	info, err := os.Lstat(path)
-	if err != nil {
-		return err
+func removeLegacyCCPIgnoreLines(content []byte) ([]byte, bool) {
+	var out bytes.Buffer
+	changed := false
+	for len(content) > 0 {
+		line := content
+		if idx := bytes.IndexByte(content, '\n'); idx >= 0 {
+			line = content[:idx+1]
+			content = content[idx+1:]
+		} else {
+			content = nil
+		}
+		trimTarget := bytes.TrimSuffix(line, []byte("\n"))
+		trimTarget = bytes.TrimSuffix(trimTarget, []byte("\r"))
+		trimmed := strings.TrimSpace(string(trimTarget))
+		if trimmed == ".ccp" || trimmed == ".ccp/" {
+			changed = true
+			continue
+		}
+		out.Write(line)
 	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("refuse to update symlinked gitignore %q", path)
+	if !changed {
+		return nil, false
 	}
-	return nil
+	return out.Bytes(), true
 }

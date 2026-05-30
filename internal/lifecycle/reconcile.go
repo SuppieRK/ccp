@@ -23,14 +23,6 @@ var (
 )
 
 func RunStartupMaintenance() error {
-	scopeRoot, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	if err := cleanupLegacyProjectInitState(scopeRoot); err != nil {
-		return err
-	}
-
 	lockPath, err := startupMaintenanceLockPath()
 	if err != nil {
 		return nil
@@ -104,22 +96,6 @@ func removeStaleStartupMaintenanceLock(lockPath string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-func cleanupLegacyProjectInitState(scopeRoot string) error {
-	ccpDir := filepath.Join(scopeRoot, ".ccp")
-	targets := []string{filepath.Join(ccpDir, "init.json")}
-	matches, err := filepath.Glob(filepath.Join(ccpDir, "init.json.bak.*"))
-	if err != nil {
-		return err
-	}
-	targets = append(targets, matches...)
-	for _, path := range targets {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-	return nil
 }
 
 func syncCanonicalHomeLayout() error {

@@ -22,6 +22,8 @@ CCP has two user-facing filter locations:
 
 If you are just getting started, use `./.ccp/filters/`.
 
+Project-local filters are intended to stay visible to Git so they can travel with a repository. CCP-generated repo-local state, such as `./.ccp/gain.db`, is ignored through a CCP-owned `./.ccp/.gitignore`; do not customize that nested ignore file because CCP rewrites it authoritatively.
+
 That is what this tutorial covers.
 
 When you are unsure which filter CCP will actually use, run:

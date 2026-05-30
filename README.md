@@ -156,6 +156,8 @@ ccp uninstall --tools codex
 ccp uninstall
 ```
 
+Successful pre-1.0 upgrades run rewrite repair through the newly installed binary, including guarded current-repository CCP migrations. Downgrades are rejected by `ccp upgrade`; uninstall and reinstall explicitly if you need an older version.
+
 ## Own The Compression Rules
 
 Own your compression logic: author filters in YAML, ship overridden behavior with your repo, share filters across your team, and fix your edge case today instead of waiting for upstream.
@@ -164,6 +166,8 @@ Two filter scopes are built in:
 
 - project-local filters in `./.ccp/filters`
 - home-scoped filters in `~/.config/ccp/filters`
+
+Project-local filters are meant to be committed when they describe repo behavior. CCP-generated repo-local state, such as `./.ccp/gain.db`, is ignored by a CCP-owned `./.ccp/.gitignore`; CCP does not need to append broad `.ccp` rules to your repository root `.gitignore` for metrics.
 
 Project scope overrides home scope. That gives you a clean model:
 

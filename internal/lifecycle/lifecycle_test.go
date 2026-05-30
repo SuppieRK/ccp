@@ -341,7 +341,7 @@ var _ = Describe("Startup maintenance", func() {
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
-		It("cleans legacy project init state but preserves gain db", func() {
+		It("leaves legacy project init state to repair migrations", func() {
 			ccpDir := filepath.Join(ws.work, ".ccp")
 			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
 
@@ -354,14 +354,10 @@ var _ = Describe("Startup maintenance", func() {
 
 			Expect(RunStartupMaintenance()).To(Succeed())
 
-			_, err := os.Stat(stale)
-			Expect(err).To(MatchError(os.ErrNotExist))
-
-			_, err = os.Stat(backup)
-			Expect(err).To(MatchError(os.ErrNotExist))
-
-			_, err = os.Stat(gainDB)
-			Expect(err).NotTo(HaveOccurred())
+			for _, file := range []string{stale, backup, gainDB} {
+				_, err := os.Stat(file)
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 
 		It("replaces managed config contents and refreshes home filters", func() {
@@ -563,6 +559,147 @@ var _ = Describe("repair", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
 	})
+
+	It("runs the built-in legacy project init cleanup migration during rewrite repair", func() {
+		ccpDir := filepath.Join(ws.work, ".ccp")
+		Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+		stale := filepath.Join(ccpDir, initConfigFileName)
+		backup := stale + ".bak.123"
+		gainDB := filepath.Join(ccpDir, "gain.db")
+		for _, file := range []string{stale, backup, gainDB} {
+			Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
+		}
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+		})
+
+		Expect(RunRepair([]string{"--yes"})).To(Succeed())
+
+		Expect(stale).NotTo(BeAnExistingFile())
+		Expect(backup).NotTo(BeAnExistingFile())
+		Expect(gainDB).To(BeAnExistingFile())
+	})
+
+	DescribeTable("runs repo migrations during rewrite repair",
+		func(args []string, stdin string, expectedMode repairMode) {
+			prevIn := repairStdin
+			prevOut := repairStdout
+			repairStdin = strings.NewReader(stdin)
+			repairStdout = io.Discard
+			DeferCleanup(func() {
+				repairStdin = prevIn
+				repairStdout = prevOut
+			})
+
+			marker := filepath.Join(ws.work, "migration-ran")
+			stubBuiltInMigrationsForSpec([]migration{
+				{
+					id:      "mark-repair",
+					surface: migrationSurfaceRepo,
+					version: "0.1.0",
+					run: func(ctx migrationContext) error {
+						Expect(ctx.homeDir).To(Equal(ws.home))
+						Expect(ctx.cwd).To(Equal(ws.work))
+						Expect(ctx.mode).To(Equal(expectedMode))
+						return os.WriteFile(marker, []byte("ok"), 0o644)
+					},
+				},
+			})
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+				"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+			})
+
+			Expect(RunRepair(args)).To(Succeed())
+
+			Expect(marker).To(BeAnExistingFile())
+		},
+		Entry("with --yes", []string{"--yes"}, "", repairModeRewrite),
+		Entry("after accepting the interactive prompt", nil, "y\n", repairModeRewrite),
+	)
+
+	DescribeTable("skips repo migrations during preserve repair",
+		func(args []string, stdin string) {
+			prevIn := repairStdin
+			prevOut := repairStdout
+			repairStdin = strings.NewReader(stdin)
+			repairStdout = io.Discard
+			DeferCleanup(func() {
+				repairStdin = prevIn
+				repairStdout = prevOut
+			})
+
+			marker := filepath.Join(ws.work, "migration-ran")
+			stubBuiltInMigrationsForSpec([]migration{
+				{
+					id:      "mark-repair",
+					surface: migrationSurfaceRepo,
+					version: "0.1.0",
+					run: func(migrationContext) error {
+						return os.WriteFile(marker, []byte("ok"), 0o644)
+					},
+				},
+			})
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+				"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+			})
+
+			Expect(RunRepair(args)).To(Succeed())
+
+			Expect(marker).NotTo(BeAnExistingFile())
+		},
+		Entry("with --no", []string{"--no"}, ""),
+		Entry("after declining the interactive prompt", nil, "n\n"),
+	)
+
+	It("aborts repair when a migration fails without printing success output", func() {
+		var out strings.Builder
+		prevOut := repairStdout
+		repairStdout = &out
+		DeferCleanup(func() { repairStdout = prevOut })
+
+		materializeCalled := false
+		prevMaterialize := materializeHomeFilters
+		materializeHomeFilters = func(string) error {
+			materializeCalled = true
+			return nil
+		}
+		DeferCleanup(func() { materializeHomeFilters = prevMaterialize })
+
+		stubBuiltInMigrationsForSpec([]migration{
+			{id: "broken", surface: migrationSurfaceRepo, version: "0.1.0", run: func(migrationContext) error { return errors.New("boom") }},
+		})
+
+		err := RunRepair([]string{"--yes"})
+
+		Expect(err).To(MatchError(ContainSubstring("migration broken: boom")))
+		Expect(materializeCalled).To(BeFalse())
+		Expect(out.String()).NotTo(ContainSubstring("ccp repair:"))
+	})
+
+	DescribeTable("uses the lifecycle lock for repair modes",
+		func(args []string) {
+			lockPath, err := startupMaintenanceLockPath()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
+			Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
+
+			stubMaterializeHomeFiltersForSpec(map[string]string{
+				".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+				"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+			})
+
+			err = RunRepair(args)
+
+			Expect(err).To(HaveOccurred())
+			_, statErr := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "git.yaml"))
+			Expect(statErr).To(MatchError(os.ErrNotExist))
+		},
+		Entry("--yes", []string{"--yes"}),
+		Entry("--no", []string{"--no"}),
+	)
 
 	It("adds missing filters and mappings when the interactive prompt is declined", func() {
 		prevIn := repairStdin
