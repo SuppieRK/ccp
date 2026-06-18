@@ -6,7 +6,7 @@ toolchain go1.26.3
 
 require (
 	github.com/fatih/color v1.19.0
-	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.41.0
 	golang.org/x/tools v0.45.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
