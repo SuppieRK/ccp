@@ -64,7 +64,7 @@ jobs:
           cache: true
 
       - name: Cache validation tools and lint state
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/bin
@@ -165,7 +165,7 @@ jobs:
 
       - name: Restore benchmark history cache
         id: benchmark-history-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
           key: benchmark-report-main-${{ matrix.tool }}-v2-${{ needs.plan.outputs.cache_epoch }}
@@ -218,7 +218,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}&ref=refs/heads/main"
 
       - name: Save benchmark history cache
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         if: always() && steps.run-benchmark.outcome == 'success' && github.event_name == 'push' && github.ref_name == 'main'
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
