@@ -60,7 +60,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.x'
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Cache validation tools and lint state
@@ -112,7 +112,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.x'
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Build and install ccp into runner PATH
@@ -154,7 +154,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.x'
+          go-version-file: 'go.mod'
 
       - name: Build ccp binary
         shell: bash
@@ -249,7 +249,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26.x'
+          go-version-file: 'go.mod'
 
       - name: Generate internal coverage profile for Sonar
         shell: bash
