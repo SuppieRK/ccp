@@ -89,7 +89,7 @@ func runLifecycleCommand(args []string) (bool, error) {
 	case "repair":
 		return true, lifecycle.RunRepair(tail)
 	case "filter":
-		return true, lifecycle.RunFilter(tail)
+		return true, lifecycle.RunFilterWithMetrics(tail, defaultMetricsPath())
 	default:
 		return false, nil
 	}

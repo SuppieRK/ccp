@@ -186,6 +186,31 @@ var _ = Describe("metrics storage", func() {
 		Expect(history[0].Passthrough).To(BeTrue())
 	})
 
+	It("preserves filter provenance in history rows", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+
+		Expect(Append(path, RunMetric{
+			Tool:             "py",
+			Command:          "py -m pytest",
+			Dispatch:         "python|pytest",
+			RawBytes:         18,
+			KeptBytes:        6,
+			FilterSourceKind: "project",
+			FilterPath:       "/repo/.ccp/filters/python.yaml",
+			FilterHash:       "abc123",
+		})).To(Succeed())
+
+		history, err := QueryHistory(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(HaveLen(1))
+		Expect(history[0].Tool).To(Equal("py"))
+		Expect(history[0].Filter).To(Equal("python"))
+		Expect(history[0].Case).To(Equal("pytest"))
+		Expect(history[0].FilterSourceKind).To(Equal("project"))
+		Expect(history[0].FilterPath).To(Equal("/repo/.ccp/filters/python.yaml"))
+		Expect(history[0].FilterHash).To(Equal("abc123"))
+	})
+
 	Context("when storing tool names", func() {
 		var path string
 
@@ -587,6 +612,133 @@ var _ = Describe("metrics storage", func() {
 			Expect(rows[2].Commands).To(Equal(int64(2)))
 		})
 
+		It("groups performance rows by invoked tool, filter case, and provenance", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{
+					Timestamp:        time.Date(2026, 3, 25, 11, 20, 0, 0, time.UTC),
+					Tool:             "py",
+					Command:          "py -m pytest",
+					Dispatch:         "python|pytest",
+					RawBytes:         16,
+					KeptBytes:        4,
+					DurationMS:       20,
+					FilterSourceKind: "project",
+					FilterPath:       "/repo/.ccp/filters/python.yaml",
+					FilterHash:       "hash-a",
+				},
+				RunMetric{
+					Timestamp:        time.Date(2026, 3, 25, 11, 21, 0, 0, time.UTC),
+					Tool:             "py",
+					Command:          "py -m pytest",
+					Dispatch:         "python|pytest",
+					RawBytes:         8,
+					KeptBytes:        8,
+					ExitCode:         1,
+					DurationMS:       40,
+					Passthrough:      true,
+					FilterSourceKind: "project",
+					FilterPath:       "/repo/.ccp/filters/python.yaml",
+					FilterHash:       "hash-a",
+				},
+				RunMetric{
+					Timestamp:        time.Date(2026, 3, 25, 11, 22, 0, 0, time.UTC),
+					Tool:             "python",
+					Command:          "python script.py",
+					Dispatch:         "python|default",
+					RawBytes:         12,
+					KeptBytes:        6,
+					FilterSourceKind: "home",
+					FilterPath:       "/home/user/.config/ccp/filters/python.yaml",
+					FilterHash:       "hash-b",
+				},
+			)
+
+			rows, err := QueryPerformanceRows(path, QueryOptions{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].Tool).To(Equal("py"))
+			Expect(rows[0].Filter).To(Equal("python"))
+			Expect(rows[0].Case).To(Equal("pytest"))
+			Expect(rows[0].DispatchKey).To(Equal("python|pytest"))
+			Expect(rows[0].FilterSourceKind).To(Equal("project"))
+			Expect(rows[0].FilterPath).To(Equal("/repo/.ccp/filters/python.yaml"))
+			Expect(rows[0].FilterHash).To(Equal("hash-a"))
+			Expect(rows[0].Commands).To(Equal(int64(2)))
+			Expect(rows[0].PassthroughCommands).To(Equal(int64(1)))
+			Expect(rows[0].PassthroughRate).To(Equal(0.5))
+			Expect(rows[0].FailedCommands).To(Equal(int64(1)))
+			Expect(rows[0].FailedRate).To(Equal(0.5))
+			Expect(rows[0].AvgDurationMS).To(Equal(float64(30)))
+			Expect(rows[0].RawBytes).To(Equal(int64(24)))
+			Expect(rows[0].KeptBytes).To(Equal(int64(12)))
+			Expect(rows[0].EstimatedSavingsPct).To(Equal(float64(50)))
+
+			Expect(rows[1].Tool).To(Equal("python"))
+			Expect(rows[1].Filter).To(Equal("python"))
+			Expect(rows[1].Case).To(Equal("default"))
+			Expect(rows[1].Commands).To(Equal(int64(1)))
+		})
+
+		It("aggregates registry build timing rows and sources", func() {
+			path := filepath.Join(tempDir, "metrics.db")
+			appendRunMetrics(path,
+				RunMetric{
+					Timestamp:             time.Date(2026, 3, 25, 11, 30, 0, 0, time.UTC),
+					Tool:                  "go",
+					Command:               "go test ./...",
+					RawBytes:              8,
+					KeptBytes:             4,
+					RegistryBuildRecorded: true,
+					RegistryBuildMS:       10,
+					RegistrySources: []RegistrySourceBuildMetric{
+						{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 7},
+						{SourceKind: "home", SourceDir: "/home/user/.config/ccp/filters", Definitions: 1, Compiled: 1, DurationMS: 3},
+					},
+				},
+				RunMetric{
+					Timestamp:             time.Date(2026, 3, 25, 11, 31, 0, 0, time.UTC),
+					Tool:                  "go",
+					Command:               "go test ./...",
+					RawBytes:              8,
+					KeptBytes:             4,
+					RegistryBuildRecorded: true,
+					RegistryBuildMS:       30,
+					RegistrySources: []RegistrySourceBuildMetric{
+						{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 3, Compiled: 2, DurationMS: 25, Error: "boom"},
+					},
+				},
+				RunMetric{
+					Timestamp:       time.Date(2026, 3, 25, 11, 32, 0, 0, time.UTC),
+					Tool:            "go",
+					Command:         "legacy",
+					RawBytes:        8,
+					KeptBytes:       4,
+					RegistryBuildMS: 99,
+				},
+			)
+
+			summary, rows, err := QueryRegistryBuild(path, QueryOptions{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(summary.Builds).To(Equal(int64(2)))
+			Expect(summary.AvgDurationMS).To(Equal(float64(20)))
+			Expect(summary.P95DurationMS).To(Equal(int64(30)))
+			Expect(summary.MaxDurationMS).To(Equal(int64(30)))
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].SourceKind).To(Equal("project"))
+			Expect(rows[0].SourceDir).To(Equal("/repo/.ccp/filters"))
+			Expect(rows[0].Builds).To(Equal(int64(2)))
+			Expect(rows[0].Errors).To(Equal(int64(1)))
+			Expect(rows[0].Definitions).To(Equal(int64(5)))
+			Expect(rows[0].Compiled).To(Equal(int64(4)))
+			Expect(rows[0].AvgDurationMS).To(Equal(float64(16)))
+			Expect(rows[0].MaxDurationMS).To(Equal(int64(25)))
+			Expect(rows[1].SourceKind).To(Equal("home"))
+			Expect(rows[1].Builds).To(Equal(int64(1)))
+		})
+
 		It("ranks missed opportunities by count, breaks ties alphabetically, and applies the default limit", func() {
 			path := filepath.Join(tempDir, "metrics.db")
 			appendRunMetrics(path,
@@ -983,15 +1135,23 @@ var _ = Describe("metrics storage", func() {
 
 		It("round-trips encoded run records and defaults blank tools to unknown", func() {
 			rec := runRecord{
-				TimestampUnix: 1_700_000_123,
-				Command:       metricsGoTestCommand,
-				Tool:          "",
-				Dispatch:      "go:test",
-				RawBytes:      12,
-				KeptBytes:     4,
-				ExitCode:      -3,
-				DurationMS:    17,
-				Passthrough:   true,
+				TimestampUnix:         1_700_000_123,
+				Command:               metricsGoTestCommand,
+				Tool:                  "",
+				Dispatch:              "go:test",
+				RawBytes:              12,
+				KeptBytes:             4,
+				ExitCode:              -3,
+				DurationMS:            17,
+				Passthrough:           true,
+				FilterSourceKind:      "project",
+				FilterPath:            "/repo/.ccp/filters/go.yaml",
+				FilterHash:            "abc123",
+				RegistryBuildRecorded: true,
+				RegistryBuildMS:       42,
+				RegistrySources: []RegistrySourceBuildMetric{
+					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
+				},
 			}
 
 			got := decodeRunRecord(encodeRunRecord(rec))
@@ -1004,6 +1164,43 @@ var _ = Describe("metrics storage", func() {
 			Expect(got.ExitCode).To(Equal(rec.ExitCode))
 			Expect(got.DurationMS).To(Equal(rec.DurationMS))
 			Expect(got.Passthrough).To(BeTrue())
+			Expect(got.FilterSourceKind).To(Equal("project"))
+			Expect(got.FilterPath).To(Equal("/repo/.ccp/filters/go.yaml"))
+			Expect(got.FilterHash).To(Equal("abc123"))
+			Expect(got.RegistryBuildRecorded).To(BeTrue())
+			Expect(got.RegistryBuildMS).To(Equal(int64(42)))
+			Expect(got.RegistrySources).To(Equal([]RegistrySourceBuildMetric{
+				{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
+			}))
+		})
+
+		It("decodes legacy run records without provenance fields", func() {
+			rec := runRecord{
+				TimestampUnix: 1_700_000_123,
+				Command:       metricsGoTestCommand,
+				Tool:          "go",
+				Dispatch:      "go|test",
+				RawBytes:      12,
+				KeptBytes:     4,
+				ExitCode:      0,
+				DurationMS:    17,
+				Passthrough:   true,
+			}
+			encoded := encodeRunRecord(rec)
+			legacyEncoded := encoded[:len(encoded)-12]
+
+			got := decodeRunRecord(legacyEncoded)
+
+			Expect(got.TimestampUnix).To(Equal(rec.TimestampUnix))
+			Expect(got.Command).To(Equal(rec.Command))
+			Expect(got.Tool).To(Equal(rec.Tool))
+			Expect(got.Dispatch).To(Equal(rec.Dispatch))
+			Expect(got.RawBytes).To(Equal(rec.RawBytes))
+			Expect(got.KeptBytes).To(Equal(rec.KeptBytes))
+			Expect(got.Passthrough).To(BeTrue())
+			Expect(got.FilterSourceKind).To(BeEmpty())
+			Expect(got.FilterPath).To(BeEmpty())
+			Expect(got.FilterHash).To(BeEmpty())
 		})
 	})
 })

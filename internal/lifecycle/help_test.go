@@ -139,7 +139,7 @@ var _ = Describe("lifecycle help", func() {
 				"Flags:",
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
-				"subcommands: new, prompt, status",
+				"subcommands: new, performance, prompt, status",
 			},
 		}),
 		Entry("filter new", helpCase{

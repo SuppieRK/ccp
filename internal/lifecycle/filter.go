@@ -22,6 +22,10 @@ type filterMappingsFile struct {
 }
 
 func RunFilter(args []string) error {
+	return RunFilterWithMetrics(args, "")
+}
+
+func RunFilterWithMetrics(args []string, metricsPath string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing filter subcommand")
 	}
@@ -31,8 +35,8 @@ func RunFilter(args []string) error {
 			fs,
 			"YAML filter authoring and inspection helpers",
 			[]string{"ccp filter <subcommand> [args...]"},
-			"subcommands: new, prompt, status",
-			"use 'ccp filter new --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
+			"subcommands: new, performance, prompt, status",
+			"use 'ccp filter new --help', 'ccp filter performance --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
 		)
 		handled, err := parseLifecycleFlags(fs, args)
 		if err != nil {
@@ -45,6 +49,8 @@ func RunFilter(args []string) error {
 	switch args[0] {
 	case "new":
 		return RunFilterNew(args[1:])
+	case "performance":
+		return RunFilterPerformance(args[1:], metricsPath)
 	case "prompt":
 		return RunFilterPrompt(args[1:])
 	case "status":

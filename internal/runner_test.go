@@ -407,6 +407,12 @@ var _ = Describe("Runner", func() {
 			Expect(history[0].RawBytes).To(BeNumerically(">", 0))
 			Expect(history[0].KeptBytes).To(BeNumerically(">", 0))
 			Expect(history[0].Passthrough).To(BeTrue())
+
+			buildSummary, buildRows, err := metrics.QueryRegistryBuild(runner.metricsPath, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buildSummary.Builds).To(Equal(int64(1)))
+			Expect(buildSummary.MaxDurationMS).To(BeNumerically(">=", 0))
+			Expect(buildRows).To(BeEmpty())
 		})
 
 		It("marks yaml-authored grep invert-match cases as passthrough", func() {
@@ -454,6 +460,12 @@ var _ = Describe("Runner", func() {
 			Expect(history[0].Passthrough).To(BeTrue())
 			Expect(history[0].DroppedBytes).To(BeZero())
 			Expect(history[0].EstimatedSavedTokens).To(BeZero())
+
+			buildSummary, buildRows, err := metrics.QueryRegistryBuild(runner.metricsPath, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buildSummary.Builds).To(Equal(int64(1)))
+			Expect(buildRows).NotTo(BeEmpty())
+			Expect(buildRows[0].SourceKind).To(Equal(string(corefilters.SourceRepository)))
 		})
 
 		DescribeTable("does not record wrapped ccp lifecycle metrics",
@@ -476,7 +488,7 @@ var _ = Describe("Runner", func() {
 					Dispatch: "ccp",
 				}
 
-				runner.appendMetrics(command, true, 0, 1, 32, 32)
+				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, true, 0, 1, 32, 32)
 
 				history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -508,7 +520,7 @@ var _ = Describe("Runner", func() {
 				Dispatch: "go",
 			}
 
-			runner.appendMetrics(command, false, 0, 1, 32, 16)
+			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 32, 16)
 
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
@@ -532,7 +544,7 @@ var _ = Describe("Runner", func() {
 			}
 
 			rawRunner := NewRunnerWithOptions(Options{Raw: true, MetricsPath: filepath.Join(tmpDir, "raw.db")})
-			rawRunner.appendMetrics(command, false, 0, 1, 10, 5)
+			rawRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
 			history, err := metrics.QueryHistory(rawRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(BeEmpty())
@@ -540,7 +552,7 @@ var _ = Describe("Runner", func() {
 			parentFile := filepath.Join(tmpDir, "not-a-dir")
 			Expect(os.WriteFile(parentFile, []byte("x"), 0o644)).To(Succeed())
 			brokenRunner := &Runner{metricsPath: filepath.Join(parentFile, "gain.db"), workingDir: filepath.Join(tmpDir, "repo")}
-			brokenRunner.appendMetrics(command, false, 0, 1, 10, 5)
+			brokenRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
 			entries, err := workspaces.ListPath(registryPath)
@@ -548,7 +560,7 @@ var _ = Describe("Runner", func() {
 			Expect(entries).To(BeEmpty())
 
 			blankRunner := &Runner{metricsPath: filepath.Join(tmpDir, "blank.db"), workingDir: "   "}
-			blankRunner.appendMetrics(command, false, 0, 1, 10, 5)
+			blankRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
 			history, err = metrics.QueryHistory(blankRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(HaveLen(1))
@@ -950,7 +962,7 @@ cases:
 			runner := &Runner{sources: []corefilters.FilterSource{
 				corefilters.RepositorySource(repoRoot),
 			}}
-			registry, err := runner.loadRegistry()
+			registry, _, err := runner.loadRegistry()
 			Expect(err).NotTo(HaveOccurred())
 
 			resolved := registry.Resolve(contracts.Command{
@@ -1135,7 +1147,7 @@ cases:
 					runner := &Runner{sources: []corefilters.FilterSource{
 						corefilters.RepositorySource(repoRoot),
 					}}
-					registry, err := runner.loadRegistry()
+					registry, _, err := runner.loadRegistry()
 					Expect(err).NotTo(HaveOccurred())
 
 					resolved := registry.Resolve(contracts.Command{
@@ -1143,6 +1155,10 @@ cases:
 						Args: args,
 					})
 					Expect(resolved).NotTo(Equal(corefilters.Passthrough{}))
+					provenance := resolved.(contracts.ProvenanceFilter).FilterProvenance()
+					Expect(provenance.SourceKind).To(Equal("repository"))
+					Expect(provenance.Path).To(Equal(filepath.Join(filterDir, "python.yaml")))
+					Expect(provenance.Hash).To(HaveLen(64))
 				},
 				Entry("with valid mappings", "py", "version: 1\nmap:\n  py: python\n", []string{"py", "-m", "pytest"}),
 				Entry("with invalid mappings that fall back to direct lookup", "python", "version: oops\n", []string{"python", "-m", "pytest"}),
@@ -1199,7 +1215,7 @@ cases:
 						corefilters.ProjectSource(projectRoot),
 						corefilters.HomeSource(homeRoot),
 					}}
-					registry, err := runner.loadRegistry()
+					registry, _, err := runner.loadRegistry()
 					Expect(err).NotTo(HaveOccurred())
 
 					resolved := registry.Resolve(contracts.Command{

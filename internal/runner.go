@@ -104,7 +104,7 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 		return 1, err
 	}
 
-	registry, err := r.loadExecutionRegistry(auditCommand, command.Tool)
+	registry, buildTiming, err := r.loadExecutionRegistry(auditCommand, command.Tool)
 	if err != nil {
 		return 1, err
 	}
@@ -148,7 +148,7 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	}
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
-	r.appendMetrics(command, isPassthroughFilter(resolved, command), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
+	r.appendMetrics(command, filterProvenance(resolved), buildTiming, isPassthroughFilter(resolved, command), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
 	auditErr := audit.Append("execution_finish", map[string]any{
 		"command":     auditCommand,
 		"tool":        command.Tool,
@@ -165,19 +165,19 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	return exitCode, nil
 }
 
-func (r *Runner) loadExecutionRegistry(auditCommand, tool string) (*engine.Registry, error) {
-	registry, err := r.loadRegistry()
+func (r *Runner) loadExecutionRegistry(auditCommand, tool string) (*engine.Registry, contracts.FilterRegistryBuildTiming, error) {
+	registry, timing, err := r.loadRegistry()
 	if err == nil {
-		return registry, nil
+		return registry, timing, nil
 	}
 	if auditErr := audit.Append("execution_registry_error", map[string]any{
 		"command": auditCommand,
 		"tool":    tool,
 		"error":   err.Error(),
 	}); auditErr != nil {
-		return nil, errors.Join(err, auditErr)
+		return nil, timing, errors.Join(err, auditErr)
 	}
-	return engine.NewRegistry(), nil
+	return engine.NewRegistry(), timing, nil
 }
 
 func filteredRunResult(ctx context.Context, waitErr, outputErr error, exitCode int) (int, error) {
@@ -296,7 +296,7 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 		return ReplayResult{}, err
 	}
 
-	registry, err := r.loadRegistry()
+	registry, _, err := r.loadRegistry()
 	if err != nil {
 		return ReplayResult{}, errors.Join(err, audit.Append("verify_registry_error", map[string]any{
 			"command": auditCommand,
@@ -341,14 +341,17 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 	}, nil
 }
 
-func (r *Runner) loadRegistry() (*engine.Registry, error) {
+func (r *Runner) loadRegistry() (*engine.Registry, contracts.FilterRegistryBuildTiming, error) {
+	startedAt := time.Now()
 	registry := engine.NewRegistry()
-	filters, err := filteryaml.LoadRegistryFiltersFromSources(r.sources)
+	filters, timing, err := filteryaml.LoadRegistryFiltersFromSourcesWithTiming(r.sources)
+	timing.DurationMS = time.Since(startedAt).Milliseconds()
 	if err != nil {
-		return nil, err
+		return nil, timing, err
 	}
 	registry.RegisterAll(filters)
-	return registry, nil
+	timing.DurationMS = time.Since(startedAt).Milliseconds()
+	return registry, timing, nil
 }
 
 func defaultMetricsPath() string {
@@ -594,7 +597,14 @@ func isPassthroughFilter(filter any, command contracts.Command) bool {
 	}
 }
 
-func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exitCode int, durationMS int64, rawBytes, keptBytes int) {
+func filterProvenance(filter any) contracts.FilterProvenance {
+	if f, ok := filter.(contracts.ProvenanceFilter); ok {
+		return f.FilterProvenance()
+	}
+	return contracts.FilterProvenance{}
+}
+
+func (r *Runner) appendMetrics(command contracts.Command, provenance contracts.FilterProvenance, buildTiming contracts.FilterRegistryBuildTiming, passthrough bool, exitCode int, durationMS int64, rawBytes, keptBytes int) {
 	if r.opts.Raw {
 		return
 	}
@@ -602,15 +612,21 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 		return
 	}
 	if err := metrics.Append(r.metricsPath, metrics.RunMetric{
-		Timestamp:   time.Now().UTC(),
-		Command:     command.RawInput,
-		Tool:        command.Tool,
-		Dispatch:    command.Dispatch,
-		RawBytes:    rawBytes,
-		KeptBytes:   keptBytes,
-		ExitCode:    exitCode,
-		DurationMS:  durationMS,
-		Passthrough: passthrough,
+		Timestamp:             time.Now().UTC(),
+		Command:               command.RawInput,
+		Tool:                  command.Tool,
+		Dispatch:              command.Dispatch,
+		RawBytes:              rawBytes,
+		KeptBytes:             keptBytes,
+		ExitCode:              exitCode,
+		DurationMS:            durationMS,
+		Passthrough:           passthrough,
+		FilterSourceKind:      provenance.SourceKind,
+		FilterPath:            provenance.Path,
+		FilterHash:            provenance.Hash,
+		RegistryBuildRecorded: true,
+		RegistryBuildMS:       buildTiming.DurationMS,
+		RegistrySources:       metricRegistrySources(buildTiming.Sources),
 	}); err != nil {
 		return
 	}
@@ -622,6 +638,21 @@ func (r *Runner) appendMetrics(command contracts.Command, passthrough bool, exit
 		return
 	}
 	_ = workspaces.UpsertPath(path, r.workingDir, r.metricsPath)
+}
+
+func metricRegistrySources(sources []contracts.FilterSourceBuildTiming) []metrics.RegistrySourceBuildMetric {
+	out := make([]metrics.RegistrySourceBuildMetric, 0, len(sources))
+	for _, source := range sources {
+		out = append(out, metrics.RegistrySourceBuildMetric{
+			SourceKind:  source.SourceKind,
+			SourceDir:   source.SourceDir,
+			Definitions: source.Definitions,
+			Compiled:    source.Compiled,
+			DurationMS:  source.DurationMS,
+			Error:       source.Error,
+		})
+	}
+	return out
 }
 
 func shouldRecordMetrics(command contracts.Command) bool {

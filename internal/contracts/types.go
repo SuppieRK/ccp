@@ -16,6 +16,26 @@ type Command struct {
 	Dispatch  string
 }
 
+type FilterProvenance struct {
+	SourceKind string
+	Path       string
+	Hash       string
+}
+
+type FilterSourceBuildTiming struct {
+	SourceKind  string
+	SourceDir   string
+	Definitions int64
+	Compiled    int64
+	DurationMS  int64
+	Error       string
+}
+
+type FilterRegistryBuildTiming struct {
+	DurationMS int64
+	Sources    []FilterSourceBuildTiming
+}
+
 type ActionKind string
 
 const (
@@ -48,4 +68,8 @@ type Filter interface {
 
 type CloneableFilter interface {
 	CloneFilter() Filter
+}
+
+type ProvenanceFilter interface {
+	FilterProvenance() FilterProvenance
 }
