@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -28,15 +29,21 @@ var (
 )
 
 type RunMetric struct {
-	Timestamp   time.Time
-	Command     string
-	Tool        string
-	Dispatch    string
-	RawBytes    int
-	KeptBytes   int
-	ExitCode    int
-	DurationMS  int64
-	Passthrough bool
+	Timestamp             time.Time
+	Command               string
+	Tool                  string
+	Dispatch              string
+	RawBytes              int
+	KeptBytes             int
+	ExitCode              int
+	DurationMS            int64
+	Passthrough           bool
+	FilterSourceKind      string
+	FilterPath            string
+	FilterHash            string
+	RegistryBuildRecorded bool
+	RegistryBuildMS       int64
+	RegistrySources       []RegistrySourceBuildMetric
 }
 
 type Summary struct {
@@ -102,6 +109,11 @@ type HistoryRow struct {
 	Command               string    `json:"command"`
 	Tool                  string    `json:"tool"`
 	DispatchKey           string    `json:"dispatch_key"`
+	Filter                string    `json:"filter"`
+	Case                  string    `json:"case"`
+	FilterSourceKind      string    `json:"filter_source_kind"`
+	FilterPath            string    `json:"filter_path"`
+	FilterHash            string    `json:"filter_hash"`
 	ExitCode              int       `json:"exit_code"`
 	Failed                bool      `json:"failed"`
 	Passthrough           bool      `json:"passthrough"`
@@ -131,16 +143,79 @@ type PeriodRow struct {
 	EstimatedSavingsPct   float64 `json:"estimated_savings_pct"`
 }
 
+type PerformanceRow struct {
+	Tool                  string  `json:"tool"`
+	Filter                string  `json:"filter"`
+	Case                  string  `json:"case"`
+	DispatchKey           string  `json:"dispatch_key"`
+	FilterSourceKind      string  `json:"filter_source_kind"`
+	FilterPath            string  `json:"filter_path"`
+	FilterHash            string  `json:"filter_hash"`
+	Commands              int64   `json:"commands"`
+	PassthroughCommands   int64   `json:"passthrough_commands"`
+	PassthroughRate       float64 `json:"passthrough_rate"`
+	FailedCommands        int64   `json:"failed_commands"`
+	FailedRate            float64 `json:"failed_rate"`
+	AvgDurationMS         float64 `json:"avg_duration_ms"`
+	RawBytes              int64   `json:"raw_bytes"`
+	KeptBytes             int64   `json:"kept_bytes"`
+	DroppedBytes          int64   `json:"dropped_bytes"`
+	DropRatio             float64 `json:"drop_ratio"`
+	EstimatedInputTokens  int64   `json:"estimated_input_tokens"`
+	EstimatedOutputTokens int64   `json:"estimated_output_tokens"`
+	EstimatedSavedTokens  int64   `json:"estimated_saved_tokens"`
+	EstimatedSavingsPct   float64 `json:"estimated_savings_pct"`
+}
+
+type RegistrySourceBuildMetric struct {
+	SourceKind  string `json:"source_kind"`
+	SourceDir   string `json:"source_dir"`
+	Definitions int64  `json:"definitions"`
+	Compiled    int64  `json:"compiled"`
+	DurationMS  int64  `json:"duration_ms"`
+	Error       string `json:"error"`
+}
+
+type RegistryBuildEvent struct {
+	DurationMS int64                       `json:"duration_ms"`
+	Sources    []RegistrySourceBuildMetric `json:"sources"`
+}
+
+type RegistryBuildSummary struct {
+	Builds        int64   `json:"builds"`
+	AvgDurationMS float64 `json:"avg_duration_ms"`
+	P95DurationMS int64   `json:"p95_duration_ms"`
+	MaxDurationMS int64   `json:"max_duration_ms"`
+}
+
+type RegistrySourceBuildRow struct {
+	SourceKind    string  `json:"source_kind"`
+	SourceDir     string  `json:"source_dir"`
+	Builds        int64   `json:"builds"`
+	Errors        int64   `json:"errors"`
+	Definitions   int64   `json:"definitions"`
+	Compiled      int64   `json:"compiled"`
+	AvgDurationMS float64 `json:"avg_duration_ms"`
+	P95DurationMS int64   `json:"p95_duration_ms"`
+	MaxDurationMS int64   `json:"max_duration_ms"`
+}
+
 type runRecord struct {
-	TimestampUnix int64
-	Command       string
-	Tool          string
-	Dispatch      string
-	RawBytes      int64
-	KeptBytes     int64
-	ExitCode      int
-	DurationMS    int64
-	Passthrough   bool
+	TimestampUnix         int64
+	Command               string
+	Tool                  string
+	Dispatch              string
+	RawBytes              int64
+	KeptBytes             int64
+	ExitCode              int
+	DurationMS            int64
+	Passthrough           bool
+	FilterSourceKind      string
+	FilterPath            string
+	FilterHash            string
+	RegistryBuildRecorded bool
+	RegistryBuildMS       int64
+	RegistrySources       []RegistrySourceBuildMetric
 }
 
 type periodAcc struct {
@@ -150,6 +225,16 @@ type periodAcc struct {
 	raw    int64
 	kept   int64
 	count  int64
+}
+
+type performanceAcc struct {
+	row      PerformanceRow
+	duration int64
+}
+
+type registrySourceBuildAcc struct {
+	row       RegistrySourceBuildRow
+	durations []int64
 }
 
 type derivedMetricTargets struct {
@@ -212,15 +297,21 @@ func normalizeMetric(metric RunMetric) runRecord {
 		metric.Tool = "unknown"
 	}
 	return runRecord{
-		TimestampUnix: metric.Timestamp.Unix(),
-		Command:       metric.Command,
-		Tool:          metric.Tool,
-		Dispatch:      metric.Dispatch,
-		RawBytes:      int64(max0(metric.RawBytes)),
-		KeptBytes:     int64(max0(metric.KeptBytes)),
-		ExitCode:      metric.ExitCode,
-		DurationMS:    max0i64(metric.DurationMS),
-		Passthrough:   metric.Passthrough,
+		TimestampUnix:         metric.Timestamp.Unix(),
+		Command:               metric.Command,
+		Tool:                  metric.Tool,
+		Dispatch:              metric.Dispatch,
+		RawBytes:              int64(max0(metric.RawBytes)),
+		KeptBytes:             int64(max0(metric.KeptBytes)),
+		ExitCode:              metric.ExitCode,
+		DurationMS:            max0i64(metric.DurationMS),
+		Passthrough:           metric.Passthrough,
+		FilterSourceKind:      strings.TrimSpace(metric.FilterSourceKind),
+		FilterPath:            strings.TrimSpace(metric.FilterPath),
+		FilterHash:            strings.TrimSpace(metric.FilterHash),
+		RegistryBuildRecorded: metric.RegistryBuildRecorded,
+		RegistryBuildMS:       max0i64(metric.RegistryBuildMS),
+		RegistrySources:       normalizeRegistrySources(metric.RegistrySources),
 	}
 }
 
@@ -512,18 +603,157 @@ func QueryPeriod(path string, opts QueryOptions) (periodRows []PeriodRow, err er
 	return out, nil
 }
 
+func QueryPerformanceRows(path string, opts QueryOptions) (rows []PerformanceRow, err error) {
+	if strings.TrimSpace(path) == "" || !fileExists(path) {
+		return nil, nil
+	}
+	db, err := openDB(path, true)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBoltDBWithErr(db, &err)
+
+	grouped := make(map[string]*performanceAcc, 32)
+	err = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(runsBucket)
+		if b == nil {
+			return nil
+		}
+		threshold := sinceThreshold(opts)
+		return b.ForEach(func(_, v []byte) error {
+			rec := decodeRunRecord(v)
+			if !matchesOptions(rec, opts, threshold) {
+				return nil
+			}
+			updatePerformanceAcc(grouped, rec)
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]PerformanceRow, 0, len(grouped))
+	for _, acc := range grouped {
+		row := acc.row
+		fillPerformanceDerived(&row, acc.duration)
+		out = append(out, row)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Commands != out[j].Commands {
+			return out[i].Commands > out[j].Commands
+		}
+		if out[i].EstimatedSavedTokens != out[j].EstimatedSavedTokens {
+			return out[i].EstimatedSavedTokens > out[j].EstimatedSavedTokens
+		}
+		if out[i].Tool != out[j].Tool {
+			return out[i].Tool < out[j].Tool
+		}
+		if out[i].Filter != out[j].Filter {
+			return out[i].Filter < out[j].Filter
+		}
+		return out[i].Case < out[j].Case
+	})
+	return out, nil
+}
+
+func QueryRegistryBuild(path string, opts QueryOptions) (summary RegistryBuildSummary, sourceRows []RegistrySourceBuildRow, err error) {
+	events, err := QueryRegistryBuildEvents(path, opts)
+	if err != nil {
+		return RegistryBuildSummary{}, nil, err
+	}
+	return RegistryBuildSummaryFromEvents(events), RegistrySourceBuildRowsFromEvents(events), nil
+}
+
+func QueryRegistryBuildEvents(path string, opts QueryOptions) (events []RegistryBuildEvent, err error) {
+	if strings.TrimSpace(path) == "" || !fileExists(path) {
+		return nil, nil
+	}
+	db, err := openDB(path, true)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBoltDBWithErr(db, &err)
+
+	out := make([]RegistryBuildEvent, 0, 16)
+	err = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(runsBucket)
+		if b == nil {
+			return nil
+		}
+		threshold := sinceThreshold(opts)
+		return b.ForEach(func(_, v []byte) error {
+			rec := decodeRunRecord(v)
+			if !matchesOptions(rec, opts, threshold) || !rec.RegistryBuildRecorded {
+				return nil
+			}
+			out = append(out, RegistryBuildEvent{
+				DurationMS: rec.RegistryBuildMS,
+				Sources:    append([]RegistrySourceBuildMetric(nil), rec.RegistrySources...),
+			})
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func RegistryBuildSummaryFromEvents(events []RegistryBuildEvent) RegistryBuildSummary {
+	durations := make([]int64, 0, len(events))
+	for _, event := range events {
+		durations = append(durations, event.DurationMS)
+	}
+	return registryBuildSummaryFromDurations(durations)
+}
+
+func RegistrySourceBuildRowsFromEvents(events []RegistryBuildEvent) []RegistrySourceBuildRow {
+	groupedSources := make(map[string]*registrySourceBuildAcc, 8)
+	for _, event := range events {
+		for _, source := range event.Sources {
+			updateRegistrySourceBuildAcc(groupedSources, source)
+		}
+	}
+	out := make([]RegistrySourceBuildRow, 0, len(groupedSources))
+	for _, acc := range groupedSources {
+		row := acc.row
+		fillRegistrySourceBuildDerived(&row, acc.durations)
+		out = append(out, row)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].AvgDurationMS != out[j].AvgDurationMS {
+			return out[i].AvgDurationMS > out[j].AvgDurationMS
+		}
+		if out[i].MaxDurationMS != out[j].MaxDurationMS {
+			return out[i].MaxDurationMS > out[j].MaxDurationMS
+		}
+		if out[i].SourceKind != out[j].SourceKind {
+			return out[i].SourceKind < out[j].SourceKind
+		}
+		return out[i].SourceDir < out[j].SourceDir
+	})
+	return out
+}
+
 func historyRowFromRecord(rec runRecord) HistoryRow {
+	filterID, caseID := dispatchFilterCase(rec.Dispatch, rec.Tool)
 	r := HistoryRow{
-		Timestamp:   time.Unix(rec.TimestampUnix, 0).UTC(),
-		Command:     rec.Command,
-		Tool:        rec.Tool,
-		DispatchKey: rec.Dispatch,
-		ExitCode:    rec.ExitCode,
-		Failed:      rec.ExitCode != 0,
-		Passthrough: rec.Passthrough,
-		DurationMS:  rec.DurationMS,
-		RawBytes:    rec.RawBytes,
-		KeptBytes:   rec.KeptBytes,
+		Timestamp:        time.Unix(rec.TimestampUnix, 0).UTC(),
+		Command:          rec.Command,
+		Tool:             rec.Tool,
+		DispatchKey:      rec.Dispatch,
+		Filter:           filterID,
+		Case:             caseID,
+		FilterSourceKind: rec.FilterSourceKind,
+		FilterPath:       rec.FilterPath,
+		FilterHash:       rec.FilterHash,
+		ExitCode:         rec.ExitCode,
+		Failed:           rec.ExitCode != 0,
+		Passthrough:      rec.Passthrough,
+		DurationMS:       rec.DurationMS,
+		RawBytes:         rec.RawBytes,
+		KeptBytes:        rec.KeptBytes,
 	}
 	fillDerivedMetrics(r.RawBytes, r.KeptBytes, derivedMetricTargets{
 		droppedBytes: &r.DroppedBytes,
@@ -534,6 +764,132 @@ func historyRowFromRecord(rec runRecord) HistoryRow {
 		savingsPct:   &r.EstimatedSavingsPct,
 	})
 	return r
+}
+
+func updateRegistrySourceBuildAcc(grouped map[string]*registrySourceBuildAcc, source RegistrySourceBuildMetric) {
+	key := strings.Join([]string{source.SourceKind, source.SourceDir}, "\x00")
+	acc := grouped[key]
+	if acc == nil {
+		acc = &registrySourceBuildAcc{
+			row: RegistrySourceBuildRow{
+				SourceKind: source.SourceKind,
+				SourceDir:  source.SourceDir,
+			},
+		}
+		grouped[key] = acc
+	}
+	acc.row.Builds++
+	if strings.TrimSpace(source.Error) != "" {
+		acc.row.Errors++
+	}
+	acc.row.Definitions += max0i64(source.Definitions)
+	acc.row.Compiled += max0i64(source.Compiled)
+	acc.durations = append(acc.durations, max0i64(source.DurationMS))
+}
+
+func registryBuildSummaryFromDurations(durations []int64) RegistryBuildSummary {
+	if len(durations) == 0 {
+		return RegistryBuildSummary{}
+	}
+	var sum int64
+	var maxDuration int64
+	for _, duration := range durations {
+		duration = max0i64(duration)
+		sum += duration
+		maxDuration = max(maxDuration, duration)
+	}
+	return RegistryBuildSummary{
+		Builds:        int64(len(durations)),
+		AvgDurationMS: float64(sum) / float64(len(durations)),
+		P95DurationMS: percentileDuration(durations, 0.95),
+		MaxDurationMS: maxDuration,
+	}
+}
+
+func fillRegistrySourceBuildDerived(row *RegistrySourceBuildRow, durations []int64) {
+	summary := registryBuildSummaryFromDurations(durations)
+	row.Builds = summary.Builds
+	row.AvgDurationMS = summary.AvgDurationMS
+	row.P95DurationMS = summary.P95DurationMS
+	row.MaxDurationMS = summary.MaxDurationMS
+}
+
+func percentileDuration(durations []int64, percentile float64) int64 {
+	if len(durations) == 0 {
+		return 0
+	}
+	sorted := append([]int64(nil), durations...)
+	for i, duration := range sorted {
+		sorted[i] = max0i64(duration)
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i] < sorted[j]
+	})
+	index := int(math.Ceil(percentile*float64(len(sorted)))) - 1
+	index = max(0, min(index, len(sorted)-1))
+	return sorted[index]
+}
+
+func updatePerformanceAcc(grouped map[string]*performanceAcc, rec runRecord) {
+	filterID, caseID := dispatchFilterCase(rec.Dispatch, rec.Tool)
+	key := strings.Join([]string{
+		rec.Tool,
+		filterID,
+		caseID,
+		rec.Dispatch,
+		rec.FilterSourceKind,
+		rec.FilterPath,
+		rec.FilterHash,
+	}, "\x00")
+	acc := grouped[key]
+	if acc == nil {
+		acc = &performanceAcc{
+			row: PerformanceRow{
+				Tool:             rec.Tool,
+				Filter:           filterID,
+				Case:             caseID,
+				DispatchKey:      rec.Dispatch,
+				FilterSourceKind: rec.FilterSourceKind,
+				FilterPath:       rec.FilterPath,
+				FilterHash:       rec.FilterHash,
+			},
+		}
+		grouped[key] = acc
+	}
+	acc.row.Commands++
+	if rec.Passthrough {
+		acc.row.PassthroughCommands++
+	}
+	if rec.ExitCode != 0 {
+		acc.row.FailedCommands++
+	}
+	acc.row.RawBytes += rec.RawBytes
+	acc.row.KeptBytes += rec.KeptBytes
+	acc.duration += rec.DurationMS
+}
+
+func dispatchFilterCase(dispatch, fallbackTool string) (string, string) {
+	dispatch = strings.TrimSpace(dispatch)
+	fallbackTool = strings.TrimSpace(fallbackTool)
+	if dispatch == "" {
+		if fallbackTool == "" {
+			return "unknown", ""
+		}
+		return fallbackTool, ""
+	}
+	filterID, caseID, ok := strings.Cut(dispatch, "|")
+	filterID = strings.TrimSpace(filterID)
+	caseID = strings.TrimSpace(caseID)
+	if filterID == "" {
+		filterID = fallbackTool
+	}
+	if filterID == "" {
+		filterID = "unknown"
+	}
+	if !ok {
+		return filterID, ""
+	}
+	return filterID, caseID
 }
 
 func reverseHistoryRows(rows []HistoryRow) {
@@ -611,23 +967,25 @@ func encodeRunRecord(rec runRecord) []byte {
 	cmd := []byte(rec.Command)
 	tool := []byte(rec.Tool)
 	dispatch := []byte(rec.Dispatch)
-	sz := 8 + 4 + len(cmd) + 4 + len(tool) + 4 + len(dispatch) + 8 + 8 + 8 + 8 + 1
+	sourceKind := []byte(rec.FilterSourceKind)
+	filterPath := []byte(rec.FilterPath)
+	filterHash := []byte(rec.FilterHash)
+	registrySources := []byte("")
+	if rec.RegistryBuildRecorded {
+		registrySources = []byte(encodeRegistrySources(rec.RegistrySources))
+	}
+	sz := 8 + 4 + len(cmd) + 4 + len(tool) + 4 + len(dispatch) + 8 + 8 + 8 + 8 + 1 +
+		4 + len(sourceKind) + 4 + len(filterPath) + 4 + len(filterHash)
+	if rec.RegistryBuildRecorded {
+		sz += 8 + 4 + len(registrySources)
+	}
 	out := make([]byte, sz)
 	i := 0
 	putNonNegativeInt64AsU64(out[i:i+8], rec.TimestampUnix)
 	i += 8
-	putLengthU32(out[i:i+4], len(cmd))
-	i += 4
-	copy(out[i:i+len(cmd)], cmd)
-	i += len(cmd)
-	putLengthU32(out[i:i+4], len(tool))
-	i += 4
-	copy(out[i:i+len(tool)], tool)
-	i += len(tool)
-	putLengthU32(out[i:i+4], len(dispatch))
-	i += 4
-	copy(out[i:i+len(dispatch)], dispatch)
-	i += len(dispatch)
+	i = putEncodedString(out, i, cmd)
+	i = putEncodedString(out, i, tool)
+	i = putEncodedString(out, i, dispatch)
 	putNonNegativeInt64AsU64(out[i:i+8], rec.RawBytes)
 	i += 8
 	putNonNegativeInt64AsU64(out[i:i+8], rec.KeptBytes)
@@ -638,6 +996,15 @@ func encodeRunRecord(rec runRecord) []byte {
 	i += 8
 	if rec.Passthrough {
 		out[i] = 1
+	}
+	i++
+	i = putEncodedString(out, i, sourceKind)
+	i = putEncodedString(out, i, filterPath)
+	i = putEncodedString(out, i, filterHash)
+	if rec.RegistryBuildRecorded {
+		putNonNegativeInt64AsU64(out[i:i+8], rec.RegistryBuildMS)
+		i += 8
+		putEncodedString(out, i, registrySources)
 	}
 	return out
 }
@@ -684,10 +1051,97 @@ func decodeRunRecord(b []byte) runRecord {
 	rec.DurationMS = getBoundedInt64FromU64(b[i : i+8])
 	i += 8
 	rec.Passthrough = b[i] == 1
+	i++
 	if rec.Tool == "" {
 		rec.Tool = "unknown"
 	}
+	if i == len(b) {
+		return rec
+	}
+	var ok bool
+	rec.FilterSourceKind, i, ok = getEncodedString(b, i)
+	if !ok {
+		return runRecord{}
+	}
+	rec.FilterPath, i, ok = getEncodedString(b, i)
+	if !ok {
+		return runRecord{}
+	}
+	rec.FilterHash, i, ok = getEncodedString(b, i)
+	if !ok {
+		return runRecord{}
+	}
+	if i == len(b) {
+		return rec
+	}
+	if i+8 > len(b) {
+		return runRecord{}
+	}
+	rec.RegistryBuildRecorded = true
+	rec.RegistryBuildMS = getBoundedInt64FromU64(b[i : i+8])
+	i += 8
+	rawSources, _, ok := getEncodedString(b, i)
+	if !ok {
+		return runRecord{}
+	}
+	rec.RegistrySources = decodeRegistrySources(rawSources)
 	return rec
+}
+
+func normalizeRegistrySources(sources []RegistrySourceBuildMetric) []RegistrySourceBuildMetric {
+	out := make([]RegistrySourceBuildMetric, 0, len(sources))
+	for _, source := range sources {
+		out = append(out, RegistrySourceBuildMetric{
+			SourceKind:  strings.TrimSpace(source.SourceKind),
+			SourceDir:   strings.TrimSpace(source.SourceDir),
+			Definitions: max0i64(source.Definitions),
+			Compiled:    max0i64(source.Compiled),
+			DurationMS:  max0i64(source.DurationMS),
+			Error:       strings.TrimSpace(source.Error),
+		})
+	}
+	return out
+}
+
+func encodeRegistrySources(sources []RegistrySourceBuildMetric) string {
+	if len(sources) == 0 {
+		return ""
+	}
+	raw, err := json.Marshal(normalizeRegistrySources(sources))
+	if err != nil {
+		return ""
+	}
+	return string(raw)
+}
+
+func decodeRegistrySources(raw string) []RegistrySourceBuildMetric {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var out []RegistrySourceBuildMetric
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil
+	}
+	return normalizeRegistrySources(out)
+}
+
+func putEncodedString(dst []byte, offset int, value []byte) int {
+	putLengthU32(dst[offset:offset+4], len(value))
+	offset += 4
+	copy(dst[offset:offset+len(value)], value)
+	return offset + len(value)
+}
+
+func getEncodedString(src []byte, offset int) (string, int, bool) {
+	if offset+4 > len(src) {
+		return "", offset, false
+	}
+	valueLen := getBoundedIntFromU32(src[offset : offset+4])
+	offset += 4
+	if offset+valueLen > len(src) {
+		return "", offset, false
+	}
+	return string(src[offset : offset+valueLen]), offset + valueLen, true
 }
 
 func putU32(dst []byte, v uint32) {
@@ -859,6 +1313,27 @@ func FillPeriodDerived(r *PeriodRow) {
 		savedTokens:  &r.EstimatedSavedTokens,
 		savingsPct:   &r.EstimatedSavingsPct,
 	})
+}
+
+func fillPerformanceDerived(row *PerformanceRow, durationMS int64) {
+	fillDerivedMetrics(row.RawBytes, row.KeptBytes, derivedMetricTargets{
+		droppedBytes: &row.DroppedBytes,
+		dropRatio:    &row.DropRatio,
+		inputTokens:  &row.EstimatedInputTokens,
+		outputTokens: &row.EstimatedOutputTokens,
+		savedTokens:  &row.EstimatedSavedTokens,
+		savingsPct:   &row.EstimatedSavingsPct,
+	})
+	if row.Commands <= 0 {
+		return
+	}
+	row.PassthroughRate = float64(row.PassthroughCommands) / float64(row.Commands)
+	row.FailedRate = float64(row.FailedCommands) / float64(row.Commands)
+	row.AvgDurationMS = float64(durationMS) / float64(row.Commands)
+}
+
+func FillPerformanceDerived(row *PerformanceRow, durationMS int64) {
+	fillPerformanceDerived(row, durationMS)
 }
 
 func fillDerivedMetrics(rawBytes, keptBytes int64, targets derivedMetricTargets) {

@@ -169,6 +169,8 @@ Two filter scopes are built in:
 
 Project-local filters are meant to be committed when they describe repo behavior. CCP-generated repo-local state, such as `./.ccp/gain.db`, is ignored by a CCP-owned `./.ccp/.gitignore`; CCP does not need to append broad `.ccp` rules to your repository root `.gitignore` for metrics.
 
+Use `ccp filter prompt` to print an embedded, agent-ready workflow for creating or improving filters. The workflow starts by copying any matching global/home filter into `./.ccp/filters` before editing; global filters are not edited unless you explicitly ask for a global change.
+
 Project scope overrides home scope. That gives you a clean model:
 
 - experiment in one repo without touching anything else

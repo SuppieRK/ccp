@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -68,7 +69,7 @@ var _ = Describe("filter", func() {
 				"Flags:",
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
-				"subcommands: new, status",
+				"subcommands: new, performance, prompt, status",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -301,6 +302,214 @@ var _ = Describe("filter", func() {
 		})
 	})
 
+	Context("performance", func() {
+		It("renders help output", func() {
+			out := captureStderr(func() error { return RunFilter([]string{"performance", "--help"}) })
+			for _, part := range []string{
+				"ccp filter performance - show YAML filter and case performance",
+				"Usage:",
+				"Flags:",
+				"ccp filter performance [--format text|json|csv]",
+				"grouped by invoked tool, resolved filter, case",
+			} {
+				Expect(out).To(ContainSubstring(part))
+			}
+		})
+
+		It("renders performance rows and improvement hints", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "gain.db")
+			appendFilterPerformanceMetrics(path)
+
+			out := captureStdout(func() error {
+				return RunFilterWithMetrics([]string{"performance", "--limit", "10"}, path)
+			})
+
+			Expect(out).To(ContainSubstring("ccp filter performance"))
+			Expect(out).To(ContainSubstring("| TOOL"))
+			Expect(out).To(ContainSubstring("| FILTER"))
+			Expect(out).To(ContainSubstring("| CASE"))
+			Expect(out).To(ContainSubstring("| py"))
+			Expect(out).To(ContainSubstring("| python"))
+			Expect(out).To(ContainSubstring("| pytest"))
+			Expect(out).To(ContainSubstring("Hints"))
+			Expect(out).To(ContainSubstring("review-case: python|pytest"))
+			Expect(out).To(ContainSubstring("passthrough-opportunity: echo noisy"))
+			Expect(out).To(ContainSubstring("Filter build"))
+			Expect(out).To(ContainSubstring("builds=2"))
+			Expect(out).To(ContainSubstring("| SOURCE"))
+			Expect(out).To(ContainSubstring("| project"))
+		})
+
+		It("renders JSON rows and suggestions", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "gain.db")
+			appendFilterPerformanceMetrics(path)
+
+			out := captureStdout(func() error {
+				return RunFilterWithMetrics([]string{"performance", "--format", "json"}, path)
+			})
+
+			Expect(out).To(ContainSubstring(`"dataset": "filter-performance"`))
+			Expect(out).To(ContainSubstring(`"tool": "py"`))
+			Expect(out).To(ContainSubstring(`"filter": "python"`))
+			Expect(out).To(ContainSubstring(`"case": "pytest"`))
+			Expect(out).To(ContainSubstring(`"filter_hash": "hash-a"`))
+			Expect(out).To(ContainSubstring(`"build": {`))
+			Expect(out).To(ContainSubstring(`"builds": 2`))
+			Expect(out).To(ContainSubstring(`"build_rows": [`))
+			Expect(out).To(ContainSubstring(`"kind": "review-case"`))
+		})
+
+		It("renders CSV rows and suggestions", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "gain.db")
+			appendFilterPerformanceMetrics(path)
+
+			out := captureStdout(func() error {
+				return RunFilterWithMetrics([]string{"performance", "--format", "csv"}, path)
+			})
+
+			Expect(out).To(ContainSubstring("dataset,since,tool_filter,failed_filter,row_kind"))
+			Expect(out).To(ContainSubstring("filter-performance,,,false,data,py,python,pytest"))
+			Expect(out).To(ContainSubstring("filter-performance,,,false,build-summary"))
+			Expect(out).To(ContainSubstring("filter-performance,,,false,build-source"))
+			Expect(out).To(ContainSubstring("filter-performance,,,false,suggestion"))
+		})
+
+		It("aggregates matching global performance rows", func() {
+			tmp := GinkgoT().TempDir()
+			firstPath := filepath.Join(tmp, "first.db")
+			secondPath := filepath.Join(tmp, "second.db")
+			Expect(metrics.Append(firstPath, metrics.RunMetric{
+				Tool:                  "py",
+				Command:               "py -m pytest",
+				Dispatch:              "python|pytest",
+				RawBytes:              20,
+				KeptBytes:             10,
+				DurationMS:            20,
+				FilterSourceKind:      "project",
+				FilterPath:            "/repo/.ccp/filters/python.yaml",
+				FilterHash:            "hash-a",
+				RegistryBuildRecorded: true,
+				RegistryBuildMS:       10,
+				RegistrySources: []metrics.RegistrySourceBuildMetric{
+					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 1, Compiled: 1, DurationMS: 8},
+				},
+			})).To(Succeed())
+			Expect(metrics.Append(secondPath, metrics.RunMetric{
+				Tool:                  "py",
+				Command:               "py -m pytest",
+				Dispatch:              "python|pytest",
+				RawBytes:              20,
+				KeptBytes:             10,
+				DurationMS:            40,
+				FilterSourceKind:      "project",
+				FilterPath:            "/repo/.ccp/filters/python.yaml",
+				FilterHash:            "hash-a",
+				RegistryBuildRecorded: true,
+				RegistryBuildMS:       30,
+				RegistrySources: []metrics.RegistrySourceBuildMetric{
+					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 22},
+				},
+			})).To(Succeed())
+
+			rows, err := queryGlobalPerformanceRows(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Tool).To(Equal("py"))
+			Expect(rows[0].Filter).To(Equal("python"))
+			Expect(rows[0].Case).To(Equal("pytest"))
+			Expect(rows[0].Commands).To(Equal(int64(2)))
+			Expect(rows[0].RawBytes).To(Equal(int64(40)))
+			Expect(rows[0].KeptBytes).To(Equal(int64(20)))
+			Expect(rows[0].AvgDurationMS).To(Equal(float64(30)))
+
+			buildSummary, buildRows, err := queryGlobalRegistryBuild(&globalQuerySession{
+				sources: []globalMetricsSource{
+					{CWD: "/repo-a", MetricsPath: firstPath},
+					{CWD: "/repo-b", MetricsPath: secondPath},
+				},
+				failures: map[string]globalQueryFailure{},
+			}, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buildSummary.Builds).To(Equal(int64(2)))
+			Expect(buildSummary.AvgDurationMS).To(Equal(float64(20)))
+			Expect(buildSummary.MaxDurationMS).To(Equal(int64(30)))
+			Expect(buildRows).To(HaveLen(1))
+			Expect(buildRows[0].Definitions).To(Equal(int64(3)))
+			Expect(buildRows[0].Compiled).To(Equal(int64(3)))
+		})
+
+		It("rejects positional arguments", func() {
+			Expect(RunFilterWithMetrics([]string{"performance", "extra"}, "")).To(MatchError("filter performance does not accept positional arguments"))
+		})
+	})
+
+	Context("prompt", func() {
+		It("renders help output", func() {
+			out := captureStderr(func() error { return RunFilter([]string{"prompt", "--help"}) })
+			for _, part := range []string{
+				"ccp filter prompt - print an embedded agent prompt for creating or improving filters",
+				"Usage:",
+				"Flags:",
+				"Notes:",
+				"ccp filter prompt [name]",
+				"embedded in the ccp binary",
+				"copy global filters into ./.ccp/filters before editing",
+			} {
+				Expect(out).To(ContainSubstring(part))
+			}
+		})
+
+		It("prints the generic embedded authoring prompt", func() {
+			out := captureStdout(func() error { return RunFilter([]string{"prompt"}) })
+
+			Expect(out).To(ContainSubstring("# CCP Filter Authoring Prompt"))
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `my-tool`."))
+			Expect(out).To(ContainSubstring("Start by working in the project-local filter directory: `./.ccp/filters`."))
+			Expect(out).To(ContainSubstring("copy it into `./.ccp/filters` first and edit that project-local copy"))
+			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("Do not edit shipped built-in filters under `filters/` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("ccp verify --dir <fixture-dir>"))
+			Expect(out).NotTo(ContainSubstring("{{FILTER_ID}}"))
+		})
+
+		It("personalizes the embedded prompt for a valid filter id", func() {
+			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
+
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
+			Expect(out).To(ContainSubstring("ccp filter new demo-tool"))
+			Expect(out).To(ContainSubstring("./.ccp/filters/demo-tool.yaml"))
+			Expect(out).NotTo(ContainSubstring("ccp filter new my-tool"))
+		})
+
+		It("rejects invalid filter ids", func() {
+			Expect(RunFilter([]string{"prompt", "Demo Tool"})).To(MatchError(ContainSubstring("invalid filter name")))
+		})
+
+		It("rejects too many arguments", func() {
+			Expect(RunFilter([]string{"prompt", "demo", "extra"})).To(MatchError("expected at most one filter name"))
+		})
+
+		It("does not read repo-local filter documentation to render the prompt", func() {
+			tmp := GinkgoT().TempDir()
+			prev, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(tmp)).To(Succeed())
+			DeferCleanup(func() { _ = os.Chdir(prev) })
+
+			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
+
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
+			Expect(filepath.Join(tmp, "docs", "agent-rules", "FILTERS.md")).NotTo(BeAnExistingFile())
+		})
+	})
+
 	Context("status", func() {
 		BeforeEach(func() {
 			oldVersion := version.Version
@@ -415,4 +624,44 @@ var _ = Describe("filter", func() {
 
 func validStatusFilterYAML(filterID string) string {
 	return "version: 1\nfilter: " + filterID + "\ncases:\n  - id: passthrough\n    passthrough: true\n"
+}
+
+func appendFilterPerformanceMetrics(path string) {
+	Expect(metrics.Append(path, metrics.RunMetric{
+		Tool:                  "py",
+		Command:               "py -m pytest",
+		Dispatch:              "python|pytest",
+		RawBytes:              20,
+		KeptBytes:             20,
+		DurationMS:            25,
+		FilterSourceKind:      "project",
+		FilterPath:            "/repo/.ccp/filters/python.yaml",
+		FilterHash:            "hash-a",
+		RegistryBuildRecorded: true,
+		RegistryBuildMS:       10,
+		RegistrySources: []metrics.RegistrySourceBuildMetric{
+			{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 8},
+		},
+	})).To(Succeed())
+	Expect(metrics.Append(path, metrics.RunMetric{
+		Tool:                  "echo",
+		Command:               "echo noisy",
+		Dispatch:              "echo",
+		RawBytes:              10,
+		KeptBytes:             10,
+		Passthrough:           true,
+		RegistryBuildRecorded: true,
+		RegistryBuildMS:       20,
+		RegistrySources: []metrics.RegistrySourceBuildMetric{
+			{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 12},
+		},
+	})).To(Succeed())
+	Expect(metrics.Append(path, metrics.RunMetric{
+		Tool:        "echo",
+		Command:     "echo noisy",
+		Dispatch:    "echo",
+		RawBytes:    10,
+		KeptBytes:   10,
+		Passthrough: true,
+	})).To(Succeed())
 }

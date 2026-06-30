@@ -94,6 +94,35 @@ cases:
 		Expect(action.Kind).To(Equal(contracts.ActionKeep))
 	})
 
+	It("reports registry build timing per source", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "python.yaml"), []byte(`
+version: 1
+filter: python
+cases:
+  - id: pytest
+    compress_output:
+      stdout:
+        lines:
+          keep:
+            - regex: '^'
+`), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadRegistryFiltersFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("python"))
+		Expect(timing.DurationMS).To(BeNumerically(">=", 0))
+		Expect(timing.Sources).To(HaveLen(1))
+		Expect(timing.Sources[0].SourceKind).To(Equal(string(v2filters.SourceRepository)))
+		Expect(timing.Sources[0].SourceDir).To(Equal(filterDir))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(1)))
+		Expect(timing.Sources[0].Compiled).To(Equal(int64(1)))
+		Expect(timing.Sources[0].DurationMS).To(BeNumerically(">=", 0))
+		Expect(timing.Sources[0].Error).To(BeEmpty())
+	})
+
 	It("skips invalid YAML scaffolds instead of failing registry construction", func() {
 		Expect(os.WriteFile(filepath.Join(filterDir, ".mappings.yaml"), []byte(`
 version: 1

@@ -55,6 +55,23 @@ The scaffold includes:
 Use project-local scaffolds first. Promote the finished result into `filters/<tool>.yaml` and `filters/.mappings.yaml`
 only when the behavior belongs in the shipped built-in set.
 
+When creating or improving an existing filter, first check the active sources with:
+
+```bash
+ccp filter status
+```
+
+If a matching home-scoped or shipped/global filter exists, copy it into `./.ccp/filters` and edit the project-local
+copy. Agents MUST NOT edit `~/.config/ccp/filters` or shipped `filters/` directly unless the user explicitly asks for a
+global or built-in filter change.
+
+Agents can ask CCP for the embedded self-service workflow with:
+
+```bash
+ccp filter prompt
+ccp filter prompt my-tool
+```
+
 The current schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
 
 Schema notes:
@@ -88,6 +105,17 @@ Mapping rules:
 ## Workflow
 
 Recommended iteration loop:
+
+1. `ccp filter prompt my-tool`
+2. `ccp filter status`
+3. copy any matching global/home filter into `./.ccp/filters` before editing, or run `ccp filter new my-tool`
+4. `ccp capture -- my-tool ...`
+5. edit `./.ccp/filters/my-tool.yaml`
+6. `ccp verify`
+7. compare `output.txt` with `verify-output.txt`
+8. inspect `verify-decisions.txt` when behavior is unclear
+
+For brand-new filters with no existing source, the short loop is:
 
 1. `ccp filter new my-tool`
 2. `ccp capture -- my-tool ...`

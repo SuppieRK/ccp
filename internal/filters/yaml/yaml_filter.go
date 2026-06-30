@@ -18,6 +18,7 @@ type YamlFilter struct {
 	spec                  *FilterDefinition
 	flagsConsumingNextArg []string
 	cases                 []compiledCase
+	provenance            contracts.FilterProvenance
 
 	activeArgs string
 }
@@ -30,6 +31,7 @@ func (f *YamlFilter) CloneFilter() contracts.Filter {
 		spec:                  f.spec,
 		flagsConsumingNextArg: cloneStrings(f.flagsConsumingNextArg),
 		cases:                 cloneCompiledCases(f.cases),
+		provenance:            f.provenance,
 	}
 }
 
@@ -51,6 +53,21 @@ func NewFilter(spec *FilterDefinition) (*YamlFilter, error) {
 		flagsConsumingNextArg: cloneStrings(spec.FlagsConsumingNextArg),
 		cases:                 cases,
 	}, nil
+}
+
+func (f *YamlFilter) WithProvenance(provenance contracts.FilterProvenance) *YamlFilter {
+	if f == nil {
+		return nil
+	}
+	f.provenance = provenance
+	return f
+}
+
+func (f *YamlFilter) FilterProvenance() contracts.FilterProvenance {
+	if f == nil {
+		return contracts.FilterProvenance{}
+	}
+	return f.provenance
 }
 
 func (f *YamlFilter) OnStdout(line string, context contracts.Context) contracts.Action {

@@ -22,6 +22,10 @@ type filterMappingsFile struct {
 }
 
 func RunFilter(args []string) error {
+	return RunFilterWithMetrics(args, "")
+}
+
+func RunFilterWithMetrics(args []string, metricsPath string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing filter subcommand")
 	}
@@ -31,8 +35,8 @@ func RunFilter(args []string) error {
 			fs,
 			"YAML filter authoring and inspection helpers",
 			[]string{"ccp filter <subcommand> [args...]"},
-			"subcommands: new, status",
-			"use 'ccp filter new --help' or 'ccp filter status --help' for subcommand details.",
+			"subcommands: new, performance, prompt, status",
+			"use 'ccp filter new --help', 'ccp filter performance --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
 		)
 		handled, err := parseLifecycleFlags(fs, args)
 		if err != nil {
@@ -45,11 +49,48 @@ func RunFilter(args []string) error {
 	switch args[0] {
 	case "new":
 		return RunFilterNew(args[1:])
+	case "performance":
+		return RunFilterPerformance(args[1:], metricsPath)
+	case "prompt":
+		return RunFilterPrompt(args[1:])
 	case "status":
 		return RunFilterStatus(args[1:])
 	default:
 		return fmt.Errorf("unknown filter subcommand %q", args[0])
 	}
+}
+
+func RunFilterPrompt(args []string) error {
+	fs := newLifecycleFlagSet("filter prompt")
+	setLifecycleUsage(
+		fs,
+		"print an embedded agent prompt for creating or improving filters",
+		[]string{"ccp filter prompt [name]"},
+		"name is optional and must be a lowercase filter id using letters, digits, and hyphens only.",
+		"the prompt is embedded in the ccp binary and does not depend on repository-local docs.",
+		"the prompt instructs agents to copy global filters into ./.ccp/filters before editing.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
+	}
+	if fs.NArg() > 1 {
+		return fmt.Errorf("expected at most one filter name")
+	}
+
+	filterID := ""
+	if fs.NArg() == 1 {
+		filterID, err = normalizeNewFilterID(fs.Arg(0))
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Print(renderFilterPrompt(filterID))
+	return nil
 }
 
 func RunFilterStatus(args []string) error {

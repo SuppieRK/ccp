@@ -2,12 +2,14 @@ package yaml
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
@@ -19,6 +21,7 @@ import (
 
 type LoadedFilter struct {
 	Path string
+	Raw  []byte
 	Spec *FilterDefinition
 }
 
@@ -74,21 +77,40 @@ func DefaultSources() []v2filters.FilterSource {
 }
 
 func LoadRegistryFiltersFromSources(sources []v2filters.FilterSource) (map[string]contracts.Filter, error) {
+	registered, _, err := LoadRegistryFiltersFromSourcesWithTiming(sources)
+	return registered, err
+}
+
+func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) (map[string]contracts.Filter, contracts.FilterRegistryBuildTiming, error) {
+	startedAt := time.Now()
 	registered := map[string]contracts.Filter{}
+	timing := contracts.FilterRegistryBuildTiming{}
 	for _, source := range sources {
 		// Source order defines override priority. The first matching filter wins, so callers
 		// should pass project-local sources before home-scoped sources when they want the
 		// documented repo-specific override behavior from README "Bring Your Own Filter".
-		filters, err := loadCompiledFiltersFromSource(source)
+		sourceStartedAt := time.Now()
+		filters, sourceTiming, err := loadCompiledFiltersFromSourceWithTiming(source)
 		if err != nil {
-			return nil, err
+			sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
+			sourceTiming.Error = err.Error()
+			timing.Sources = append(timing.Sources, sourceTiming)
+			timing.DurationMS = time.Since(startedAt).Milliseconds()
+			return nil, timing, err
 		}
 		registerCompiledFilters(registered, filters, source)
 		if err := registerMappedFilters(registered, filters, source); err != nil {
-			return nil, err
+			sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
+			sourceTiming.Error = err.Error()
+			timing.Sources = append(timing.Sources, sourceTiming)
+			timing.DurationMS = time.Since(startedAt).Milliseconds()
+			return nil, timing, err
 		}
+		sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
+		timing.Sources = append(timing.Sources, sourceTiming)
 	}
-	return registered, nil
+	timing.DurationMS = time.Since(startedAt).Milliseconds()
+	return registered, timing, nil
 }
 
 func LoadRegistryStatusFromSources(sources []v2filters.FilterSource) (map[string]contracts.Filter, []RegistryStatusRow, error) {
@@ -119,7 +141,11 @@ func LoadRegistryStatusFromSources(sources []v2filters.FilterSource) (map[string
 	return registered, rows, nil
 }
 
-func loadCompiledFiltersFromSource(source v2filters.FilterSource) (map[string]contracts.Filter, error) {
+func loadCompiledFiltersFromSourceWithTiming(source v2filters.FilterSource) (map[string]contracts.Filter, contracts.FilterSourceBuildTiming, error) {
+	timing := contracts.FilterSourceBuildTiming{
+		SourceKind: string(source.Kind),
+		SourceDir:  source.Directory,
+	}
 	items, err := loadFilterDefinitionsFromDir(source.Directory)
 	if err != nil {
 		audit.MustAppend("filter_discovery_error", map[string]any{
@@ -127,24 +153,26 @@ func loadCompiledFiltersFromSource(source v2filters.FilterSource) (map[string]co
 			"source_dir":  source.Directory,
 			"error":       err.Error(),
 		})
-		return nil, err
+		return nil, timing, err
 	}
-	filters, err := compileFilters(items)
+	timing.Definitions = int64(len(items))
+	filters, err := compileFiltersFromSource(items, source)
 	if err != nil {
 		audit.MustAppend("filter_compile_error", map[string]any{
 			"source_kind": string(source.Kind),
 			"source_dir":  source.Directory,
 			"error":       err.Error(),
 		})
-		return nil, err
+		return nil, timing, err
 	}
+	timing.Compiled = int64(len(filters))
 	audit.MustAppend("filter_discovery", map[string]any{
 		"source_kind":    string(source.Kind),
 		"source_dir":     source.Directory,
 		"definitions":    len(items),
 		"compiled_count": len(filters),
 	})
-	return filters, nil
+	return filters, timing, nil
 }
 
 func inspectCompiledFiltersFromSource(source v2filters.FilterSource, order int) (map[string]compiledStatusFilter, []RegistryStatusRow, error) {
@@ -182,6 +210,7 @@ func inspectCompiledFiltersFromSource(source v2filters.FilterSource, order int) 
 			})
 			continue
 		}
+		filter.WithProvenance(filterProvenance(source, path, raw))
 		if previous, ok := compiled[spec.Filter]; ok {
 			rows = append(rows, RegistryStatusRow{
 				Tool:       previous.tool,
@@ -370,6 +399,10 @@ func compareSourceOrder(left, right int) int {
 }
 
 func compileFilters(loaded []LoadedFilter) (map[string]contracts.Filter, error) {
+	return compileFiltersFromSource(loaded, v2filters.FilterSource{})
+}
+
+func compileFiltersFromSource(loaded []LoadedFilter, source v2filters.FilterSource) (map[string]contracts.Filter, error) {
 	filters := make(map[string]contracts.Filter, len(loaded))
 	for _, candidate := range loaded {
 		filter, err := NewFilter(candidate.Spec)
@@ -385,6 +418,7 @@ func compileFilters(loaded []LoadedFilter) (map[string]contracts.Filter, error) 
 		// lexicographically loaded files replace earlier ones for the same filter
 		// id. This matches CCP's documented override model and keeps precedence
 		// deterministic instead of failing registry construction on collisions.
+		filter.WithProvenance(filterProvenance(source, candidate.Path, candidate.Raw))
 		filters[candidate.Spec.Filter] = filter
 	}
 	return filters, nil
@@ -439,10 +473,22 @@ func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
 			})
 			continue
 		}
-		out = append(out, LoadedFilter{Path: p, Spec: spec})
+		out = append(out, LoadedFilter{Path: p, Raw: raw, Spec: spec})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
 	return out, nil
+}
+
+func filterProvenance(source v2filters.FilterSource, path string, raw []byte) contracts.FilterProvenance {
+	if source.Kind == "" && strings.TrimSpace(path) == "" && len(raw) == 0 {
+		return contracts.FilterProvenance{}
+	}
+	sum := sha256.Sum256(raw)
+	return contracts.FilterProvenance{
+		SourceKind: string(source.Kind),
+		Path:       path,
+		Hash:       fmt.Sprintf("%x", sum),
+	}
 }
 
 func matchedFilterFiles(root string) ([]string, error) {
