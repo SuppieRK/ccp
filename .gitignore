@@ -30,7 +30,6 @@ go.work.sum
 .env.*
 
 # --- Local runtime state ---
-.ccp/
 **/.ccp/
 **/ccp-capture-*.*
 
@@ -86,5 +85,4 @@ Thumbs.db
 
 # AI
 openspec
-.ccp
 research

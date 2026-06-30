@@ -140,6 +140,7 @@ var _ = Describe("lifecycle help", func() {
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
 				"subcommands: new, performance, prompt, status",
+				"agents creating or improving filters should start with 'ccp filter prompt [name]'",
 			},
 		}),
 		Entry("filter new", helpCase{
@@ -149,6 +150,7 @@ var _ = Describe("lifecycle help", func() {
 				"Usage:",
 				"Flags:",
 				"Notes:",
+				"agents should prefer 'ccp filter prompt <name>' first",
 				"./.ccp/filters/<name>.yaml",
 				".mappings.yaml",
 			},

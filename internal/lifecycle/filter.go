@@ -36,6 +36,7 @@ func RunFilterWithMetrics(args []string, metricsPath string) error {
 			"YAML filter authoring and inspection helpers",
 			[]string{"ccp filter <subcommand> [args...]"},
 			"subcommands: new, performance, prompt, status",
+			"agents creating or improving filters should start with 'ccp filter prompt [name]' for the embedded workflow.",
 			"use 'ccp filter new --help', 'ccp filter performance --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
 		)
 		handled, err := parseLifecycleFlags(fs, args)
@@ -102,6 +103,7 @@ func RunFilterStatus(args []string) error {
 		"status shows all discovered rows from the current filter sources.",
 		"project-local filters override home-scoped filters when both define the same tool or alias.",
 		"filter paths are compacted for readability; mappings show their target with '->'.",
+		"agents creating or improving filters should run 'ccp filter prompt [name]' before editing.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -126,6 +128,8 @@ func RunFilterStatus(args []string) error {
 	fmt.Println()
 	if len(rows) == 0 {
 		fmt.Println("No filters found.")
+		fmt.Println()
+		printFilterPromptHint()
 		return nil
 	}
 	fmt.Printf("showing %d rows\n\n", len(rows))
@@ -149,7 +153,13 @@ func RunFilterStatus(args []string) error {
 		{header: "SOURCE"},
 		{header: "STATUS"},
 	}, tableRows))
+	fmt.Println()
+	printFilterPromptHint()
 	return nil
+}
+
+func printFilterPromptHint() {
+	fmt.Println("Next: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters.")
 }
 
 func RunFilterNew(args []string) error {
@@ -159,6 +169,7 @@ func RunFilterNew(args []string) error {
 		"generate a commented YAML scaffold for a new filter",
 		[]string{"ccp filter new <name>"},
 		"name must be a lowercase filter id using letters, digits, and hyphens only.",
+		"agents should prefer 'ccp filter prompt <name>' first when creating or improving filters.",
 		"ccp writes the scaffold to ./.ccp/filters/<name>.yaml relative to the current working directory.",
 		"ccp also ensures ./.ccp/filters/.mappings.yaml contains an identity mapping for the new filter id.",
 		"the generated scaffold is valid YAML and starts in safe passthrough mode until you author real behavior.",

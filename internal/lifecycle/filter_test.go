@@ -70,6 +70,7 @@ var _ = Describe("filter", func() {
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
 				"subcommands: new, performance, prompt, status",
+				"agents creating or improving filters should start with 'ccp filter prompt [name]'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -470,13 +471,19 @@ var _ = Describe("filter", func() {
 			out := captureStdout(func() error { return RunFilter([]string{"prompt"}) })
 
 			Expect(out).To(ContainSubstring("# CCP Filter Authoring Prompt"))
-			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `my-tool`."))
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `<filter-id>`."))
+			Expect(out).To(ContainSubstring("When using the generic prompt, `<filter-id>` is a placeholder."))
 			Expect(out).To(ContainSubstring("Start by working in the project-local filter directory: `./.ccp/filters`."))
 			Expect(out).To(ContainSubstring("copy it into `./.ccp/filters` first and edit that project-local copy"))
 			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks"))
 			Expect(out).To(ContainSubstring("Do not edit shipped built-in filters under `filters/` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("ccp filter new <filter-id>"))
+			Expect(out).To(ContainSubstring("ccp capture -- <tool> <args...>"))
+			Expect(out).To(ContainSubstring("./.ccp/filters/<filter-id>.yaml"))
 			Expect(out).To(ContainSubstring("ccp verify --dir <fixture-dir>"))
 			Expect(out).NotTo(ContainSubstring("{{FILTER_ID}}"))
+			Expect(out).NotTo(ContainSubstring("{{COMMAND_EXAMPLE}}"))
+			Expect(out).NotTo(ContainSubstring("my-tool"))
 		})
 
 		It("personalizes the embedded prompt for a valid filter id", func() {
@@ -484,6 +491,7 @@ var _ = Describe("filter", func() {
 
 			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
 			Expect(out).To(ContainSubstring("ccp filter new demo-tool"))
+			Expect(out).To(ContainSubstring("ccp capture -- demo-tool <args...>"))
 			Expect(out).To(ContainSubstring("./.ccp/filters/demo-tool.yaml"))
 			Expect(out).NotTo(ContainSubstring("ccp filter new my-tool"))
 		})
@@ -525,6 +533,7 @@ var _ = Describe("filter", func() {
 				"Flags:",
 				"Notes:",
 				"project-local filters override home-scoped filters",
+				"agents creating or improving filters should run 'ccp filter prompt [name]'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -569,6 +578,7 @@ var _ = Describe("filter", func() {
 			Expect(out).To(ContainSubstring("| -"))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(homeFilters)))
 			Expect(out).To(ContainSubstring("source error:"))
+			Expect(out).To(ContainSubstring("Next: run `ccp filter prompt <filter-id>` for the embedded agent workflow"))
 		})
 
 		It("shows project overrides and mapping target failures", func() {
@@ -617,7 +627,7 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"status"}) })
 
-			Expect(strings.TrimSpace(out)).To(Equal("ccp filter status\n\nNo filters found."))
+			Expect(strings.TrimSpace(out)).To(Equal("ccp filter status\n\nNo filters found.\n\nNext: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters."))
 		})
 	})
 })
