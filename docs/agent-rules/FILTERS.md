@@ -69,7 +69,7 @@ Agents can ask CCP for the embedded self-service workflow with:
 
 ```bash
 ccp filter prompt
-ccp filter prompt my-tool
+ccp filter prompt <filter-id>
 ```
 
 The current schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
@@ -106,23 +106,24 @@ Mapping rules:
 
 Recommended iteration loop:
 
-1. `ccp filter prompt my-tool`
+1. `ccp filter prompt <filter-id>`
 2. `ccp filter status`
-3. copy any matching global/home filter into `./.ccp/filters` before editing, or run `ccp filter new my-tool`
-4. `ccp capture -- my-tool ...`
-5. edit `./.ccp/filters/my-tool.yaml`
+3. copy any matching global/home filter into `./.ccp/filters` before editing, or run `ccp filter new <filter-id>`
+4. `ccp capture -- <tool> ...`
+5. edit `./.ccp/filters/<filter-id>.yaml`
 6. `ccp verify`
 7. compare `output.txt` with `verify-output.txt`
 8. inspect `verify-decisions.txt` when behavior is unclear
 
 For brand-new filters with no existing source, the short loop is:
 
-1. `ccp filter new my-tool`
-2. `ccp capture -- my-tool ...`
-3. edit `./.ccp/filters/my-tool.yaml`
-4. `ccp verify`
-5. compare `output.txt` with `verify-output.txt`
-6. inspect `verify-decisions.txt` when behavior is unclear
+1. `ccp filter prompt <filter-id>`
+2. `ccp filter new <filter-id>`
+3. `ccp capture -- <tool> ...`
+4. edit `./.ccp/filters/<filter-id>.yaml`
+5. `ccp verify`
+6. compare `output.txt` with `verify-output.txt`
+7. inspect `verify-decisions.txt` when behavior is unclear
 
 If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local
 filter acts as the active override.

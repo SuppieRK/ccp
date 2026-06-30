@@ -2,6 +2,8 @@
 
 You are helping create or improve a CCP YAML filter for `{{FILTER_ID}}`.
 
+When using the generic prompt, `<filter-id>` is a placeholder. Replace it with the lowercase filter id for the command you are working on.
+
 ## Hard Rules
 
 - Start by working in the project-local filter directory: `./.ccp/filters`.
@@ -15,7 +17,7 @@ You are helping create or improve a CCP YAML filter for `{{FILTER_ID}}`.
 1. Inspect active filters with `ccp filter status`.
 2. If `{{FILTER_ID}}` already exists outside `./.ccp/filters`, create `./.ccp/filters` and copy the existing YAML into `./.ccp/filters/{{FILTER_ID}}.yaml` before editing.
 3. If no matching filter exists, run `ccp filter new {{FILTER_ID}}`.
-4. Capture real command output with `ccp capture -- <tool> <args...>`.
+4. Capture real command output with `ccp capture -- {{COMMAND_EXAMPLE}}`.
 5. Edit only the project-local YAML filter and project-local `.mappings.yaml` as needed.
 6. Run `ccp verify` or `ccp verify --dir <fixture-dir>`.
 7. Compare `output.txt` with `verify-output.txt`, and inspect `verify-decisions.txt` when behavior is unclear.
@@ -35,7 +37,7 @@ You are helping create or improve a CCP YAML filter for `{{FILTER_ID}}`.
 ```bash
 ccp filter status
 ccp filter new {{FILTER_ID}}
-ccp capture -- <tool> <args...>
+ccp capture -- {{COMMAND_EXAMPLE}}
 ccp verify
 ccp verify --dir <fixture-dir>
 ```
