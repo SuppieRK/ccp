@@ -25,25 +25,31 @@ var _ = ginkgo.Describe("context link families", func() {
 			ginkgo.Entry("amazon-q", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
+				ccpFilterPromptHint,
 			}, []string{"alwaysApply: true", "description:", ccpManagedBlockStart}),
 			ginkgo.Entry("cline", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
+				ccpFilterPromptHint,
 			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
 			ginkgo.Entry("cursor", cursorRuleContent, []string{
 				"alwaysApply: true",
 				"description: Route shell commands through ccp",
+				ccpFilterPromptHint,
 			}, []string{ccpManagedBlockStart}),
 			ginkgo.Entry("roocode", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
+				ccpFilterPromptHint,
 			}, []string{ccpManagedBlockStart}),
 			ginkgo.Entry("trae", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
+				ccpFilterPromptHint,
 			}, []string{"alwaysApply: true", "trigger: always_on", ccpManagedBlockStart}),
 			ginkgo.Entry("windsurf", ccpManagedGuidanceMarkdown, []string{
 				"## CCP Integration (Managed)",
 				ccpRawEscapeHatch,
+				ccpFilterPromptHint,
 			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
 		)
 	})

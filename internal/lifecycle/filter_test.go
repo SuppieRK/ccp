@@ -68,7 +68,7 @@ var _ = Describe("filter", func() {
 				"Flags:",
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
-				"subcommands: new, status",
+				"subcommands: new, prompt, status",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -298,6 +298,66 @@ var _ = Describe("filter", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("read mappings file"))
 			Expect(filepath.Join(tmp, ".ccp", "filters", "demo-tool.yaml")).To(BeAnExistingFile())
+		})
+	})
+
+	Context("prompt", func() {
+		It("renders help output", func() {
+			out := captureStderr(func() error { return RunFilter([]string{"prompt", "--help"}) })
+			for _, part := range []string{
+				"ccp filter prompt - print an embedded agent prompt for creating or improving filters",
+				"Usage:",
+				"Flags:",
+				"Notes:",
+				"ccp filter prompt [name]",
+				"embedded in the ccp binary",
+				"copy global filters into ./.ccp/filters before editing",
+			} {
+				Expect(out).To(ContainSubstring(part))
+			}
+		})
+
+		It("prints the generic embedded authoring prompt", func() {
+			out := captureStdout(func() error { return RunFilter([]string{"prompt"}) })
+
+			Expect(out).To(ContainSubstring("# CCP Filter Authoring Prompt"))
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `my-tool`."))
+			Expect(out).To(ContainSubstring("Start by working in the project-local filter directory: `./.ccp/filters`."))
+			Expect(out).To(ContainSubstring("copy it into `./.ccp/filters` first and edit that project-local copy"))
+			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("Do not edit shipped built-in filters under `filters/` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("ccp verify --dir <fixture-dir>"))
+			Expect(out).NotTo(ContainSubstring("{{FILTER_ID}}"))
+		})
+
+		It("personalizes the embedded prompt for a valid filter id", func() {
+			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
+
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
+			Expect(out).To(ContainSubstring("ccp filter new demo-tool"))
+			Expect(out).To(ContainSubstring("./.ccp/filters/demo-tool.yaml"))
+			Expect(out).NotTo(ContainSubstring("ccp filter new my-tool"))
+		})
+
+		It("rejects invalid filter ids", func() {
+			Expect(RunFilter([]string{"prompt", "Demo Tool"})).To(MatchError(ContainSubstring("invalid filter name")))
+		})
+
+		It("rejects too many arguments", func() {
+			Expect(RunFilter([]string{"prompt", "demo", "extra"})).To(MatchError("expected at most one filter name"))
+		})
+
+		It("does not read repo-local filter documentation to render the prompt", func() {
+			tmp := GinkgoT().TempDir()
+			prev, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(tmp)).To(Succeed())
+			DeferCleanup(func() { _ = os.Chdir(prev) })
+
+			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
+
+			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
+			Expect(filepath.Join(tmp, "docs", "agent-rules", "FILTERS.md")).NotTo(BeAnExistingFile())
 		})
 	})
 

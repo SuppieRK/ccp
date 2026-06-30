@@ -10,6 +10,7 @@ const (
 	ccpManagedBlockStart = "<!-- BEGIN: CCP MANAGED BLOCK -->"
 	ccpManagedBlockEnd   = "<!-- END: CCP MANAGED BLOCK -->"
 	ccpRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
+	ccpFilterPromptHint  = "When asked to create or improve CCP YAML filters, run `ccp filter prompt` for the embedded self-service workflow."
 )
 
 func ccpManagedBlockTemplate() string {
@@ -27,6 +28,7 @@ func ccpManagedGuidanceMarkdown() string {
 		"- `ccp false || ccp echo chain-recovered`\n" +
 		"- `ccp nl -ba spec.md | ccp sed -n '1,260p'`\n\n" +
 		ccpRawEscapeHatch + "\n\n" +
+		ccpFilterPromptHint + "\n\n" +
 		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n"
 }
 
@@ -40,6 +42,9 @@ func verifyManagedContextBlock(target, missingFmt, markersFmt string) error {
 		return fmt.Errorf(markersFmt, target)
 	}
 	if !strings.Contains(s, ccpRawEscapeHatch) {
+		return fmt.Errorf(markersFmt, target)
+	}
+	if !strings.Contains(s, ccpFilterPromptHint) {
 		return fmt.Errorf(markersFmt, target)
 	}
 	return nil

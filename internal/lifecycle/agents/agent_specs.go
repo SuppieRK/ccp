@@ -72,6 +72,7 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 			"Use `ccp` as the command prefix for every executable in shell commands",
 			"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
 			ccpRawEscapeHatch,
+			ccpFilterPromptHint,
 		},
 		TargetScope: managedRuleFileTargetRepo,
 	},
@@ -359,6 +360,7 @@ func canonicalRuleVerificationSnippets() []string {
 		"Use `ccp` as the command prefix for every executable in shell commands",
 		"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
 		ccpRawEscapeHatch,
+		ccpFilterPromptHint,
 	}
 }
 

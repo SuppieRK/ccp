@@ -64,6 +64,8 @@ var _ = Describe("lifecycle help", func() {
 					return RunFilter([]string{"--help"})
 				case "filter":
 					return RunFilter([]string{"new", "--help"})
+				case "filter-prompt":
+					return RunFilter([]string{"prompt", "--help"})
 				case "filter-status":
 					return RunFilter([]string{"status", "--help"})
 				case "repair":
@@ -137,7 +139,7 @@ var _ = Describe("lifecycle help", func() {
 				"Flags:",
 				"Notes:",
 				"ccp filter <subcommand> [args...]",
-				"subcommands: new, status",
+				"subcommands: new, prompt, status",
 			},
 		}),
 		Entry("filter new", helpCase{
@@ -149,6 +151,17 @@ var _ = Describe("lifecycle help", func() {
 				"Notes:",
 				"./.ccp/filters/<name>.yaml",
 				".mappings.yaml",
+			},
+		}),
+		Entry("filter prompt", helpCase{
+			command: "filter-prompt",
+			parts: []string{
+				"ccp filter prompt - print an embedded agent prompt for creating or improving filters",
+				"Usage:",
+				"Flags:",
+				"Notes:",
+				"ccp filter prompt [name]",
+				"embedded in the ccp binary",
 			},
 		}),
 		Entry("filter status", helpCase{

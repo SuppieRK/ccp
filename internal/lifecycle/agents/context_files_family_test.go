@@ -73,6 +73,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 		Expect(updated).To(ContainSubstring(ccpManagedBlockStart))
 		Expect(updated).To(ContainSubstring("Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions."))
 		Expect(updated).To(ContainSubstring("`ccp echo chain-ok && ccp echo chain-done`"))
+		Expect(updated).To(ContainSubstring(ccpFilterPromptHint))
 	})
 
 	ginkgo.It("normalizes managed file content", func() {
@@ -81,6 +82,15 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 
 	ginkgo.It("requires the raw escape hatch when verifying managed files", func() {
 		content := ccpManagedBlockStart + "\nmanaged guidance without raw retry\n" + ccpManagedBlockEnd + "\n"
+		Expect(os.WriteFile(path, []byte(content), 0o644)).To(Succeed())
+
+		err := verifyManagedContextBlock(path, "missing file: %s", "missing markers in %s")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("missing markers in "))
+	})
+
+	ginkgo.It("requires the filter prompt hint when verifying managed files", func() {
+		content := ccpManagedBlockStart + "\n" + strings.ReplaceAll(ccpManagedGuidanceMarkdown(), ccpFilterPromptHint+"\n\n", "") + ccpManagedBlockEnd + "\n"
 		Expect(os.WriteFile(path, []byte(content), 0o644)).To(Succeed())
 
 		err := verifyManagedContextBlock(path, "missing file: %s", "missing markers in %s")
@@ -132,6 +142,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(strings.Count(out, ccpManagedBlockStart)).To(Equal(1))
 		Expect(out).To(ContainSubstring(ccpRawEscapeHatch))
+		Expect(out).To(ContainSubstring(ccpFilterPromptHint))
 		Expect(out).To(ContainSubstring("before"))
 		Expect(out).To(ContainSubstring("after"))
 	})
