@@ -112,7 +112,9 @@ func parseFilterPerformanceFlags(args []string) (filterPerformanceFlags, bool, e
 		[]string{"ccp filter performance [--format text|json|csv] [--limit <n>] [--since <duration>] [--tool <tool>] [--failed] [--global]"},
 		"Rows are grouped by invoked tool, resolved filter, case, and recorded filter provenance.",
 		"Existing metrics recorded before provenance support show blank source/path/hash fields.",
+		"Use --tool <tool> for focused improvements; tool means the invoked command name.",
 		"Use --global to aggregate across registered workspace metrics databases.",
+		"Pair this report with 'ccp filter prompt <name>' before editing filters.",
 		"--limit applies to text output only; text output defaults to 15 rows.",
 		"Legacy --json remains available as an alias for --format json.",
 	)
