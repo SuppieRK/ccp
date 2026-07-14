@@ -22,6 +22,17 @@ When using the generic prompt, `<filter-id>` is a placeholder. Replace it with t
 6. Run `ccp verify` or `ccp verify --dir <fixture-dir>`.
 7. Compare `output.txt` with `verify-output.txt`, and inspect `verify-decisions.txt` when behavior is unclear.
 
+## Performance-Guided Improvements
+
+- Run `ccp filter performance --limit 30` to find local filter rows worth improving.
+- For focused work on one command, run `ccp filter performance --tool <tool> --limit 30`. The `--tool` value is the invoked tool name, not necessarily the resolved filter id.
+- Use `ccp filter performance --global --tool <tool> --limit 30` only when the user wants cross-workspace signal.
+- Read `RUNS` as frequency, `SAVED` and `SAVINGS` as estimated compression value, `PASS` as passthrough rate, and `FAIL` as native command failure rate.
+- Treat `review-case` hints as matched filters or cases with low savings; inspect whether the case should be improved, narrowed, or left alone.
+- Treat `failure-heavy` hints as failure-output-heavy rows; do not optimize them unless the failure output is useful and representative.
+- Treat `passthrough-opportunity` hints as frequent passthrough command shapes; capture real output before authoring a new case.
+- Use performance as a prioritization signal, not proof. Copy or create the project-local filter first, then capture and verify representative output before changing behavior.
+
 ## Authoring Guidance
 
 - Preserve native execution semantics: exit code, critical diagnostics, exact `--raw` behavior, and empty output behavior.
@@ -36,6 +47,7 @@ When using the generic prompt, `<filter-id>` is a placeholder. Replace it with t
 
 ```bash
 ccp filter status
+ccp filter performance --tool <tool> --limit 30
 ccp filter new {{FILTER_ID}}
 ccp capture -- {{COMMAND_EXAMPLE}}
 ccp verify

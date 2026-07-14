@@ -128,6 +128,19 @@ For brand-new filters with no existing source, the short loop is:
 If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local
 filter acts as the active override.
 
+### Performance
+
+Use performance metrics to prioritize improvements before authoring broad changes:
+
+```bash
+ccp filter performance --limit 30
+ccp filter performance --tool <tool> --limit 30
+ccp filter performance --global --tool <tool> --limit 30
+```
+
+`--tool` filters by the invoked command name. Treat `review-case`, `failure-heavy`, and `passthrough-opportunity` hints
+as starting points for inspection, then capture representative output and verify the project-local filter change.
+
 ### Capture
 
 Capture a real command with:

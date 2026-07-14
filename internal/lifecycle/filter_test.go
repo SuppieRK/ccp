@@ -312,6 +312,8 @@ var _ = Describe("filter", func() {
 				"Flags:",
 				"ccp filter performance [--format text|json|csv]",
 				"grouped by invoked tool, resolved filter, case",
+				"Use --tool <tool> for focused improvements",
+				"Pair this report with 'ccp filter prompt <name>'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -477,6 +479,13 @@ var _ = Describe("filter", func() {
 			Expect(out).To(ContainSubstring("copy it into `./.ccp/filters` first and edit that project-local copy"))
 			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks"))
 			Expect(out).To(ContainSubstring("Do not edit shipped built-in filters under `filters/` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("ccp filter performance --tool <tool> --limit 30"))
+			Expect(out).To(ContainSubstring("The `--tool` value is the invoked tool name"))
+			Expect(out).To(ContainSubstring("`review-case` hints"))
+			Expect(out).To(ContainSubstring("`failure-heavy` hints"))
+			Expect(out).To(ContainSubstring("`passthrough-opportunity` hints"))
+			Expect(out).To(ContainSubstring("Read `RUNS` as frequency"))
+			Expect(out).To(ContainSubstring("`PASS` as passthrough rate"))
 			Expect(out).To(ContainSubstring("ccp filter new <filter-id>"))
 			Expect(out).To(ContainSubstring("ccp capture -- <tool> <args...>"))
 			Expect(out).To(ContainSubstring("./.ccp/filters/<filter-id>.yaml"))
