@@ -8,7 +8,8 @@ set -eu
 #   curl --proto "=https" --tlsv1.2 -sSfL ... | VERSION=0.1.0 sh
 #
 # Env:
-#   VERSION    Release tag in X.Y.Z form (default: latest)
+#   VERSION           Release tag in X.Y.Z form (default: latest)
+#   CCP_INSTALL_DIR   Explicit destination directory (default: automatic selection)
 # Installer behavior:
 #   - Repository is fixed to SuppieRK/ccp.
 #   - Install directory is selected automatically:
@@ -18,6 +19,7 @@ set -eu
 
 REPO="SuppieRK/ccp"
 VERSION="${VERSION:-latest}"
+REQUESTED_INSTALL_DIR="${CCP_INSTALL_DIR:-}"
 BIN_NAME="ccp"
 PROFILE_NOTE="# added by ccp installer"
 REPAIR_CUTOFF_VERSION="0.5.1"
@@ -195,6 +197,14 @@ probe_installed_version() {
 }
 
 choose_install_dir() {
+  if [ -n "$REQUESTED_INSTALL_DIR" ]; then
+    if [ -d "$REQUESTED_INSTALL_DIR" ] || mkdir -p "$REQUESTED_INSTALL_DIR" 2>/dev/null; then
+      echo "$REQUESTED_INSTALL_DIR"
+      return 0
+    fi
+    echo "install directory is not writable: $REQUESTED_INSTALL_DIR" >&2
+    exit 1
+  fi
   if [ -w "/usr/local/bin" ]; then
     echo "/usr/local/bin"
     return 0

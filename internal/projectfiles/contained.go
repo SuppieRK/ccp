@@ -67,20 +67,43 @@ func containedPath(root, path string) (string, string, error) {
 
 	absPath := path
 	if !filepath.IsAbs(absPath) {
-		absPath = filepath.Join(canonicalRoot, absPath)
+		absPath = filepath.Join(absRoot, absPath)
 	}
 	absPath, err = filepath.Abs(filepath.Clean(absPath))
 	if err != nil {
 		return "", "", fmt.Errorf("resolve contained path: %w", err)
 	}
-	relative, err := filepath.Rel(canonicalRoot, absPath)
+
+	// Darwin exposes temporary directories through /var while resolving them
+	// to /private/var, and Windows can expose the same directory through both
+	// DOS 8.3 and long path spellings. Prefer the caller's lexical root so both
+	// sides stay in the same namespace, then accept an already canonical path.
+	relative, contained, relativeErr := relativePathBeneath(absRoot, absPath)
+	if !contained && canonicalRoot != absRoot {
+		var canonicalErr error
+		relative, contained, canonicalErr = relativePathBeneath(canonicalRoot, absPath)
+		if relativeErr == nil {
+			relativeErr = canonicalErr
+		}
+	}
+	if !contained {
+		if relativeErr != nil {
+			return "", "", relativeErr
+		}
+		return "", "", fmt.Errorf("refuse path %q outside contained root %q", path, canonicalRoot)
+	}
+	return canonicalRoot, relative, nil
+}
+
+func relativePathBeneath(root, path string) (string, bool, error) {
+	relative, err := filepath.Rel(root, path)
 	if err != nil {
-		return "", "", fmt.Errorf("relativize contained path: %w", err)
+		return "", false, fmt.Errorf("relativize contained path: %w", err)
 	}
 	relative = filepath.Clean(relative)
 	if relative == "." || relative == "" || relative == ".." ||
 		strings.HasPrefix(relative, ".."+string(os.PathSeparator)) || filepath.IsAbs(relative) {
-		return "", "", fmt.Errorf("refuse path %q outside contained root %q", path, canonicalRoot)
+		return "", false, nil
 	}
-	return canonicalRoot, relative, nil
+	return relative, true, nil
 }

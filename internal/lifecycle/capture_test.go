@@ -117,7 +117,9 @@ var _ = Describe("capture", func() {
 		})).To(BeTrue())
 		dirInfo, err := os.Stat(tmp)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		if runtime.GOOS != "windows" {
+			Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		}
 		for _, name := range []string{
 			replay.CommandFileName,
 			captureStdoutFileName,
@@ -128,7 +130,9 @@ var _ = Describe("capture", func() {
 		} {
 			info, statErr := os.Stat(filepath.Join(tmp, name))
 			Expect(statErr).NotTo(HaveOccurred())
-			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)), name)
+			if runtime.GOOS != "windows" {
+				Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)), name)
+			}
 		}
 	})
 

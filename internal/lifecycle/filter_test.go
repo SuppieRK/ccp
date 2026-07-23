@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"go-command-compression-proxy/internal/audit"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/metrics"
@@ -59,6 +60,7 @@ var _ = Describe("filter", func() {
 			Expect(os.Setenv("USERPROFILE", home)).To(Succeed())
 			DeferCleanup(func() { _ = os.Unsetenv("USERPROFILE") })
 		}
+		DeferCleanup(audit.Reset)
 	}
 
 	It("renders root help output for help flags", func() {
@@ -662,9 +664,11 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(project)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(previous) })
 			setHomeDir(home)
+			canonicalProject, err := filtertrust.CanonicalRoot(project)
+			Expect(err).NotTo(HaveOccurred())
 
 			out := captureStdout(func() error { return RunFilter([]string{"trust"}) })
-			Expect(out).To(ContainSubstring("ccp filter trust: trusted " + project))
+			Expect(out).To(ContainSubstring("ccp filter trust: trusted " + canonicalProject))
 			status := captureStdout(func() error { return RunFilter([]string{"status"}) })
 			Expect(status).To(ContainSubstring("project trust: trusted (.)"))
 			Expect(status).To(ContainSubstring("| git"))

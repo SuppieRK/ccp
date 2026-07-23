@@ -20,6 +20,21 @@ var _ = Describe("contained project files", func() {
 		Expect(path).To(BeAnExistingFile())
 	})
 
+	It("accepts a path expressed through the same symlinked root alias", func() {
+		realRoot := GinkgoT().TempDir()
+		aliasRoot := filepath.Join(GinkgoT().TempDir(), "project")
+		if err := os.Symlink(realRoot, aliasRoot); err != nil {
+			Skip("symlink creation unavailable: " + err.Error())
+		}
+		path := filepath.Join(aliasRoot, ".ccp", "gain.db")
+
+		file, err := OpenFileBeneath(aliasRoot, path, os.O_RDWR|os.O_CREATE, 0o600)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(file.Close()).To(Succeed())
+		Expect(filepath.Join(realRoot, ".ccp", "gain.db")).To(BeAnExistingFile())
+	})
+
 	It("rejects paths outside the root", func() {
 		root := GinkgoT().TempDir()
 		outside := filepath.Join(GinkgoT().TempDir(), "gain.db")

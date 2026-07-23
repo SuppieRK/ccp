@@ -342,9 +342,7 @@ var _ = Describe("DefaultSources", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chdir(project)).To(Succeed())
 		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
-		previousHome := os.Getenv("HOME")
-		Expect(os.Setenv("HOME", home)).To(Succeed())
-		DeferCleanup(func() { _ = os.Setenv("HOME", previousHome) })
+		setLoaderTestHome(home)
 		restoreTrust := filtertrust.WithTestHome(home)
 		DeferCleanup(restoreTrust)
 		_, err = filtertrust.Trust(project)
@@ -374,9 +372,7 @@ var _ = Describe("DefaultSources", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chdir(project)).To(Succeed())
 		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
-		previousHome := os.Getenv("HOME")
-		Expect(os.Setenv("HOME", home)).To(Succeed())
-		DeferCleanup(func() { _ = os.Setenv("HOME", previousHome) })
+		setLoaderTestHome(home)
 		restoreTrust := filtertrust.WithTestHome(home)
 		DeferCleanup(restoreTrust)
 
@@ -388,6 +384,11 @@ var _ = Describe("DefaultSources", func() {
 		Expect(provenance.FilterProvenance().SourceKind).To(Equal(string(v2filters.SourceHome)))
 	})
 })
+
+func setLoaderTestHome(home string) {
+	GinkgoT().Setenv("HOME", home)
+	GinkgoT().Setenv("USERPROFILE", home)
+}
 
 var _ = Describe("LoadRegistryStatusFromSources", func() {
 	It("reports active, overridden, and broken entries while keeping runtime winners", func() {

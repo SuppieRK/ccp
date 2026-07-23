@@ -262,7 +262,7 @@ func validateWindowsContainedHandle(handle windows.Handle, name string, director
 func windowsContainedDestinationMode(parent windows.Handle, base string, requested os.FileMode, relative string) (os.FileMode, error) {
 	handle, err := openWindowsRelative(parent, base, os.O_RDONLY, windows.FILE_NON_DIRECTORY_FILE)
 	if err != nil {
-		if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) || errors.Is(err, windows.ERROR_PATH_NOT_FOUND) {
+		if isWindowsPathNotFound(err) {
 			return requested.Perm(), nil
 		}
 		return 0, fmt.Errorf("inspect contained destination %q: %w", relative, err)
@@ -325,7 +325,7 @@ func renameWindowsRelative(handle, parent windows.Handle, destination string) er
 func removeWindowsRelative(parent windows.Handle, name string) error {
 	handle, err := openWindowsRelative(parent, name, os.O_RDWR|os.O_EXCL, windows.FILE_NON_DIRECTORY_FILE)
 	if err != nil {
-		if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+		if isWindowsPathNotFound(err) {
 			return nil
 		}
 		return err
@@ -344,4 +344,12 @@ func removeWindowsRelative(parent windows.Handle, name string) error {
 		uint32(unsafe.Sizeof(flags)),
 		windows.FileDispositionInformationEx,
 	)
+}
+
+func isWindowsPathNotFound(err error) bool {
+	return errors.Is(err, windows.ERROR_FILE_NOT_FOUND) ||
+		errors.Is(err, windows.ERROR_PATH_NOT_FOUND) ||
+		errors.Is(err, windows.STATUS_NO_SUCH_FILE) ||
+		errors.Is(err, windows.STATUS_OBJECT_NAME_NOT_FOUND) ||
+		errors.Is(err, windows.STATUS_OBJECT_PATH_NOT_FOUND)
 }

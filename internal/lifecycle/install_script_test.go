@@ -85,9 +85,10 @@ esac
 `, shellQuoteArg(checksumPath), shellQuoteArg(assetPath)))
 		home := filepath.Join(workspace, "home")
 		result := runInstallScript(scriptPath, workspace, map[string]string{
-			"VERSION": "1.2.3",
-			"HOME":    home,
-			"PATH":    testPATH(binDir, os.Getenv("PATH")),
+			"VERSION":         "1.2.3",
+			"CCP_INSTALL_DIR": filepath.Join(home, ".local", "bin"),
+			"HOME":            home,
+			"PATH":            testPATH(binDir, os.Getenv("PATH")),
 		})
 
 		Expect(result.exitCode).To(BeZero(), result.stderr)

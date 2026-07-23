@@ -24,6 +24,7 @@ const (
 	dateFormatYMD         = "2006-01-02"
 	defaultRetention      = 90 * 24 * time.Hour
 	pruneBatchLimit       = 100
+	projectMetricsFile    = "gain.db"
 )
 
 var (
@@ -1521,7 +1522,7 @@ func ensureLocalCCPGitignore(projectRoot, path string) error {
 	if err != nil {
 		return nil
 	}
-	if filepath.Base(cleanPath) != "gain.db" {
+	if filepath.Base(cleanPath) != projectMetricsFile {
 		return nil
 	}
 	ccpDir := filepath.Dir(cleanPath)
@@ -1548,13 +1549,15 @@ func ensureLocalCCPGitignore(projectRoot, path string) error {
 		if containedErr != nil {
 			return containedErr
 		}
-		if filepath.Clean(canonicalPath) != filepath.Clean(cleanPath) {
-			return fmt.Errorf("metrics path %q does not use the canonical project path", path)
-		}
 		canonicalProjectRoot, canonicalErr := canonicalExistingPath(projectRoot)
-		if canonicalErr != nil || filepath.Clean(canonicalProjectRoot) != filepath.Clean(pathProjectRoot) {
+		if canonicalErr != nil {
 			return fmt.Errorf("metrics path %q is not the project .ccp database", path)
 		}
+		expectedCanonicalPath := filepath.Join(canonicalProjectRoot, ".ccp", projectMetricsFile)
+		if filepath.Clean(canonicalPath) != filepath.Clean(expectedCanonicalPath) {
+			return fmt.Errorf("metrics path %q is not the project .ccp database", path)
+		}
+		pathProjectRoot = canonicalProjectRoot
 		projectRoot = canonicalProjectRoot
 	}
 	gitMeta := filepath.Join(pathProjectRoot, ".git")

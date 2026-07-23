@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"go-command-compression-proxy/internal/audit"
 )
 
 var (
@@ -124,6 +126,9 @@ func rewriteManagedRepairState() error {
 }
 
 func rewriteManagedRepairStateLocked() error {
+	// The rewrite removes managed home state, including audit logs. Windows
+	// cannot remove the active audit file while lumberjack still has it open.
+	audit.Reset()
 	if err := syncCanonicalHomeLayout(); err != nil {
 		return err
 	}

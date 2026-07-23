@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -268,13 +269,15 @@ var _ = Describe("metrics storage", func() {
 
 			ccpInfo, err := os.Stat(filepath.Join(project, ".ccp"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ccpInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
 			spoolInfo, err := os.Stat(filepath.Join(project, ".ccp", spoolDirectoryName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(spoolInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
 			dbInfo, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(dbInfo.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+			if runtime.GOOS != "windows" {
+				Expect(ccpInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+				Expect(spoolInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+				Expect(dbInfo.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+			}
 		})
 	})
 

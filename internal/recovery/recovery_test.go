@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -34,7 +35,9 @@ var _ = Describe("recovery storage", func() {
 		Expect(enabled).To(BeTrue())
 		info, err := os.Stat(filepath.Join(root, "ccp", "recovery.json"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+		if runtime.GOOS != "windows" {
+			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+		}
 	})
 
 	It("stores replay-compatible private artifacts and purges them", func() {
@@ -51,11 +54,15 @@ var _ = Describe("recovery storage", func() {
 		Expect(items[0].ExitCode).To(Equal(7))
 		dirInfo, err := os.Stat(items[0].Path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		if runtime.GOOS != "windows" {
+			Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		}
 		for _, name := range []string{"command.yaml", "stdout.txt", "stderr.txt"} {
 			info, statErr := os.Stat(filepath.Join(items[0].Path, name))
 			Expect(statErr).NotTo(HaveOccurred())
-			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+			if runtime.GOOS != "windows" {
+				Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+			}
 		}
 
 		removed, err := Purge()
