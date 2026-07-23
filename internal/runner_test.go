@@ -531,12 +531,15 @@ var _ = Describe("Runner", func() {
 			})
 			restore := workspaces.WithTestConfig(tmpDir, nil)
 			DeferCleanup(restore)
-			Expect(os.MkdirAll(filepath.Join(tmpDir, "repo"), 0o755)).To(Succeed())
+			repo := filepath.Join(tmpDir, "repo")
+			Expect(os.MkdirAll(repo, 0o755)).To(Succeed())
+			canonicalRepo, err := filepath.EvalSymlinks(repo)
+			Expect(err).NotTo(HaveOccurred())
 
 			runner := &Runner{
 				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(tmpDir, "repo", ".ccp", "gain.db"),
-				workingDir:  filepath.Join(tmpDir, "repo"),
+				metricsPath: filepath.Join(repo, ".ccp", "gain.db"),
+				workingDir:  repo,
 			}
 
 			command := contracts.Command{
@@ -553,8 +556,8 @@ var _ = Describe("Runner", func() {
 			entries, err := workspaces.ListPath(registryPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].CWD).To(Equal(filepath.Join(tmpDir, "repo")))
-			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(tmpDir, "repo", ".ccp", "gain.db")))
+			Expect(entries[0].CWD).To(Equal(canonicalRepo))
+			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(canonicalRepo, ".ccp", "gain.db")))
 		})
 
 		It("skips redirected automatic metrics without registering the unsafe path", func() {

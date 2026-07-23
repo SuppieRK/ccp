@@ -98,10 +98,12 @@ var _ = Describe("project filter trust", func() {
 		_, err := Trust(alias)
 		Expect(err).NotTo(HaveOccurred())
 		decision, err := Evaluate(project)
-
 		Expect(err).NotTo(HaveOccurred())
+		canonicalProject, err := CanonicalRoot(project)
+		Expect(err).NotTo(HaveOccurred())
+
 		Expect(decision.State).To(Equal(StateTrusted))
-		Expect(decision.Root).To(Equal(project))
+		Expect(decision.Root).To(Equal(canonicalProject))
 	})
 
 	It("rejects symlinked project filter sources and files", func() {

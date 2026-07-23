@@ -347,11 +347,13 @@ var _ = Describe("DefaultSources", func() {
 		DeferCleanup(restoreTrust)
 		_, err = filtertrust.Trust(project)
 		Expect(err).NotTo(HaveOccurred())
+		canonicalProject, err := filtertrust.CanonicalRoot(project)
+		Expect(err).NotTo(HaveOccurred())
 
 		sources := DefaultSources()
 
 		Expect(sources).To(Equal([]v2filters.FilterSource{
-			v2filters.ProjectSource(project),
+			v2filters.ProjectSource(canonicalProject),
 			v2filters.HomeSource(home),
 		}))
 	})
