@@ -30,7 +30,7 @@ func openFileBeneath(root, relative string, flag int, perm os.FileMode) (*os.Fil
 	if err != nil {
 		return nil, err
 	}
-	defer windows.CloseHandle(parent)
+	defer func() { _ = windows.CloseHandle(parent) }()
 	beforeContainedFinalOpen()
 
 	handle, err := openWindowsRelative(parent, base, flag, windows.FILE_NON_DIRECTORY_FILE)
@@ -56,7 +56,7 @@ func atomicWriteFileBeneath(root, relative string, data []byte, perm os.FileMode
 	if err != nil {
 		return err
 	}
-	defer windows.CloseHandle(parent)
+	defer func() { _ = windows.CloseHandle(parent) }()
 
 	finalMode, err := windowsContainedDestinationMode(parent, base, perm, relative)
 	if err != nil {
@@ -330,7 +330,7 @@ func removeWindowsRelative(parent windows.Handle, name string) error {
 		}
 		return err
 	}
-	defer windows.CloseHandle(handle)
+	defer func() { _ = windows.CloseHandle(handle) }()
 	flags := uint32(
 		windows.FILE_DISPOSITION_DELETE |
 			windows.FILE_DISPOSITION_POSIX_SEMANTICS |
