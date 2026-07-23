@@ -39,6 +39,11 @@ type Decision struct {
 	Reason string
 }
 
+type SourceFile struct {
+	Name string
+	Raw  []byte
+}
+
 type approval struct {
 	Root      string    `json:"root"`
 	Digest    string    `json:"digest"`
@@ -91,31 +96,40 @@ func CanonicalRoot(root string) (string, error) {
 }
 
 func Evaluate(root string) (Decision, error) {
+	decision, _, err := EvaluateSource(root)
+	return decision, err
+}
+
+// EvaluateSource returns the exact safely opened bytes whose digest was
+// evaluated. Runtime loaders must compile these bytes rather than reopening
+// the source after trust has been decided.
+func EvaluateSource(root string) (Decision, []SourceFile, error) {
 	canonical, err := CanonicalRoot(root)
 	if err != nil {
-		return Decision{State: StateUnsafe, Reason: err.Error()}, err
+		return Decision{State: StateUnsafe, Reason: err.Error()}, nil, err
 	}
-	digest, present, err := sourceDigest(canonical)
+	files, present, err := readSourceFiles(canonical)
 	if err != nil {
-		return Decision{Root: canonical, State: StateUnsafe, Reason: err.Error()}, err
+		return Decision{Root: canonical, State: StateUnsafe, Reason: err.Error()}, nil, err
 	}
 	if !present {
-		return Decision{Root: canonical, State: StateAbsent}, nil
+		return Decision{Root: canonical, State: StateAbsent}, nil, nil
 	}
+	digest := sourceFilesDigest(canonical, files)
 	store, err := loadDefaultStore()
 	if err != nil {
-		return Decision{Root: canonical, Digest: digest, State: StateUnsafe, Reason: err.Error()}, err
+		return Decision{Root: canonical, Digest: digest, State: StateUnsafe, Reason: err.Error()}, nil, err
 	}
 	for _, item := range store.Projects {
 		if filepath.Clean(item.Root) != canonical {
 			continue
 		}
 		if item.Digest == digest {
-			return Decision{Root: canonical, Digest: digest, State: StateTrusted}, nil
+			return Decision{Root: canonical, Digest: digest, State: StateTrusted}, files, nil
 		}
-		return Decision{Root: canonical, Digest: digest, State: StateChanged}, nil
+		return Decision{Root: canonical, Digest: digest, State: StateChanged}, files, nil
 	}
-	return Decision{Root: canonical, Digest: digest, State: StateUntrusted}, nil
+	return Decision{Root: canonical, Digest: digest, State: StateUntrusted}, files, nil
 }
 
 func Trust(root string) (Decision, error) {
@@ -178,36 +192,52 @@ func Untrust(root string) (Decision, error) {
 }
 
 func sourceDigest(root string) (string, bool, error) {
+	files, present, err := readSourceFiles(root)
+	if err != nil || !present {
+		return "", present, err
+	}
+	return sourceFilesDigest(root, files), true, nil
+}
+
+func readSourceFiles(root string) ([]SourceFile, bool, error) {
 	filtersDir := filepath.Join(root, ".ccp", "filters")
 	if err := projectfiles.RejectSymlinkPath(filtersDir); err != nil {
-		return "", false, fmt.Errorf("project filter source is unsafe: %w", err)
+		return nil, false, fmt.Errorf("project filter source is unsafe: %w", err)
 	}
 	entries, err := os.ReadDir(filtersDir)
 	if errors.Is(err, os.ErrNotExist) {
-		return "", false, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return "", false, fmt.Errorf("read project filters: %w", err)
+		return nil, false, fmt.Errorf("read project filters: %w", err)
 	}
 
 	names := projectFilterNames(entries)
 	if len(names) == 0 {
-		return "", false, nil
+		return nil, false, nil
 	}
 	slices.Sort(names)
 
-	hash := sha256.New()
-	writeDigestPart(hash, digestDomain)
-	writeDigestPart(hash, filepath.ToSlash(root))
+	files := make([]SourceFile, 0, len(names))
 	for _, name := range names {
 		raw, err := readProjectFilter(root, filepath.Join(filtersDir, name), name)
 		if err != nil {
-			return "", false, err
+			return nil, false, err
 		}
-		writeDigestPart(hash, filepath.ToSlash(name))
-		writeDigestBytes(hash, raw)
+		files = append(files, SourceFile{Name: name, Raw: raw})
 	}
-	return hex.EncodeToString(hash.Sum(nil)), true, nil
+	return files, true, nil
+}
+
+func sourceFilesDigest(root string, files []SourceFile) string {
+	hash := sha256.New()
+	writeDigestPart(hash, digestDomain)
+	writeDigestPart(hash, filepath.ToSlash(root))
+	for _, file := range files {
+		writeDigestPart(hash, filepath.ToSlash(file.Name))
+		writeDigestBytes(hash, file.Raw)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func projectFilterNames(entries []os.DirEntry) []string {

@@ -352,6 +352,45 @@ func readReplayLine(reader *bufio.Reader) (string, error) {
 	return "", err
 }
 
+// ReadStreamRecord reads one live-output record. Bare carriage returns are
+// record boundaries, while CRLF remains a single boundary.
+func ReadStreamRecord(reader *bufio.Reader) ([]byte, error) {
+	first, err := reader.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	return CompleteStreamRecord(reader, first)
+}
+
+// CompleteStreamRecord finishes a record after its first byte has already
+// been observed. Capture uses this form so cross-stream sequence numbers are
+// assigned at the same point that native output first becomes visible.
+func CompleteStreamRecord(reader *bufio.Reader, first byte) ([]byte, error) {
+	record := make([]byte, 0, 256)
+	record = append(record, first)
+	for {
+		switch record[len(record)-1] {
+		case '\n':
+			return record, nil
+		case '\r':
+			if next, peekErr := reader.Peek(1); peekErr == nil && next[0] == '\n' {
+				newline, readErr := reader.ReadByte()
+				if readErr != nil {
+					return record, readErr
+				}
+				record = append(record, newline)
+			}
+			return record, nil
+		}
+
+		next, err := reader.ReadByte()
+		if err != nil {
+			return record, err
+		}
+		record = append(record, next)
+	}
+}
+
 func replayPayloadNeedsEncoding(line string) bool {
 	if !strings.HasSuffix(line, "\n") || strings.Count(line, "\n") != 1 {
 		return true

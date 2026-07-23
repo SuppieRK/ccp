@@ -217,14 +217,9 @@ var _ = Describe("Engine integration", func() {
 
 		It("falls back to passthrough", func() {
 			Expect(state.command.CommandID).To(Equal("cmd-2"))
-			Expect(state.Stdout("hello\n")).To(BeEmpty())
-			Expect(state.Stderr("warn\n")).To(BeEmpty())
-			entries := state.Exit(0)
-			Expect(entryLines(entries)).To(Equal([]string{"hello\n", "warn\n"}))
-			Expect(entryStreams(entries)).To(Equal([]contracts.Stream{
-				contracts.StreamStdout,
-				contracts.StreamStderr,
-			}))
+			Expect(entryLines(state.Stdout("hello\n"))).To(Equal([]string{"hello\n"}))
+			Expect(entryLines(state.Stderr("warn\n"))).To(Equal([]string{"warn\n"}))
+			Expect(state.Exit(0)).To(BeEmpty())
 		})
 	})
 
@@ -362,8 +357,16 @@ var _ = Describe("Engine integration", func() {
 			action, entries := state.StdoutAction("out\n")
 
 			Expect(action.Kind).To(Equal(contracts.ActionEmit))
-			Expect(entries).To(BeNil())
+			Expect(entryLines(entries)).To(Equal([]string{"out\n"}))
+			Expect(entryStreams(entries)).To(Equal([]contracts.Stream{contracts.StreamStdout}))
 			Expect(entryLines(state.Exit(0))).To(Equal([]string{"s\n"}))
+		})
+
+		It("streams emit actions without waiting for exit", func() {
+			entries := state.Stdout("first\n")
+
+			Expect(entryLines(entries)).To(Equal([]string{"first\n"}))
+			Expect(state.Passthrough()).To(BeFalse())
 		})
 
 		It("returns the action and no entries for ignored stderr", func() {

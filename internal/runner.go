@@ -470,7 +470,7 @@ func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.Buffer
 	reader := bufio.NewReader(src)
 	var sinkErr error
 	for {
-		record, err := readStreamRecord(reader)
+		record, err := replay.ReadStreamRecord(reader)
 		if len(record) > 0 {
 			if stats != nil {
 				stats.rawBytes += len(record)
@@ -480,30 +480,6 @@ func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.Buffer
 		}
 		if err != nil {
 			return errors.Join(sinkErr, wrapStreamReadError(err))
-		}
-	}
-}
-
-func readStreamRecord(reader *bufio.Reader) ([]byte, error) {
-	record := make([]byte, 0, 256)
-	for {
-		b, err := reader.ReadByte()
-		if err != nil {
-			return record, err
-		}
-		record = append(record, b)
-		switch b {
-		case '\n':
-			return record, nil
-		case '\r':
-			if next, peekErr := reader.Peek(1); peekErr == nil && next[0] == '\n' {
-				newline, readErr := reader.ReadByte()
-				if readErr != nil {
-					return record, readErr
-				}
-				record = append(record, newline)
-			}
-			return record, nil
 		}
 	}
 }

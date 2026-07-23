@@ -377,8 +377,15 @@ var _ = Describe("DefaultSources", func() {
 		setLoaderTestHome(home)
 		restoreTrust := filtertrust.WithTestHome(home)
 		DeferCleanup(restoreTrust)
+		_, err = filtertrust.Trust(project)
+		Expect(err).NotTo(HaveOccurred())
+		sources := DefaultSources()
+		Expect(sources).To(HaveLen(2))
+		Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(
+			validLoaderStatusFilterYAML("git")+"# changed after approval\n",
+		), 0o644)).To(Succeed())
 
-		filters, err := LoadRegistryFiltersFromSources(DefaultSources())
+		filters, err := LoadRegistryFiltersFromSources(sources)
 
 		Expect(err).NotTo(HaveOccurred())
 		provenance, ok := filters["git"].(contracts.ProvenanceFilter)

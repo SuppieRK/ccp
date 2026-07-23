@@ -132,7 +132,7 @@ func (s *State) applyExit(action contracts.Action) []BufferEntry {
 		}
 	}
 	entries := s.buffer.Entries()
-	if transformedBytes(entries) >= s.rawBytes {
+	if s.rawBytes > 0 && transformedBytes(entries) >= s.rawBytes {
 		s.passthrough = true
 		s.buffer.Clear()
 		return s.takeRawEntries()
@@ -190,6 +190,10 @@ func (s *State) applyAction(stream contracts.Stream, line string, action contrac
 	switch action.Kind {
 	case contracts.ActionIgnore:
 		return action, nil
+	case contracts.ActionEmit:
+		s.rawEntries = s.rawEntries[:len(s.rawEntries)-1]
+		s.rawBytes -= len(raw.Original)
+		return action, []BufferEntry{raw}
 	case contracts.ActionReplace:
 		s.buffer.AddAt(sequence, stream, raw.Original, raw.Original)
 		removed := s.buffer.RemoveLastEntries(stream, max(action.ReplaceCount, 1))

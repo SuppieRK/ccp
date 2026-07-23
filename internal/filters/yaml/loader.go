@@ -46,6 +46,64 @@ type compiledStatusFilter struct {
 	filter contracts.Filter
 }
 
+type preparedFilterSource struct {
+	source       v2filters.FilterSource
+	projectFiles map[string][]byte
+}
+
+func prepareFilterSource(source v2filters.FilterSource) (preparedFilterSource, bool, error) {
+	if source.Kind != v2filters.SourceProject {
+		return preparedFilterSource{source: source}, true, nil
+	}
+
+	projectRoot := filepath.Dir(filepath.Dir(source.Directory))
+	decision, files, err := filtertrust.EvaluateSource(projectRoot)
+	audit.MustAppend("project_filter_trust", map[string]any{
+		"project_root": decision.Root,
+		"state":        decision.State,
+		"reason":       decision.Reason,
+	})
+	if err != nil || decision.State != filtertrust.StateTrusted {
+		return preparedFilterSource{source: source}, false, nil
+	}
+
+	source.Directory = filepath.Join(decision.Root, ".ccp", "filters")
+	projectFiles := make(map[string][]byte, len(files))
+	for _, file := range files {
+		projectFiles[file.Name] = file.Raw
+	}
+	return preparedFilterSource{source: source, projectFiles: projectFiles}, true, nil
+}
+
+func (s preparedFilterSource) readFile(path string) ([]byte, error) {
+	if s.projectFiles == nil {
+		return os.ReadFile(path)
+	}
+	raw, ok := s.projectFiles[filepath.Base(path)]
+	if !ok {
+		return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
+	}
+	return raw, nil
+}
+
+func (s preparedFilterSource) matchedFilterFiles() ([]string, error) {
+	if s.projectFiles == nil {
+		return matchedFilterFiles(s.source.Directory)
+	}
+	matches := make([]string, 0, len(s.projectFiles))
+	for name := range s.projectFiles {
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+		switch filepath.Ext(name) {
+		case ".yaml", ".yml":
+			matches = append(matches, filepath.Join(s.source.Directory, name))
+		}
+	}
+	sort.Strings(matches)
+	return matches, nil
+}
+
 func ProjectRootFromSource() string {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -151,7 +209,12 @@ func LoadExecutionFilterFromSourcesWithTiming(sources []v2filters.FilterSource, 
 }
 
 func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (contracts.Filter, int, error) {
-	mappings, mappingErr := readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
+	prepared, enabled, err := prepareFilterSource(source)
+	if err != nil || !enabled {
+		return nil, 0, err
+	}
+	source = prepared.source
+	mappings, mappingErr := prepared.readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
 	if mappingErr != nil && !os.IsNotExist(mappingErr) {
 		audit.MustAppend("mapping_read_error", map[string]any{
 			"source_kind": string(source.Kind),
@@ -166,7 +229,7 @@ func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (
 		targets = append(targets, target)
 	}
 	for _, target := range targets {
-		loaded, inspected, found, err := loadExactTargetDefinition(source.Directory, target)
+		loaded, inspected, found, err := loadExactTargetDefinition(prepared, target)
 		if err != nil {
 			return nil, inspected, err
 		}
@@ -175,14 +238,15 @@ func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (
 		}
 	}
 
-	loaded, inspected, found, err := loadLegacyTargetDefinition(source.Directory, targets)
+	loaded, inspected, found, err := loadLegacyTargetDefinition(prepared, targets)
 	if err != nil || !found {
 		return nil, inspected, err
 	}
 	return compileExecutionFilter(source, loaded), inspected, nil
 }
 
-func loadExactTargetDefinition(dir, target string) (LoadedFilter, int, bool, error) {
+func loadExactTargetDefinition(source preparedFilterSource, target string) (LoadedFilter, int, bool, error) {
+	dir := source.source.Directory
 	paths := []string{
 		filepath.Join(dir, target+".yaml"),
 		filepath.Join(dir, target+".yml"),
@@ -190,7 +254,7 @@ func loadExactTargetDefinition(dir, target string) (LoadedFilter, int, bool, err
 	var selected LoadedFilter
 	inspected := 0
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
+		raw, err := source.readFile(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -213,8 +277,8 @@ func loadExactTargetDefinition(dir, target string) (LoadedFilter, int, bool, err
 	return selected, inspected, selected.Spec != nil, nil
 }
 
-func loadLegacyTargetDefinition(dir string, targets []string) (LoadedFilter, int, bool, error) {
-	paths, err := matchedFilterFiles(dir)
+func loadLegacyTargetDefinition(source preparedFilterSource, targets []string) (LoadedFilter, int, bool, error) {
+	paths, err := source.matchedFilterFiles()
 	if err != nil {
 		return LoadedFilter{}, 0, false, err
 	}
@@ -225,7 +289,7 @@ func loadLegacyTargetDefinition(dir string, targets []string) (LoadedFilter, int
 	var selected LoadedFilter
 	inspected := 0
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
+		raw, err := source.readFile(path)
 		if err != nil {
 			return LoadedFilter{}, inspected, false, fmt.Errorf("read filter %s: %w", path, err)
 		}
@@ -270,7 +334,21 @@ func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) 
 		// should pass project-local sources before home-scoped sources when they want the
 		// documented repo-specific override behavior from README "Bring Your Own Filter".
 		sourceStartedAt := time.Now()
-		filters, sourceTiming, err := loadCompiledFiltersFromSourceWithTiming(source)
+		prepared, enabled, prepareErr := prepareFilterSource(source)
+		if prepareErr != nil {
+			timing.DurationMS = time.Since(startedAt).Milliseconds()
+			return nil, timing, prepareErr
+		}
+		if !enabled {
+			timing.Sources = append(timing.Sources, contracts.FilterSourceBuildTiming{
+				SourceKind: string(source.Kind),
+				SourceDir:  source.Directory,
+				DurationMS: time.Since(sourceStartedAt).Milliseconds(),
+			})
+			continue
+		}
+		source = prepared.source
+		filters, sourceTiming, err := loadCompiledFiltersFromSourceWithTiming(prepared)
 		if err != nil {
 			sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
 			sourceTiming.Error = err.Error()
@@ -279,7 +357,7 @@ func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) 
 			return nil, timing, err
 		}
 		registerCompiledFilters(registered, filters, source)
-		if err := registerMappedFilters(registered, filters, source); err != nil {
+		if err := registerMappedFilters(registered, filters, prepared); err != nil {
 			sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
 			sourceTiming.Error = err.Error()
 			timing.Sources = append(timing.Sources, sourceTiming)
@@ -354,12 +432,13 @@ func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSou
 	return registered, rows, nil
 }
 
-func loadCompiledFiltersFromSourceWithTiming(source v2filters.FilterSource) (map[string]contracts.Filter, contracts.FilterSourceBuildTiming, error) {
+func loadCompiledFiltersFromSourceWithTiming(prepared preparedFilterSource) (map[string]contracts.Filter, contracts.FilterSourceBuildTiming, error) {
+	source := prepared.source
 	timing := contracts.FilterSourceBuildTiming{
 		SourceKind: string(source.Kind),
 		SourceDir:  source.Directory,
 	}
-	items, err := loadFilterDefinitionsFromDir(source.Directory)
+	items, err := loadFilterDefinitions(prepared)
 	if err != nil {
 		audit.MustAppend("filter_discovery_error", map[string]any{
 			"source_kind": string(source.Kind),
@@ -452,8 +531,9 @@ func registerCompiledFilters(registered map[string]contracts.Filter, filters map
 	}
 }
 
-func registerMappedFilters(registered map[string]contracts.Filter, filters map[string]contracts.Filter, source v2filters.FilterSource) error {
-	mappings, err := readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
+func registerMappedFilters(registered map[string]contracts.Filter, filters map[string]contracts.Filter, prepared preparedFilterSource) error {
+	source := prepared.source
+	mappings, err := prepared.readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -642,6 +722,18 @@ func readMappingsFile(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseMappingsFile(path, raw)
+}
+
+func (s preparedFilterSource) readMappingsFile(path string) (map[string]string, error) {
+	raw, err := s.readFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return parseMappingsFile(path, raw)
+}
+
+func parseMappingsFile(path string, raw []byte) (map[string]string, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(raw))
 	dec.KnownFields(true)
 	var payload mappingsFile
@@ -667,14 +759,20 @@ func readMappingsFile(path string) (map[string]string, error) {
 }
 
 func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
-	paths, err := matchedFilterFiles(dir)
+	return loadFilterDefinitions(preparedFilterSource{
+		source: v2filters.FilterSource{Directory: dir},
+	})
+}
+
+func loadFilterDefinitions(source preparedFilterSource) ([]LoadedFilter, error) {
+	paths, err := source.matchedFilterFiles()
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]LoadedFilter, 0, len(paths))
 	for _, p := range paths {
-		raw, err := os.ReadFile(p)
+		raw, err := source.readFile(p)
 		if err != nil {
 			return nil, fmt.Errorf("read filter %s: %w", p, err)
 		}

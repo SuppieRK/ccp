@@ -23,6 +23,7 @@ import (
 	"go-command-compression-proxy/internal/engine"
 	corefilters "go-command-compression-proxy/internal/filters"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/version"
@@ -1281,6 +1282,10 @@ cases:
           keep:
             - regex: '^'
 `), 0o644)).To(Succeed())
+					restoreTrust := filtertrust.WithTestHome(homeRoot)
+					DeferCleanup(restoreTrust)
+					_, err = filtertrust.Trust(projectRoot)
+					Expect(err).NotTo(HaveOccurred())
 
 					runner := &Runner{sources: []corefilters.FilterSource{
 						corefilters.ProjectSource(projectRoot),

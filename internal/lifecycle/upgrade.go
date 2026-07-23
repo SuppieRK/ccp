@@ -33,6 +33,9 @@ var (
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
 	upgradeRunRepair      = runInstalledRepair
 	upgradeValidateStaged = validateStagedBinaryVersion
+	upgradeRenameBinary   = os.Rename
+	upgradeRemoveBinary   = os.Remove
+	upgradeScheduleRemove = scheduleExecutableRemoval
 )
 
 type githubRelease struct {
@@ -120,17 +123,70 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err != nil {
 		return err
 	}
-	if err := upgradeReplaceBinary(exePath, srcPath); err != nil {
+	oldBinaryPath, err := installUpgradeReplacement(exePath, srcPath)
+	if err != nil {
 		return err
 	}
 	if err := ensureUpgradeExecutablePermissions(exePath); err != nil {
 		return err
 	}
 	repairMode := repairModeRewrite
-	if err := upgradeRunRepair(exePath, repairMode); err != nil {
-		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", err, repairMode.flag())
+	repairErr := upgradeRunRepair(exePath, repairMode)
+	var cleanupErr error
+	if oldBinaryPath != "" {
+		if err := upgradeScheduleRemove(oldBinaryPath); err != nil {
+			cleanupErr = fmt.Errorf("schedule removal of previous binary %q: %w; the new binary remains installed", oldBinaryPath, err)
+		}
+	}
+	if repairErr != nil {
+		return errors.Join(
+			fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", repairErr, repairMode.flag()),
+			cleanupErr,
+		)
+	}
+	if cleanupErr != nil {
+		return cleanupErr
 	}
 	return printUpgradeSuccess(exePath, assetName, tag)
+}
+
+func installUpgradeReplacement(exePath, srcPath string) (_ string, err error) {
+	if upgradeRuntimeOS() != "windows" {
+		return "", upgradeReplaceBinary(exePath, srcPath)
+	}
+
+	backupPath := backupBinaryPath(exePath)
+	if err := upgradeRenameBinary(exePath, backupPath); err != nil {
+		return "", fmt.Errorf("move running binary aside: %w", err)
+	}
+	installed := false
+	defer func() {
+		if installed {
+			return
+		}
+		removeErr := upgradeRemoveBinary(exePath)
+		if errors.Is(removeErr, os.ErrNotExist) {
+			removeErr = nil
+		}
+		restoreErr := upgradeRenameBinary(backupPath, exePath)
+		err = errors.Join(
+			err,
+			wrapOptionalError("remove partial Windows binary", removeErr),
+			wrapOptionalError("restore previous binary", restoreErr),
+		)
+	}()
+	if err := upgradeReplaceBinary(exePath, srcPath); err != nil {
+		return "", fmt.Errorf("install staged Windows binary: %w", err)
+	}
+	installed = true
+	return backupPath, nil
+}
+
+func wrapOptionalError(message string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", message, err)
 }
 
 func ensureUpgradeExecutablePermissions(exePath string) error {
@@ -445,6 +501,12 @@ func ensureExecutableIfNeeded(path string) error {
 		return nil
 	}
 	return os.Chmod(path, 0o755)
+}
+
+func backupBinaryPath(exePath string) string {
+	dir := filepath.Dir(exePath)
+	base := filepath.Base(exePath)
+	return filepath.Join(dir, fmt.Sprintf("%s.backup.%d", base, time.Now().UnixNano()))
 }
 
 func validateStagedBinaryVersion(path, expected string) error {

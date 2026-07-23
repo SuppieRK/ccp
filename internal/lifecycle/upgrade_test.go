@@ -103,6 +103,100 @@ var _ = Describe("replaceBinary", func() {
 	})
 })
 
+var _ = Describe("installUpgradeReplacement", func() {
+	It("moves the running Windows image aside before installing the staged binary", func() {
+		tmpDir := GinkgoT().TempDir()
+		src := filepath.Join(tmpDir, "staged.exe")
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevOS := upgradeRuntimeOS
+		prevReplace := upgradeReplaceBinary
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeReplaceBinary = func(dest, source string) error {
+			if _, err := os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
+				return errors.New("destination is still mapped")
+			}
+			return replaceBinary(dest, source)
+		}
+		DeferCleanup(func() {
+			upgradeRuntimeOS = prevOS
+			upgradeReplaceBinary = prevReplace
+		})
+
+		backupPath, err := installUpgradeReplacement(dst, src)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(backupPath).NotTo(BeEmpty())
+		Expect(os.ReadFile(dst)).To(Equal([]byte(newBinaryContent)))
+		Expect(os.ReadFile(backupPath)).To(Equal([]byte("old-binary")))
+	})
+
+	It("restores the Windows binary when staged installation fails", func() {
+		tmpDir := GinkgoT().TempDir()
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevOS := upgradeRuntimeOS
+		prevReplace := upgradeReplaceBinary
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeReplaceBinary = func(string, string) error { return errors.New("install failed") }
+		DeferCleanup(func() {
+			upgradeRuntimeOS = prevOS
+			upgradeReplaceBinary = prevReplace
+		})
+
+		_, err := installUpgradeReplacement(dst, filepath.Join(tmpDir, "staged.exe"))
+
+		Expect(err).To(MatchError(ContainSubstring("install failed")))
+		Expect(os.ReadFile(dst)).To(Equal([]byte("old-binary")))
+	})
+
+	It("repairs the new Windows binary before scheduling removal of the old image", func() {
+		tmpDir := GinkgoT().TempDir()
+		src := filepath.Join(tmpDir, "staged.exe")
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevExec := upgradeExecutablePath
+		prevOS := upgradeRuntimeOS
+		prevRepair := upgradeRunRepair
+		prevSchedule := upgradeScheduleRemove
+		prevPrintf := upgradePrintf
+		repaired := false
+		scheduledPath := ""
+		upgradeExecutablePath = func() (string, error) { return dst, nil }
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeRunRepair = func(path string, mode repairMode) error {
+			Expect(path).To(Equal(dst))
+			Expect(mode).To(Equal(repairModeRewrite))
+			repaired = true
+			return nil
+		}
+		upgradeScheduleRemove = func(path string) error {
+			Expect(repaired).To(BeTrue())
+			scheduledPath = path
+			return nil
+		}
+		upgradePrintf = func(string, ...any) (int, error) { return 0, nil }
+		DeferCleanup(func() {
+			upgradeExecutablePath = prevExec
+			upgradeRuntimeOS = prevOS
+			upgradeRunRepair = prevRepair
+			upgradeScheduleRemove = prevSchedule
+			upgradePrintf = prevPrintf
+		})
+
+		Expect(installUpgradeBinary(src, "asset.zip", "1.2.3")).To(Succeed())
+
+		Expect(scheduledPath).NotTo(BeEmpty())
+		Expect(os.ReadFile(scheduledPath)).To(Equal([]byte("old-binary")))
+		Expect(os.ReadFile(dst)).To(Equal([]byte(newBinaryContent)))
+	})
+})
+
 var _ = Describe("releaseAssetName", func() {
 	DescribeTable("resolving supported release asset names",
 		func(goos string, goarch string, wantAsset string, wantBin string) {
