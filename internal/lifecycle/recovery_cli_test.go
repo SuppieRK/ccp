@@ -3,7 +3,6 @@ package lifecycle
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"go-command-compression-proxy/internal/contracts"
 	"go-command-compression-proxy/internal/recovery"
@@ -15,11 +14,9 @@ import (
 var _ = Describe("recovery commands", func() {
 	BeforeEach(func() {
 		configRoot := GinkgoT().TempDir()
-		if runtime.GOOS == "windows" {
-			GinkgoT().Setenv("AppData", configRoot)
-		} else {
-			GinkgoT().Setenv("XDG_CONFIG_HOME", configRoot)
-		}
+		GinkgoT().Setenv("HOME", configRoot)
+		GinkgoT().Setenv("XDG_CONFIG_HOME", configRoot)
+		GinkgoT().Setenv("AppData", configRoot)
 	})
 
 	It("validates actions and renders help", func() {
