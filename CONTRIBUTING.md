@@ -70,9 +70,9 @@ All contributors must run the following from the repository root before submitti
 ./scripts/validate.sh
 ```
 
-The script runs `gofmt`, `go vet`, `go test`, `go mod tidy`, `go test -race`, internal coverage-gate verification, and
-the local quality tools `staticcheck`, `ineffassign`, and `gocyclo` when they are installed. If one of those CLI tools
-is missing, the script prints an installation suggestion instead of failing on the missing binary.
+The script runs `gofmt`, `go vet`, `go test`, `go mod tidy`, `go test -race`, internal coverage-gate verification,
+and the validation tools declared in the repository's `go.mod` `tool` block. Go resolves every tool through the
+versions and checksums recorded in `go.mod` and `go.sum`.
 
 CI is authoritative. Pull requests must pass all CI checks.
 

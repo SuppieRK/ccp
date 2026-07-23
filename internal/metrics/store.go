@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"cmp"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -594,16 +596,18 @@ func QueryMissedOpportunities(path string, opts QueryOptions, limit int) (opps [
 	for cmd, cnt := range grouped {
 		out = append(out, MissedOpportunity{Command: cmd, Count: cnt})
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Count != out[j].Count {
-			return out[i].Count > out[j].Count
-		}
-		return out[i].Command < out[j].Command
-	})
+	slices.SortFunc(out, compareMissedOpportunities)
 	if len(out) > limit {
 		out = out[:limit]
 	}
 	return out, nil
+}
+
+func compareMissedOpportunities(left, right MissedOpportunity) int {
+	if order := cmp.Compare(right.Count, left.Count); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Command, right.Command)
 }
 
 func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err error) {
@@ -715,22 +719,24 @@ func QueryPerformanceRows(path string, opts QueryOptions) (rows []PerformanceRow
 		fillPerformanceDerived(&row, acc.duration)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedSavedTokens != out[j].EstimatedSavedTokens {
-			return out[i].EstimatedSavedTokens > out[j].EstimatedSavedTokens
-		}
-		if out[i].Tool != out[j].Tool {
-			return out[i].Tool < out[j].Tool
-		}
-		if out[i].Filter != out[j].Filter {
-			return out[i].Filter < out[j].Filter
-		}
-		return out[i].Case < out[j].Case
-	})
+	slices.SortFunc(out, comparePerformanceRows)
 	return out, nil
+}
+
+func comparePerformanceRows(left, right PerformanceRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedSavedTokens, left.EstimatedSavedTokens); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Tool, right.Tool); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Filter, right.Filter); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Case, right.Case)
 }
 
 func QueryRegistryBuild(path string, opts QueryOptions) (summary RegistryBuildSummary, sourceRows []RegistrySourceBuildRow, err error) {
@@ -1521,47 +1527,13 @@ func closeBoltDBWithErr(db *bolt.DB, retErr *error) {
 }
 
 func ensureLocalCCPGitignore(projectRoot, path string) error {
-	cleanPath, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
+	cleanPath, pathProjectRoot, ok := localProjectMetricsPath(path)
+	if !ok {
 		return nil
 	}
-	if filepath.Base(cleanPath) != projectMetricsFile {
-		return nil
-	}
-	ccpDir := filepath.Dir(cleanPath)
-	if filepath.Base(ccpDir) != ".ccp" {
-		return nil
-	}
-	pathProjectRoot := filepath.Dir(ccpDir)
-	if strings.TrimSpace(projectRoot) == "" {
-		cwd, cwdErr := os.Getwd()
-		if cwdErr != nil {
-			return nil
-		}
-		cwd, cwdErr = canonicalExistingPath(cwd)
-		if cwdErr != nil {
-			return nil
-		}
-		canonicalProjectRoot, canonicalErr := canonicalExistingPath(pathProjectRoot)
-		if canonicalErr != nil || cwd != canonicalProjectRoot {
-			return nil
-		}
-		projectRoot = pathProjectRoot
-	} else {
-		canonicalPath, containedErr := projectfiles.CanonicalPathBeneath(projectRoot, cleanPath)
-		if containedErr != nil {
-			return containedErr
-		}
-		canonicalProjectRoot, canonicalErr := canonicalExistingPath(projectRoot)
-		if canonicalErr != nil {
-			return fmt.Errorf("metrics path %q is not the project .ccp database", path)
-		}
-		expectedCanonicalPath := filepath.Join(canonicalProjectRoot, ".ccp", projectMetricsFile)
-		if filepath.Clean(canonicalPath) != filepath.Clean(expectedCanonicalPath) {
-			return fmt.Errorf("metrics path %q is not the project .ccp database", path)
-		}
-		pathProjectRoot = canonicalProjectRoot
-		projectRoot = canonicalProjectRoot
+	projectRoot, pathProjectRoot, ok, err := resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, path)
+	if err != nil || !ok {
+		return err
 	}
 	gitMeta := filepath.Join(pathProjectRoot, ".git")
 	info, err := os.Stat(gitMeta)
@@ -1570,6 +1542,53 @@ func ensureLocalCCPGitignore(projectRoot, path string) error {
 	}
 
 	return projectfiles.EnsureNestedCCPGitignore(projectRoot)
+}
+
+func localProjectMetricsPath(path string) (string, string, bool) {
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil || filepath.Base(cleanPath) != projectMetricsFile {
+		return "", "", false
+	}
+	ccpDir := filepath.Dir(cleanPath)
+	if filepath.Base(ccpDir) != ".ccp" {
+		return "", "", false
+	}
+	return cleanPath, filepath.Dir(ccpDir), true
+}
+
+func resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, originalPath string) (string, string, bool, error) {
+	if strings.TrimSpace(projectRoot) == "" {
+		return resolveImplicitMetricsProjectRoot(pathProjectRoot)
+	}
+	canonicalPath, err := projectfiles.CanonicalPathBeneath(projectRoot, cleanPath)
+	if err != nil {
+		return "", "", false, err
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
+	if err != nil {
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+	}
+	expectedPath := filepath.Join(canonicalProjectRoot, ".ccp", projectMetricsFile)
+	if filepath.Clean(canonicalPath) != filepath.Clean(expectedPath) {
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+	}
+	return canonicalProjectRoot, canonicalProjectRoot, true, nil
+}
+
+func resolveImplicitMetricsProjectRoot(pathProjectRoot string) (string, string, bool, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", "", false, nil
+	}
+	cwd, err = canonicalExistingPath(cwd)
+	if err != nil {
+		return "", "", false, nil
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(pathProjectRoot)
+	if err != nil || cwd != canonicalProjectRoot {
+		return "", "", false, nil
+	}
+	return pathProjectRoot, pathProjectRoot, true, nil
 }
 
 func canonicalExistingPath(path string) (string, error) {

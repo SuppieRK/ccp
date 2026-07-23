@@ -409,7 +409,6 @@ li code,
 a code,
 h3 code {
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .copy-button {

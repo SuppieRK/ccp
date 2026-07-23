@@ -206,4 +206,39 @@ var _ = Describe("recovery storage", func() {
 		_, err = Purge()
 		Expect(err).To(MatchError("config unavailable"))
 	})
+
+	It("rotates only directories and deterministically removes overflow", func() {
+		recoveryRoot, err := RootPath()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.MkdirAll(recoveryRoot, 0o700)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(recoveryRoot, "keep.txt"), []byte("keep"), 0o600)).To(Succeed())
+		baseTime := time.Now().Add(-time.Hour)
+		for index := range maxArtifacts + 2 {
+			path := filepath.Join(recoveryRoot, string(rune('a'+index)))
+			Expect(os.Mkdir(path, 0o700)).To(Succeed())
+			modTime := baseTime.Add(time.Duration(index) * time.Minute)
+			Expect(os.Chtimes(path, modTime, modTime)).To(Succeed())
+		}
+
+		Expect(rotate(recoveryRoot)).To(Succeed())
+
+		entries, err := os.ReadDir(recoveryRoot)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(HaveLen(maxArtifacts + 1))
+		Expect(filepath.Join(recoveryRoot, "a")).NotTo(BeADirectory())
+		Expect(filepath.Join(recoveryRoot, "b")).NotTo(BeADirectory())
+		Expect(filepath.Join(recoveryRoot, "keep.txt")).To(BeAnExistingFile())
+	})
+
+	It("measures nested artifact bytes", func() {
+		root := GinkgoT().TempDir()
+		Expect(os.Mkdir(filepath.Join(root, "nested"), 0o700)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "one"), []byte("123"), 0o600)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "nested", "two"), []byte("4567"), 0o600)).To(Succeed())
+
+		size, err := directorySize(root)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(size).To(Equal(int64(7)))
+	})
 })

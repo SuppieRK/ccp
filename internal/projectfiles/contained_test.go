@@ -63,6 +63,30 @@ var _ = Describe("contained project files", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
+	It("canonicalizes and validates an existing regular file beneath the root", func() {
+		root := GinkgoT().TempDir()
+		path := filepath.Join(root, ".ccp", "gain.db")
+		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+		Expect(os.WriteFile(path, []byte("metrics"), 0o600)).To(Succeed())
+
+		canonical, err := CanonicalPathBeneath(root, path)
+
+		Expect(err).NotTo(HaveOccurred())
+		expected, err := filepath.EvalSymlinks(path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(canonical).To(Equal(expected))
+		Expect(ValidateRegularFileBeneath(root, path)).To(Succeed())
+	})
+
+	It("rejects a missing contained root", func() {
+		root := filepath.Join(GinkgoT().TempDir(), "missing")
+		path := filepath.Join(root, ".ccp", "gain.db")
+
+		_, err := CanonicalPathBeneath(root, path)
+
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("rejects symlinked parent directories", func() {
 		root := GinkgoT().TempDir()
 		outside := GinkgoT().TempDir()

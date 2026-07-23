@@ -79,24 +79,41 @@ func consolidateProjectSpool(projectRoot, databasePath string) (retErr error) {
 	defer func() { retErr = errors.Join(retErr, db.Close()) }()
 
 	var joined error
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+	for _, path := range spoolEventPaths(spoolDir, entries) {
+		recoverable, eventErr := consolidateSpoolEvent(db, projectRoot, path)
+		if eventErr == nil {
 			continue
 		}
-		path := filepath.Join(spoolDir, entry.Name())
-		event, readErr := readSpoolEvent(projectRoot, path)
-		if readErr != nil {
-			joined = errors.Join(joined, readErr)
-			continue
-		}
-		if commitErr := commitSpoolEvent(db, event); commitErr != nil {
-			return errors.Join(joined, commitErr)
-		}
-		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-			joined = errors.Join(joined, removeErr)
+		joined = errors.Join(joined, eventErr)
+		if !recoverable {
+			return joined
 		}
 	}
 	return joined
+}
+
+func spoolEventPaths(spoolDir string, entries []os.DirEntry) []string {
+	paths := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			paths = append(paths, filepath.Join(spoolDir, entry.Name()))
+		}
+	}
+	return paths
+}
+
+func consolidateSpoolEvent(db *bolt.DB, projectRoot, path string) (bool, error) {
+	event, err := readSpoolEvent(projectRoot, path)
+	if err != nil {
+		return true, err
+	}
+	if err := commitSpoolEvent(db, event); err != nil {
+		return false, err
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return true, err
+	}
+	return true, nil
 }
 
 func readSpoolEvent(projectRoot, path string) (_ spoolEvent, retErr error) {
@@ -182,17 +199,7 @@ func pruneOldEventIDs(bucket *bolt.Bucket, cutoff time.Time, limit int) error {
 }
 
 func ProjectStorageStatus(projectRoot, databasePath string) StorageStatus {
-	status := StorageStatus{}
-	spoolDir := filepath.Join(filepath.Dir(databasePath), spoolDirectoryName)
-	if entries, err := os.ReadDir(spoolDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-				status.Pending++
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		status.StorageErrors++
-	}
+	status := inspectPendingSpool(databasePath)
 	db, err := openDBAt(projectRoot, databasePath, true)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -201,12 +208,7 @@ func ProjectStorageStatus(projectRoot, databasePath string) StorageStatus {
 		return status
 	}
 	defer func() { _ = db.Close() }()
-	_ = db.View(func(tx *bolt.Tx) error {
-		if bucket := tx.Bucket(runsBucket); bucket != nil {
-			status.Observed = bucket.Stats().KeyN
-		}
-		return nil
-	})
+	status.Observed, _ = observedRunCount(db)
 	return status
 }
 
@@ -214,17 +216,7 @@ func ProjectStorageStatus(projectRoot, databasePath string) StorageStatus {
 // the store. It is intended for user-facing reports, including stores that
 // are not the current project's contained automatic database.
 func InspectStorage(databasePath string) StorageStatus {
-	status := StorageStatus{}
-	spoolDir := filepath.Join(filepath.Dir(databasePath), spoolDirectoryName)
-	if entries, err := os.ReadDir(spoolDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-				status.Pending++
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		status.StorageErrors++
-	}
+	status := inspectPendingSpool(databasePath)
 	if _, err := os.Stat(databasePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			status.StorageErrors++
@@ -240,15 +232,42 @@ func InspectStorage(databasePath string) StorageStatus {
 		return status
 	}
 	defer func() { _ = db.Close() }()
-	if err := db.View(func(tx *bolt.Tx) error {
-		if bucket := tx.Bucket(runsBucket); bucket != nil {
-			status.Observed = bucket.Stats().KeyN
-		}
-		return nil
-	}); err != nil {
+	observed, err := observedRunCount(db)
+	if err != nil {
 		status.StorageErrors++
+		return status
+	}
+	status.Observed = observed
+	return status
+}
+
+func inspectPendingSpool(databasePath string) StorageStatus {
+	status := StorageStatus{}
+	spoolDir := filepath.Join(filepath.Dir(databasePath), spoolDirectoryName)
+	entries, err := os.ReadDir(spoolDir)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			status.StorageErrors++
+		}
+		return status
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			status.Pending++
+		}
 	}
 	return status
+}
+
+func observedRunCount(db *bolt.DB) (int, error) {
+	observed := 0
+	err := db.View(func(tx *bolt.Tx) error {
+		if bucket := tx.Bucket(runsBucket); bucket != nil {
+			observed = bucket.Stats().KeyN
+		}
+		return nil
+	})
+	return observed, err
 }
 
 func newEventID() (string, error) {

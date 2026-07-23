@@ -70,3 +70,37 @@ var _ = Describe("release distribution workflow", func() {
 		Expect(publish).To(BeNumerically(">", smoke))
 	})
 })
+
+var _ = Describe("validation workflow dependencies", func() {
+	DescribeTable("using the Go module lock for validation tools",
+		func(name string) {
+			raw, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", name))
+			Expect(err).NotTo(HaveOccurred())
+			workflow := string(raw)
+			var document map[string]any
+			Expect(yaml.Unmarshal(raw, &document)).To(Succeed())
+
+			Expect(workflow).To(ContainSubstring("go mod download"))
+			Expect(workflow).NotTo(ContainSubstring("go install "))
+			Expect(workflow).NotTo(ContainSubstring("raw.githubusercontent.com/golangci"))
+		},
+		Entry("main validation", "main-validation.yml"),
+		Entry("pull-request validation", "pr-validation.yml"),
+	)
+
+	It("declares every executed validation tool in go.mod", func() {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))
+		Expect(err).NotTo(HaveOccurred())
+		module := string(raw)
+
+		for _, tool := range []string{
+			"github.com/fzipp/gocyclo/cmd/gocyclo",
+			"github.com/golangci/golangci-lint/v2/cmd/golangci-lint",
+			"github.com/gordonklaus/ineffassign",
+			"golang.org/x/vuln/cmd/govulncheck",
+			"honnef.co/go/tools/cmd/staticcheck",
+		} {
+			Expect(module).To(ContainSubstring("\n\t" + tool + "\n"))
+		}
+	})
+})

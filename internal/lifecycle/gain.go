@@ -145,6 +145,28 @@ func RunHistory(args []string, metricsPath string) error {
 }
 
 func runHistoryPurge(args []string, metricsPath string) error {
+	request, handled, err := parseHistoryPurgeRequest(args)
+	if err != nil || handled {
+		return err
+	}
+	sources, err := historyPurgeSources(metricsPath, request.global)
+	if err != nil {
+		return err
+	}
+	removed, err := purgeHistorySources(sources, request.cutoff)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Purged %d history records before %s.\n", removed, request.cutoff.UTC().Format(time.RFC3339))
+	return nil
+}
+
+type historyPurgeRequest struct {
+	cutoff time.Time
+	global bool
+}
+
+func parseHistoryPurgeRequest(args []string) (historyPurgeRequest, bool, error) {
 	fs := newLifecycleFlagSet("history purge")
 	before := fs.String("before", "", "remove history older than this duration (for example 90d)")
 	global := fs.Bool("global", false, "purge every registered workspace")
@@ -158,50 +180,58 @@ func runHistoryPurge(args []string, metricsPath string) error {
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
-		return err
+		return historyPurgeRequest{}, false, err
 	}
 	if handled {
-		return nil
+		return historyPurgeRequest{}, true, nil
 	}
 	if len(fs.Args()) != 0 {
-		return fmt.Errorf("history purge does not accept positional arguments")
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge does not accept positional arguments")
 	}
 	if strings.TrimSpace(*before) == "" {
-		return fmt.Errorf("history purge requires --before <duration>")
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --before <duration>")
 	}
 	duration, err := parseSince(*before)
 	if err != nil || duration <= 0 {
-		return fmt.Errorf("invalid --before %q", *before)
+		return historyPurgeRequest{}, false, fmt.Errorf("invalid --before %q", *before)
 	}
 	if !*yes {
-		return fmt.Errorf("history purge requires --yes")
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --yes")
 	}
-	cutoff := gainNow().Add(-duration)
+	return historyPurgeRequest{
+		cutoff: gainNow().Add(-duration),
+		global: *global,
+	}, false, nil
+}
+
+func historyPurgeSources(metricsPath string, global bool) ([]globalMetricsSource, error) {
 	sources := []globalMetricsSource{currentGlobalMetricsSourceValue(metricsPath)}
-	if *global {
-		sources, err = globalMetricsSources(metricsPath)
-		if err != nil {
-			return err
-		}
+	if !global {
+		return sources, nil
 	}
+	return globalMetricsSources(metricsPath)
+}
+
+func purgeHistorySources(sources []globalMetricsSource, cutoff time.Time) (int, error) {
 	removed := 0
 	for _, source := range sources {
 		if strings.TrimSpace(source.MetricsPath) == "" {
 			continue
 		}
-		var count int
-		if projectRoot := containedMetricsProject(source.CWD, source.MetricsPath); projectRoot != "" {
-			count, err = metrics.PurgeProjectBefore(projectRoot, source.MetricsPath, cutoff)
-		} else {
-			count, err = metrics.PurgeBefore(source.MetricsPath, cutoff)
-		}
+		count, err := purgeHistorySource(source, cutoff)
 		if err != nil {
-			return fmt.Errorf("purge history %q: %w", source.MetricsPath, err)
+			return removed, fmt.Errorf("purge history %q: %w", source.MetricsPath, err)
 		}
 		removed += count
 	}
-	fmt.Printf("Purged %d history records before %s.\n", removed, cutoff.UTC().Format(time.RFC3339))
-	return nil
+	return removed, nil
+}
+
+func purgeHistorySource(source globalMetricsSource, cutoff time.Time) (int, error) {
+	if projectRoot := containedMetricsProject(source.CWD, source.MetricsPath); projectRoot != "" {
+		return metrics.PurgeProjectBefore(projectRoot, source.MetricsPath, cutoff)
+	}
+	return metrics.PurgeBefore(source.MetricsPath, cutoff)
 }
 
 func currentGlobalMetricsSourceValue(metricsPath string) globalMetricsSource {

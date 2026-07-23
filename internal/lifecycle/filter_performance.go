@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"cmp"
 	"encoding/csv"
 	"fmt"
 	"math"
@@ -17,6 +18,10 @@ const (
 	filterPerformanceDataset     = "filter-performance"
 	maxPerformanceHints          = 5
 	filterPerformanceMeasurement = "recorded command metrics only; source/path/hash are blank for legacy rows; registry timing covers observed filter builds; pending or rejected writes are disclosed in storage"
+	suggestionReviewCase         = "review-case"
+	suggestionFailureHeavy       = "failure-heavy"
+	suggestionPassthrough        = "passthrough-opportunity"
+	suggestionRegistryCost       = "registry-cost"
 )
 
 type filterPerformanceFlags struct {
@@ -323,21 +328,23 @@ func performanceRowIdentity(row metrics.PerformanceRow) metrics.PerformanceRow {
 }
 
 func sortPerformanceRows(rows []metrics.PerformanceRow) {
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Commands != rows[j].Commands {
-			return rows[i].Commands > rows[j].Commands
-		}
-		if rows[i].EstimatedSavedTokens != rows[j].EstimatedSavedTokens {
-			return rows[i].EstimatedSavedTokens > rows[j].EstimatedSavedTokens
-		}
-		if rows[i].Tool != rows[j].Tool {
-			return rows[i].Tool < rows[j].Tool
-		}
-		if rows[i].Filter != rows[j].Filter {
-			return rows[i].Filter < rows[j].Filter
-		}
-		return rows[i].Case < rows[j].Case
-	})
+	slices.SortFunc(rows, comparePerformanceRows)
+}
+
+func comparePerformanceRows(left, right metrics.PerformanceRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedSavedTokens, left.EstimatedSavedTokens); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Tool, right.Tool); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Filter, right.Filter); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Case, right.Case)
 }
 
 func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []metrics.MissedOpportunity, buildRows []metrics.RegistrySourceBuildRow) []filterPerformanceSuggestion {
@@ -352,7 +359,7 @@ func appendReviewCaseSuggestions(suggestions []filterPerformanceSuggestion, rows
 	for _, row := range rows {
 		if row.Commands > 0 && row.PassthroughCommands < row.Commands && row.EstimatedSavingsPct < 5 {
 			suggestions = append(suggestions, filterPerformanceSuggestion{
-				Kind:       "review-case",
+				Kind:       suggestionReviewCase,
 				Tool:       row.Tool,
 				Filter:     row.Filter,
 				Case:       row.Case,
@@ -360,7 +367,7 @@ func appendReviewCaseSuggestions(suggestions []filterPerformanceSuggestion, rows
 				Reason:     "matched case has low or no estimated savings",
 				SavingsPct: row.EstimatedSavingsPct,
 			})
-			if countKind(suggestions, "review-case") == maxPerformanceHints {
+			if countKind(suggestions, suggestionReviewCase) == maxPerformanceHints {
 				break
 			}
 		}
@@ -372,7 +379,7 @@ func appendFailureHeavySuggestions(suggestions []filterPerformanceSuggestion, ro
 	for _, row := range rows {
 		if row.Commands > 0 && row.FailedRate >= 0.5 {
 			suggestions = append(suggestions, filterPerformanceSuggestion{
-				Kind:       "failure-heavy",
+				Kind:       suggestionFailureHeavy,
 				Tool:       row.Tool,
 				Filter:     row.Filter,
 				Case:       row.Case,
@@ -380,7 +387,7 @@ func appendFailureHeavySuggestions(suggestions []filterPerformanceSuggestion, ro
 				Reason:     "most recorded runs for this row failed",
 				SavingsPct: row.EstimatedSavingsPct,
 			})
-			if countKind(suggestions, "failure-heavy") == maxPerformanceHints {
+			if countKind(suggestions, suggestionFailureHeavy) == maxPerformanceHints {
 				break
 			}
 		}
@@ -391,12 +398,12 @@ func appendFailureHeavySuggestions(suggestions []filterPerformanceSuggestion, ro
 func appendPassthroughSuggestions(suggestions []filterPerformanceSuggestion, missed []metrics.MissedOpportunity) []filterPerformanceSuggestion {
 	for _, row := range missed {
 		suggestions = append(suggestions, filterPerformanceSuggestion{
-			Kind:    "passthrough-opportunity",
+			Kind:    suggestionPassthrough,
 			Command: row.Command,
 			Count:   row.Count,
 			Reason:  "frequent passthrough command",
 		})
-		if countKind(suggestions, "passthrough-opportunity") == maxPerformanceHints {
+		if countKind(suggestions, suggestionPassthrough) == maxPerformanceHints {
 			break
 		}
 	}
@@ -416,12 +423,12 @@ func appendRegistryCostSuggestions(suggestions []filterPerformanceSuggestion, bu
 			continue
 		}
 		suggestions = append(suggestions, filterPerformanceSuggestion{
-			Kind:    "registry-cost",
+			Kind:    suggestionRegistryCost,
 			Command: row.SourceDir,
 			Count:   row.Builds,
 			Reason:  fmt.Sprintf("registry source averages %.1fms per build", row.AvgDurationMS),
 		})
-		if countKind(suggestions, "registry-cost") == maxPerformanceHints {
+		if countKind(suggestions, suggestionRegistryCost) == maxPerformanceHints {
 			break
 		}
 	}
@@ -563,11 +570,11 @@ func printFilterPerformanceSuggestions(suggestions []filterPerformanceSuggestion
 
 func suggestionText(suggestion filterPerformanceSuggestion) string {
 	switch suggestion.Kind {
-	case "review-case", "failure-heavy":
+	case suggestionReviewCase, suggestionFailureHeavy:
 		return fmt.Sprintf("%s%s (%s, %s runs)", suggestion.Filter, performanceCaseSuffix(suggestion.Case), suggestion.Reason, formatInt(suggestion.Count))
-	case "passthrough-opportunity":
+	case suggestionPassthrough:
 		return fmt.Sprintf("%s (%s runs, %s)", suggestion.Command, formatInt(suggestion.Count), suggestion.Reason)
-	case "registry-cost":
+	case suggestionRegistryCost:
 		return fmt.Sprintf("%s (%s builds, %s)", displayFilter(suggestion.Command, "unknown source"), formatInt(suggestion.Count), suggestion.Reason)
 	default:
 		return suggestion.Reason

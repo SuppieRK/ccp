@@ -2,6 +2,7 @@ package projectfiles
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -147,7 +148,45 @@ var _ = Describe("AtomicWriteFile", func() {
 
 		Expect(err).To(MatchError(ContainSubstring("refuse to replace non-regular file")))
 	})
+
+	It("reports destination inspection and temporary creation failures", func() {
+		injected := errors.New("injected")
+		ops := defaultAtomicWriteOps
+		ops.lstat = func(string) (os.FileInfo, error) { return nil, injected }
+		Expect(atomicWriteFile(filepath.Join(GinkgoT().TempDir(), "settings.json"), nil, 0o600, ops)).
+			To(MatchError(ContainSubstring("inspect destination")))
+
+		ops = defaultAtomicWriteOps
+		ops.createTemp = func(string, string) (atomicFile, error) { return nil, injected }
+		Expect(atomicWriteFile(filepath.Join(GinkgoT().TempDir(), "settings.json"), nil, 0o600, ops)).
+			To(MatchError(ContainSubstring("create temporary file")))
+	})
+
+	It("joins temporary cleanup failures with the triggering failure", func() {
+		root := GinkgoT().TempDir()
+		ops := defaultAtomicWriteOps
+		ops.replace = func(string, string) error { return errors.New("replace failed") }
+		ops.remove = func(string) error { return errors.New("cleanup failed") }
+
+		err := atomicWriteFile(filepath.Join(root, "settings.json"), []byte("data"), 0o600, ops)
+
+		Expect(err).To(MatchError(And(
+			ContainSubstring("replace failed"),
+			ContainSubstring("cleanup failed"),
+		)))
+	})
+
+	It("detects writers that make no progress", func() {
+		Expect(writeAtomicBytes(zeroWriter{}, []byte("data"))).To(MatchError(io.ErrShortWrite))
+		Expect(writeAtomicBytes(zeroWriter{}, nil)).To(Succeed())
+	})
 })
+
+type zeroWriter struct{}
+
+func (zeroWriter) Write([]byte) (int, error) {
+	return 0, nil
+}
 
 type failingAtomicFile struct {
 	atomicFile

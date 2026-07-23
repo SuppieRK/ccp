@@ -58,24 +58,11 @@ func atomicWriteFile(path string, data []byte, perm os.FileMode, ops atomicWrite
 	tmpPath := tmp.Name()
 	replaced := false
 	defer func() {
-		if tmp != nil {
-			retErr = errors.Join(retErr, tmp.Close())
-		}
-		if !replaced {
-			if removeErr := ops.remove(tmpPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-				retErr = errors.Join(retErr, fmt.Errorf("remove temporary file %q: %w", tmpPath, removeErr))
-			}
-		}
+		retErr = errors.Join(retErr, cleanupAtomicTemporary(tmp, tmpPath, replaced, ops.remove))
 	}()
 
-	if err := tmp.Chmod(finalMode); err != nil {
-		return fmt.Errorf("set temporary file mode for %q: %w", path, err)
-	}
-	if err := writeAtomicBytes(tmp, data); err != nil {
-		return fmt.Errorf("write temporary file for %q: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		return fmt.Errorf("sync temporary file for %q: %w", path, err)
+	if err := prepareAtomicTemporary(tmp, data, finalMode, path); err != nil {
+		return err
 	}
 	if err := tmp.Close(); err != nil {
 		tmp = nil
@@ -92,6 +79,34 @@ func atomicWriteFile(path string, data []byte, perm os.FileMode, ops atomicWrite
 	replaced = true
 	if err := ops.syncDir(dir); err != nil {
 		return fmt.Errorf("sync parent directory for %q: %w", path, err)
+	}
+	return nil
+}
+
+func cleanupAtomicTemporary(tmp atomicFile, path string, replaced bool, remove func(string) error) error {
+	var cleanupErr error
+	if tmp != nil {
+		cleanupErr = tmp.Close()
+	}
+	if replaced {
+		return cleanupErr
+	}
+	removeErr := remove(path)
+	if removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+		cleanupErr = errors.Join(cleanupErr, fmt.Errorf("remove temporary file %q: %w", path, removeErr))
+	}
+	return cleanupErr
+}
+
+func prepareAtomicTemporary(tmp atomicFile, data []byte, mode os.FileMode, destination string) error {
+	if err := tmp.Chmod(mode); err != nil {
+		return fmt.Errorf("set temporary file mode for %q: %w", destination, err)
+	}
+	if err := writeAtomicBytes(tmp, data); err != nil {
+		return fmt.Errorf("write temporary file for %q: %w", destination, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		return fmt.Errorf("sync temporary file for %q: %w", destination, err)
 	}
 	return nil
 }

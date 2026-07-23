@@ -545,7 +545,12 @@ var _ = Describe("Runner", func() {
 					Dispatch: "ccp",
 				}
 
-				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, true, 0, 1, 32, 32)
+				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+					passthrough: true,
+					durationMS:  1,
+					rawBytes:    32,
+					keptBytes:   32,
+				})
 
 				history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -581,7 +586,11 @@ var _ = Describe("Runner", func() {
 				Dispatch: "go",
 			}
 
-			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 32, 16)
+			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   32,
+				keptBytes:  16,
+			})
 
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
@@ -615,7 +624,11 @@ var _ = Describe("Runner", func() {
 				Dispatch: "go",
 			}
 
-			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 32, 16)
+			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   32,
+				keptBytes:  16,
+			})
 
 			Expect(outside).NotTo(BeAnExistingFile())
 			registryPath, err := workspaces.DefaultPath()
@@ -643,7 +656,11 @@ var _ = Describe("Runner", func() {
 			}
 
 			rawRunner := NewRunnerWithOptions(Options{Raw: true, MetricsPath: filepath.Join(tmpDir, "raw.db")})
-			rawRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			rawRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			history, err := metrics.QueryHistory(rawRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(BeEmpty())
@@ -651,7 +668,11 @@ var _ = Describe("Runner", func() {
 			parentFile := filepath.Join(tmpDir, "not-a-dir")
 			Expect(os.WriteFile(parentFile, []byte("x"), 0o644)).To(Succeed())
 			brokenRunner := &Runner{metricsPath: filepath.Join(parentFile, "gain.db"), workingDir: filepath.Join(tmpDir, "repo")}
-			brokenRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			brokenRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
 			entries, err := workspaces.ListPath(registryPath)
@@ -659,7 +680,11 @@ var _ = Describe("Runner", func() {
 			Expect(entries).To(BeEmpty())
 
 			blankRunner := &Runner{metricsPath: filepath.Join(tmpDir, "blank.db"), workingDir: "   "}
-			blankRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			blankRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			history, err = metrics.QueryHistory(blankRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(HaveLen(1))

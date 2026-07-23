@@ -266,33 +266,48 @@ func rotate(root string) error {
 	if err != nil {
 		return err
 	}
-	type candidate struct {
-		name    string
-		modTime time.Time
+	items, err := retainedRecoveryCandidates(root, entries, nowUTC().Add(-maxArtifactAge))
+	if err != nil {
+		return err
 	}
-	items := make([]candidate, 0, len(entries))
+	slices.SortFunc(items, compareRecoveryCandidates)
+	return removeOverflowRecoveryArtifacts(root, items)
+}
+
+type recoveryCandidate struct {
+	name    string
+	modTime time.Time
+}
+
+func retainedRecoveryCandidates(root string, entries []os.DirEntry, cutoff time.Time) ([]recoveryCandidate, error) {
+	items := make([]recoveryCandidate, 0, len(entries))
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		info, err := entry.Info()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if info.ModTime().Before(nowUTC().Add(-maxArtifactAge)) {
+		if info.ModTime().Before(cutoff) {
 			if err := os.RemoveAll(filepath.Join(root, entry.Name())); err != nil {
-				return err
+				return nil, err
 			}
 			continue
 		}
-		items = append(items, candidate{name: entry.Name(), modTime: info.ModTime()})
+		items = append(items, recoveryCandidate{name: entry.Name(), modTime: info.ModTime()})
 	}
-	slices.SortFunc(items, func(left, right candidate) int {
-		if order := right.modTime.Compare(left.modTime); order != 0 {
-			return order
-		}
-		return strings.Compare(right.name, left.name)
-	})
+	return items, nil
+}
+
+func compareRecoveryCandidates(left, right recoveryCandidate) int {
+	if order := right.modTime.Compare(left.modTime); order != 0 {
+		return order
+	}
+	return strings.Compare(right.name, left.name)
+}
+
+func removeOverflowRecoveryArtifacts(root string, items []recoveryCandidate) error {
 	if len(items) <= maxArtifacts {
 		return nil
 	}

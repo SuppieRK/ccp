@@ -94,46 +94,41 @@ func (f *YamlFilter) OnStdoutExitActions(context contracts.Context) []contracts.
 	if !ok || cs.passthrough {
 		return []contracts.Action{{Kind: contracts.ActionKeep}}
 	}
-
-	if cs.shared != nil {
-		output := renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamCombined), ""), cs.shared, context.ExitCode())
-		if cs.onExit != nil {
-			output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
-		}
-		return []contracts.Action{exitActionForOutput(output, contracts.StreamCombined)}
+	switch {
+	case cs.shared != nil:
+		return []contracts.Action{renderScopedExitAction(context, contracts.StreamCombined, cs.shared, cs, true)}
+	case cs.stdout == nil && cs.stderr == nil:
+		return []contracts.Action{renderUnscopedExitAction(context, cs)}
+	default:
+		return renderStreamExitActions(context, cs)
 	}
+}
 
-	if cs.stdout == nil && cs.stderr == nil {
-		output := strings.Join(context.BufferedLines(contracts.StreamStdout), "")
-		if cs.onExit != nil {
-			output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
-		}
-		return []contracts.Action{exitActionForOutput(output, contracts.StreamStdout)}
-	}
-
+func renderStreamExitActions(context contracts.Context, cs *compiledCase) []contracts.Action {
 	actions := make([]contracts.Action, 0, 2)
-	stdoutOutput := ""
 	if cs.stdout != nil {
-		stdoutOutput = renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamStdout), ""), cs.stdout, context.ExitCode())
+		actions = append(actions, renderScopedExitAction(context, contracts.StreamStdout, cs.stdout, cs, true))
 	}
-	if cs.onExit != nil {
-		if cs.stdout != nil {
-			stdoutOutput = appendCaseExitPrint(stdoutOutput, cs.onExit, cs.variables, context.ExitCode())
-		}
-	}
-	if cs.stdout != nil {
-		actions = append(actions, exitActionForOutput(stdoutOutput, contracts.StreamStdout))
-	}
-
-	stderrOutput := ""
 	if cs.stderr != nil {
-		stderrOutput = renderStdoutExitOutput(strings.Join(context.BufferedLines(contracts.StreamStderr), ""), cs.stderr, context.ExitCode())
-		if cs.onExit != nil && cs.stdout == nil {
-			stderrOutput = appendCaseExitPrint(stderrOutput, cs.onExit, cs.variables, context.ExitCode())
-		}
-		actions = append(actions, exitActionForOutput(stderrOutput, contracts.StreamStderr))
+		actions = append(actions, renderScopedExitAction(context, contracts.StreamStderr, cs.stderr, cs, cs.stdout == nil))
 	}
 	return actions
+}
+
+func renderScopedExitAction(context contracts.Context, stream contracts.Stream, scope *compiledScope, cs *compiledCase, includeFinally bool) contracts.Action {
+	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(stream), ""), scope, context.ExitCode())
+	if includeFinally && cs.onExit != nil {
+		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
+	}
+	return exitActionForOutput(output, stream)
+}
+
+func renderUnscopedExitAction(context contracts.Context, cs *compiledCase) contracts.Action {
+	output := strings.Join(context.BufferedLines(contracts.StreamStdout), "")
+	if cs.onExit != nil {
+		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
+	}
+	return exitActionForOutput(output, contracts.StreamStdout)
 }
 
 func renderStdoutExitOutput(output string, scope *compiledScope, exitCode int) string {

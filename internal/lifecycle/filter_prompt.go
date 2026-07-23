@@ -1,7 +1,7 @@
 package lifecycle
 
 import (
-	_ "embed"
+	_ "embed" // Required by go:embed for the agent-facing filter prompt below.
 	"strings"
 )
 

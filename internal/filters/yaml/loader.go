@@ -20,6 +20,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const mappingsFileName = ".mappings.yaml"
+
 type LoadedFilter struct {
 	Path string
 	Raw  []byte
@@ -214,35 +216,12 @@ func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (
 		return nil, 0, err
 	}
 	source = prepared.source
-	mappings, mappingErr := prepared.readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
-	if mappingErr != nil && !os.IsNotExist(mappingErr) {
-		audit.MustAppend("mapping_read_error", map[string]any{
-			"source_kind": string(source.Kind),
-			"source_dir":  source.Directory,
-			"error":       mappingErr.Error(),
-		})
-		mappings = nil
-	}
-
-	targets := []string{tool}
-	if target := strings.TrimSpace(mappings[tool]); target != "" && target != tool {
-		targets = append(targets, target)
-	}
+	mappings := readExecutionMappings(prepared)
+	targets := executionFilterTargets(tool, mappings)
 	for _, target := range targets {
-		loaded, inspected, found, err := loadExactTargetDefinition(prepared, target)
-		if err != nil {
-			return nil, inspected, err
-		}
-		if found {
-			override, scanned, overridden, err := loadLegacyTargetDefinitionAfter(prepared, []string{target}, loaded.Path)
-			inspected += scanned
-			if err != nil {
-				return nil, inspected, err
-			}
-			if overridden {
-				loaded = override
-			}
-			return compileExecutionFilter(source, loaded), inspected, nil
+		filter, inspected, found, err := loadExactExecutionFilter(prepared, source, target)
+		if err != nil || found {
+			return filter, inspected, err
 		}
 	}
 
@@ -251,6 +230,127 @@ func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (
 		return nil, inspected, err
 	}
 	return compileExecutionFilter(source, loaded), inspected, nil
+}
+
+func readExecutionMappings(source preparedFilterSource) map[string]string {
+	mappings, err := source.readMappingsFile(filepath.Join(source.source.Directory, mappingsFileName))
+	if err == nil || os.IsNotExist(err) {
+		return mappings
+	}
+	audit.MustAppend("mapping_read_error", map[string]any{
+		"source_kind": string(source.source.Kind),
+		"source_dir":  source.source.Directory,
+		"error":       err.Error(),
+	})
+	return nil
+}
+
+func executionFilterTargets(tool string, mappings map[string]string) []string {
+	targets := []string{tool}
+	if target := strings.TrimSpace(mappings[tool]); target != "" && target != tool {
+		targets = append(targets, target)
+	}
+	return targets
+}
+
+func loadExactExecutionFilter(prepared preparedFilterSource, source v2filters.FilterSource, target string) (contracts.Filter, int, bool, error) {
+	loaded, inspected, found, err := loadExactTargetDefinition(prepared, target)
+	if err != nil || !found {
+		return nil, inspected, found, err
+	}
+	override, scanned, overridden, err := loadLegacyTargetDefinitionAfter(prepared, []string{target}, loaded.Path)
+	inspected += scanned
+	if err != nil {
+		return nil, inspected, true, err
+	}
+	if overridden {
+		loaded = override
+	}
+	return compileExecutionFilter(source, loaded), inspected, true, nil
+}
+
+type registryStatusBuilder struct {
+	projectState filtertrust.State
+	registered   map[string]contracts.Filter
+	rows         []RegistryStatusRow
+}
+
+func (b *registryStatusBuilder) addSource(source v2filters.FilterSource, order int) {
+	if b.skipUnavailableProjectSource(source, order) {
+		return
+	}
+	filters, filterRows, err := inspectCompiledFiltersFromSource(source, order)
+	b.rows = append(b.rows, filterRows...)
+	if err != nil {
+		b.rows = append(b.rows, RegistryStatusRow{
+			Tool:       "-",
+			FilterPath: source.Directory,
+			SourceKind: source.Kind,
+			Status:     "source error: " + err.Error(),
+			order:      order,
+		})
+		return
+	}
+	if b.appendUntrustedProjectStatuses(filters, source, order) {
+		return
+	}
+	registerCompiledFilterStatuses(b.registered, filters, source, order, &b.rows)
+	registerMappedFilterStatuses(b.registered, filters, source, order, &b.rows)
+}
+
+func (b *registryStatusBuilder) skipUnavailableProjectSource(source v2filters.FilterSource, order int) bool {
+	if source.Kind != v2filters.SourceProject ||
+		(b.projectState != filtertrust.StateUnsafe && b.projectState != filtertrust.StateAbsent) {
+		return false
+	}
+	if b.projectState == filtertrust.StateUnsafe {
+		b.rows = append(b.rows, RegistryStatusRow{
+			Tool:       "-",
+			FilterPath: source.Directory,
+			SourceKind: source.Kind,
+			Status:     string(b.projectState),
+			order:      order,
+		})
+	}
+	return true
+}
+
+func (b *registryStatusBuilder) appendUntrustedProjectStatuses(filters map[string]compiledStatusFilter, source v2filters.FilterSource, order int) bool {
+	if source.Kind != v2filters.SourceProject || b.projectState == "" || b.projectState == filtertrust.StateTrusted {
+		return false
+	}
+	projectRows := make([]RegistryStatusRow, 0)
+	scratch := map[string]contracts.Filter{}
+	registerCompiledFilterStatuses(scratch, filters, source, order, &projectRows)
+	registerMappedFilterStatuses(scratch, filters, source, order, &projectRows)
+	for i := range projectRows {
+		projectRows[i].Status = string(b.projectState)
+	}
+	for i := range b.rows {
+		if b.rows[i].SourceKind == v2filters.SourceProject && b.rows[i].order == order {
+			b.rows[i].Status = string(b.projectState) + "; " + b.rows[i].Status
+		}
+	}
+	b.rows = append(b.rows, projectRows...)
+	return true
+}
+
+func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSource, projectState filtertrust.State) (map[string]contracts.Filter, []RegistryStatusRow, error) {
+	builder := registryStatusBuilder{
+		projectState: projectState,
+		registered:   map[string]contracts.Filter{},
+		rows:         make([]RegistryStatusRow, 0),
+	}
+	for order, source := range sources {
+		builder.addSource(source, order)
+	}
+	sort.SliceStable(builder.rows, func(i, j int) bool {
+		if diff := compareStatusRows(builder.rows[i], builder.rows[j]); diff != 0 {
+			return diff < 0
+		}
+		return false
+	})
+	return builder.registered, builder.rows, nil
 }
 
 func loadExactTargetDefinition(source preparedFilterSource, target string) (LoadedFilter, int, bool, error) {
@@ -386,63 +486,6 @@ func LoadRegistryStatusFromSources(sources []v2filters.FilterSource) (map[string
 	return LoadRegistryStatusFromSourcesWithProjectState(sources, "")
 }
 
-func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSource, projectState filtertrust.State) (map[string]contracts.Filter, []RegistryStatusRow, error) {
-	registered := map[string]contracts.Filter{}
-	rows := make([]RegistryStatusRow, 0)
-	for order, source := range sources {
-		if source.Kind == v2filters.SourceProject &&
-			(projectState == filtertrust.StateUnsafe || projectState == filtertrust.StateAbsent) {
-			if projectState == filtertrust.StateUnsafe {
-				rows = append(rows, RegistryStatusRow{
-					Tool:       "-",
-					FilterPath: source.Directory,
-					SourceKind: source.Kind,
-					Status:     string(projectState),
-					order:      order,
-				})
-			}
-			continue
-		}
-		filters, filterRows, err := inspectCompiledFiltersFromSource(source, order)
-		rows = append(rows, filterRows...)
-		if err != nil {
-			rows = append(rows, RegistryStatusRow{
-				Tool:       "-",
-				FilterPath: source.Directory,
-				SourceKind: source.Kind,
-				Status:     "source error: " + err.Error(),
-				order:      order,
-			})
-			continue
-		}
-		if source.Kind == v2filters.SourceProject && projectState != "" && projectState != filtertrust.StateTrusted {
-			projectRows := make([]RegistryStatusRow, 0)
-			scratch := map[string]contracts.Filter{}
-			registerCompiledFilterStatuses(scratch, filters, source, order, &projectRows)
-			registerMappedFilterStatuses(scratch, filters, source, order, &projectRows)
-			for i := range projectRows {
-				projectRows[i].Status = string(projectState)
-			}
-			for i := range rows {
-				if rows[i].SourceKind == v2filters.SourceProject && rows[i].order == order {
-					rows[i].Status = string(projectState) + "; " + rows[i].Status
-				}
-			}
-			rows = append(rows, projectRows...)
-			continue
-		}
-		registerCompiledFilterStatuses(registered, filters, source, order, &rows)
-		registerMappedFilterStatuses(registered, filters, source, order, &rows)
-	}
-	sort.SliceStable(rows, func(i, j int) bool {
-		if diff := compareStatusRows(rows[i], rows[j]); diff != 0 {
-			return diff < 0
-		}
-		return false
-	})
-	return registered, rows, nil
-}
-
 func loadCompiledFiltersFromSourceWithTiming(prepared preparedFilterSource) (map[string]contracts.Filter, contracts.FilterSourceBuildTiming, error) {
 	source := prepared.source
 	timing := contracts.FilterSourceBuildTiming{
@@ -544,7 +587,7 @@ func registerCompiledFilters(registered map[string]contracts.Filter, filters map
 
 func registerMappedFilters(registered map[string]contracts.Filter, filters map[string]contracts.Filter, prepared preparedFilterSource) error {
 	source := prepared.source
-	mappings, err := prepared.readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
+	mappings, err := prepared.readMappingsFile(filepath.Join(source.Directory, mappingsFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -610,7 +653,7 @@ func registerCompiledFilterStatuses(registered map[string]contracts.Filter, filt
 }
 
 func registerMappedFilterStatuses(registered map[string]contracts.Filter, filters map[string]compiledStatusFilter, source v2filters.FilterSource, order int, rows *[]RegistryStatusRow) {
-	mappingsPath := filepath.Join(source.Directory, ".mappings.yaml")
+	mappingsPath := filepath.Join(source.Directory, mappingsFileName)
 	mappings, err := readMappingsFile(mappingsPath)
 	if err != nil {
 		if !os.IsNotExist(err) {

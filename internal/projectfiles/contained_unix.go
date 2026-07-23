@@ -52,24 +52,11 @@ func atomicWriteFileBeneath(root, relative string, data []byte, perm os.FileMode
 	tmpExists := true
 	file := os.NewFile(uintptr(fd), filepath.Join(root, filepath.Dir(relative), tmpName))
 	defer func() {
-		if file != nil {
-			retErr = errors.Join(retErr, file.Close())
-		}
-		if tmpExists {
-			if removeErr := unix.Unlinkat(parentFD, tmpName, 0); removeErr != nil && !errors.Is(removeErr, unix.ENOENT) {
-				retErr = errors.Join(retErr, fmt.Errorf("remove contained temporary file: %w", removeErr))
-			}
-		}
+		retErr = errors.Join(retErr, cleanupContainedTemporary(file, parentFD, tmpName, tmpExists))
 	}()
 
-	if err := file.Chmod(finalMode); err != nil {
-		return fmt.Errorf("set contained temporary file mode: %w", err)
-	}
-	if err := writeAtomicBytes(file, data); err != nil {
-		return fmt.Errorf("write contained temporary file: %w", err)
-	}
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("sync contained temporary file: %w", err)
+	if err := prepareContainedTemporary(file, data, finalMode); err != nil {
+		return err
 	}
 	if err := file.Close(); err != nil {
 		file = nil
@@ -87,16 +74,38 @@ func atomicWriteFileBeneath(root, relative string, data []byte, perm os.FileMode
 	return nil
 }
 
-func openContainedParent(root, relative string, create bool) (int, string, error) {
-	parts := make([]string, 0, 8)
-	for part := range strings.SplitSeq(filepath.Clean(relative), string(os.PathSeparator)) {
-		if part == "" || part == "." || part == ".." {
-			return -1, "", fmt.Errorf("invalid contained path component %q", part)
-		}
-		parts = append(parts, part)
+func cleanupContainedTemporary(file *os.File, parentFD int, name string, exists bool) error {
+	var cleanupErr error
+	if file != nil {
+		cleanupErr = file.Close()
 	}
-	if len(parts) == 0 {
-		return -1, "", fmt.Errorf("contained path has no file component")
+	if !exists {
+		return cleanupErr
+	}
+	removeErr := unix.Unlinkat(parentFD, name, 0)
+	if removeErr != nil && !errors.Is(removeErr, unix.ENOENT) {
+		cleanupErr = errors.Join(cleanupErr, fmt.Errorf("remove contained temporary file: %w", removeErr))
+	}
+	return cleanupErr
+}
+
+func prepareContainedTemporary(file *os.File, data []byte, mode os.FileMode) error {
+	if err := file.Chmod(mode); err != nil {
+		return fmt.Errorf("set contained temporary file mode: %w", err)
+	}
+	if err := writeAtomicBytes(file, data); err != nil {
+		return fmt.Errorf("write contained temporary file: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		return fmt.Errorf("sync contained temporary file: %w", err)
+	}
+	return nil
+}
+
+func openContainedParent(root, relative string, create bool) (int, string, error) {
+	parts, err := containedPathParts(relative)
+	if err != nil {
+		return -1, "", err
 	}
 
 	current, err := unix.Open(root, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
@@ -104,17 +113,10 @@ func openContainedParent(root, relative string, create bool) (int, string, error
 		return -1, "", fmt.Errorf("open contained root %q: %w", root, err)
 	}
 	for _, part := range parts[:len(parts)-1] {
-		next, openErr := unix.Openat(current, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-		if errors.Is(openErr, unix.ENOENT) && create {
-			if mkdirErr := unix.Mkdirat(current, part, 0o755); mkdirErr != nil && !errors.Is(mkdirErr, unix.EEXIST) {
-				_ = unix.Close(current)
-				return -1, "", fmt.Errorf("create contained directory %q: %w", part, mkdirErr)
-			}
-			next, openErr = unix.Openat(current, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-		}
+		next, openErr := openContainedDirectory(current, part, create)
 		if openErr != nil {
 			_ = unix.Close(current)
-			return -1, "", fmt.Errorf("open contained directory %q: %w", part, openErr)
+			return -1, "", openErr
 		}
 		if err := unix.Close(current); err != nil {
 			_ = unix.Close(next)
@@ -123,6 +125,38 @@ func openContainedParent(root, relative string, create bool) (int, string, error
 		current = next
 	}
 	return current, parts[len(parts)-1], nil
+}
+
+func containedPathParts(relative string) ([]string, error) {
+	parts := make([]string, 0, 8)
+	for part := range strings.SplitSeq(filepath.Clean(relative), string(os.PathSeparator)) {
+		if part == "" || part == "." || part == ".." {
+			return nil, fmt.Errorf("invalid contained path component %q", part)
+		}
+		parts = append(parts, part)
+	}
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("contained path has no file component")
+	}
+	return parts, nil
+}
+
+func openContainedDirectory(parentFD int, part string, create bool) (int, error) {
+	next, err := unix.Openat(parentFD, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if !errors.Is(err, unix.ENOENT) || !create {
+		if err != nil {
+			return -1, fmt.Errorf("open contained directory %q: %w", part, err)
+		}
+		return next, nil
+	}
+	if mkdirErr := unix.Mkdirat(parentFD, part, 0o755); mkdirErr != nil && !errors.Is(mkdirErr, unix.EEXIST) {
+		return -1, fmt.Errorf("create contained directory %q: %w", part, mkdirErr)
+	}
+	next, err = unix.Openat(parentFD, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return -1, fmt.Errorf("open contained directory %q: %w", part, err)
+	}
+	return next, nil
 }
 
 func validateContainedFileFD(fd int, relative string) error {

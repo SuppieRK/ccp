@@ -170,7 +170,13 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.maybeStoreRecovery(command, resolved, state, exitCode, rawBytes, keptBytes)
-	r.appendMetrics(command, filterProvenance(resolved), buildTiming, isPassthroughFilter(resolved, command) || state.Passthrough(), exitCode, time.Since(startedAt).Milliseconds(), rawBytes, keptBytes)
+	r.appendMetrics(command, filterProvenance(resolved), buildTiming, executionMetricStats{
+		passthrough: isPassthroughFilter(resolved, command) || state.Passthrough(),
+		exitCode:    exitCode,
+		durationMS:  time.Since(startedAt).Milliseconds(),
+		rawBytes:    rawBytes,
+		keptBytes:   keptBytes,
+	})
 	auditErr := audit.Append("execution_finish", map[string]any{
 		"command":     auditCommand,
 		"tool":        command.Tool,
@@ -630,7 +636,15 @@ func filterProvenance(filter any) contracts.FilterProvenance {
 	return contracts.FilterProvenance{}
 }
 
-func (r *Runner) appendMetrics(command contracts.Command, provenance contracts.FilterProvenance, buildTiming contracts.FilterRegistryBuildTiming, passthrough bool, exitCode int, durationMS int64, rawBytes, keptBytes int) {
+type executionMetricStats struct {
+	passthrough bool
+	exitCode    int
+	durationMS  int64
+	rawBytes    int
+	keptBytes   int
+}
+
+func (r *Runner) appendMetrics(command contracts.Command, provenance contracts.FilterProvenance, buildTiming contracts.FilterRegistryBuildTiming, stats executionMetricStats) {
 	if r.opts.Raw {
 		return
 	}
@@ -642,11 +656,11 @@ func (r *Runner) appendMetrics(command contracts.Command, provenance contracts.F
 		Command:               r.auditCommand(command.RawInput),
 		Tool:                  command.Tool,
 		Dispatch:              command.Dispatch,
-		RawBytes:              rawBytes,
-		KeptBytes:             keptBytes,
-		ExitCode:              exitCode,
-		DurationMS:            durationMS,
-		Passthrough:           passthrough,
+		RawBytes:              stats.rawBytes,
+		KeptBytes:             stats.keptBytes,
+		ExitCode:              stats.exitCode,
+		DurationMS:            stats.durationMS,
+		Passthrough:           stats.passthrough,
 		FilterSourceKind:      provenance.SourceKind,
 		FilterPath:            provenance.Path,
 		FilterHash:            provenance.Hash,

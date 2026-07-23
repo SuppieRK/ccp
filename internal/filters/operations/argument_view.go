@@ -32,7 +32,6 @@ func ParseArguments(args, valueFlags []string) ArgumentView {
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		if afterSeparator {
-			view.raw = slices.Clone(args)
 			view.normalized = append(view.normalized, arg)
 			view.positionals = append(view.positionals, arg)
 			continue
@@ -44,44 +43,62 @@ func ParseArguments(args, valueFlags []string) ArgumentView {
 		}
 
 		view.before = append(view.before, arg)
-		if name, value, ok := strings.Cut(arg, "="); ok && isLongOptionName(name) {
-			view.longOptions = append(view.longOptions, longOption{name: name, value: value, hasValue: true})
-			view.normalizedPre = append(view.normalizedPre, name, value)
-			view.normalized = append(view.normalized, name, value)
-			continue
-		}
-		if isLongOptionName(arg) {
-			option := longOption{name: arg}
-			view.normalizedPre = append(view.normalizedPre, arg)
-			view.normalized = append(view.normalized, arg)
-			if slices.Contains(valueFlags, arg) && index+1 < len(args) {
-				index++
-				option.value = args[index]
-				option.hasValue = true
-				view.before = append(view.before, args[index])
-				view.normalizedPre = append(view.normalizedPre, args[index])
-				view.normalized = append(view.normalized, args[index])
-			}
-			view.longOptions = append(view.longOptions, option)
-			continue
-		}
-		view.normalizedPre = append(view.normalizedPre, arg)
-		view.normalized = append(view.normalized, arg)
-		if takesStandaloneValue(arg, valueFlags) {
-			if index+1 < len(args) {
-				index++
-				view.before = append(view.before, args[index])
-				view.normalizedPre = append(view.normalizedPre, args[index])
-				view.normalized = append(view.normalized, args[index])
-			}
-			continue
-		}
-		if len(arg) > 0 && arg[0] == '-' {
-			continue
-		}
-		view.positionals = append(view.positionals, arg)
+		index += view.appendBeforeSeparator(args, index, valueFlags)
 	}
 	return view
+}
+
+func (v *ArgumentView) appendBeforeSeparator(args []string, index int, valueFlags []string) int {
+	arg := args[index]
+	if name, value, ok := strings.Cut(arg, "="); ok && isLongOptionName(name) {
+		v.longOptions = append(v.longOptions, longOption{name: name, value: value, hasValue: true})
+		v.appendNormalized(name, value)
+		return 0
+	}
+	if isLongOptionName(arg) {
+		return v.appendLongOption(args, index, valueFlags)
+	}
+	v.appendNormalized(arg)
+	if takesStandaloneValue(arg, valueFlags) {
+		return v.appendStandaloneValue(args, index)
+	}
+	if !strings.HasPrefix(arg, "-") {
+		v.positionals = append(v.positionals, arg)
+	}
+	return 0
+}
+
+func (v *ArgumentView) appendLongOption(args []string, index int, valueFlags []string) int {
+	name := args[index]
+	option := longOption{name: name}
+	v.appendNormalized(name)
+	if !slices.Contains(valueFlags, name) || index+1 >= len(args) {
+		v.longOptions = append(v.longOptions, option)
+		return 0
+	}
+
+	value := args[index+1]
+	option.value = value
+	option.hasValue = true
+	v.before = append(v.before, value)
+	v.appendNormalized(value)
+	v.longOptions = append(v.longOptions, option)
+	return 1
+}
+
+func (v *ArgumentView) appendStandaloneValue(args []string, index int) int {
+	if index+1 >= len(args) {
+		return 0
+	}
+	value := args[index+1]
+	v.before = append(v.before, value)
+	v.appendNormalized(value)
+	return 1
+}
+
+func (v *ArgumentView) appendNormalized(values ...string) {
+	v.normalizedPre = append(v.normalizedPre, values...)
+	v.normalized = append(v.normalized, values...)
 }
 
 func (v ArgumentView) MatchesHaveAny(wants []string) bool {
@@ -89,23 +106,21 @@ func (v ArgumentView) MatchesHaveAny(wants []string) bool {
 		return true
 	}
 	for _, want := range wants {
-		if strings.HasPrefix(want, "--") {
-			if name, value, hasValue := strings.Cut(want, "="); hasValue {
-				if v.HasLongOptionValue(name, value) {
-					return true
-				}
-				continue
-			}
-			if v.HasLongOption(want) {
-				return true
-			}
-			continue
-		}
-		if slices.Contains(v.raw, want) {
+		if v.matchesWantedArgument(want) {
 			return true
 		}
 	}
 	return false
+}
+
+func (v ArgumentView) matchesWantedArgument(want string) bool {
+	if !strings.HasPrefix(want, "--") {
+		return slices.Contains(v.raw, want)
+	}
+	if name, value, hasValue := strings.Cut(want, "="); hasValue {
+		return v.HasLongOptionValue(name, value)
+	}
+	return v.HasLongOption(want)
 }
 
 func (v ArgumentView) MatchesLackAny(disallowed []string) bool {

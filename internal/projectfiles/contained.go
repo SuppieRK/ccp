@@ -7,7 +7,10 @@ import (
 	"strings"
 )
 
-var beforeContainedFinalOpen = func() {}
+var beforeContainedFinalOpen = func() {
+	// Intentionally empty in production; tests replace this hook to simulate
+	// pathname swaps immediately before the final contained open.
+}
 
 // OpenFileBeneath opens path while requiring every resolved component to stay
 // beneath root and rejecting link-like traversal.

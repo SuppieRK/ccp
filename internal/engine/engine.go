@@ -111,41 +111,59 @@ func (s *State) applyExitActions(actions []contracts.Action) []BufferEntry {
 	}
 	s.recovery = slices.Clone(s.rawEntries)
 	for _, action := range actions {
-		target := action.Stream
-		if target == "" {
-			target = contracts.StreamStdout
+		target, safe := s.exitActionTarget(action.Stream)
+		if !safe {
+			s.passthrough = true
+			return s.takeRawEntries()
 		}
-		if target == contracts.StreamCombined {
-			stream, mixed := singleBufferedStream(s.buffer.Entries())
-			if mixed {
-				s.passthrough = true
-				return s.takeRawEntries()
-			}
-			if stream != "" {
-				target = stream
-			} else {
-				target = contracts.StreamStdout
-			}
-		}
-
-		switch action.Kind {
-		case contracts.ActionIgnore:
-			s.buffer.RemoveLast(target, s.buffer.Count(target))
-		case contracts.ActionReplace:
-			removed := s.buffer.RemoveLastEntries(target, exitReplaceCount(s.buffer, target, action.ReplaceCount))
-			if action.Output != "" {
-				sequence := s.next
-				original := []byte(nil)
-				if len(removed) > 0 {
-					sequence = removed[0].Sequence
-					original = joinOriginal(removed)
-				} else {
-					s.next++
-				}
-				s.buffer.AddAt(sequence, target, original, []byte(action.Output))
-			}
-		}
+		s.applyExitAction(action, target)
 	}
+	return s.finalizeExitEntries()
+}
+
+func (s *State) exitActionTarget(target contracts.Stream) (contracts.Stream, bool) {
+	if target == "" {
+		return contracts.StreamStdout, true
+	}
+	if target != contracts.StreamCombined {
+		return target, true
+	}
+	stream, mixed := singleBufferedStream(s.buffer.Entries())
+	if mixed {
+		return "", false
+	}
+	if stream == "" {
+		return contracts.StreamStdout, true
+	}
+	return stream, true
+}
+
+func (s *State) applyExitAction(action contracts.Action, target contracts.Stream) {
+	switch action.Kind {
+	case contracts.ActionIgnore:
+		s.buffer.RemoveLast(target, s.buffer.Count(target))
+	case contracts.ActionReplace:
+		s.applyExitReplacement(action, target)
+	}
+}
+
+func (s *State) applyExitReplacement(action contracts.Action, target contracts.Stream) {
+	removed := s.buffer.RemoveLastEntries(target, exitReplaceCount(s.buffer, target, action.ReplaceCount))
+	if action.Output == "" {
+		return
+	}
+	sequence := s.next
+	original := []byte(nil)
+	if len(removed) > 0 {
+		sequence = removed[0].Sequence
+		original = joinOriginal(removed)
+	} else {
+		s.next++
+	}
+	s.buffer.AddAt(sequence, target, original, []byte(action.Output))
+}
+
+func (s *State) finalizeExitEntries() []BufferEntry {
 	entries := s.buffer.Entries()
 	if s.rawBytes > 0 && transformedBytes(entries) >= s.rawBytes {
 		s.passthrough = true
