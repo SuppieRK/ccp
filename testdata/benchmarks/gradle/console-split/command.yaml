@@ -1,0 +1,2 @@
+argv: ["gradle", "build", "--console", "plain"]
+exit_code: 0

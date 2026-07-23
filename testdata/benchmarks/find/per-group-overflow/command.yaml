@@ -1,1 +1,2 @@
 argv: ["find", ".git/objects", "-type", "f"]
+exit_code: 0

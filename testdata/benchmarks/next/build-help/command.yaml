@@ -1,0 +1,2 @@
+argv: ["next", "build", "--help"]
+exit_code: 0

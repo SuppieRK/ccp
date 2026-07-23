@@ -1,0 +1,2 @@
+argv: ["playwright", "test", "--reporter=line"]
+exit_code: 0

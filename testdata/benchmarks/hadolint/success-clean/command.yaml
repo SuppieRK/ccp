@@ -1,1 +1,2 @@
 argv: ["hadolint", "--no-color", "/tmp/tmp.clean/Dockerfile"]
+exit_code: 0

@@ -61,7 +61,6 @@ esac
 		workspace := GinkgoT().TempDir()
 		binDir := filepath.Join(workspace, "bin")
 		assetPath, checksumPath := makeInstallFixtures(workspace, "1.2.3")
-		installLog := filepath.Join(workspace, "install.log")
 		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
 
 		writeExecutable(filepath.Join(binDir, "uname"), `#!/bin/sh
@@ -84,25 +83,20 @@ case "$url" in
   *) cp %s "$out" ;;
 esac
 `, shellQuoteArg(checksumPath), shellQuoteArg(assetPath)))
-		writeExecutable(filepath.Join(binDir, "install"), fmt.Sprintf(`#!/bin/sh
-printf '%%s\n' "$*" > %s
-exit 0
-`, shellQuoteArg(installLog)))
-
+		home := filepath.Join(workspace, "home")
 		result := runInstallScript(scriptPath, workspace, map[string]string{
 			"VERSION": "1.2.3",
-			"HOME":    filepath.Join(workspace, "home"),
+			"HOME":    home,
 			"PATH":    testPATH(binDir, os.Getenv("PATH")),
 		})
 
 		Expect(result.exitCode).To(BeZero(), result.stderr)
 		Expect(result.stdout).To(ContainSubstring("Downloading https://github.com/SuppieRK/ccp/releases/download/1.2.3/ccp_1.2.3_linux_amd64.zip"))
-		Expect(result.stdout).To(ContainSubstring("Installed ccp 1.2.3 to "))
+		Expect(result.stdout).To(ContainSubstring("Installed binary ccp 1.2.3 to "))
 
-		body, err := os.ReadFile(installLog)
+		body, err := os.ReadFile(filepath.Join(home, ".local", "bin", "ccp"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(body)).To(ContainSubstring("-m 0755"))
-		Expect(string(body)).To(ContainSubstring("/ccp"))
+		Expect(string(body)).To(ContainSubstring("printf '1.2.3"))
 	})
 
 	Describe("sourced helper behavior", func() {
@@ -201,7 +195,7 @@ func makeInstallFixtures(root, version string) (string, string) {
 	zipWriter := zip.NewWriter(file)
 	entry, err := zipWriter.Create("ccp")
 	Expect(err).NotTo(HaveOccurred())
-	_, err = entry.Write([]byte("#!/bin/sh\necho ccp\n"))
+	_, err = entry.Write([]byte("#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf '" + version + "\\n'; fi\n"))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(zipWriter.Close()).To(Succeed())
 	Expect(file.Close()).To(Succeed())

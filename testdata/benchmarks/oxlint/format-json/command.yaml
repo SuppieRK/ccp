@@ -1,0 +1,2 @@
+argv: ["oxlint", "--format=json", "src"]
+exit_code: 1

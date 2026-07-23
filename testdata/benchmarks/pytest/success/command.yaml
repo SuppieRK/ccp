@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pytest", "-q", "tests/test_app.py::test_pass"]
+exit_code: 0

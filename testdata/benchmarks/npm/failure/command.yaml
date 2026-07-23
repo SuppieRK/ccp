@@ -1,1 +1,2 @@
 argv: ["npm", "run", "failure-diagnostics"]
+exit_code: 1

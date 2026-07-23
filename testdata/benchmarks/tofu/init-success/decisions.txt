@@ -1,0 +1,14 @@
+<skip>    | 
+<skip>    | Initializing the backend...
+<skip>    | 
+<skip>    | Initializing provider plugins...
+<skip>    | 
+<keep>    | OpenTofu has been successfully initialized!
+<skip>    | 
+<skip>    | You may now begin working with OpenTofu. Try running "tofu plan" to see
+<skip>    | any changes that are required for your infrastructure. All OpenTofu commands
+<skip>    | should now work.
+<skip>    | 
+<skip>    | If you ever set or change modules or backend configuration for OpenTofu,
+<skip>    | rerun this command to reinitialize your working directory. If you forget, other
+<skip>    | commands will detect it and remind you to do so if necessary.

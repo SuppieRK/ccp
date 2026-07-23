@@ -1,1 +1,2 @@
 argv: ["bazel", "build", "//:hello"]
+exit_code: 0

@@ -1,1 +1,2 @@
 argv: ["pnpm", "install"]
+exit_code: 0

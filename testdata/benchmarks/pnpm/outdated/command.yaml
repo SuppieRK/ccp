@@ -1,1 +1,2 @@
 argv: ["pnpm", "outdated"]
+exit_code: 0

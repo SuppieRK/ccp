@@ -1,1 +1,2 @@
 argv: ["git", "switch", "-c", "trial"]
+exit_code: 0

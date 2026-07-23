@@ -1,0 +1,2 @@
+<skip>    | Prisma schema loaded from prisma/schema.prisma
+<replace> | The schema at prisma/schema.prisma is valid 🚀

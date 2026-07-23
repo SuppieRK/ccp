@@ -1,1 +1,2 @@
 argv: ["git", "branch", "-a"]
+exit_code: 0

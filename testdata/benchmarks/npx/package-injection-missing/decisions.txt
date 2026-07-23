@@ -1,0 +1,8 @@
+<keep>    | npm error code E404
+<keep>    | npm error 404 Not Found - GET https://registry.npmjs.org/definitely-missing-npx-corpus-package - Not found
+<keep>    | npm error 404
+<keep>    | npm error 404  'definitely-missing-npx-corpus-package@*' is not in this registry.
+<keep>    | npm error 404
+<keep>    | npm error 404 Note that you can also install from a
+<keep>    | npm error 404 tarball, folder, http url, or git url.
+<keep>    | npm error A complete log of this run can be found in: /tmp/home-repo-45/.npm/_logs/2026-03-15T07_56_10_544Z-debug-0.log

@@ -1,0 +1,7 @@
+<skip>    | Checking formatting...
+<keep>    | [error] data/repro-broken.js: SyntaxError: Unexpected token (4:1)
+<keep>    | [error]   2 |   title: 'oops',
+<keep>    | [error]   3 |
+<keep>    | [error] > 4 |
+<keep>    | [error]     | ^
+<skip>    | Error occurred when checking code style in the above file.

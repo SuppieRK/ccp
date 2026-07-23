@@ -1,0 +1,1 @@
+prisma|explicit-schema-config-or-output-passthrough

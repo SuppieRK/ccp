@@ -1,1 +1,2 @@
 argv: ["pnpm", "install", "--frozen-lockfile"]
+exit_code: 0

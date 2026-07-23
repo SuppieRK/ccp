@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pip", "list", "--format=freeze"]
+exit_code: 0

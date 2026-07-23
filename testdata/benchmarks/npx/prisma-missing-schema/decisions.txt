@@ -1,0 +1,3 @@
+<skip>    | Loaded Prisma config from prisma.config.ts.
+<keep>    | 
+<keep>    | Error: Could not load `--schema` from provided path `prisma/definitely-missing.prisma`: file or directory not found

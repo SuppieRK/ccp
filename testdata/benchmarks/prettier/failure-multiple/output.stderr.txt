@@ -1,0 +1,3 @@
+- src/bad.js
+- src/bad2.js
+prettier check: 2 files need formatting

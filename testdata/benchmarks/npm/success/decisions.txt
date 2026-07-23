@@ -1,0 +1,6 @@
+<skip>    | 
+<skip>    | > ccp-npm-benchmark-basic@1.0.0 spinner-cr
+<skip>    | > node scripts/spinner_cr.js
+<skip>    | 
+<keep>    | ⠋ [1/2] compiling calculator.js...⠋ [2/2] compiling legacy.js...
+<keep>    | Done

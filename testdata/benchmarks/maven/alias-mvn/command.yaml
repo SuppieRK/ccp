@@ -1,0 +1,2 @@
+argv: ["mvn", "test"]
+exit_code: 0

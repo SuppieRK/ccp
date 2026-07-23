@@ -1,0 +1,2 @@
+<keep>    | Prisma is a modern DB toolkit to query, migrate and model your database.
+<keep>    | Usage: prisma [command] [options]

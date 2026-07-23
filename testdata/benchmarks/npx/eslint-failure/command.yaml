@@ -1,1 +1,2 @@
 argv: ["npx", "eslint", "src/lint_fail.js"]
+exit_code: 1

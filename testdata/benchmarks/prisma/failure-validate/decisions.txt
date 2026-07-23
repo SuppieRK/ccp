@@ -1,0 +1,14 @@
+<keep>    | 
+<keep>    | Error: Prisma schema validation - (validate wasm)
+<keep>    | Error code: P1012
+<keep>    | [1;91merror[0m: [1mThe model "User" cannot be defined because a model with that name already exists.[0m
+<keep>    |   [1;94m-->[0m  [4mprisma/bad.prisma:15[0m
+<keep>    | [1;94m   | [0m
+<keep>    | [1;94m14 | [0m
+<keep>    | [1;94m15 | [0mmodel [1;91mUser[0m {
+<keep>    | [1;94m   | [0m
+<keep>    | 
+<keep>    | Validation Error Count: 1
+<keep>    | [Context: validate]
+<keep>    | 
+<keep>    | Prisma CLI Version : 6.5.0

@@ -1,0 +1,11 @@
+<skip>    | Verbose mode can be enabled via `-v, --verbose` option
+<skip>    | CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32dev.html
+<skip>    | LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+<skip>    | Compiling .pio/build/esp32dev/src/main.cpp.o
+<skip>    | Building .pio/build/esp32dev/firmware.elf
+<keep>    | Linking .pio/build/esp32dev/firmware.elf
+<skip>    | Checking size .pio/build/esp32dev/firmware.elf
+<keep>    | Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+<keep>    | RAM:   [=         ]  11.2% (used 36792 bytes from 327680 bytes)
+<keep>    | Flash: [===       ]  31.8% (used 417421 bytes from 1310720 bytes)
+<keep>    | ========================= [SUCCESS] Took 1.23 seconds =========================

@@ -46,4 +46,3 @@ cases:
               to: '$1'
           skip:
             - regex: '^FAIL$'
-            - regex: '^FAIL\s+\S+.*$'

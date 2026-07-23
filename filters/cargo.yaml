@@ -5,6 +5,12 @@ about: Compact cargo build, check, test, and clippy while preserving failure loc
 flags_consuming_next_arg: ["--allow", "--bench", "--bin", "--color", "--config", "--deny", "--exclude", "--explain", "--features", "--forbid", "--jobs", "--lockfile-path", "--manifest-path", "--message-format", "--package", "--profile", "--target", "--target-dir", "--test", "--warn", "-A", "-D", "-F", "-Z", "-j", "-p"]
 
 cases:
+  - id: explicit-message-format-passthrough
+    when_arguments:
+      have_any:
+        - --message-format
+    passthrough: true
+
   - id: build
     when_arguments:
       first_is: build
@@ -16,16 +22,18 @@ cases:
             - regex: '^error\[[A-Z0-9]+\]: .+$'
             - regex: '^ --> .+$'
             - regex: '^ {2,}\|$'
+            - regex: '^\s*\|\s+[~^_-]+(?:\s+.+)?$'
             - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^\s*[~^]+(?:\s+.+)?$'
             - regex: '^ {0,}= note: .+$'
             - regex: '^ {0,}= help: .+$'
+            - regex: '^error: could not compile .+$'
           replace:
             - regex: '^\s*Finished .+$'
               to: 'cargo build: ok'
           skip:
             - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
             - regex: '^For more information about this error, try `rustc --explain .+$'
-            - regex: '^error: could not compile .+$'
 
   - id: check
     when_arguments:
@@ -38,16 +46,18 @@ cases:
             - regex: '^error\[[A-Z0-9]+\]: .+$'
             - regex: '^ --> .+$'
             - regex: '^ {2,}\|$'
+            - regex: '^\s*\|\s+[~^_-]+(?:\s+.+)?$'
             - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^\s*[~^]+(?:\s+.+)?$'
             - regex: '^ {0,}= note: .+$'
             - regex: '^ {0,}= help: .+$'
+            - regex: '^error: could not compile .+$'
           replace:
             - regex: '^\s*Finished .+$'
               to: 'cargo check: ok'
           skip:
             - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
             - regex: '^For more information about this error, try `rustc --explain .+$'
-            - regex: '^error: could not compile .+$'
 
   - id: test
     when_arguments:
@@ -62,9 +72,12 @@ cases:
             - regex: '^\s+(left|right): .+$'
             - regex: '^ --> .+$'
             - regex: '^ {2,}\|$'
+            - regex: '^\s*\|\s+[~^_-]+(?:\s+.+)?$'
             - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^\s*[~^]+(?:\s+.+)?$'
             - regex: '^ {0,}= note: .+$'
             - regex: '^ {0,}= help: .+$'
+            - regex: '^error: could not compile .+$'
           replace:
             - regex: '^test result: ok\. ([0-9]+) passed; ([0-9]+) failed; ([0-9]+) ignored; .+$'
               to: 'cargo test: ok ($1 passed, $2 failed, $3 ignored)'
@@ -91,12 +104,14 @@ cases:
             - regex: '^error: [^`]+$'
             - regex: '^ --> .+$'
             - regex: '^ {2,}\|$'
+            - regex: '^\s*\|\s+[~^_-]+(?:\s+.+)?$'
             - regex: '^ {0,}\d+ \| .+$'
+            - regex: '^\s*[~^]+(?:\s+.+)?$'
             - regex: '^  = note: .+$'
             - regex: '^  = help: .+$'
+            - regex: '^error: could not compile .+$'
           replace:
             - regex: '^\s*Finished .+$'
               to: 'cargo clippy: ok'
           skip:
             - regex: '^\s*(Compiling|Checking|Downloading|Fresh) .+$'
-            - regex: '^error: could not compile .+$'

@@ -1,0 +1,5 @@
+<keep>    | ▲ Next.js 15.2.0
+<skip>    | Creating an optimized production build ...
+<keep>    | Failed to compile.
+<keep>    | ./app/page.tsx
+<keep>    | Error: Missing required export

@@ -1,0 +1,4 @@
+<keep>    | warning: The following rules have been removed and ignoring them has no effect:
+<keep>    |     - UP038
+<keep>    | 
+<keep>    | All checks passed!

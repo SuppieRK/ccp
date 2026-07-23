@@ -1,0 +1,3 @@
+<skip>    | Verbose mode can be enabled via `-v, --verbose` option
+<skip>    | Compiling .pio/build/esp32dev/src/main.cpp.o
+<keep>    | Linking .pio/build/esp32dev/firmware.elf

@@ -1,0 +1,9 @@
+<keep>    | README.md
+<keep>    | docs
+<keep>    | emptydir
+<keep>    | file-0.bin
+<keep>    | file-1.bin
+<keep>    | file-2.bin
+<keep>    | link-to-main.txt
+<keep>    | node_modules
+<keep>    | src

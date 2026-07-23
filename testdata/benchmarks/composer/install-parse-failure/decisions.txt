@@ -1,0 +1,11 @@
+<skip>    | 
+<keep>    | In JsonFile.php line 375:
+<skip>    |                                                                           
+<keep>    |   "./composer.json" does not contain valid JSON                           
+<keep>    |   Parse error on line 4:                                                  
+<keep>    |   ...": {    "psr/log": ^3.0  }}                                          
+<keep>    |   ---------------------^                                                  
+<keep>    |   Expected one of: 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '['  
+<skip>    |                                                                           
+<skip>    | 
+<keep>    | install [--prefer-source] [--prefer-dist] [--prefer-install PREFER-INSTALL] [--dry-run] [--download-only] [--dev] [--no-suggest] [--no-dev] [--no-autoloader] [--no-progress] [--no-install] [--audit] [--audit-format AUDIT-FORMAT] [-v|vv|vvv|--verbose] [-o|--optimize-autoloader] [-a|--classmap-authoritative] [--apcu-autoloader] [--apcu-autoloader-prefix APCU-AUTOLOADER-PREFIX] [--ignore-platform-req IGNORE-PLATFORM-REQ] [--ignore-platform-reqs] [--] [<packages>...]

@@ -1,1 +1,2 @@
 argv: ["git", "pull"]
+exit_code: 1

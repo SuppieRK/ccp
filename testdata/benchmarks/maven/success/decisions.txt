@@ -1,0 +1,42 @@
+<skip>    | WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+<skip>    | WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/home/suppie/.m2/wrapper/dists/apache-maven-3.9.11/a2d47e15/lib/guice-5.1.0-classes.jar)
+<skip>    | WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+<skip>    | WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+<skip>    | [INFO] Scanning for projects...
+<skip>    | [INFO] 
+<skip>    | [INFO] --------------------------< example:example >---------------------------
+<skip>    | [INFO] Building example 1.0-SNAPSHOT
+<skip>    | [INFO]   from pom.xml
+<skip>    | [INFO] --------------------------------[ jar ]---------------------------------
+<skip>    | [INFO] 
+<replace> | [INFO] --- resources:3.3.1:resources (default-resources) @ example ---
+<skip>    | [INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/main/resources
+<skip>    | [INFO] 
+<replace> | [INFO] --- compiler:3.13.0:compile (default-compile) @ example ---
+<skip>    | [INFO] No sources to compile
+<skip>    | [INFO] 
+<replace> | [INFO] --- resources:3.3.1:testResources (default-testResources) @ example ---
+<skip>    | [INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/test/resources
+<skip>    | [INFO] 
+<replace> | [INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ example ---
+<skip>    | [INFO] Nothing to compile - all classes are up to date.
+<skip>    | [INFO] 
+<replace> | [INFO] --- surefire:3.2.5:test (default-test) @ example ---
+<skip>    | [INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+<skip>    | [INFO] 
+<skip>    | [INFO] -------------------------------------------------------
+<skip>    | [INFO]  T E S T S
+<skip>    | [INFO] -------------------------------------------------------
+<skip>    | [INFO] Running example.SuccessTest
+<skip>    | [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.052 s -- in example.SuccessTest
+<skip>    | [INFO] 
+<skip>    | [INFO] Results:
+<skip>    | [INFO] 
+<skip>    | [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+<skip>    | [INFO] 
+<skip>    | [INFO] ------------------------------------------------------------------------
+<replace> | [INFO] BUILD SUCCESS
+<skip>    | [INFO] ------------------------------------------------------------------------
+<skip>    | [INFO] Total time:  1.379 s
+<skip>    | [INFO] Finished at: 2026-02-27T23:32:27+01:00
+<skip>    | [INFO] ------------------------------------------------------------------------

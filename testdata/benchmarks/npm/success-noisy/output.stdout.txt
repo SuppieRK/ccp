@@ -1,0 +1,9 @@
+# Subtest: add computes sums
+ok 1 - add computes sums
+# Subtest: divide computes quotient
+ok 2 - divide computes quotient
+1..2
+# tests 2
+# pass 2
+# fail 0
+# duration_ms 37.905034

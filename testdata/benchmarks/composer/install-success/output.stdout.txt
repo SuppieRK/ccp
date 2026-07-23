@@ -1,0 +1,7 @@
+No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+Lock file operations: 1 install, 0 updates, 0 removals
+  - Locking psr/log (3.0.2)
+Writing lock file
+Installing dependencies from lock file (including require-dev)
+Package operations: 1 install, 0 updates, 0 removals
+Generating autoload files

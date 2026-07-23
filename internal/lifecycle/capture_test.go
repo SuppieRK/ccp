@@ -31,6 +31,8 @@ type stubCaptureRunner struct {
 	gotEvents   []replay.Event
 	gotExitCode int
 	output      string
+	stdout      string
+	stderr      string
 	err         error
 }
 
@@ -38,7 +40,7 @@ func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Ev
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)
 	s.gotExitCode = exitCode
-	return core.ReplayResult{Output: s.output}, s.err
+	return core.ReplayResult{Output: s.output, Stdout: s.stdout, Stderr: s.stderr}, s.err
 }
 
 var _ = Describe("capture", func() {
@@ -64,9 +66,13 @@ var _ = Describe("capture", func() {
 
 	It("writes command, sequenced streams, and CCP output artifacts", func() {
 		tmp := GinkgoT().TempDir()
-		stub := &stubCaptureRunner{output: "proxy output\n"}
+		stub := &stubCaptureRunner{
+			output: "proxy output\n",
+			stdout: "proxy stdout\n",
+			stderr: "proxy stderr\n",
+		}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, stdoutLine, stderrLine := captureSuccessCommand()
@@ -85,11 +91,17 @@ var _ = Describe("capture", func() {
 		for _, arg := range commandArgs {
 			Expect(string(commandData)).To(ContainSubstring(strconv.Quote(arg)))
 		}
-		Expect(string(commandData)).NotTo(ContainSubstring("exit_code:"))
+		Expect(string(commandData)).To(ContainSubstring("exit_code: 0"))
 
 		outputData, err := os.ReadFile(filepath.Join(tmp, captureOutputFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(outputData)).To(Equal("proxy output\n"))
+		outputStdoutData, err := os.ReadFile(filepath.Join(tmp, captureOutputStdoutFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(outputStdoutData)).To(Equal("proxy stdout\n"))
+		outputStderrData, err := os.ReadFile(filepath.Join(tmp, captureOutputStderrFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(outputStderrData)).To(Equal("proxy stderr\n"))
 		Expect(stub.gotArgs).To(Equal(commandArgs))
 		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
@@ -103,13 +115,61 @@ var _ = Describe("capture", func() {
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
 			return event.Stream == contracts.StreamStderr && normalizeCaptureLineEndings(event.Line) == stderrLine
 		})).To(BeTrue())
+		dirInfo, err := os.Stat(tmp)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		for _, name := range []string{
+			replay.CommandFileName,
+			captureStdoutFileName,
+			captureStderrFileName,
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
+			info, statErr := os.Stat(filepath.Join(tmp, name))
+			Expect(statErr).NotTo(HaveOccurred())
+			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)), name)
+		}
+	})
+
+	It("redacts confidential argv and native streams and marks the fixture", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+		tmp := GinkgoT().TempDir()
+		secret := "capture-super-secret"
+		stub := &stubCaptureRunner{output: "***\n", stdout: "***\n"}
+		var gotConfidential []string
+		prev := newCaptureRunner
+		newCaptureRunner = func(confidential []string) captureVerifier {
+			gotConfidential = slices.Clone(confidential)
+			return stub
+		}
+		DeferCleanup(func() { newCaptureRunner = prev })
+
+		Expect(RunCapture([]string{
+			"--dir", tmp,
+			"--confidential", secret,
+			"--", "sh", "-c", "printf " + secret,
+		})).To(Succeed())
+
+		Expect(gotConfidential).To(Equal([]string{secret}))
+		for _, name := range []string{replay.CommandFileName, captureStdoutFileName, captureOutputFileName} {
+			body, err := os.ReadFile(filepath.Join(tmp, name))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).NotTo(ContainSubstring(secret))
+		}
+		command, err := replay.ReadCommand(filepath.Join(tmp, replay.CommandFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(command.Redacted).To(BeTrue())
+		Expect(strings.Join(command.Argv, " ")).To(ContainSubstring("***"))
 	})
 
 	It("keeps artifacts when the native command exits non-zero", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{output: "captured failure\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		err := RunCapture(append([]string{"--dir", tmp, "--"}, captureFailureCommand()...))
@@ -134,7 +194,7 @@ var _ = Describe("capture", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{output: "proxy output\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, _, _ := captureStdoutOnlyCommand()
@@ -415,7 +475,7 @@ var _ = Describe("capture", func() {
 
 		stub := &stubCaptureRunner{output: "proxy output\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, _, _ := captureStdoutOnlyCommand()

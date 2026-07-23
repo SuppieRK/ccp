@@ -1,0 +1,10 @@
+<skip>    | [0m[32mCheck[0m main_test.ts
+<keep>    | [0m[1mTS2367 [0m[ERROR]: This comparison appears to be unintentional because the types '1' and '2' have no overlap.
+<skip>    |   if (left !== right) {
+<skip>    | [0m[31m      ~~~~~~~~~~~~~~[0m
+<skip>    |     at [0m[36mfile:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/deno/projects/failure/main_test.ts[0m:[0m[33m4[0m:[0m[33m7[0m
+<skip>    | 
+<skip>    | [0m[1m[31merror[0m: Type checking failed.
+<skip>    | 
+<skip>    |   [33minfo:[39m The program failed type-checking, but it still might work correctly.
+<skip>    |   [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.

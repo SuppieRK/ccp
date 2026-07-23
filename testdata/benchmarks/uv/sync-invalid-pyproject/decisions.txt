@@ -1,0 +1,13 @@
+<keep>    | warning: Failed to parse `pyproject.toml` during settings discovery:
+<keep>    |   TOML parse error at line 1, column 9
+<keep>    |     |
+<keep>    |   1 | [project
+<keep>    |     |         ^
+<keep>    |   unclosed table, expected `]`
+<skip>    | 
+<keep>    | error: Failed to parse: `pyproject.toml`
+<keep>    |   Caused by: TOML parse error at line 1, column 9
+<keep>    |   |
+<keep>    | 1 | [project
+<keep>    |   |         ^
+<keep>    | unclosed table, expected `]`

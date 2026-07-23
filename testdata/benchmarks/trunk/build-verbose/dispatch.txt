@@ -1,0 +1,1 @@
+trunk|explicit-diagnostic-or-output-passthrough

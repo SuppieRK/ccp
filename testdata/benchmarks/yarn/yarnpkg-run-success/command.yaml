@@ -1,1 +1,2 @@
 argv: ["yarnpkg", "run", "test:success"]
+exit_code: 0

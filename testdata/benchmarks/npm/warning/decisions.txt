@@ -1,0 +1,7 @@
+<skip>    | 
+<skip>    | > ccp-npm-benchmark-basic@1.0.0 warning-actionable
+<skip>    | > node scripts/warning_actionable.js
+<skip>    | 
+<keep>    | Checked 1 file
+<keep>    | (node:158811) DeprecationWarning: normalizeName() is deprecated; migrate to normalizeUserName()
+<keep>    | (Use `node --trace-deprecation ...` to show where the warning was created)

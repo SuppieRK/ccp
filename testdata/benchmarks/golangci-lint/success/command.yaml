@@ -1,1 +1,2 @@
 argv: ["golangci-lint", "run", "./..."]
+exit_code: 0

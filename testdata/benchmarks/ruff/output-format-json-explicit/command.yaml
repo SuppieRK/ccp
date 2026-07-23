@@ -1,0 +1,2 @@
+argv: ["ruff", "check", "--output-format=json", "."]
+exit_code: 1

@@ -1,0 +1,2 @@
+argv: ["golangci-lint", "run", "--help"]
+exit_code: 0

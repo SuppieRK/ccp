@@ -1,0 +1,2 @@
+argv: ["uv", "pip", "list", "--format", "json"]
+exit_code: 0

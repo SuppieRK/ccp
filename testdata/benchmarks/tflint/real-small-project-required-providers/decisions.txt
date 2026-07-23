@@ -1,0 +1,11 @@
+<skip>    | 2 issue(s) found:
+<skip>    | 
+<keep>    | Warning: terraform "required_version" attribute is required (terraform_required_version)
+<keep>    |   on providers.tf line 1:
+<keep>    |    1: terraform {
+<skip>    | Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_required_version.md
+<skip>    | 
+<keep>    | Warning: Missing version constraint for provider "aws" in `required_providers` (terraform_required_providers)
+<keep>    |   on main.tf line 32:
+<keep>    |   32: resource "aws_internet_gateway" "igw" {
+<skip>    | Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_required_providers.md

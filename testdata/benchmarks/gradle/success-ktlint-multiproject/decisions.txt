@@ -1,0 +1,139 @@
+<keep>    | 
+<skip>    | > Configure project :plugin
+<skip>    | Inferred project: ktlint-gradle, version: 14.3.0-dev.0.uncommitted+4f887d2
+<skip>    | Publishing key or secret was null
+<skip>    | GitHub key was null
+<skip>    | Type-safe project accessors is an incubating feature.
+<keep>    | 
+<skip>    | > Task :plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :plugin:compileKotlin UP-TO-DATE
+<skip>    | > Task :plugin:compileJava NO-SOURCE
+<skip>    | > Task :plugin:pluginDescriptors UP-TO-DATE
+<skip>    | > Task :plugin:processResources UP-TO-DATE
+<skip>    | > Task :plugin:classes UP-TO-DATE
+<replace> | > Task :plugin:jar
+<replace> | > Task :plugin:shadowJar
+<keep>    | 
+<skip>    | > Configure project :samples:kotlin-js
+<keep>    | w: 'kotlin-js' Gradle plugin is deprecated and will be removed in the future. 
+<keep>    | Please use 'kotlin("multiplatform")' plugin with a 'js()' target instead. See the migration guide: https://kotl.in/t6m3vu
+<keep>    | w: [33m[1m⚠️ Deprecated Gradle Property 'kotlin.js.compiler' Used[0m[0m
+<keep>    | The `kotlin.js.compiler` deprecated property is used in your build.
+<keep>    | [32m[1mSolution:[0m[0m
+<keep>    | [32m[3mIt is unsupported, please stop using it.[0m[0m
+<keep>    | 
+<keep>    | 
+<skip>    | > Task :samples:kotlin-reporter-creating:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-reporter-using:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-ks:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-rulesets-using:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-js:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :samples:kotlin-rulesets-creating:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<replace> | > Task :kotlinKotlinNpmCachesSetup
+<replace> | > Task :samples:kotlin-mpp:jsPackageJson
+<replace> | > Task :samples:kotlin-mpp:jsTestPackageJson
+<replace> | > Task :samples:kotlin-mpp:jsPublicPackageJson
+<replace> | > Task :samples:kotlin-mpp:jsTestPublicPackageJson
+<skip>    | > Task :samples:kotlin-rulesets-using:processResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:processResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:processResources UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-creating:processResources UP-TO-DATE
+<skip>    | > Task :samples:kotlin-gradle:processResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:processTestResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-using:processTestResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:processTestResources NO-SOURCE
+<replace> | > Task :samples:kotlin-js:packageJson
+<skip>    | > Task :samples:kotlin-ks:processResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-gradle:processTestResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-creating:processTestResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-ks:processTestResources NO-SOURCE
+<replace> | > Task :samples:kotlin-js:testPackageJson
+<replace> | > Task :samples:kotlin-js:publicPackageJson
+<replace> | > Task :samples:kotlin-js:testPublicPackageJson
+<skip>    | > Task :samples:kotlin-js:processResources NO-SOURCE
+<skip>    | > Task :samples:kotlin-js:testProcessResources NO-SOURCE
+<replace> | > Task :kotlinNodeJsSetup
+<replace> | > Task :kotlinRestoreYarnLock
+<replace> | > Task :kotlinYarnSetup
+<replace> | > Task :kotlinPackageJsonUmbrella
+<replace> | > Task :rootPackageJson
+<replace> | > Task :samples:kotlin-js:kotlinNodeJsSetup
+<replace> | > Task :samples:kotlin-js:compileKotlinJs
+<replace> | > Task :samples:kotlin-js:mainClasses
+<skip>    | > Task :samples:kotlin-js:compileTestKotlinJs NO-SOURCE
+<skip>    | > Task :samples:kotlin-js:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-js:compileTestDevelopmentExecutableKotlinJs NO-SOURCE
+<skip>    | > Task :samples:kotlin-js:testTestDevelopmentExecutableCompileSync NO-SOURCE
+<replace> | > Task :samples:kotlin-rulesets-using:compileKotlin
+<skip>    | > Task :samples:kotlin-rulesets-using:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-using:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-using:jar UP-TO-DATE
+<replace> | > Task :samples:kotlin-reporter-using:compileKotlin
+<skip>    | > Task :samples:kotlin-rulesets-using:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-using:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-using:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-reporter-using:jar UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-using:test NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-using:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-reporter-using:test NO-SOURCE
+<replace> | > Task :kotlinNpmInstall
+<replace> | > Task :kotlinStoreYarnLock
+<skip>    | > Task :samples:kotlin-js:nodeTest SKIPPED
+<skip>    | > Task :samples:kotlin-js:test NO-SOURCE
+<replace> | > Task :samples:kotlin-gradle:compileKotlin
+<skip>    | > Task :samples:kotlin-gradle:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-gradle:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-gradle:jar UP-TO-DATE
+<skip>    | > Task :samples:kotlin-gradle:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-gradle:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-gradle:testClasses UP-TO-DATE
+<replace> | > Task :samples:kotlin-ks:compileKotlin
+<skip>    | > Task :samples:kotlin-gradle:test NO-SOURCE
+<skip>    | > Task :samples:kotlin-ks:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-ks:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-ks:jar UP-TO-DATE
+<replace> | > Task :samples:kotlin-reporter-creating:compileKotlin
+<skip>    | > Task :samples:kotlin-ks:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-ks:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-ks:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-reporter-creating:jar UP-TO-DATE
+<skip>    | > Task :samples:kotlin-ks:test NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-reporter-creating:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-reporter-creating:test NO-SOURCE
+<replace> | > Task :samples:kotlin-rulesets-creating:compileKotlin
+<skip>    | > Task :samples:kotlin-rulesets-creating:compileJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-creating:classes UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-creating:jar UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-creating:compileTestKotlin NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-creating:compileTestJava NO-SOURCE
+<skip>    | > Task :samples:kotlin-rulesets-creating:testClasses UP-TO-DATE
+<skip>    | > Task :samples:kotlin-rulesets-creating:test NO-SOURCE
+<keep>    | 
+<skip>    | [Incubating] Problems report is available at: file:///tmp/ktlint-gradle-corpus/build/reports/problems/problems-report.html
+<keep>    | 
+<skip>    | Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+<keep>    | 
+<skip>    | You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+<keep>    | 
+<skip>    | For more on this, please refer to https://docs.gradle.org/9.1.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+<keep>    | 
+<keep>    | BUILD SUCCESSFUL in 2s
+<keep>    | 36 actionable tasks: 25 executed, 11 up-to-date
+<keep>    | 
+<skip>    | Publishing Build Scan to Develocity...
+<skip>    | https://gradle.com/s/xxm3jxcukzpnq
+<keep>    | 
+<skip>    | Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.1.0/userguide/configuration_cache_enabling.html
+<skip>    | WARNING: A restricted method in java.lang.System has been called
+<skip>    | WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.1.0-bin/9agqghryom9wkf8r80qlhnts3/gradle-9.1.0/lib/native-platform-0.22-milestone-28.jar)
+<skip>    | WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+<skip>    | WARNING: Restricted methods will be blocked in a future release unless native access is enabled

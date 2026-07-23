@@ -5,6 +5,21 @@ about: Compact default `trunk build` output by dropping repetitive Rust compile 
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-diagnostic-or-output-passthrough
+    when_arguments:
+      first_is: build
+      have_any:
+        - --verbose
+        - -v
+        - --filehash
+        - --public-url
+        - --dist
+        - --release
+        - --offline
+        - --locked
+        - --color
+    passthrough: true
+
   - id: build
     when_arguments:
       first_is: build

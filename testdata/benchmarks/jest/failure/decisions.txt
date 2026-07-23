@@ -1,0 +1,22 @@
+<keep>    | FAIL src/lib/todo-service.test.ts
+<skip>    |   todo service
+<keep>    |     ✕ rejects empty title (4 ms)
+<keep>    |     ✓ trims completed items
+<skip>    | 
+<keep>    |   ● todo service › rejects empty title
+<skip>    | 
+<keep>    |     expect(received).toThrow(expected)
+<skip>    | 
+<skip>    |     Expected substring: "title"
+<skip>    |     Received message:   "todo title is required"
+<skip>    | 
+<keep>    |       16 |   it('rejects empty title', () => {
+<keep>    |       17 |     const subject = () => createTodo({ title: '' })
+<keep>    |     > 18 |     expect(subject).toThrow('title')
+<keep>    |          |                     ^
+<keep>    |       19 |   })
+<skip>    | 
+<replace> | Test Suites: 1 failed, 1 total
+<replace> | Tests:       1 failed, 1 passed, 2 total
+<skip>    | Time:        0.761 s
+<keep>    | Ran all test suites matching /src\\/lib\\/todo-service.test.ts/i.

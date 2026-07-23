@@ -1,1 +1,2 @@
 argv: ["git", "show"]
+exit_code: 0

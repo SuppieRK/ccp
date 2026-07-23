@@ -1,0 +1,20 @@
+<skip>    | 
+<skip>    | Terraform used the selected providers to generate the following execution
+<skip>    | plan. Resource actions are indicated with the following symbols:
+<skip>    |   + create
+<skip>    | 
+<keep>    | Terraform will perform the following actions:
+<skip>    | 
+<keep>    |   # terraform_data.example will be created
+<keep>    |   + resource "terraform_data" "example" {
+<keep>    |       + id     = (known after apply)
+<keep>    |       + input  = "hello"
+<keep>    |       + output = (known after apply)
+<keep>    |     }
+<skip>    | 
+<keep>    | Plan: 1 to add, 0 to change, 0 to destroy.
+<skip>    | 
+<skip>    | ─────────────────────────────────────────────────────────────────────────────
+<skip>    | 
+<skip>    | Note: You didn't use the -out option to save this plan, so Terraform can't
+<skip>    | guarantee to take exactly these actions if you run "terraform apply" now.

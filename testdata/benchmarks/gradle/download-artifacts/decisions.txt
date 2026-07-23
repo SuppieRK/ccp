@@ -1,0 +1,77 @@
+<skip>    | 11:58:18 AM: Executing 'clean spotlessApply :plugin:build build --stacktrace'…
+<keep>    | 
+<skip>    | Starting Gradle Daemon...
+<skip>    | Gradle Daemon started in 996 ms
+<skip>    | Download https://plugins.gradle.org/m2/org/nosphere/gradle/github/gradle-github-actions-plugin/1.4.0/gradle-github-actions-plugin-1.4.0.jar, took 334 ms
+<skip>    | > Task :plugin:compileJava UP-TO-DATE
+<skip>    | > Task :plugin:compileGroovy NO-SOURCE
+<skip>    | > Task :plugin:pluginDescriptors UP-TO-DATE
+<skip>    | > Task :plugin:processResources UP-TO-DATE
+<skip>    | > Task :plugin:classes UP-TO-DATE
+<skip>    | > Task :plugin:jar UP-TO-DATE
+<skip>    | Download https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.5/checker-qual-3.49.5.jar, took 61 ms
+<skip>    | Download https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.8/postgresql-42.7.8.jar, took 79 ms
+<replace> | > Task :clean
+<replace> | > Task :example-project:clean
+<replace> | > Task :spotlessInternalRegisterDependencies
+<replace> | > Task :plugin:javadoc
+<replace> | > Task :plugin:javadocJar
+<replace> | > Task :plugin:sourcesJar
+<replace> | > Task :plugin:assemble
+<skip>    | > Task :plugin:compileFunctionalTestJava NO-SOURCE
+<skip>    | > Task :plugin:compileFunctionalTestGroovy UP-TO-DATE
+<skip>    | > Task :plugin:processFunctionalTestResources NO-SOURCE
+<skip>    | > Task :plugin:functionalTestClasses UP-TO-DATE
+<replace> | > Task :plugin:pluginUnderTestMetadata
+<keep>    | 
+<replace> | > Task :spotlessGroovy
+<skip>    | Missing required bundle org.eclipse.jdt.debug needed by [org.eclipse.jdt.launching, org.eclipse.jdt.launching.macosx]
+<skip>    | Missing required capability osgi.extender:osgi.extender=osgi.serviceloader.processor needed by org.apache.commons.commons-logging
+<skip>    | Missing required capability osgi.serviceloader:osgi.serviceloader=org.apache.commons.logging.LogFactory needed by org.apache.commons.commons-logging
+<skip>    | Recommend setting osgi.configuration.area to a directory, getDataFile will return null
+<skip>    | Starting Groovy-Eclipse compiler resolver. Specified compiler level: unspecified
+<skip>    |  20 org.codehaus.groovy_5.0.0.v202503311943-e2503 RESOLVED
+<keep>    | 
+<replace> | > Task :spotlessGroovyApply
+<replace> | > Task :plugin:functionalTest
+<replace> | > Task :spotlessGroovyGradle
+<replace> | > Task :spotlessGroovyGradleApply
+<replace> | > Task :spotlessJava
+<replace> | > Task :spotlessJavaApply
+<replace> | > Task :spotlessApply
+<skip>    | > Task :assemble UP-TO-DATE
+<replace> | > Task :spotlessGroovyCheck
+<replace> | > Task :spotlessGroovyGradleCheck
+<replace> | > Task :spotlessJavaCheck
+<replace> | > Task :spotlessCheck
+<replace> | > Task :check
+<replace> | > Task :build
+<skip>    | > Task :example-project:generateJooq SKIPPED
+<replace> | > Task :example-project:processResources
+<skip>    | > Task :example-project:verifyJooqCodegenConfiguration SKIPPED
+<replace> | > Task :example-project:generateMainDatabaseClasses
+<replace> | > Task :example-project:compileJava
+<replace> | > Task :example-project:classes
+<replace> | > Task :example-project:jar
+<replace> | > Task :example-project:javadoc
+<replace> | > Task :example-project:javadocJar
+<replace> | > Task :example-project:sourcesJar
+<replace> | > Task :example-project:assemble
+<skip>    | > Task :example-project:compileTestJava NO-SOURCE
+<skip>    | > Task :example-project:processTestResources NO-SOURCE
+<skip>    | > Task :example-project:testClasses UP-TO-DATE
+<skip>    | > Task :example-project:test NO-SOURCE
+<skip>    | > Task :example-project:check UP-TO-DATE
+<replace> | > Task :example-project:build
+<skip>    | > Task :plugin:compileTestJava UP-TO-DATE
+<skip>    | > Task :plugin:compileTestGroovy NO-SOURCE
+<skip>    | > Task :plugin:processTestResources NO-SOURCE
+<skip>    | > Task :plugin:testClasses UP-TO-DATE
+<replace> | > Task :plugin:test
+<replace> | > Task :plugin:validatePlugins
+<replace> | > Task :plugin:check
+<replace> | > Task :plugin:build
+<keep>    | 
+<keep>    | BUILD SUCCESSFUL in 6m 45s
+<keep>    | 32 actionable tasks: 26 executed, 6 up-to-date
+<skip>    | 12:05:04 PM: Execution finished 'clean spotlessApply :plugin:build build --stacktrace'.

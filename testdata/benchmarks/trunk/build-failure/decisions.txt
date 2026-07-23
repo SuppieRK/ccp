@@ -1,0 +1,8 @@
+<skip>    |    Compiling my-crate v0.1.0
+<skip>    |    Checking tokio v1.35.0
+<keep>    | error[E0425]: cannot find value `foo` in this scope
+<keep>    |  --> src/main.rs:10:5
+<keep>    |   |
+<keep>    | 10 |     foo();
+<keep>    |   |     ^^^ not found in this scope
+<keep>    |   |

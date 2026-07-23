@@ -1,0 +1,62 @@
+<skip>    | ==================================== ERRORS ====================================
+<skip>    | ___________________ ERROR collecting tests/test_packages.py ____________________
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/python.py:498: in importtestmodule
+<skip>    |     mod = import_path(
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path
+<skip>    |     importlib.import_module(module_name)
+<skip>    | /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+<skip>    |     return _bootstrap._gcd_import(name[level:], package, level)
+<skip>    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | <frozen importlib._bootstrap>:1387: in _gcd_import
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:1360: in _find_and_load
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:935: in _load_unlocked
+<skip>    |     ???
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+<skip>    |     source_stat, co = _rewrite_test(fn, self.config)
+<skip>    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+<skip>    |     tree = ast.parse(source, filename=strfn)
+<skip>    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | /usr/lib/python3.12/ast.py:52: in parse
+<skip>    |     return compile(source, filename, mode, flags,
+<skip>    | E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+<skip>    | E       def test_can_access_urllib3_attribute(:
+<skip>    | E                                             ^
+<skip>    | E   SyntaxError: invalid syntax
+<skip>    | ___________________ ERROR collecting tests/test_packages.py ____________________
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/python.py:498: in importtestmodule
+<skip>    |     mod = import_path(
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path
+<skip>    |     importlib.import_module(module_name)
+<skip>    | /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+<skip>    |     return _bootstrap._gcd_import(name[level:], package, level)
+<skip>    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | <frozen importlib._bootstrap>:1387: in _gcd_import
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:1360: in _find_and_load
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+<skip>    |     ???
+<skip>    | <frozen importlib._bootstrap>:935: in _load_unlocked
+<skip>    |     ???
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+<skip>    |     source_stat, co = _rewrite_test(fn, self.config)
+<skip>    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | .venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+<skip>    |     tree = ast.parse(source, filename=strfn)
+<skip>    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<skip>    | /usr/lib/python3.12/ast.py:52: in parse
+<skip>    |     return compile(source, filename, mode, flags,
+<skip>    | E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+<skip>    | E       def test_can_access_urllib3_attribute(:
+<skip>    | E                                             ^
+<skip>    | E   SyntaxError: invalid syntax
+<skip>    | =========================== short test summary info ============================
+<skip>    | ERROR tests/test_packages.py
+<skip>    | ERROR tests/test_packages.py
+<skip>    | !!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+<skip>    | 2 errors in 0.10s

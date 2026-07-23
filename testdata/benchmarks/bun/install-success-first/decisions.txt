@@ -1,0 +1,6 @@
+<skip>    | bun install v1.3.11 (af24e281)
+<skip>    | 
+<keep>    | + bun-local-pkg@../bun-local-pkg
+<skip>    | 
+<keep>    | 1 package installed [16.00ms]
+<keep>    | Saved lockfile

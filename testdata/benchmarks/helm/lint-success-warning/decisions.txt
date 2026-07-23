@@ -1,0 +1,4 @@
+<replace> | ==> Linting samplechart
+<keep>    | [INFO] Chart.yaml: icon is recommended
+<skip>    | 
+<keep>    | 1 chart(s) linted, 0 chart(s) failed

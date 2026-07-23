@@ -1,1 +1,2 @@
 argv: ["go", "build", "-x", "./..."]
+exit_code: 0

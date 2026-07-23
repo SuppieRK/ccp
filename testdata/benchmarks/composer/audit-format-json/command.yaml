@@ -1,0 +1,2 @@
+argv: ["composer", "install", "--audit-format=json"]
+exit_code: 0

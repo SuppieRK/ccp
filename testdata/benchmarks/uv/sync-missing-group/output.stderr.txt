@@ -1,0 +1,1 @@
+error: Group `definitely-missing-group` is not defined in the project's `dependency-groups` table

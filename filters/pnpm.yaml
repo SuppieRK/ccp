@@ -5,6 +5,20 @@ about: Compact pnpm install/list/outdated output while preserving real package s
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-output-or-interactive-passthrough
+    when_arguments:
+      have_any:
+        - --json
+        - --reporter
+        - --loglevel
+        - --silent
+        - --stream
+        - --aggregate-output
+        - --interactive
+        - --recursive
+        - -r
+    passthrough: true
+
   - id: install
     when_arguments:
       first_is: install

@@ -22,7 +22,7 @@ func EnsureNestedCCPGitignore(projectRoot string) error {
 	if err := os.MkdirAll(filepath.Dir(gitignorePath), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(gitignorePath, []byte(nestedCCPGitignoreContents), 0o644)
+	return AtomicWriteFileBeneath(projectRoot, gitignorePath, []byte(nestedCCPGitignoreContents), 0o644)
 }
 
 func RemoveLegacyRootCCPGitignoreEntries(projectRoot string) error {
@@ -50,7 +50,7 @@ func RemoveLegacyRootCCPGitignoreEntries(projectRoot string) error {
 	if !changed {
 		return nil
 	}
-	return os.WriteFile(gitignorePath, updated, 0o644)
+	return AtomicWriteFileBeneath(projectRoot, gitignorePath, updated, 0o644)
 }
 
 func removeLegacyCCPIgnoreLines(content []byte) ([]byte, bool) {

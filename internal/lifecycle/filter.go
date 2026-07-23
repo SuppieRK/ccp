@@ -8,8 +8,12 @@ import (
 	"slices"
 	"strings"
 
+	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/engine"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+	"go-command-compression-proxy/internal/filtertrust"
+	"go-command-compression-proxy/internal/projectfiles"
+	"go-command-compression-proxy/internal/version"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,7 +39,7 @@ func RunFilterWithMetrics(args []string, metricsPath string) error {
 			fs,
 			"YAML filter authoring and inspection helpers",
 			[]string{"ccp filter <subcommand> [args...]"},
-			"subcommands: new, performance, prompt, status",
+			"subcommands: new, performance, prompt, status, trust, untrust",
 			"agents creating or improving filters should start with 'ccp filter prompt [name]' for the embedded workflow.",
 			"use 'ccp filter new --help', 'ccp filter performance --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
 		)
@@ -56,6 +60,10 @@ func RunFilterWithMetrics(args []string, metricsPath string) error {
 		return RunFilterPrompt(args[1:])
 	case "status":
 		return RunFilterStatus(args[1:])
+	case "trust":
+		return RunFilterTrust(args[1:])
+	case "untrust":
+		return RunFilterUntrust(args[1:])
 	default:
 		return fmt.Errorf("unknown filter subcommand %q", args[0])
 	}
@@ -116,8 +124,14 @@ func RunFilterStatus(args []string) error {
 		return fmt.Errorf("filter status does not accept positional arguments")
 	}
 
-	sources := filteryaml.DefaultSources()
-	filters, rows, err := filteryaml.LoadRegistryStatusFromSources(sources)
+	sources := filteryaml.StatusSources()
+	projectState := filtertrust.State("")
+	var trustDecision filtertrust.Decision
+	if version.Version != "dev" {
+		trustDecision, _ = filtertrust.Evaluate("")
+		projectState = trustDecision.State
+	}
+	filters, rows, err := filteryaml.LoadRegistryStatusFromSourcesWithProjectState(sources, projectState)
 	if err != nil {
 		return err
 	}
@@ -126,6 +140,14 @@ func RunFilterStatus(args []string) error {
 
 	fmt.Println("ccp filter status")
 	fmt.Println()
+	if version.Version != "dev" {
+		fmt.Printf("project trust: %s", trustDecision.State)
+		if trustDecision.Root != "" {
+			fmt.Printf(" (%s)", compactFilterStatusPath(trustDecision.Root))
+		}
+		fmt.Println()
+		fmt.Println()
+	}
 	if len(rows) == 0 {
 		fmt.Println("No filters found.")
 		fmt.Println()
@@ -155,6 +177,70 @@ func RunFilterStatus(args []string) error {
 	}, tableRows))
 	fmt.Println()
 	printFilterPromptHint()
+	return nil
+}
+
+func RunFilterTrust(args []string) error {
+	fs := newLifecycleFlagSet("filter trust")
+	setLifecycleUsage(
+		fs,
+		"approve the exact current project filter source",
+		[]string{"ccp filter trust"},
+		"the current canonical working directory is the only implicit project target.",
+		"approval covers every project YAML filter and .mappings.yaml by path and exact bytes.",
+		"any addition, removal, rename, mapping change, or content change requires approval again.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("filter trust does not accept positional arguments")
+	}
+	decision, err := filtertrust.Trust("")
+	if err != nil {
+		return err
+	}
+	audit.MustAppend("project_filter_trusted", map[string]any{
+		"project_root": decision.Root,
+		"digest":       decision.Digest,
+	})
+	fmt.Printf("ccp filter trust: trusted %s\n", decision.Root)
+	fmt.Printf("digest: %s\n", decision.Digest)
+	return nil
+}
+
+func RunFilterUntrust(args []string) error {
+	fs := newLifecycleFlagSet("filter untrust")
+	setLifecycleUsage(
+		fs,
+		"remove approval for the current project filter source",
+		[]string{"ccp filter untrust"},
+		"the current canonical working directory is the only implicit project target.",
+		"project filters remain on disk but are ignored until explicitly trusted again.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("filter untrust does not accept positional arguments")
+	}
+	decision, err := filtertrust.Untrust("")
+	if err != nil {
+		return err
+	}
+	audit.MustAppend("project_filter_untrusted", map[string]any{
+		"project_root": decision.Root,
+		"state":        decision.State,
+	})
+	fmt.Printf("ccp filter untrust: removed approval for %s\n", decision.Root)
 	return nil
 }
 
@@ -205,7 +291,7 @@ func RunFilterNew(args []string) error {
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("check existing scaffold: %w", err)
 	}
-	if err := os.WriteFile(filterPath, []byte(newFilterScaffold(filterID)), 0o644); err != nil {
+	if err := projectfiles.AtomicWriteFile(filterPath, []byte(newFilterScaffold(filterID)), 0o644); err != nil {
 		return fmt.Errorf("write filter scaffold: %w", err)
 	}
 
@@ -266,7 +352,7 @@ func ensureIdentityFilterMapping(path, filterID string) error {
 	for _, key := range ordered {
 		_, _ = fmt.Fprintf(&b, "  %s: %s\n", key, mappings.Map[key])
 	}
-	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+	if err := projectfiles.AtomicWriteFile(path, []byte(b.String()), 0o644); err != nil {
 		return fmt.Errorf("write mappings file: %w", err)
 	}
 	return nil

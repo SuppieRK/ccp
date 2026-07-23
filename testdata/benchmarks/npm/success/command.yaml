@@ -1,1 +1,2 @@
 argv: ["npm", "run", "spinner-cr"]
+exit_code: 0

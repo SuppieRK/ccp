@@ -1,0 +1,2 @@
+argv: ["docker", "build", "--tag", "demo:latest", "."]
+exit_code: 0

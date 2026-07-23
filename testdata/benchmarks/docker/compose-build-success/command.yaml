@@ -1,1 +1,2 @@
 argv: ["docker", "compose", "build"]
+exit_code: 0

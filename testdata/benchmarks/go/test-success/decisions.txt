@@ -1,0 +1,3 @@
+<replace> | ?   	fixture-go-test/no-test	[no test files]
+<replace> | ok  	fixture-go-test	(cached)
+<replace> | ok  	fixture-go-test/test	(cached)

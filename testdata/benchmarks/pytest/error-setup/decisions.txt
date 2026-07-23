@@ -1,0 +1,13 @@
+<skip>    | E                                                                        [100%]
+<skip>    | ==================================== ERRORS ====================================
+<skip>    | _____________________ ERROR at setup of test_error ______________________
+<skip>    | 
+<skip>    |     @pytest.fixture
+<skip>    |     def error_fixture():
+<skip>    | >       assert 0
+<skip>    | E       assert 0
+<skip>    | 
+<skip>    | test_example.py:6: AssertionError
+<skip>    | =========================== short test summary info ============================
+<skip>    | ERROR test_example.py::test_error - assert 0
+<skip>    | 1 error in 0.12s

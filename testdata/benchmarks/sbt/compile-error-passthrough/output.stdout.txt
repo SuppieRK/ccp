@@ -1,0 +1,5 @@
+[error] ## Exception when compiling 1 sources to /work/demo/target/scala-3.3.3/classes
+[error] /work/demo/src/main/scala/Main.scala:4:10: Not found: missing
+[error] one error found
+[error] (Compile / compileIncremental) Compilation failed
+[error] Total time: 2 s, completed Mar 20, 2026, 9:21:17 AM

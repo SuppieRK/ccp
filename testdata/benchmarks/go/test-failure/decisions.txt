@@ -1,0 +1,15 @@
+<replace> | ?   	fixture-go-test/no-test	[no test files]
+<replace> | --- FAIL: TestByteCompare (0.00s)
+<replace> |     main_test.go:65: context: byte compare baseline=ccp expected=cxp
+<replace> |         expected: cxp
+<replace> |         actual: ccp
+<replace> |     main_test.go:68: intentional mismatch at index 1
+<replace> | --- FAIL: TestStructField (0.00s)
+<replace> |     main_test.go:78: context: struct field expected=fixture-bad actual=fixture
+<replace> |         expected: fixture-bad
+<replace> |         actual: fixture
+<replace> |     main_test.go:80: intentional struct mismatch
+<skip>    | FAIL
+<keep>    | FAIL	fixture-go-test	0.001s
+<replace> | ok  	fixture-go-test/test	0.002s
+<skip>    | FAIL

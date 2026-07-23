@@ -1,0 +1,21 @@
+<keep>    | FAIL src/ui/filter-bar.test.ts
+<keep>    |   ● Test suite failed to run
+<skip>    | 
+<keep>    |     Jest encountered an unexpected token
+<skip>    | 
+<keep>    |     SyntaxError: /workspace/todo-lite/src/ui/filter-bar.test.ts: Unexpected token, expected "," (4:26)
+<skip>    | 
+<keep>    |       2 | import { render } from '@testing-library/react'
+<keep>    |       3 | import { describe, it, expect } from '@jest/globals'
+<keep>    |     > 4 | import { FilterBar from './FilterBar'
+<keep>    |         |                          ^
+<keep>    |       5 |
+<keep>    |       6 | describe('filter bar', () => {
+<keep>    |       7 |   it('keeps all selected by default', () => {
+<skip>    | 
+<skip>    |       at constructor (/workspace/todo-lite/node_modules/@babel/parser/src/parse-error.ts:95:45)
+<skip>    | 
+<replace> | Test Suites: 1 failed, 1 total
+<skip>    | Tests:       0 total
+<skip>    | Time:        0.592 s
+<keep>    | Ran all test suites matching /src\\/ui\\/filter-bar.test.ts/i.

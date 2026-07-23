@@ -1,1 +1,2 @@
 argv: ["bazel", "test", "//:ok_test"]
+exit_code: 0

@@ -1,0 +1,1 @@
+git|status-explicit-short-representation-passthrough

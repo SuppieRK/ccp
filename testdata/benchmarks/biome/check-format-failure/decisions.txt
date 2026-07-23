@@ -1,0 +1,19 @@
+<keep>    |  at testdata/tool-fixtures/npx-prettier/projects/basic/src/bad.js format ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<skip>    | 
+<keep>    |   × Formatter would have printed the following content:
+<skip>    |   
+<keep>    |     1   │ - function··sum(a,b){return·a+b}
+<keep>    |     2   │ - module.exports={sum}
+<keep>    |       1 │ + function·sum(a,·b)·{
+<keep>    |       2 │ + → return·a·+·b;
+<keep>    |       3 │ + }
+<keep>    |       4 │ + module.exports·=·{·sum·};
+<keep>    |     3 5 │   
+<skip>    |   
+<skip>    | 
+<keep>    | Checked 1 file in 2ms. No fixes applied.
+<keep>    | Found 1 error.
+<skip>    | check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<skip>    | 
+<skip>    |   × Some errors were emitted while running checks.
+<skip>    |   

@@ -1,0 +1,14 @@
+<skip>    | total 0
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 27 12:10 .
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 ..
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 27 12:10 .ccp
+<replace> | -rwxrwxrwx 1 suppie suppie   23 Feb 26 13:26 .hidden-fixture
+<replace> | -rwxrwxrwx 1 suppie suppie   59 Feb 26 11:50 README.md
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 docs
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 emptydir
+<replace> | -rwxrwxrwx 1 suppie suppie   21 Feb 26 11:50 file-0.bin
+<replace> | -rwxrwxrwx 1 suppie suppie   26 Feb 26 11:50 file-1.bin
+<replace> | -rwxrwxrwx 1 suppie suppie   35 Feb 26 11:50 file-2.bin
+<replace> | -rwxrwxrwx 1 suppie suppie   29 Feb 26 11:50 link-to-main.txt
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 node_modules
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Feb 26 11:50 src

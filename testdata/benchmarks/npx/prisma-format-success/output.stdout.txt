@@ -1,0 +1,1 @@
+prisma format: ok prisma/format.prisma

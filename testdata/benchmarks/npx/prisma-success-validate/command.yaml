@@ -1,1 +1,2 @@
 argv: ["npx", "prisma", "validate", "--schema", "prisma/schema.prisma"]
+exit_code: 0

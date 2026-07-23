@@ -2,12 +2,13 @@
 version: 1
 filter: biome
 about: Compact plain Biome lint and check output by trimming decorative separators and generic summaries while preserving file paths, diff hunks, parser carets, and explicit reporter modes.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--reporter"]
 
 cases:
   - id: reporter_passthrough_inline
     when_arguments:
       have_any:
+        - --reporter
         - --reporter=json
         - --reporter=json-pretty
         - --reporter=junit

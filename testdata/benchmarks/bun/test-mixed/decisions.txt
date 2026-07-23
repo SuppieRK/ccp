@@ -1,0 +1,28 @@
+<skip>    | bun test v1.3.11 (af24e281)
+<skip>    | 
+<keep>    | test/failure.test.ts:
+<keep>    | 1 | import { expect, test } from "bun:test";
+<keep>    | 2 | 
+<keep>    | 3 | test("shows failure", () => {
+<keep>    | 4 |   expect({ left: 1 }).toEqual({ left: 2 });
+<keep>    |                           ^
+<keep>    | error: expect(received).toEqual(expected)
+<skip>    | 
+<keep>    |   {
+<keep>    | -   "left": 2,
+<keep>    | +   "left": 1,
+<keep>    |   }
+<skip>    | 
+<keep>    | - Expected  - 1
+<keep>    | + Received  + 1
+<skip>    | 
+<keep>    |       at <anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-test-demo/test/failure.test.ts:4:23)
+<keep>    | (fail) shows failure [1.60ms]
+<skip>    | 
+<keep>    | test/success.test.ts:
+<keep>    | (pass) adds numbers [0.02ms]
+<skip>    | 
+<keep>    |  1 pass
+<keep>    |  1 fail
+<keep>    |  2 expect() calls
+<keep>    | Ran 2 tests across 2 files. [20.00ms]

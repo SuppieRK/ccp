@@ -1,2 +1,5 @@
-  .artifacts/flutter_extra_demo/lib/issues.dart:9:48 error creation_with_non_type The name 'MissingWidget' isn't a class
-flutter analyze: 1 issue(s)
+Analyzing flutter_extra_demo...                                 
+
+  error • The name 'MissingWidget' isn't a class • .artifacts/flutter_extra_demo/lib/issues.dart:9:48 • creation_with_non_type
+
+1 issue found. (ran in 4.9s)

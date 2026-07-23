@@ -1,0 +1,23 @@
+<skip>    | bun install v1.3.11 (af24e281)
+<skip>    | 
+<keep>    | + @nestjs/testing@10.4.8
+<keep>    | + @types/bun@1.1.13
+<keep>    | + @types/express@5.0.0
+<keep>    | + @types/supertest@6.0.2
+<keep>    | + @typescript-eslint/eslint-plugin@8.15.0
+<keep>    | + @typescript-eslint/parser@8.15.0
+<keep>    | + eslint@8.57.1
+<keep>    | + eslint-config-prettier@9.1.0
+<keep>    | + eslint-plugin-prettier@5.2.1
+<keep>    | + prettier@3.3.3
+<keep>    | + supertest@7.0.0
+<keep>    | + tsc-watch@6.2.1
+<keep>    | + typescript@5.6.3
+<keep>    | + @nestjs/common@10.4.8
+<keep>    | + @nestjs/core@10.4.8
+<keep>    | + @nestjs/mapped-types@2.0.6
+<keep>    | + @nestjs/platform-express@10.4.8
+<keep>    | + reflect-metadata@0.2.2
+<keep>    | + rxjs@7.8.1
+<skip>    | 
+<keep>    | 278 packages installed [23.85s]

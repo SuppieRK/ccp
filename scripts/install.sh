@@ -69,6 +69,54 @@ verify_download_checksum() {
   fi
 }
 
+inspect_archive() {
+  archive="$1"
+  expected="$2"
+  count=0
+  entries="$(unzip -Z1 "$archive")" || {
+    echo "failed to inspect archive entries" >&2
+    exit 1
+  }
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    case "$entry" in
+      /*|*\\*|../*|*/../*|*/..)
+        echo "unsafe archive entry: $entry" >&2
+        exit 1
+        ;;
+    esac
+    if [ "$entry" != "$expected" ]; then
+      echo "unexpected archive entry: $entry" >&2
+      exit 1
+    fi
+    count=$((count + 1))
+  done <<EOF
+$entries
+EOF
+  if [ "$count" -ne 1 ]; then
+    echo "archive must contain exactly one $expected binary" >&2
+    exit 1
+  fi
+  entry_type="$(unzip -Z -l "$archive" "$expected" | awk '$1 ~ /^[-dl]/ {print substr($1,1,1); exit}')"
+  if [ "$entry_type" != "-" ]; then
+    echo "archive entry is not a regular binary: $expected" >&2
+    exit 1
+  fi
+}
+
+validate_staged_binary() {
+  candidate="$1"
+  expected="$2"
+  actual="$("$candidate" --version 2>/dev/null | tr -d '\r\n')" || {
+    echo "staged binary failed --version" >&2
+    exit 1
+  }
+  if [ "$actual" != "$expected" ]; then
+    echo "staged binary version mismatch: expected $expected, got $actual" >&2
+    exit 1
+  fi
+}
+
 need_cmd() {
   cmd="$1"
   command -v "$cmd" >/dev/null 2>&1 || {
@@ -270,7 +318,8 @@ RESOLVED_VERSION="$(validate_release_version "$VERSION")" || {
 VERSION="$RESOLVED_VERSION"
 
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
+STAGED_DST=""
+trap 'if [ -n "$STAGED_DST" ]; then rm -f "$STAGED_DST"; fi; rm -rf "$TMP_DIR"' EXIT INT TERM
 
 ASSET="${BIN_NAME}_${VERSION}_${OS}_${ARCH}.zip"
 URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET"
@@ -282,17 +331,18 @@ curl_secure "$URL" -o "$TMP_DIR/$ASSET"
 curl_secure "$CHECKSUMS_URL" -o "$TMP_DIR/$CHECKSUMS_ASSET"
 verify_download_checksum "$TMP_DIR/$CHECKSUMS_ASSET" "$ASSET" "$TMP_DIR/$ASSET"
 
-unzip -oq "$TMP_DIR/$ASSET" -d "$TMP_DIR"
-
 if [ "$OS" = "windows" ]; then
-  SRC="$TMP_DIR/${BIN_NAME}.exe"
+  ARCHIVE_BINARY="${BIN_NAME}.exe"
   INSTALL_DIR="$(choose_install_dir)"
   DST="$INSTALL_DIR/${BIN_NAME}.exe"
 else
-  SRC="$TMP_DIR/$BIN_NAME"
+  ARCHIVE_BINARY="$BIN_NAME"
   INSTALL_DIR="$(choose_install_dir)"
   DST="$INSTALL_DIR/$BIN_NAME"
 fi
+SRC="$TMP_DIR/$ARCHIVE_BINARY"
+inspect_archive "$TMP_DIR/$ASSET" "$ARCHIVE_BINARY"
+unzip -p "$TMP_DIR/$ASSET" "$ARCHIVE_BINARY" > "$SRC"
 
 PREVIOUS_VERSION=""
 if [ -x "$DST" ]; then
@@ -310,15 +360,23 @@ fi
 if [ "$OS" != "windows" ]; then
   chmod +x "$SRC"
 fi
+validate_staged_binary "$SRC" "$VERSION"
 
 if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
   echo "install directory is not writable: $INSTALL_DIR" >&2
   exit 1
 fi
 
-install -m 0755 "$SRC" "$DST"
+STAGED_DST="$INSTALL_DIR/.${BIN_NAME}.new.$$"
+cp "$SRC" "$STAGED_DST"
+if [ "$OS" != "windows" ]; then
+  chmod 0755 "$STAGED_DST"
+fi
+validate_staged_binary "$STAGED_DST" "$VERSION"
+mv -f "$STAGED_DST" "$DST"
+STAGED_DST=""
 update_path_if_needed "$INSTALL_DIR"
-echo "Installed $BIN_NAME $VERSION to $DST"
+echo "Installed binary $BIN_NAME $VERSION to $DST"
 
 if version_lt_cutoff "$PREVIOUS_VERSION"; then
   if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
@@ -330,7 +388,7 @@ if version_lt_cutoff "$PREVIOUS_VERSION"; then
         ;;
       *)
         printf '%s\n' "$REPAIR_OUTPUT" >&2
-        echo "ccp repair failed after install" >&2
+        echo "Managed-state repair failed after binary installation; the new binary remains installed" >&2
         exit 1
         ;;
     esac

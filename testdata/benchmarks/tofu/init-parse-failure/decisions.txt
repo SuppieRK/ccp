@@ -1,0 +1,16 @@
+<skip>    | 
+<skip>    | Initializing the backend...
+<skip>    | OpenTofu encountered problems during initialization, including problems
+<skip>    | with the configuration, described below.
+<skip>    | 
+<skip>    | The OpenTofu configuration must be valid before initialization so that
+<skip>    | OpenTofu can determine which modules and providers need to be installed.
+<skip>    | 
+<keep>    | Error: Unclosed configuration block
+<skip>    | 
+<keep>    |   on main.tf line 1, in terraform:
+<keep>    |    1: terraform {
+<skip>    | 
+<keep>    | There is no closing brace for this block before the end of the file. This may
+<keep>    | be caused by incorrect brace nesting elsewhere in this file.
+<skip>    | 

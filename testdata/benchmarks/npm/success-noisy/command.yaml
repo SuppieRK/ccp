@@ -1,1 +1,2 @@
 argv: ["npm", "run", "success-noisy"]
+exit_code: 0

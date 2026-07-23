@@ -1,0 +1,6 @@
+In scripts/validate.sh line 2:
+if [ "$x" = ]; then
+^-- SC1009 (info): The mentioned syntax error was in this if expression.
+   ^-- SC1073 (error): Couldn't parse this test expression. Fix to allow more checks.
+          ^-- SC1027 (error): Expected another argument for this operator.
+             ^-- SC1072 (error): Unexpected . Fix any mentioned problems and try again.

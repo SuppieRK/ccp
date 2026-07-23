@@ -1,0 +1,1 @@
+00000|src/main.rs:1:1: warning: sample warning

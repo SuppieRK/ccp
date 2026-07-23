@@ -1,1 +1,2 @@
 argv: ["git", "add", "-v", "-A", "tracked.txt"]
+exit_code: 0

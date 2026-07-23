@@ -1,0 +1,2 @@
+00000|Prisma is a modern DB toolkit to query, migrate and model your database.
+00001|Usage: prisma [command] [options]

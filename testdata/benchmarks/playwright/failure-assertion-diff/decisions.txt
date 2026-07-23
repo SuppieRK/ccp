@@ -1,0 +1,36 @@
+<skip>    | 
+<skip>    | Running 1 test using 1 worker
+<skip>    | 
+<keep>    |   ✘  1 [chrome] › tests/capabilities.spec.ts:19:5 › test snapshot tool list (378ms)
+<skip>    | 
+<skip>    | 
+<skip>    |   1) [chrome] › tests/capabilities.spec.ts:19:5 › test snapshot tool list ──────────────────────────
+<skip>    | 
+<keep>    |     Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m
+<skip>    | 
+<skip>    |     \u001b[32m- Expected  - 1\u001b[39m
+<skip>    |     \u001b[31m+ Received  + 0\u001b[39m
+<skip>    | 
+<skip>    |     \u001b[33m@@ -1,10 +1,9 @@\u001b[39m
+<skip>    |     \u001b[2m  Set {\u001b[22m
+<skip>    |     \u001b[2m    "browser_click",\u001b[22m
+<skip>    |     \u001b[2m    "browser_close",\u001b[22m
+<skip>    |     \u001b[2m    "browser_console_messages",\u001b[22m
+<skip>    |     \u001b[32m-   "browser_definitely_missing_tool",\u001b[39m
+<skip>    |     \u001b[2m    "browser_drag",\u001b[22m
+<skip>    |     \u001b[2m    "browser_evaluate",\u001b[22m
+<skip>    |     \u001b[2m    "browser_file_upload",\u001b[22m
+<skip>    |     \u001b[2m    "browser_fill_form",\u001b[22m
+<skip>    |     \u001b[2m    "browser_handle_dialog",\u001b[22m
+<skip>    | 
+<keep>    |       19 | test('test snapshot tool list', async ({ client }) => {
+<keep>    |       20 |   const { tools } = await client.listTools();
+<skip>    |     > 21 |   expect(new Set(tools.map(t => t.name))).toEqual(new Set([
+<keep>    |          |                                           ^
+<keep>    |       22 |     'browser_click',
+<keep>    |       23 |     'browser_console_messages',
+<keep>    |       24 |     'browser_drag',
+<keep>    |         at /workspace/src/repo-54/packages/playwright-mcp/tests/capabilities.spec.ts:21:43
+<skip>    | 
+<skip>    |   1 failed
+<skip>    |     [chrome] › tests/capabilities.spec.ts:19:5 › test snapshot tool list ───────────────────────────

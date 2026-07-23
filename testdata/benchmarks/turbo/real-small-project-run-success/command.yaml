@@ -1,1 +1,2 @@
 argv: ["turbo", "run", "test", "--filter=web", "--filter=shared-ui"]
+exit_code: 0

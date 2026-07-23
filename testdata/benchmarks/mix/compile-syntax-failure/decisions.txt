@@ -1,0 +1,5 @@
+<skip>    | Compiling 2 files (.ex)
+<skip>    | 
+<keep>    | == Compilation error in file lib/ccpmixdemo.ex ==
+<keep>    | ** (SyntaxError) lib/ccpmixdemo.ex:21:1: unexpected reserved word: end. The "(" at line 19 is missing terminator ")"
+<keep>    |     (elixir 1.14.0) lib/kernel/parallel_compiler.ex:346: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/7

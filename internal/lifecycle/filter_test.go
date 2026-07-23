@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/metrics"
 	"go-command-compression-proxy/internal/version"
 
@@ -570,7 +571,7 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"status"}) })
 
-			Expect(out).To(ContainSubstring("ccp filter status\n\nshowing 4 rows"))
+			Expect(out).To(ContainSubstring("ccp filter status\n\nproject trust: untrusted (.)\n\nshowing 4 rows"))
 			Expect(out).To(ContainSubstring("| TOOL"))
 			Expect(out).To(ContainSubstring("| FILTER"))
 			Expect(out).To(ContainSubstring("| SOURCE"))
@@ -584,6 +585,7 @@ var _ = Describe("filter", func() {
 			})))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(filepath.Join(projectFilters, "broken.yaml"))))
 			Expect(out).To(ContainSubstring("invalid filter:"))
+			Expect(out).To(ContainSubstring("untrusted"))
 			Expect(out).To(ContainSubstring("| -"))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(homeFilters)))
 			Expect(out).To(ContainSubstring("source error:"))
@@ -614,7 +616,7 @@ var _ = Describe("filter", func() {
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(filepath.Join(projectFilters, "git.yaml"))))
 			Expect(out).To(ContainSubstring("ok"))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(filepath.Join(homeFilters, "git.yaml"))))
-			Expect(out).To(ContainSubstring("overridden"))
+			Expect(out).To(ContainSubstring("untrusted"))
 			Expect(out).To(ContainSubstring(truncateTailForDisplay(displayFilterStatusPath(filteryaml.RegistryStatusRow{
 				FilterPath: filepath.Join(homeFilters, ".mappings.yaml"),
 				Target:     "python",
@@ -636,8 +638,78 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"status"}) })
 
-			Expect(strings.TrimSpace(out)).To(Equal("ccp filter status\n\nNo filters found.\n\nNext: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters."))
+			Expect(strings.TrimSpace(out)).To(Equal("ccp filter status\n\nproject trust: absent (.)\n\nNo filters found.\n\nNext: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters."))
 		})
+	})
+
+	Context("trust", func() {
+		BeforeEach(func() {
+			oldVersion := version.Version
+			version.Version = "1.2.3"
+			DeferCleanup(func() { version.Version = oldVersion })
+		})
+
+		It("approves, detects changes, and removes approval for the current canonical project", func() {
+			tmp := GinkgoT().TempDir()
+			home := filepath.Join(tmp, "home")
+			project := filepath.Join(tmp, "repo")
+			filters := filepath.Join(project, ".ccp", "filters")
+			Expect(os.MkdirAll(filters, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(home, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
+			previous, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(project)).To(Succeed())
+			DeferCleanup(func() { _ = os.Chdir(previous) })
+			setHomeDir(home)
+
+			out := captureStdout(func() error { return RunFilter([]string{"trust"}) })
+			Expect(out).To(ContainSubstring("ccp filter trust: trusted " + project))
+			status := captureStdout(func() error { return RunFilter([]string{"status"}) })
+			Expect(status).To(ContainSubstring("project trust: trusted (.)"))
+			Expect(status).To(ContainSubstring("| git"))
+			Expect(status).To(ContainSubstring("| ok"))
+
+			Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte(validStatusFilterYAML("git")+"# changed\n"), 0o644)).To(Succeed())
+			status = captureStdout(func() error { return RunFilter([]string{"status"}) })
+			Expect(status).To(ContainSubstring("project trust: changed (.)"))
+			Expect(status).To(ContainSubstring("| changed"))
+
+			out = captureStdout(func() error { return RunFilter([]string{"untrust"}) })
+			Expect(out).To(ContainSubstring("ccp filter untrust: removed approval"))
+			status = captureStdout(func() error { return RunFilter([]string{"status"}) })
+			Expect(status).To(ContainSubstring("project trust: untrusted (.)"))
+		})
+
+		It("preserves approval through managed home repair", func() {
+			tmp := GinkgoT().TempDir()
+			home := filepath.Join(tmp, "home")
+			project := filepath.Join(tmp, "repo")
+			filters := filepath.Join(project, ".ccp", "filters")
+			Expect(os.MkdirAll(filters, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(home, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
+			previous, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(project)).To(Succeed())
+			DeferCleanup(func() { _ = os.Chdir(previous) })
+			setHomeDir(home)
+			Expect(RunFilter([]string{"trust"})).To(Succeed())
+
+			Expect(RunRepair([]string{"--yes"})).To(Succeed())
+
+			decision, err := filtertrust.Evaluate(project)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(decision.State).To(Equal(filtertrust.StateTrusted))
+		})
+
+		DescribeTable("rejects positional project targets",
+			func(subcommand string) {
+				Expect(RunFilter([]string{subcommand, "/other"})).To(MatchError(ContainSubstring("does not accept positional arguments")))
+			},
+			Entry("trust", "trust"),
+			Entry("untrust", "untrust"),
+		)
 	})
 })
 

@@ -1,0 +1,22 @@
+<skip>    | 
+<skip>    |  NX   Running target lint for 3 projects:
+<skip>    | 
+<skip>    | - web
+<skip>    | - shared-ui
+<skip>    | - shared-data
+<skip>    | 
+<keep>    | > nx run shared-ui:lint
+<skip>    | 
+<skip>    | All files pass linting.
+<skip>    | 
+<keep>    | > nx run web:lint
+<skip>    | 
+<skip>    | All files pass linting.
+<skip>    | 
+<keep>    | > nx run shared-data:lint
+<skip>    | 
+<skip>    | All files pass linting.
+<skip>    | 
+<replace> | Nx read the output from the cache for 2 out of 3 tasks.
+<skip>    | 
+<replace> | Successfully ran target lint for 3 projects

@@ -1,0 +1,15 @@
+<skip>    | 
+<skip>    |  NX   Running target test for 2 projects:
+<skip>    | 
+<skip>    | - web
+<skip>    | - shared-ui
+<skip>    | 
+<keep>    | > nx run shared-ui:test
+<skip>    | 
+<keep>    | PASS shared-ui src/lib/slugify.spec.ts
+<skip>    | 
+<keep>    | > nx run web:test
+<skip>    | 
+<keep>    | PASS web src/app/app.spec.ts
+<skip>    | 
+<replace> | Successfully ran target test for 2 projects

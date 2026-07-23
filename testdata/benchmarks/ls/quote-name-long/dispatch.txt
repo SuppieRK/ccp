@@ -1,0 +1,1 @@
+ls|long_quoted_long_passthrough

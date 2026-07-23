@@ -1,0 +1,3 @@
+<skip>    | Package Version
+<skip>    | ------- -------
+<replace> | pip     24.0

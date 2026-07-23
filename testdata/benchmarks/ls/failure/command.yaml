@@ -1,1 +1,2 @@
 argv: ["ls", "does-not-exist"]
+exit_code: 2

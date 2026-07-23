@@ -1,1 +1,2 @@
 argv: ["go", "test", "-count=1", "-json", "./..."]
+exit_code: 0

@@ -1,1 +1,2 @@
 argv: ["find", "internal", "-type", "d"]
+exit_code: 0

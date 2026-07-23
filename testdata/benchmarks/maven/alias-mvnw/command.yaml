@@ -1,0 +1,2 @@
+argv: ["mvnw", "test"]
+exit_code: 0

@@ -1,0 +1,2 @@
+  .artifacts/dart-demo-format/main.dart
+dart format: 1 changed

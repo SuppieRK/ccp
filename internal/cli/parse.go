@@ -2,14 +2,32 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
+
+func LifecycleCommands() []string {
+	commands := make([]string, 0, len(lifecycleCommands)+len(filterCommands))
+	for command := range lifecycleCommands {
+		commands = append(commands, command)
+	}
+	for command := range filterCommands {
+		commands = append(commands, command)
+	}
+	slices.Sort(commands)
+	return commands
+}
+
+func ExecutionFlags() []string {
+	return []string{"--confidential", "--help", "--raw", "--version", "-h"}
+}
 
 var lifecycleCommands = map[string]struct{}{
 	"capture":   {},
 	"init":      {},
 	"gain":      {},
 	"history":   {},
+	"recovery":  {},
 	"verify":    {},
 	"upgrade":   {},
 	"uninstall": {},

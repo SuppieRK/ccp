@@ -1,1 +1,2 @@
 argv: ["./node_modules/.bin/prettier", "--check", "src/good.js"]
+exit_code: 0

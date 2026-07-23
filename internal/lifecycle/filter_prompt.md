@@ -11,6 +11,7 @@ When using the generic prompt, `<filter-id>` is a placeholder. Replace it with t
 - Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks for a global filter change.
 - Do not edit shipped built-in filters under `filters/` unless the user directly asks to change CCP's built-in filter set.
 - Keep behavior in the YAML DSL whenever possible. Do not change Go runtime behavior unless the current DSL cannot express the requested behavior and the user confirms that broader change.
+- Project-local filters remain inactive until the user approves their exact current bytes with `ccp filter trust`; never approve changed bytes without reviewing the complete source.
 
 ## Workflow
 
@@ -21,6 +22,7 @@ When using the generic prompt, `<filter-id>` is a placeholder. Replace it with t
 5. Edit only the project-local YAML filter and project-local `.mappings.yaml` as needed.
 6. Run `ccp verify` or `ccp verify --dir <fixture-dir>`.
 7. Compare `output.txt` with `verify-output.txt`, and inspect `verify-decisions.txt` when behavior is unclear.
+8. After reviewing every project YAML file and `.mappings.yaml`, run `ccp filter trust` if the user wants this exact source activated.
 
 ## Performance-Guided Improvements
 
@@ -49,6 +51,7 @@ When using the generic prompt, `<filter-id>` is a placeholder. Replace it with t
 ccp filter status
 ccp filter performance --tool <tool> --limit 30
 ccp filter new {{FILTER_ID}}
+ccp filter trust
 ccp capture -- {{COMMAND_EXAMPLE}}
 ccp verify
 ccp verify --dir <fixture-dir>

@@ -1,0 +1,3 @@
+<skip>    | 00:00 +0: loading test/success_test.dart
+<skip>    | 00:00 +0: adds numbers
+<replace> | 00:00 +1: All tests passed!

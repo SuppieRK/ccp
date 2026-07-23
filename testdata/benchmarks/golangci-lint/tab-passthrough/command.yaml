@@ -1,1 +1,2 @@
 argv: ["golangci-lint", "run", "--no-config", "--enable-only", "errcheck,govet", "--output.tab.path", "stdout", "./..."]
+exit_code: 0

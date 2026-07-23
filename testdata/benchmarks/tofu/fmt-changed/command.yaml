@@ -1,1 +1,2 @@
 argv: ["tofu", "fmt", "-no-color"]
+exit_code: 0

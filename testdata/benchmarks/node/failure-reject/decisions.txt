@@ -1,0 +1,16 @@
+<keep>    | /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/unhandled_rejection.js:2
+<keep>    | Promise.reject(new Error("boom"));
+<keep>    |                ^
+<keep>    | 
+<keep>    | Error: boom
+<keep>    |     at Object.<anonymous> (/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/node/projects/basic/unhandled_rejection.js:2:16)
+<keep>    |     at Module._compile (node:internal/modules/cjs/loader:1706:14)
+<keep>    |     at Object..js (node:internal/modules/cjs/loader:1839:10)
+<keep>    |     at Module.load (node:internal/modules/cjs/loader:1441:32)
+<keep>    |     at Function._load (node:internal/modules/cjs/loader:1263:12)
+<keep>    |     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+<keep>    |     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+<keep>    |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+<keep>    |     at node:internal/main/run_main_module:36:49
+<keep>    | 
+<keep>    | Node.js v22.20.0

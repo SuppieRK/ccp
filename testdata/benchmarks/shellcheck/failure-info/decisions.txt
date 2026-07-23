@@ -1,0 +1,10 @@
+<skip>    | 
+<keep>    | In scripts/validate.sh line 94:
+<keep>    | for f in $FILES; do echo $f; done
+<keep>    |                          ^-- SC2086 (info): Double quote to prevent globbing and word splitting.
+<skip>    | 
+<keep>    | Did you mean: 
+<keep>    | for f in $FILES; do echo "$f"; done
+<skip>    | 
+<skip>    | For more information:
+<skip>    |   https://www.shellcheck.net/wiki/SC2086 -- Double quote to prevent globbing ...

@@ -1,1 +1,2 @@
 argv: ["turbo", "run", "lint", "--filter=web", "--filter=shared-data"]
+exit_code: 0

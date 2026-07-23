@@ -5,6 +5,18 @@ about: Compact `helm lint` output by shortening the linting banner and normalizi
 flags_consuming_next_arg: ["--color", "--colour", "--content-cache", "--kube-apiserver", "--kube-as-user", "--kube-ca-file", "--kube-context", "--kube-tls-server-name", "--kube-token", "--kube-version", "--kubeconfig", "--registry-config", "--repository-cache", "--repository-config", "--values", "-f", "-n", "--namespace"]
 
 cases:
+  - id: explicit-output-or-debug-passthrough
+    when_arguments:
+      have_any:
+        - --output
+        - --output-format
+        - --quiet
+        - -q
+        - --debug
+        - --dry-run
+        - --show-only
+    passthrough: true
+
   - id: lint
     when_arguments:
       first_is: lint

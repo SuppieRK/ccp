@@ -1,1 +1,2 @@
 argv: ["./mvnw", "test", "-Dtest=SuccessTest"]
+exit_code: 0

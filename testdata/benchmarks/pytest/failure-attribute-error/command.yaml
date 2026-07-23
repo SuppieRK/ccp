@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pytest", "-q", "tests/test_packages.py::test_can_access_urllib3_attribute"]
+exit_code: 1

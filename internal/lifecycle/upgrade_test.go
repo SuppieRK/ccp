@@ -94,11 +94,11 @@ var _ = Describe("replaceBinary", func() {
 			Expect(os.MkdirAll(dst, 0o755)).To(Succeed())
 		})
 
-		It("returns the rename error and keeps the staged file", func() {
+		It("returns the rename error, preserves the destination, and removes staging", func() {
 			err := replaceBinary(dst, src)
 			Expect(err).To(HaveOccurred())
 			Expect(dst).To(BeADirectory())
-			Expect(dst + ".new").To(BeAnExistingFile())
+			Expect(dst + ".new").NotTo(BeAnExistingFile())
 		})
 	})
 })
@@ -184,6 +184,34 @@ var _ = Describe("upgrade helper functions", func() {
 
 		_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
 		Expect(err).To(MatchError(ContainSubstring("binary ccp not found in archive")))
+	})
+
+	DescribeTable("rejects unsafe binary archive entries",
+		func(entries []zipTestEntry, message string) {
+			tmpDir := GinkgoT().TempDir()
+			zipPath := filepath.Join(tmpDir, "asset.zip")
+			Expect(os.WriteFile(zipPath, makeZipEntries(entries), 0o644)).To(Succeed())
+			zr, err := zip.OpenReader(zipPath)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { _ = zr.Close() })
+
+			_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
+			Expect(err).To(MatchError(ContainSubstring(message)))
+		},
+		Entry("path traversal", []zipTestEntry{{name: "../ccp", body: "x"}}, "unsafe archive entry"),
+		Entry("absolute path", []zipTestEntry{{name: "/ccp", body: "x"}}, "unsafe archive entry"),
+		Entry("duplicate binaries", []zipTestEntry{{name: "ccp", body: "one"}, {name: "ccp", body: "two"}}, "duplicate binary"),
+		Entry("symlink binary", []zipTestEntry{{name: "ccp", body: "target", mode: os.ModeSymlink | 0o777}}, "not a regular file"),
+	)
+
+	It("requires exact staged --version output", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses a unix shell script")
+		}
+		path := filepath.Join(GinkgoT().TempDir(), "ccp")
+		Expect(os.WriteFile(path, []byte("#!/bin/sh\nprintf '1.2.3\\n'\n"), 0o755)).To(Succeed())
+		Expect(validateStagedBinaryVersion(path, "1.2.3")).To(Succeed())
+		Expect(validateStagedBinaryVersion(path, "1.2.4")).To(MatchError(ContainSubstring("does not match requested")))
 	})
 
 	It("preserves an existing error when a closer also fails", func() {
@@ -699,6 +727,31 @@ func makeZipArchive(name string, content []byte) []byte {
 	return buf.Bytes()
 }
 
+type zipTestEntry struct {
+	name string
+	body string
+	mode os.FileMode
+}
+
+func makeZipEntries(entries []zipTestEntry) []byte {
+	var buf bytes.Buffer
+	writer := zip.NewWriter(&buf)
+	for _, item := range entries {
+		header := &zip.FileHeader{Name: item.name, Method: zip.Store}
+		if item.mode != 0 {
+			header.SetMode(item.mode)
+		} else {
+			header.SetMode(0o755)
+		}
+		entry, err := writer.CreateHeader(header)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = entry.Write([]byte(item.body))
+		Expect(err).NotTo(HaveOccurred())
+	}
+	Expect(writer.Close()).To(Succeed())
+	return buf.Bytes()
+}
+
 func jsonHTTPResponse(status int, payload string) *http.Response {
 	return bytesHTTPResponse(status, "application/json", []byte(payload))
 }
@@ -737,16 +790,19 @@ func stubUpgradeRuntimeDeps(
 	prevArch := upgradeRuntimeArch
 	prevHTTP := upgradeHTTPClient
 	prevRepair := upgradeRunRepair
+	prevValidate := upgradeValidateStaged
 	upgradeExecutablePath = execFn
 	upgradeRuntimeOS = osFn
 	upgradeRuntimeArch = archFn
 	upgradeHTTPClient = httpClient
 	upgradeRunRepair = repairFn
+	upgradeValidateStaged = func(string, string) error { return nil }
 	return func() {
 		upgradeExecutablePath = prevExec
 		upgradeRuntimeOS = prevOS
 		upgradeRuntimeArch = prevArch
 		upgradeHTTPClient = prevHTTP
 		upgradeRunRepair = prevRepair
+		upgradeValidateStaged = prevValidate
 	}
 }

@@ -1,1 +1,2 @@
 argv: ["nx", "affected", "-t", "build", "--graph=stdout"]
+exit_code: 0

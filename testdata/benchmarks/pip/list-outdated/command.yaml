@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pip", "list", "--outdated"]
+exit_code: 0

@@ -249,7 +249,7 @@ var _ = Describe("YamlFilter", func() {
 			Expect(exitActionForOutput(output, stream)).To(Equal(expected))
 		},
 		Entry("keeps empty exit output", "", contracts.StreamStdout, contracts.Action{Kind: contracts.ActionKeep}),
-		Entry("replaces stdout output without setting a combined stream", "summary\n", contracts.StreamStdout, contracts.Action{Kind: contracts.ActionReplace, Output: "summary\n"}),
+		Entry("marks stdout exit replacements explicitly", "summary\n", contracts.StreamStdout, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamStdout, Output: "summary\n"}),
 		Entry("marks combined exit replacements explicitly", "summary\n", contracts.StreamCombined, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "summary\n"}),
 	)
 
@@ -609,6 +609,43 @@ var _ = Describe("YamlFilter", func() {
 			Tool: "ls",
 			Args: []string{"ls", "-l"},
 		})).To(Equal("ls|long"))
+	})
+
+	It("matches the user argv after preparing a normalized child argv", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{
+				{
+					ID: "explicit",
+					WhenArguments: &WhenArguments{
+						HaveAny: []string{"--format"},
+					},
+					Passthrough: true,
+				},
+				{
+					ID: "default",
+					NormalizeCommand: &CommandMutation{
+						AppendIfMissing: []string{"--format=compact"},
+					},
+					CompressOutput: &OutputShape{
+						Combined: &OutputScope{Lines: &OutputLines{
+							Keep: []SkipOrKeepRule{{Contains: "diagnostic"}},
+						}},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		original := contracts.Command{Tool: "demo", Args: []string{"demo", "check"}}
+		prepared, err := filter.PrepareCommand(original)
+		Expect(err).NotTo(HaveOccurred())
+		prepared.MatchingArgs = slices.Clone(original.Args)
+
+		Expect(prepared.Args).To(Equal([]string{"demo", "check", "--format=compact"}))
+		Expect(filter.Dispatch(prepared)).To(Equal("demo|default"))
+		Expect(filter.ReportsPassthrough(prepared)).To(BeFalse())
 	})
 
 	It("does not append default positionals when explicit paths are present", func() {
@@ -974,6 +1011,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(successExit).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamStdout,
 			Output: "tracked.txt\nsummary: 1 files changed\n",
 		}))
 
@@ -984,6 +1022,7 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(failureExit).To(Equal(contracts.Action{
 			Kind:   contracts.ActionReplace,
+			Stream: contracts.StreamStdout,
 			Output: "fatal: not a git repository: '.git'\n",
 		}))
 	})
@@ -1268,6 +1307,102 @@ var _ = Describe("YamlFilter", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(command.Args).To(Equal([]string{"go", "test", "-run", "TestSmoke", "./..."}))
+	})
+
+	It("dispatches attached and split long options equivalently without mutating child argv", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version:               1,
+			Filter:                "demo",
+			FlagsConsumingNextArg: []string{"--format"},
+			Cases: []CaseClause{
+				{
+					ID: "explicit-format",
+					WhenArguments: &WhenArguments{
+						HaveAny: []string{"--format=json"},
+					},
+					Passthrough: true,
+				},
+				{
+					ID: "human",
+					WhenArguments: &WhenArguments{
+						LackAny: []string{"--format=json"},
+					},
+					NormalizeCommand: &CommandMutation{
+						AppendIfMissing: []string{"--format=text"},
+					},
+					CompressOutput: &OutputShape{
+						Stdout: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^"}}}},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		for _, args := range [][]string{
+			{"demo", "--format=json", "file"},
+			{"demo", "--format", "json", "file"},
+		} {
+			original := slices.Clone(args)
+			command := contracts.Command{Tool: "demo", Args: args}
+			Expect(filter.Dispatch(command)).To(Equal("demo|explicit-format"))
+
+			prepared, prepareErr := filter.PrepareCommand(command)
+			Expect(prepareErr).NotTo(HaveOccurred())
+			Expect(prepared.Args).To(Equal(original))
+			Expect(args).To(Equal(original))
+		}
+	})
+
+	It("does not treat option-looking positionals after -- as option presence", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version:               1,
+			Filter:                "demo",
+			FlagsConsumingNextArg: []string{"--format"},
+			Cases: []CaseClause{
+				{
+					ID: "explicit-format",
+					WhenArguments: &WhenArguments{
+						HaveSequence: []string{"--format", "json"},
+					},
+					Passthrough: true,
+				},
+				{
+					ID:             "fallback",
+					CompressOutput: &OutputShape{Stdout: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^"}}}}},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.Dispatch(contracts.Command{
+			Tool: "demo",
+			Args: []string{"demo", "--", "--format", "json"},
+		})).To(Equal("demo|fallback"))
+	})
+
+	It("does not append an equivalent long-option representation", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version:               1,
+			Filter:                "demo",
+			FlagsConsumingNextArg: []string{"--format"},
+			Cases: []CaseClause{{
+				ID: "default",
+				NormalizeCommand: &CommandMutation{
+					AppendIfMissing: []string{"--format=json"},
+				},
+				CompressOutput: &OutputShape{Stdout: &OutputScope{Lines: &OutputLines{Keep: []SkipOrKeepRule{{Regex: "^"}}}}},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		for _, args := range [][]string{
+			{"demo", "--format=json"},
+			{"demo", "--format", "json"},
+		} {
+			prepared, prepareErr := filter.PrepareCommand(contracts.Command{Tool: "demo", Args: args})
+			Expect(prepareErr).NotTo(HaveOccurred())
+			Expect(prepared.Args).To(Equal(args))
+		}
 	})
 
 	DescribeTable("applies command mutations directly",

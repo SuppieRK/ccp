@@ -1,0 +1,2 @@
+argv: ["npm", "run", "--help"]
+exit_code: 0

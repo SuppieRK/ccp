@@ -1,1 +1,2 @@
 argv: ["yamllint", ".goreleaser.yaml"]
+exit_code: 0

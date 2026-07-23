@@ -1,0 +1,6 @@
+<keep>    | docs:
+<keep>    | design.md
+<keep>    | 00002|
+<keep>    | src:
+<keep>    | main.go
+<keep>    | util

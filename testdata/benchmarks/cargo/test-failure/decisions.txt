@@ -1,0 +1,21 @@
+<skip>    | 
+<skip>    | running 2 tests
+<replace> | test tests::failing_case ... FAILED
+<skip>    | test tests::subtracts_positive_numbers ... ok
+<skip>    | 
+<skip>    | failures:
+<skip>    | 
+<replace> | ---- tests::failing_case stdout ----
+<skip>    | 
+<keep>    | thread 'tests::failing_case' (145626) panicked at src/lib.rs:16:9:
+<keep>    | assertion `left == right` failed
+<keep>    |   left: 6
+<keep>    |  right: 7
+<skip>    | note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+<skip>    | 
+<skip>    | 
+<skip>    | failures:
+<skip>    |     tests::failing_case
+<skip>    | 
+<replace> | test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+<skip>    | 

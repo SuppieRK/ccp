@@ -1,0 +1,7 @@
+<skip>    | Verbose mode can be enabled via `-v, --verbose` option
+<skip>    | CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32dev.html
+<skip>    | LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+<skip>    | Compiling .pio/build/esp32dev/src/main.cpp.o
+<keep>    | src/main.cpp:10:3: error: 'LED_BUILTINN' was not declared in this scope
+<keep>    | *** [.pio/build/esp32dev/src/main.cpp.o] Error 1
+<keep>    | ========================== [FAILED] Took 1.23 seconds ==========================

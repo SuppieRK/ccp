@@ -39,7 +39,7 @@ func RunVerify(args []string) error {
 		[]string{"ccp verify [--dir <path>]"},
 		"verify reads command.yaml and optional sequenced stdout.txt/stderr.txt from the fixture directory.",
 		"missing stdout.txt or stderr.txt means that stream is empty.",
-		"verify always writes verify-output.txt and verify-decisions.txt into the fixture directory.",
+		"verify always writes verify-output.txt, verify-stdout.txt, verify-stderr.txt, verify-decisions.txt, and verify-dispatch.txt into the fixture directory.",
 		"verify fails when sequence prefixes break cross-stream ordering integrity.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -82,18 +82,30 @@ func RunVerify(args []string) error {
 	if err := replay.WriteArtifact(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
 		return recordFailure(dir, "write_output", err)
 	}
+	if err := replay.WriteArtifact(fixture.VerifyStdout, []byte(replayed.Stdout), 0o644); err != nil {
+		return recordFailure(dir, "write_stdout", err)
+	}
+	if err := replay.WriteArtifact(fixture.VerifyStderr, []byte(replayed.Stderr), 0o644); err != nil {
+		return recordFailure(dir, "write_stderr", err)
+	}
 	if err := replay.WriteArtifact(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
 		return recordFailure(dir, "write_decisions", err)
 	}
+	if err := replay.WriteArtifact(fixture.VerifyDispatch, []byte(replayed.Dispatch+"\n"), 0o644); err != nil {
+		return recordFailure(dir, "write_dispatch", err)
+	}
 
 	if err := audit.Append("verify_invocation_finish", map[string]any{
-		"dir":            dir,
-		"command":        strings.Join(fixture.Command.Argv, " "),
-		"verify_output":  fixture.VerifyOutput,
-		"verify_decided": fixture.VerifyDecisions,
-		"success":        true,
-		"output_bytes":   len(replayed.Output),
-		"decision_bytes": len(replayed.Decisions),
+		"dir":             dir,
+		"command":         strings.Join(fixture.Command.Argv, " "),
+		"verify_output":   fixture.VerifyOutput,
+		"verify_stdout":   fixture.VerifyStdout,
+		"verify_stderr":   fixture.VerifyStderr,
+		"verify_decided":  fixture.VerifyDecisions,
+		"verify_dispatch": fixture.VerifyDispatch,
+		"success":         true,
+		"output_bytes":    len(replayed.Output),
+		"decision_bytes":  len(replayed.Decisions),
 	}); err != nil {
 		return err
 	}

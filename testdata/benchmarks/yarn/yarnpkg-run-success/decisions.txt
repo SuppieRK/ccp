@@ -1,0 +1,5 @@
+<skip>    | yarn run v1.22.22
+<skip>    | $ node scripts/success.js
+<keep>    | success-line-1
+<keep>    | success-line-2
+<skip>    | Done in 0.06s.

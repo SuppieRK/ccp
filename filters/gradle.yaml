@@ -2,9 +2,26 @@
 version: 1
 filter: gradle
 about: Trim Gradle and Gradle Wrapper boilerplate aggressively, keep task and failure loci visible, and drop low-value configuration, internal stack, and INFO chatter when it does not help follow-up shell work.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--console", "--dependency-verification", "--max-workers", "--priority", "--project-cache-dir", "--project-dir", "--warning-mode", "--write-verification-metadata", "-D", "-I", "-P", "-p"]
 
 cases:
+  - id: explicit-diagnostic-or-interactive-passthrough
+    when_arguments:
+      have_any:
+        - --console
+        - --warning-mode
+        - --stacktrace
+        - --full-stacktrace
+        - --info
+        - --debug
+        - --scan
+        - --profile
+        - --continuous
+        - --status
+        - --dry-run
+        - --write-verification-metadata
+    passthrough: true
+
   - id: gradle_output
     compress_output:
       combined:

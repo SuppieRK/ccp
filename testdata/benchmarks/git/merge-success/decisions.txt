@@ -1,0 +1,4 @@
+<replace> | Updating a786cd4..29c7887
+<skip>    | Fast-forward
+<skip>    |  tracked.txt | 1 +
+<skip>    |  1 file changed, 1 insertion(+)

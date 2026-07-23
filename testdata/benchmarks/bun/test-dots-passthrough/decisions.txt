@@ -1,0 +1,7 @@
+<keep>    | bun test v1.3.11 (af24e281)
+<keep>    | .
+<keep>    | 
+<keep>    | 1 pass
+<keep>    | 0 fail
+<keep>    | 1 expect() calls
+<keep>    | Ran 1 test across 1 file. [16.00ms]

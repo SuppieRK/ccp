@@ -1,10 +1,14 @@
+
 Error: Prisma schema validation - (validate wasm)
 Error code: P1012
-error: The model "User" cannot be defined because a model with that name already exists.
-  -->  prisma/bad.prisma:15
-   | 
-14 | 
-15 | model User {
+[1;91merror[0m: [1mThe model "User" cannot be defined because a model with that name already exists.[0m
+  [1;94m-->[0m  [4mprisma/bad.prisma:15[0m
+[1;94m   | [0m
+[1;94m14 | [0m
+[1;94m15 | [0mmodel [1;91mUser[0m {
+[1;94m   | [0m
+
 Validation Error Count: 1
 [Context: validate]
+
 Prisma CLI Version : 6.5.0

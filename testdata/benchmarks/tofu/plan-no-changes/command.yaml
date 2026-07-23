@@ -1,1 +1,2 @@
 argv: ["tofu", "plan", "-input=false", "-refresh=false", "-no-color"]
+exit_code: 0

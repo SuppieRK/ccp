@@ -40,3 +40,15 @@ func CommandWithPipesContext(ctx context.Context, name string, args []string) (*
 	}
 	return cmd, stdout, stderr, nil
 }
+
+func CommandAttachedContext(ctx context.Context, name string, args []string) *exec.Cmd {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	configureManagedCommand(cmd)
+	return cmd
+}

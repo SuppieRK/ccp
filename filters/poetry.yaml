@@ -5,6 +5,22 @@ about: Compact Poetry install, lock, and update progress noise while preserving 
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-execution-or-output-passthrough
+    when_arguments:
+      have_any:
+        - --verbose
+        - -v
+        - -vv
+        - -vvv
+        - --quiet
+        - -q
+        - --dry-run
+        - --sync
+        - --format
+        - --ansi
+        - --no-ansi
+    passthrough: true
+
   - id: install
     when_arguments:
       first_is: install

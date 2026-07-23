@@ -14,6 +14,7 @@ import (
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
 	v2filters "go-command-compression-proxy/internal/filters"
+	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/version"
 
 	"gopkg.in/yaml.v3"
@@ -66,19 +67,198 @@ func DefaultSources() []v2filters.FilterSource {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return []v2filters.FilterSource{
-			v2filters.ProjectSource(cwd),
-		}
+		return trustedProjectSources(cwd, "")
 	}
-	return []v2filters.FilterSource{
-		v2filters.ProjectSource(cwd),
-		v2filters.HomeSource(home),
+	return trustedProjectSources(cwd, home)
+}
+
+func StatusSources() []v2filters.FilterSource {
+	if version.Version == "dev" {
+		return DefaultSources()
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	sources := []v2filters.FilterSource{v2filters.ProjectSource(cwd)}
+	if home, homeErr := os.UserHomeDir(); homeErr == nil {
+		sources = append(sources, v2filters.HomeSource(home))
+	}
+	return sources
+}
+
+func trustedProjectSources(cwd, home string) []v2filters.FilterSource {
+	decision, err := filtertrust.Evaluate(cwd)
+	audit.MustAppend("project_filter_trust", map[string]any{
+		"project_root": decision.Root,
+		"state":        decision.State,
+		"reason":       decision.Reason,
+	})
+	sources := make([]v2filters.FilterSource, 0, 2)
+	if err == nil && decision.State == filtertrust.StateTrusted {
+		sources = append(sources, v2filters.ProjectSource(decision.Root))
+	}
+	if strings.TrimSpace(home) != "" {
+		sources = append(sources, v2filters.HomeSource(home))
+	}
+	return sources
 }
 
 func LoadRegistryFiltersFromSources(sources []v2filters.FilterSource) (map[string]contracts.Filter, error) {
 	registered, _, err := LoadRegistryFiltersFromSourcesWithTiming(sources)
 	return registered, err
+}
+
+// LoadExecutionFilterFromSourcesWithTiming resolves only the invoked tool.
+// Full-registry loading remains available for status, validation, repair, and
+// authoring commands.
+func LoadExecutionFilterFromSourcesWithTiming(sources []v2filters.FilterSource, tool string) (map[string]contracts.Filter, contracts.FilterRegistryBuildTiming, error) {
+	startedAt := time.Now()
+	registered := map[string]contracts.Filter{}
+	timing := contracts.FilterRegistryBuildTiming{}
+	tool = strings.TrimSpace(tool)
+	if tool == "" {
+		return registered, timing, nil
+	}
+
+	for _, source := range sources {
+		sourceStartedAt := time.Now()
+		sourceTiming := contracts.FilterSourceBuildTiming{
+			SourceKind: string(source.Kind),
+			SourceDir:  source.Directory,
+		}
+		candidate, inspected, err := loadExecutionFilterFromSource(source, tool)
+		sourceTiming.Definitions = int64(inspected)
+		if err != nil {
+			sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
+			sourceTiming.Error = err.Error()
+			timing.Sources = append(timing.Sources, sourceTiming)
+			timing.DurationMS = time.Since(startedAt).Milliseconds()
+			return nil, timing, err
+		}
+		if candidate != nil {
+			sourceTiming.Compiled = 1
+			registered[tool] = candidate
+		}
+		sourceTiming.DurationMS = time.Since(sourceStartedAt).Milliseconds()
+		timing.Sources = append(timing.Sources, sourceTiming)
+		if candidate != nil {
+			break
+		}
+	}
+	timing.DurationMS = time.Since(startedAt).Milliseconds()
+	return registered, timing, nil
+}
+
+func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (contracts.Filter, int, error) {
+	mappings, mappingErr := readMappingsFile(filepath.Join(source.Directory, ".mappings.yaml"))
+	if mappingErr != nil && !os.IsNotExist(mappingErr) {
+		audit.MustAppend("mapping_read_error", map[string]any{
+			"source_kind": string(source.Kind),
+			"source_dir":  source.Directory,
+			"error":       mappingErr.Error(),
+		})
+		mappings = nil
+	}
+
+	targets := []string{tool}
+	if target := strings.TrimSpace(mappings[tool]); target != "" && target != tool {
+		targets = append(targets, target)
+	}
+	for _, target := range targets {
+		loaded, inspected, found, err := loadExactTargetDefinition(source.Directory, target)
+		if err != nil {
+			return nil, inspected, err
+		}
+		if found {
+			return compileExecutionFilter(source, loaded), inspected, nil
+		}
+	}
+
+	loaded, inspected, found, err := loadLegacyTargetDefinition(source.Directory, targets)
+	if err != nil || !found {
+		return nil, inspected, err
+	}
+	return compileExecutionFilter(source, loaded), inspected, nil
+}
+
+func loadExactTargetDefinition(dir, target string) (LoadedFilter, int, bool, error) {
+	paths := []string{
+		filepath.Join(dir, target+".yaml"),
+		filepath.Join(dir, target+".yml"),
+	}
+	var selected LoadedFilter
+	inspected := 0
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return LoadedFilter{}, inspected, false, fmt.Errorf("read filter %s: %w", path, err)
+		}
+		inspected++
+		spec, err := ParseDefinition(raw)
+		if err != nil {
+			audit.MustAppend("filter_definition_invalid", map[string]any{
+				"path":  path,
+				"error": err.Error(),
+			})
+			continue
+		}
+		if spec.Filter == target {
+			selected = LoadedFilter{Path: path, Raw: raw, Spec: spec}
+		}
+	}
+	return selected, inspected, selected.Spec != nil, nil
+}
+
+func loadLegacyTargetDefinition(dir string, targets []string) (LoadedFilter, int, bool, error) {
+	paths, err := matchedFilterFiles(dir)
+	if err != nil {
+		return LoadedFilter{}, 0, false, err
+	}
+	targetSet := make(map[string]struct{}, len(targets))
+	for _, target := range targets {
+		targetSet[target] = struct{}{}
+	}
+	var selected LoadedFilter
+	inspected := 0
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return LoadedFilter{}, inspected, false, fmt.Errorf("read filter %s: %w", path, err)
+		}
+		inspected++
+		spec, err := ParseDefinition(raw)
+		if err != nil {
+			audit.MustAppend("filter_definition_invalid", map[string]any{
+				"path":  path,
+				"error": err.Error(),
+			})
+			continue
+		}
+		if _, ok := targetSet[spec.Filter]; ok {
+			selected = LoadedFilter{Path: path, Raw: raw, Spec: spec}
+		}
+	}
+	return selected, inspected, selected.Spec != nil, nil
+}
+
+func compileExecutionFilter(source v2filters.FilterSource, loaded LoadedFilter) contracts.Filter {
+	if loaded.Spec == nil {
+		return nil
+	}
+	filter, err := NewFilter(loaded.Spec)
+	if err != nil {
+		audit.MustAppend("filter_compile_invalid", map[string]any{
+			"path":   loaded.Path,
+			"filter": loaded.Spec.Filter,
+			"error":  err.Error(),
+		})
+		return nil
+	}
+	return filter.WithProvenance(filterProvenance(source, loaded.Path, loaded.Raw))
 }
 
 func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) (map[string]contracts.Filter, contracts.FilterRegistryBuildTiming, error) {
@@ -114,9 +294,26 @@ func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) 
 }
 
 func LoadRegistryStatusFromSources(sources []v2filters.FilterSource) (map[string]contracts.Filter, []RegistryStatusRow, error) {
+	return LoadRegistryStatusFromSourcesWithProjectState(sources, "")
+}
+
+func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSource, projectState filtertrust.State) (map[string]contracts.Filter, []RegistryStatusRow, error) {
 	registered := map[string]contracts.Filter{}
 	rows := make([]RegistryStatusRow, 0)
 	for order, source := range sources {
+		if source.Kind == v2filters.SourceProject &&
+			(projectState == filtertrust.StateUnsafe || projectState == filtertrust.StateAbsent) {
+			if projectState == filtertrust.StateUnsafe {
+				rows = append(rows, RegistryStatusRow{
+					Tool:       "-",
+					FilterPath: source.Directory,
+					SourceKind: source.Kind,
+					Status:     string(projectState),
+					order:      order,
+				})
+			}
+			continue
+		}
 		filters, filterRows, err := inspectCompiledFiltersFromSource(source, order)
 		rows = append(rows, filterRows...)
 		if err != nil {
@@ -127,6 +324,22 @@ func LoadRegistryStatusFromSources(sources []v2filters.FilterSource) (map[string
 				Status:     "source error: " + err.Error(),
 				order:      order,
 			})
+			continue
+		}
+		if source.Kind == v2filters.SourceProject && projectState != "" && projectState != filtertrust.StateTrusted {
+			projectRows := make([]RegistryStatusRow, 0)
+			scratch := map[string]contracts.Filter{}
+			registerCompiledFilterStatuses(scratch, filters, source, order, &projectRows)
+			registerMappedFilterStatuses(scratch, filters, source, order, &projectRows)
+			for i := range projectRows {
+				projectRows[i].Status = string(projectState)
+			}
+			for i := range rows {
+				if rows[i].SourceKind == v2filters.SourceProject && rows[i].order == order {
+					rows[i].Status = string(projectState) + "; " + rows[i].Status
+				}
+			}
+			rows = append(rows, projectRows...)
 			continue
 		}
 		registerCompiledFilterStatuses(registered, filters, source, order, &rows)

@@ -26,6 +26,5 @@ cases:
             - regex: '^LDF: .+$'
             - regex: '^Library Manager: .+$'
             - regex: '^Compiling .+$'
-            - regex: '^Linking .+$'
             - regex: '^Building .+$'
             - regex: '^Checking size .+$'

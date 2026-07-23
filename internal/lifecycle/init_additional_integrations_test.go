@@ -215,7 +215,8 @@ var _ = Describe("init additional integration coverage", func() {
 
 		text := string(body)
 		Expect(text).To(ContainSubstring(`"tool.execute.before"`))
-		Expect(text).To(ContainSubstring(`trimmed.startsWith("ccp ")`))
+		Expect(text).To(ContainSubstring(`function rewriteCommand(input)`))
+		Expect(text).To(ContainSubstring(`shellBuiltinsAndKeywords`))
 
 		beforeInfo, err := os.Stat(path)
 		Expect(err).NotTo(HaveOccurred())

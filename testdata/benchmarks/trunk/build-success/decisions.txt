@@ -1,0 +1,8 @@
+<skip>    |    Compiling tokio v1.35.0
+<skip>    |    Compiling hyper v0.14.28
+<skip>    |    Compiling my-crate v0.1.0
+<skip>    |    Downloading serde v1.0.195
+<skip>    |    Fresh regex v1.10.2
+<skip>    | 
+<keep>    |    Finished release [optimized] target(s) in 45.23s
+<keep>    |    Binary: target/release/my-crate (5.2MB)

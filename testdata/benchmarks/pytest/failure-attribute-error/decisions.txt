@@ -1,0 +1,12 @@
+<skip>    | F                                                                        [100%]
+<skip>    | =================================== FAILURES ===================================
+<skip>    | ______________________ test_can_access_urllib3_attribute _______________________
+<skip>    | 
+<skip>    |     def test_can_access_urllib3_attribute():
+<skip>    | >       requests.packages.does_not_exist
+<skip>    | E       AttributeError: module 'requests.packages' has no attribute 'does_not_exist'
+<skip>    | 
+<skip>    | tests/test_packages.py:5: AttributeError
+<skip>    | =========================== short test summary info ============================
+<skip>    | FAILED tests/test_packages.py::test_can_access_urllib3_attribute - AttributeE...
+<skip>    | 1 failed in 0.01s

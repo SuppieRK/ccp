@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pip", "list"]
+exit_code: 0

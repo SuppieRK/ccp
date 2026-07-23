@@ -1,0 +1,6 @@
+ * [new branch]      feature-a  -> origin/feature-a
+ * [new branch]      feature-b  -> origin/feature-b
+ * [new branch]      feature-c  -> origin/feature-c
+ * [new tag]         v2         -> v2
+ * [new tag]         v3         -> v3
+git fetch: ok (3 new branches, 2 new tags)

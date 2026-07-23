@@ -1,0 +1,2 @@
+<skip>    | Prisma schema loaded from prisma/format.prisma
+<replace> | Formatted prisma/format.prisma in 17ms 🚀

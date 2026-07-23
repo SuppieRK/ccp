@@ -1,0 +1,44 @@
+<keep>    | 
+<skip>    | > Configure project :plugin
+<skip>    | Inferred project: ktlint-gradle, version: 14.3.0-dev.0.uncommitted+4f887d2
+<skip>    | Publishing key or secret was null
+<skip>    | GitHub key was null
+<skip>    | Type-safe project accessors is an incubating feature.
+<keep>    | 
+<skip>    | > Task :plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+<skip>    | > Task :plugin:pluginDescriptors UP-TO-DATE
+<skip>    | > Task :plugin:processResources UP-TO-DATE
+<keep>    | 
+<keep>    | > Task :plugin:compileKotlin FAILED
+<keep>    | w: Language version 1.8 is deprecated and its support will be removed in a future version of Kotlin
+<keep>    | 3 actionable tasks: 1 executed, 2 up-to-date
+<keep>    | 
+<skip>    | Publishing Build Scan to Develocity...
+<skip>    | https://gradle.com/s/qjboradzfueic
+<keep>    | 
+<skip>    | WARNING: A restricted method in java.lang.System has been called
+<skip>    | WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.1.0-bin/9agqghryom9wkf8r80qlhnts3/gradle-9.1.0/lib/native-platform-0.22-milestone-28.jar)
+<skip>    | WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+<skip>    | WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+<keep>    | 
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:1 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:6 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:9 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:13 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:19 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:26 Expecting a top level declaration
+<keep>    | e: file:///tmp/ktlint-gradle-corpus/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/PluginUtil.kt:124:33 Expecting a top level declaration
+<keep>    | 
+<keep>    | FAILURE: Build failed with an exception.
+<keep>    | 
+<keep>    | * What went wrong:
+<keep>    | Execution failed for task ':plugin:compileKotlin'.
+<keep>    | > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+<keep>    |    > Compilation error. See log for more details
+<keep>    | 
+<keep>    | * Try:
+<keep>    | > Run with --stacktrace option to get the stack trace.
+<keep>    | > Run with --info or --debug option to get more log output.
+<keep>    | > Get more help at https://help.gradle.org.
+<keep>    | 
+<keep>    | BUILD FAILED in 781ms

@@ -1,0 +1,1 @@
+<skip>    | src/app.ts(1,1): error TS1000: sample error

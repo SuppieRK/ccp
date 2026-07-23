@@ -1,0 +1,2 @@
+<keep>    | Using Python 3.11.15 environment at: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv
+<keep>    | uv-demo-pkg @ file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-pkg

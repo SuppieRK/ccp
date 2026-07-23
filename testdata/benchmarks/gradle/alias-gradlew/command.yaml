@@ -1,0 +1,2 @@
+argv: ["gradlew", "build"]
+exit_code: 0

@@ -1,1 +1,2 @@
 argv: ["deno", "test"]
+exit_code: 1

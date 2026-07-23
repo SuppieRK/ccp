@@ -2,7 +2,7 @@
 version: 1
 filter: vitest
 about: Compact default text-mode Vitest summaries conservatively, preserve failed selectors and code-frame detail, and leave reporter, watch, UI, and coverage modes native.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--config", "--coverage.reportsDirectory", "--outputFile", "--pool", "--project", "--reporter", "--testTimeout", "--testNamePattern", "--workspace"]
 
 cases:
   - id: passthrough_interactive_and_reporters

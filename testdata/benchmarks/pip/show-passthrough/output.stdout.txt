@@ -1,0 +1,10 @@
+Name: pip
+Version: 24.0
+Summary: The PyPA recommended tool for installing Python packages.
+Home-page: 
+Author: 
+Author-email: The pip developers <distutils-sig@python.org>
+License: MIT
+Location: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/pip/projects/basic/.venv/lib/python3.12/site-packages
+Requires: 
+Required-by: 

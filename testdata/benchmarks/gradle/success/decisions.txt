@@ -1,0 +1,16 @@
+<skip>    | WARNING: A restricted method in java.lang.System has been called
+<skip>    | WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/home/suppie/.gradle/wrapper/dists/gradle-9.2.0-bin/11i5gvueggl8a5cioxuftxrik/gradle-9.2.0/lib/native-platform-0.22-milestone-29.jar)
+<skip>    | WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+<skip>    | WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+<keep>    | 
+<skip>    | > Task :compileJava NO-SOURCE
+<skip>    | > Task :processResources NO-SOURCE
+<skip>    | > Task :classes UP-TO-DATE
+<skip>    | > Task :compileTestJava UP-TO-DATE
+<skip>    | > Task :processTestResources NO-SOURCE
+<skip>    | > Task :testClasses UP-TO-DATE
+<skip>    | > Task :test UP-TO-DATE
+<keep>    | 
+<keep>    | BUILD SUCCESSFUL in 641ms
+<keep>    | 2 actionable tasks: 2 up-to-date
+<skip>    | Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.0/userguide/configuration_cache_enabling.html

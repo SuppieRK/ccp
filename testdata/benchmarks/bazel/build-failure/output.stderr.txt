@@ -1,0 +1,7 @@
+ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: Creating symlink broken failed: missing input file '//:missing.sh'
+ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: Creating symlink broken failed: 1 input file(s) do not exist
+ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10: //:broken: missing input file '//:missing.sh'
+Target //:broken failed to build
+Use --verbose_failures to see the command lines of failed build steps.
+ERROR: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bazel-corpus/broken/BUILD.bazel:3:10 Creating symlink broken failed: 1 input file(s) do not exist
+ERROR: Build did NOT complete successfully

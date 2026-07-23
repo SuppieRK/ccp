@@ -1,1 +1,2 @@
 argv: ["yamllint", "-d", "{extends: default, rules: {document-start: disable}}", ".goreleaser.yaml"]
+exit_code: 0

@@ -1,0 +1,8 @@
+Terraform will perform the following actions:
+  # terraform_data.example will be created
+  + resource "terraform_data" "example" {
+      + id     = (known after apply)
+      + input  = "hello"
+      + output = (known after apply)
+    }
+Plan: 1 to add, 0 to change, 0 to destroy.

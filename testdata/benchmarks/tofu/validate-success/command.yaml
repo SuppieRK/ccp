@@ -1,1 +1,2 @@
 argv: ["tofu", "validate", "-no-color"]
+exit_code: 0

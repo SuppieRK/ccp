@@ -1,0 +1,1 @@
+Usage: golangci-lint run [flags]

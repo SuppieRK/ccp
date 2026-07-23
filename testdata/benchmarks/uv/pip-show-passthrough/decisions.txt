@@ -1,0 +1,6 @@
+<keep>    | Using Python 3.11.15 environment at: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv
+<keep>    | Name: uv-demo-pkg
+<keep>    | Version: 0.1.0
+<keep>    | Location: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv/lib/python3.11/site-packages
+<keep>    | Requires:
+<keep>    | Required-by:

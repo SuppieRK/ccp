@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	filterPerformanceDataset = "filter-performance"
-	maxPerformanceHints      = 5
+	filterPerformanceDataset     = "filter-performance"
+	maxPerformanceHints          = 5
+	filterPerformanceMeasurement = "recorded command metrics only; source/path/hash are blank for legacy rows; registry timing covers observed filter builds; pending or rejected writes are disclosed in storage"
 )
 
 type filterPerformanceFlags struct {
@@ -28,7 +30,9 @@ type filterPerformanceFlags struct {
 
 type filterPerformanceEnvelope struct {
 	Dataset     string                           `json:"dataset"`
+	Measurement string                           `json:"measurement"`
 	Filters     filtersEnvelope                  `json:"filters"`
+	Storage     metrics.StorageStatus            `json:"storage"`
 	Rows        []metrics.PerformanceRow         `json:"rows"`
 	Build       metrics.RegistryBuildSummary     `json:"build"`
 	BuildRows   []metrics.RegistrySourceBuildRow `json:"build_rows"`
@@ -56,6 +60,7 @@ type filterPerformanceData struct {
 	missed       []metrics.MissedOpportunity
 	buildSummary metrics.RegistryBuildSummary
 	buildRows    []metrics.RegistrySourceBuildRow
+	storage      metrics.StorageStatus
 }
 
 func RunFilterPerformance(args []string, metricsPath string) error {
@@ -79,12 +84,14 @@ func RunFilterPerformance(args []string, metricsPath string) error {
 	if err != nil {
 		return err
 	}
-	suggestions := buildFilterPerformanceSuggestions(data.rows, data.missed)
+	suggestions := buildFilterPerformanceSuggestions(data.rows, data.missed, data.buildRows)
 	switch flags.format {
 	case "json":
 		return writeJSON(filterPerformanceEnvelope{
 			Dataset:     filterPerformanceDataset,
+			Measurement: filterPerformanceMeasurement,
 			Filters:     filters,
+			Storage:     data.storage,
 			Rows:        data.rows,
 			Build:       data.buildSummary,
 			BuildRows:   data.buildRows,
@@ -191,6 +198,7 @@ func queryFilterPerformance(metricsPath string, flags filterPerformanceFlags, op
 			missed:       missed,
 			buildSummary: buildSummary,
 			buildRows:    buildRows,
+			storage:      session.storageStatus(),
 		}, nil
 	}
 	rows, err := metrics.QueryPerformanceRows(metricsPath, opts)
@@ -210,6 +218,7 @@ func queryFilterPerformance(metricsPath string, flags filterPerformanceFlags, op
 		missed:       missed,
 		buildSummary: buildSummary,
 		buildRows:    buildRows,
+		storage:      metrics.InspectStorage(metricsPath),
 	}, nil
 }
 
@@ -331,8 +340,15 @@ func sortPerformanceRows(rows []metrics.PerformanceRow) {
 	})
 }
 
-func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []metrics.MissedOpportunity) []filterPerformanceSuggestion {
-	suggestions := make([]filterPerformanceSuggestion, 0, maxPerformanceHints*3)
+func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []metrics.MissedOpportunity, buildRows []metrics.RegistrySourceBuildRow) []filterPerformanceSuggestion {
+	suggestions := make([]filterPerformanceSuggestion, 0, maxPerformanceHints*4)
+	suggestions = appendReviewCaseSuggestions(suggestions, rows)
+	suggestions = appendFailureHeavySuggestions(suggestions, rows)
+	suggestions = appendPassthroughSuggestions(suggestions, missed)
+	return appendRegistryCostSuggestions(suggestions, buildRows)
+}
+
+func appendReviewCaseSuggestions(suggestions []filterPerformanceSuggestion, rows []metrics.PerformanceRow) []filterPerformanceSuggestion {
 	for _, row := range rows {
 		if row.Commands > 0 && row.PassthroughCommands < row.Commands && row.EstimatedSavingsPct < 5 {
 			suggestions = append(suggestions, filterPerformanceSuggestion{
@@ -349,6 +365,10 @@ func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []m
 			}
 		}
 	}
+	return suggestions
+}
+
+func appendFailureHeavySuggestions(suggestions []filterPerformanceSuggestion, rows []metrics.PerformanceRow) []filterPerformanceSuggestion {
 	for _, row := range rows {
 		if row.Commands > 0 && row.FailedRate >= 0.5 {
 			suggestions = append(suggestions, filterPerformanceSuggestion{
@@ -365,6 +385,10 @@ func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []m
 			}
 		}
 	}
+	return suggestions
+}
+
+func appendPassthroughSuggestions(suggestions []filterPerformanceSuggestion, missed []metrics.MissedOpportunity) []filterPerformanceSuggestion {
 	for _, row := range missed {
 		suggestions = append(suggestions, filterPerformanceSuggestion{
 			Kind:    "passthrough-opportunity",
@@ -373,6 +397,31 @@ func buildFilterPerformanceSuggestions(rows []metrics.PerformanceRow, missed []m
 			Reason:  "frequent passthrough command",
 		})
 		if countKind(suggestions, "passthrough-opportunity") == maxPerformanceHints {
+			break
+		}
+	}
+	return suggestions
+}
+
+func appendRegistryCostSuggestions(suggestions []filterPerformanceSuggestion, buildRows []metrics.RegistrySourceBuildRow) []filterPerformanceSuggestion {
+	sortedBuildRows := slices.Clone(buildRows)
+	sort.Slice(sortedBuildRows, func(i, j int) bool {
+		if sortedBuildRows[i].AvgDurationMS != sortedBuildRows[j].AvgDurationMS {
+			return sortedBuildRows[i].AvgDurationMS > sortedBuildRows[j].AvgDurationMS
+		}
+		return sortedBuildRows[i].SourceDir < sortedBuildRows[j].SourceDir
+	})
+	for _, row := range sortedBuildRows {
+		if row.Builds == 0 || row.AvgDurationMS <= 0 {
+			continue
+		}
+		suggestions = append(suggestions, filterPerformanceSuggestion{
+			Kind:    "registry-cost",
+			Command: row.SourceDir,
+			Count:   row.Builds,
+			Reason:  fmt.Sprintf("registry source averages %.1fms per build", row.AvgDurationMS),
+		})
+		if countKind(suggestions, "registry-cost") == maxPerformanceHints {
 			break
 		}
 	}
@@ -397,6 +446,7 @@ func printFilterPerformanceText(rows []metrics.PerformanceRow, buildSummary metr
 		title += compactFilterSuffix(filters)
 	}
 	fmt.Println(title)
+	fmt.Println("Measurement:", filterPerformanceMeasurement+".")
 	fmt.Println()
 	if len(rows) == 0 {
 		fmt.Println(noResultsMsg)
@@ -507,6 +557,8 @@ func printFilterPerformanceSuggestions(suggestions []filterPerformanceSuggestion
 	for _, suggestion := range suggestions {
 		fmt.Printf("- %s: %s\n", suggestion.Kind, suggestionText(suggestion))
 	}
+	fmt.Println()
+	fmt.Println("Capture checklist: reproduce with `ccp capture --dir <fixture> -- <command>`, inspect native streams, then run `ccp filter prompt <name>`.")
 }
 
 func suggestionText(suggestion filterPerformanceSuggestion) string {
@@ -515,6 +567,8 @@ func suggestionText(suggestion filterPerformanceSuggestion) string {
 		return fmt.Sprintf("%s%s (%s, %s runs)", suggestion.Filter, performanceCaseSuffix(suggestion.Case), suggestion.Reason, formatInt(suggestion.Count))
 	case "passthrough-opportunity":
 		return fmt.Sprintf("%s (%s runs, %s)", suggestion.Command, formatInt(suggestion.Count), suggestion.Reason)
+	case "registry-cost":
+		return fmt.Sprintf("%s (%s builds, %s)", displayFilter(suggestion.Command, "unknown source"), formatInt(suggestion.Count), suggestion.Reason)
 	default:
 		return suggestion.Reason
 	}

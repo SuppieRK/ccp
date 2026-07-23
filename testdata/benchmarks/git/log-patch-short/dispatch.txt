@@ -1,0 +1,1 @@
+git|log-explicit-short-representation-passthrough

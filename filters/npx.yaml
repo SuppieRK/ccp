@@ -2,9 +2,34 @@
 version: 1
 filter: npx
 about: Compact routed npx subcommands conservatively, keep unsupported and package-injection forms native, and preserve wrapper behavior instead of turning npx into a semantic rewrite layer.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--package", "-p"]
 
 cases:
+  - id: package-wrapper-passthrough
+    when_arguments:
+      first_in:
+        - --package
+        - -p
+    passthrough: true
+
+  - id: explicit-wrapper-or-child-output-passthrough
+    when_arguments:
+      have_any:
+        - --yes
+        - --no
+        - --call
+        - -c
+        - --reporter
+        - --format
+        - --output-file
+        - --output
+        - --json
+        - --watch
+        - --debug
+        - --inspect
+        - --interactive
+    passthrough: true
+
   - id: eslint
     when_arguments:
       first_is: eslint
@@ -94,6 +119,7 @@ cases:
           keep:
             - contains: "ExperimentalWarning:"
             - starts_with: "(Use `node --trace-warnings"
+            - regex: '^\s+at .+:\d+:\d+\)?$'
             - regex: '^application payload$'
 
   - id: tsc_diagnostics_pretty_false
@@ -130,13 +156,6 @@ cases:
               replace:
                 - regex: '^.*$'
                   to: '{{line}}:{{column}} {{code}} {{message}}'
-              max:
-                count: 6
-                print: "\n+{{value}}"
-        lines:
-          max:
-            count: 40
-            print: "\n{{value}} lines"
 
   - id: tsc_passthrough_unsupported
     when_arguments:
@@ -193,10 +212,3 @@ cases:
               replace:
                 - regex: '^.*$'
                   to: '{{line}}:{{column}} {{code}} {{message}}'
-              max:
-                count: 6
-                print: "\n+{{value}}"
-        lines:
-          max:
-            count: 40
-            print: "\n{{value}} lines"

@@ -1,0 +1,100 @@
+<skip>    | [INFO] Scanning for projects...
+<skip>    | [INFO] 
+<skip>    | [INFO] ------------< org-41:repo-41 >------------
+<skip>    | [INFO] Building repo-41 4.0.0-SNAPSHOT
+<skip>    | [INFO]   from pom.xml
+<skip>    | [INFO] --------------------------------[ jar ]---------------------------------
+<skip>    | [INFO] 
+<replace> | [INFO] --- enforcer:3.6.2:enforce (enforce-java) @ repo-41 ---
+<skip>    | [INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireJavaVersion passed
+<skip>    | [INFO] 
+<replace> | [INFO] --- spring-javaformat:0.0.47:validate (default) @ repo-41 ---
+<skip>    | [INFO] 
+<replace> | [INFO] --- checkstyle:3.6.0:check (nohttp-checkstyle-validation) @ repo-41 ---
+<skip>    | [INFO] You have 0 Checkstyle violations.
+<skip>    | [INFO] 
+<replace> | [INFO] --- jacoco:0.8.14:prepare-agent (default) @ repo-41 ---
+<skip>    | [INFO] argLine set to -javaagent:/home/user/.m2/repository/org/jacoco/org.jacoco.agent/0.8.14/org.jacoco.agent-0.8.14-runtime.jar=destfile=/workspace/src/repo-41/target/jacoco.exec
+<skip>    | [INFO] 
+<replace> | [INFO] --- git-commit-id:9.0.2:revision (default) @ repo-41 ---
+<skip>    | [INFO] dotGitDirectory '/workspace/src/repo-41/.git'
+<skip>    | [INFO] Collected git.build.user.name with value Repo User
+<skip>    | [INFO] Collected git.build.user.email with value user@example.com
+<skip>    | [INFO] Collected git.branch with value main
+<skip>    | [INFO] Collected git.commit.id.describe with value aaaaaaa
+<skip>    | [INFO] Collected git.commit.id.describe-short with value aaaaaaa
+<skip>    | [INFO] Collected git.commit.id with value aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+<skip>    | [INFO] Collected git.commit.id.abbrev with value aaaaaaa
+<skip>    | [INFO] Collected git.dirty with value false
+<skip>    | [INFO] Collected git.commit.user.name with value Commit Author
+<skip>    | [INFO] Collected git.commit.user.email with value author@example.com
+<skip>    | [INFO] Collected git.commit.message.full with value Redacted commit subject
+<keep>    | 
+<skip>    | Signed-off-by: Commit Author <author@example.com>
+<skip>    | [INFO] Collected git.commit.message.short with value Redacted commit subject
+<skip>    | [INFO] Collected git.commit.time with value 2026-03-11T08:09:31+01:00
+<skip>    | [INFO] Collected git.commit.author.time with value 2026-03-07T18:53:21+01:00
+<skip>    | [INFO] Collected git.commit.committer.time with value 2026-03-11T08:09:31+01:00
+<skip>    | [INFO] Collected git.remote.origin.url with value https://github.com/org-41/repo-41.git
+<skip>    | [INFO] Collected git.tags with value 
+<skip>    | [INFO] Collected git.tag with value 
+<skip>    | [INFO] Collected git.closest.tag.name with value 
+<skip>    | [INFO] Collected git.closest.tag.commit.count with value 
+<skip>    | [INFO] Collected git.total.commit.count with value 1
+<skip>    | [INFO] Collected git.local.branch.ahead with value 0
+<skip>    | [INFO] Collected git.local.branch.behind with value 0
+<skip>    | [INFO] Collected git.build.time with value 2024-11-28T15:37:52+01:00
+<skip>    | [INFO] Collected git.build.version with value 4.0.0-SNAPSHOT
+<skip>    | [INFO] Collected git.build.host with value build-host
+<skip>    | [INFO] including property 'git.tags' in results
+<skip>    | [INFO] including property 'git.build.version' in results
+<skip>    | [INFO] including property 'git.branch' in results
+<skip>    | [INFO] including property 'git.build.host' in results
+<skip>    | [INFO] including property 'git.commit.id' in results
+<skip>    | [INFO] including property 'git.commit.user.email' in results
+<skip>    | [INFO] including property 'git.local.branch.behind' in results
+<skip>    | [INFO] including property 'git.commit.author.time' in results
+<skip>    | [INFO] including property 'git.build.user.name' in results
+<skip>    | [INFO] including property 'git.dirty' in results
+<skip>    | [INFO] including property 'git.closest.tag.commit.count' in results
+<skip>    | [INFO] including property 'git.commit.user.name' in results
+<skip>    | [INFO] including property 'git.commit.id.abbrev' in results
+<skip>    | [INFO] including property 'git.commit.id.describe-short' in results
+<skip>    | [INFO] including property 'git.total.commit.count' in results
+<skip>    | [INFO] including property 'git.commit.id.describe' in results
+<skip>    | [INFO] including property 'git.build.user.email' in results
+<skip>    | [INFO] including property 'git.commit.message.short' in results
+<skip>    | [INFO] including property 'git.commit.committer.time' in results
+<skip>    | [INFO] including property 'git.tag' in results
+<skip>    | [INFO] including property 'git.closest.tag.name' in results
+<skip>    | [INFO] including property 'git.local.branch.ahead' in results
+<skip>    | [INFO] including property 'git.commit.time' in results
+<skip>    | [INFO] including property 'git.build.time' in results
+<skip>    | [INFO] including property 'git.commit.message.full' in results
+<skip>    | [INFO] including property 'git.remote.origin.url' in results
+<skip>    | [INFO] Reading existing properties file [/workspace/src/repo-41/target/classes/git.properties] (for project repo-41)...
+<skip>    | [INFO] Writing properties file [/workspace/src/repo-41/target/classes/git.properties] (for project repo-41)...
+<skip>    | [INFO] 
+<replace> | [INFO] --- spring-boot:4.0.3:build-info (default) @ repo-41 ---
+<skip>    | [INFO] 
+<replace> | [INFO] --- cyclonedx:2.9.1:makeAggregateBom (default) @ repo-41 ---
+<skip>    | [INFO] CycloneDX: Resolving Dependencies
+<skip>    | [INFO] CycloneDX: Creating BOM version 1.6 with 108 component(s)
+<skip>    | [INFO] CycloneDX: Writing and validating BOM (JSON): /workspace/src/repo-41/target/classes/META-INF/sbom/application.cdx.json
+<keep>    | [WARNING] Unknown keyword meta:enum - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+<keep>    | [WARNING] Unknown keyword deprecated - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+<skip>    | [INFO]            attaching as repo-41-4.0.0-SNAPSHOT-cyclonedx.json
+<skip>    | [INFO] 
+<replace> | [INFO] --- resources:3.3.1:resources (default-resources) @ repo-41 ---
+<skip>    | [INFO] Copying 3 resources from src/main/resources to target/classes
+<skip>    | [INFO] Copying 45 resources from src/main/resources to target/classes
+<skip>    | [INFO] 
+<replace> | [INFO] --- compiler:3.14.1:compile (default-compile) @ repo-41 ---
+<skip>    | [INFO] Recompiling the module because of changed source code.
+<skip>    | [INFO] Compiling 30 source files with javac [debug parameters release 17] to target/classes
+<skip>    | [INFO] ------------------------------------------------------------------------
+<replace> | [INFO] BUILD SUCCESS
+<skip>    | [INFO] ------------------------------------------------------------------------
+<skip>    | [INFO] Total time:  4.374 s
+<skip>    | [INFO] Finished at: 2026-03-15T07:54:35+01:00
+<skip>    | [INFO] ------------------------------------------------------------------------

@@ -340,6 +340,7 @@ var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
 		}
 		return nil
 	},
+	VerifyHook: verifyBashRewriteHook,
 	UninstallSettings: func(settingsPath, hookPath string) (InstallResult, error) {
 		changed, err := removePreToolUseCommandHook(settingsPath, hookPath)
 		if err != nil {

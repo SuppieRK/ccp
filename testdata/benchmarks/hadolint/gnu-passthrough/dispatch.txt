@@ -1,0 +1,1 @@
+hadolint|passthrough_alt_formats

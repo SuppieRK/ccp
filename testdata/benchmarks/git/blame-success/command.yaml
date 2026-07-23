@@ -1,1 +1,2 @@
 argv: ["git", "blame", "tracked.txt"]
+exit_code: 0

@@ -12,5 +12,5 @@
 4:7 TS2322 Type 'string' is not assignable to type 'number'.
 5:7 TS2322 Type 'string' is not assignable to type 'number'.
 6:7 TS2322 Type 'string' is not assignable to type 'number'.
-
-+2
+7:7 TS2322 Type 'string' is not assignable to type 'number'.
+8:7 TS2322 Type 'string' is not assignable to type 'number'.

@@ -1,0 +1,2 @@
+argv: ["poetry", "install", "--dry-run"]
+exit_code: 0

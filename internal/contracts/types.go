@@ -9,11 +9,19 @@ const (
 )
 
 type Command struct {
-	CommandID string
-	RawInput  string
-	Args      []string
-	Tool      string
-	Dispatch  string
+	CommandID    string
+	RawInput     string
+	Args         []string
+	MatchingArgs []string
+	Tool         string
+	Dispatch     string
+}
+
+func (c Command) ArgsForMatching() []string {
+	if c.MatchingArgs != nil {
+		return c.MatchingArgs
+	}
+	return c.Args
 }
 
 type FilterProvenance struct {

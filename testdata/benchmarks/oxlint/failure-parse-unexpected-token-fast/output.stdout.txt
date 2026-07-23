@@ -1,0 +1,8 @@
+  x Unexpected token
+   ,-[file:///workspace/src/repo-51/src/index.ts:2:1]
+ 1 | export const broken =
+ 2 | export * from './cli/index.js';
+   : ^^^^^^
+ 3 | export * from './core/index.js';
+   `----
+Found 0 warnings and 1 error.

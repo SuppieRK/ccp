@@ -1,0 +1,19 @@
+<skip>    | turbo 2.0.6
+<skip>    | 
+<skip>    | • Packages in scope: web, shared-ui
+<skip>    | • Running build in 2 packages
+<skip>    | • Remote caching disabled
+<skip>    | 
+<keep>    | shared-ui:build: cache miss, executing 71f2a08b
+<keep>    | shared-ui:build: vite v6.3.1 building for production...
+<keep>    | shared-ui:build: ✓ 4 modules transformed.
+<keep>    | web:build: cache miss, executing 10bc5aa2
+<keep>    | web:build: error: Cannot find module './missing'
+<keep>    | web:build: command finished with error Error: command (/repo/apps/web) pnpm run build exited (1)
+<skip>    | 
+<replace> |  Tasks:    1 successful, 2 total
+<skip>    |  Cached:   0 cached, 2 total
+<skip>    |  Time:     1.904s
+<skip>    | Failed:    web#build
+<skip>    | 
+<keep>    |  ERROR  run failed: command  exited (1)

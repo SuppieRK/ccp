@@ -1,1 +1,2 @@
 argv: ["vitest", "run", "src/ui/filter-bar.test.ts"]
+exit_code: 1

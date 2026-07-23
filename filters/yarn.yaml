@@ -5,6 +5,19 @@ about: Compact Yarn Classic script-run boilerplate for explicit run flows while 
 flags_consuming_next_arg: ["--cwd"]
 
 cases:
+  - id: interactive-or-explicit-output-passthrough
+    when_arguments:
+      have_any:
+        - --interactive
+        - --json
+        - --verbose
+        - --silent
+        - --non-interactive
+        - --mutex
+        - --emoji
+        - --no-emoji
+    passthrough: true
+
   - id: run
     when_arguments:
       first_is: run

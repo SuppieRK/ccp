@@ -1,0 +1,27 @@
+<keep>    | {
+<keep>    |   "version": 1,
+<keep>    |   "diagnostics": [
+<keep>    |     {
+<keep>    |       "filename": "file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/benchmarks/deno/projects/structured/lint_target.ts",
+<keep>    |       "range": {
+<keep>    |         "start": {
+<keep>    |           "line": 1,
+<keep>    |           "col": 6,
+<keep>    |           "bytePos": 6
+<keep>    |         },
+<keep>    |         "end": {
+<keep>    |           "line": 1,
+<keep>    |           "col": 17,
+<keep>    |           "bytePos": 17
+<keep>    |         }
+<keep>    |       },
+<keep>    |       "message": "`unusedValue` is never used",
+<keep>    |       "code": "no-unused-vars",
+<keep>    |       "hint": "If this is intentional, prefix it with an underscore like `_unusedValue`"
+<keep>    |     }
+<keep>    |   ],
+<keep>    |   "errors": [],
+<keep>    |   "checked_files": [
+<keep>    |     "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/benchmarks/deno/projects/structured/lint_target.ts"
+<keep>    |   ]
+<keep>    | }

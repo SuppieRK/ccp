@@ -1,1 +1,2 @@
 argv: ["tflint", "--no-color"]
+exit_code: 0

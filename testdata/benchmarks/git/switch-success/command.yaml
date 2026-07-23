@@ -1,1 +1,2 @@
 argv: ["git", "switch", "feature"]
+exit_code: 0

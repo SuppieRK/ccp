@@ -2,12 +2,12 @@
 version: 1
 filter: playwright
 about: Compact native Playwright test summaries conservatively, preserve failed spec selectors and startup parser guidance, and keep reporter modes passthrough.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--config", "--grep", "--grep-invert", "--output", "--project", "--reporter", "--shard", "--timeout", "--workers"]
 
 cases:
   - id: reporter_passthrough
     when_arguments:
-      have_any: ["--reporter", "--reporter=json"]
+      have_any: ["--reporter", "--output", "--ui", "--debug", "--headed", "--trace"]
     passthrough: true
 
   - id: test_summary

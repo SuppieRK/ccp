@@ -1,0 +1,7 @@
+<replace> | --- FAIL: TestGlobalHistorySource (0.00s)
+<replace> |     gain_test.go:405: source field mismatch
+<replace> |         expected: /tmp/lifecycle/repo-one
+<replace> |         actual: /tmp/lifecycle/repo
+<replace> |     gain_test.go:406: source field should include repo tail
+<skip>    | FAIL
+<keep>    | FAIL	fixture-go-test	0.001s

@@ -5,6 +5,22 @@ about: Trim Maven info-level boilerplate aggressively, keep build phases and war
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-output-or-debug-passthrough
+    when_arguments:
+      have_any:
+        - --quiet
+        - -q
+        - --debug
+        - -X
+        - --errors
+        - -e
+        - --log-file
+        - -l
+        - --batch-mode
+        - -B
+        - --no-transfer-progress
+    passthrough: true
+
   - id: maven_output
     compress_output:
       combined:

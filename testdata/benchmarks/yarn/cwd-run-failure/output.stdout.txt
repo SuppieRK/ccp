@@ -1,0 +1,4 @@
+yarn run v1.22.22
+$ node scripts/failure.js
+failure-line
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

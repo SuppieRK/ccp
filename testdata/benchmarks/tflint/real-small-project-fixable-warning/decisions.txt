@@ -1,0 +1,6 @@
+<skip>    | 1 issue(s) found:
+<skip>    | 
+<keep>    | Warning: [Fixed] variable "aws_region" is declared but not used (terraform_unused_declarations)
+<keep>    |   on variables.tf line 6:
+<keep>    |    6: variable "aws_region" {
+<skip>    | Reference: https://github.com/terraform-linters/tflint-ruleset-terraform/blob/v0.8.0/docs/rules/terraform_unused_declarations.md

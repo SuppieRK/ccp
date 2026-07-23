@@ -5,6 +5,21 @@ about: Compact default `ty` type-checker output by dropping version, file-count,
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-output-or-diagnostic-passthrough
+    when_arguments:
+      have_any:
+        - --output-format
+        - --format
+        - --json
+        - --verbose
+        - -v
+        - --quiet
+        - -q
+        - --watch
+        - --error-on-warning
+        - --show-settings
+    passthrough: true
+
   - id: ty
     compress_output:
       combined:

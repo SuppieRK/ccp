@@ -1,1 +1,2 @@
 argv: ["tflint", "--config=./.tflint.hcl", "--no-color"]
+exit_code: 1

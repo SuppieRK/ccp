@@ -1,0 +1,2 @@
+# fixture-go-build-failure
+./main.go:6:10: undefined: lib.BrokenValue

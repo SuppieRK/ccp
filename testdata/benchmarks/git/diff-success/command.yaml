@@ -1,1 +1,2 @@
 argv: ["git", "diff"]
+exit_code: 0

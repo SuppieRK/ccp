@@ -1,0 +1,20 @@
+<skip>    |  RUN  v3.0.0 /workspace/app
+<skip>    | 
+<keep>    |  ❯ test/example.test.ts (1 test | 1 failed) 8ms
+<keep>    |    × an example of a test with annotation 8ms
+<keep>    |      → expected 1 to be 2
+<skip>    | 
+<skip>    |  ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+<skip>    | 
+<keep>    |   FAIL  test/example.test.ts > an example of a test with annotation
+<keep>    |  AssertionError: expected 1 to be 2
+<keep>    |    ❯ test/example.test.ts:11:21
+<keep>    |      9 |   expect(1).toBe(1)
+<keep>    |     10 | })
+<keep>    |     11 |   expect(1).toBe(2)
+<keep>    |        |            ^
+<skip>    | 
+<replace> |   Test Files  1 failed (1)
+<replace> |        Tests  1 failed (1)
+<skip>    |     Start at  11:01:36
+<skip>    |     Duration  2.00s (transform 35ms, setup 1ms, collect 90ms, tests 8ms, environment 0ms, prepare 267ms)

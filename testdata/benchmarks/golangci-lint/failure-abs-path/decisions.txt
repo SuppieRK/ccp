@@ -1,0 +1,11 @@
+<skip>    | /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/golangci-lint-demo/main.go:6:12: Error return value of `fmt.Errorf` is not checked (errcheck)
+<skip>    | 	fmt.Errorf("ignored")
+<skip>    | 	          ^
+<skip>    | /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/golangci-lint-demo/util.go:6:12: Error return value of `fmt.Errorf` is not checked (errcheck)
+<skip>    | 	fmt.Errorf("helper ignored")
+<skip>    | /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/golangci-lint-demo/main.go:7:14: printf: fmt.Printf format %d has arg "wrong" of wrong type string (govet)
+<skip>    | 	fmt.Printf("%d", "wrong")
+<skip>    | 	            ^
+<skip>    | 3 issues:
+<skip>    | * errcheck: 2
+<skip>    | * govet: 1

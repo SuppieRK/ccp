@@ -1,0 +1,20 @@
+<keep>    | warning: The following rules have been removed and ignoring them has no effect:
+<keep>    |     - UP038
+<keep>    | 
+<keep>    | invalid-syntax: Expected a parameter or the end of the parameter list
+<keep>    |  --> src/requests/_ruff_corpus_broken.py:1:12
+<keep>    |   |
+<keep>    | 1 | def broken(:
+<keep>    |   |            ^
+<keep>    | 2 |     pass
+<keep>    |   |
+<keep>    | 
+<keep>    | invalid-syntax: Expected `)`, found newline
+<keep>    |  --> src/requests/_ruff_corpus_broken.py:1:13
+<keep>    |   |
+<keep>    | 1 | def broken(:
+<keep>    |   |             ^
+<keep>    | 2 |     pass
+<keep>    |   |
+<keep>    | 
+<keep>    | Found 2 errors.

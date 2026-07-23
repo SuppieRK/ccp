@@ -1,0 +1,1 @@
+gradle|explicit-diagnostic-or-interactive-passthrough

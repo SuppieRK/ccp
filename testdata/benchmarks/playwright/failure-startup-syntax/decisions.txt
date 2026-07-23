@@ -1,0 +1,22 @@
+<keep>    | SyntaxError: /workspace/src/repo-54/packages/playwright-mcp/tests/capabilities.spec.ts: Unexpected token, expected "," (17:22)
+<skip>    | 
+<keep>    |   15 |  */
+<skip>    |   16 |
+<keep>    | > 17 | import { test, expect from './fixtures';
+<keep>    |      |                       ^
+<skip>    |   18 |
+<keep>    |   19 | test('test snapshot tool list', async ({ client }) => {
+<keep>    |   20 |   const { tools } = await client.listTools();
+<skip>    | 
+<keep>    |    at capabilities.spec.ts:17
+<skip>    | 
+<keep>    |   15 |  */
+<skip>    |   16 |
+<keep>    | > 17 | import { test, expect from './fixtures';
+<keep>    |      |                      ^
+<skip>    |   18 |
+<keep>    |   19 | test('test snapshot tool list', async ({ client }) => {
+<keep>    |   20 |   const { tools } = await client.listTools();
+<keep>    | Error: No tests found.
+<keep>    | Make sure that arguments are regular expressions matching test files.
+<keep>    | You may need to escape symbols like "$" or "*" and quote the arguments.

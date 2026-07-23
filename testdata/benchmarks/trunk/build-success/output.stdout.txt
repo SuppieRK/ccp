@@ -1,0 +1,2 @@
+   Finished release [optimized] target(s) in 45.23s
+   Binary: target/release/my-crate (5.2MB)

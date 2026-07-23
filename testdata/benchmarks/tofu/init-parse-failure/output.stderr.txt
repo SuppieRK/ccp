@@ -1,0 +1,5 @@
+Error: Unclosed configuration block
+  on main.tf line 1, in terraform:
+   1: terraform {
+There is no closing brace for this block before the end of the file. This may
+be caused by incorrect brace nesting elsewhere in this file.

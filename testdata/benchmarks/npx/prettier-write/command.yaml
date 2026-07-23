@@ -1,1 +1,2 @@
 argv: ["npx", "prettier", "--write", "src/write_bad.js"]
+exit_code: 0

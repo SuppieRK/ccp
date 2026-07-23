@@ -1,1 +1,2 @@
 argv: ["find", "internal", "cmd", "-name", "*.go", "-type", "f"]
+exit_code: 0

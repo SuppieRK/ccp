@@ -1,0 +1,2 @@
+argv: ["pnpm", "list", "--json"]
+exit_code: 0

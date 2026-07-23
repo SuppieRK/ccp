@@ -1,1 +1,2 @@
 argv: ["ls", "-l", "testdata/benchmarks/ls/_fixture-tree/path-one"]
+exit_code: 0

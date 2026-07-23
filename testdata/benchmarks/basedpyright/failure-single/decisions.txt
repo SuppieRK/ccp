@@ -1,0 +1,4 @@
+<keep>    | /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py
+<skip>    |   /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py:1:1 - warning: Type of "value" is unknown (reportUnknownVariableType)
+<skip>    |   /workspace/src/repo-68/testdata/tool-fixtures/pip/projects/basic/localpkg/localpkg/_ccp_basedpyright_name_error.py:1:9 - error: "missing_name" is not defined (reportUndefinedVariable)
+<keep>    | 1 error, 1 warning, 0 notes

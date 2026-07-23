@@ -1,0 +1,6 @@
+<skip>    | Analyzing dart-demo-bad...
+<skip>    | 
+<replace> |   error - main.dart:3:10 - A value of type 'String' can't be returned from the function 'answer' because it has a return type of 'int'. - return_of_invalid_type
+<replace> | warning - main.dart:2:7 - The value of the local variable 'unused' isn't used. Try removing the variable or using it. - unused_local_variable
+<skip>    | 
+<replace> | 2 issues found.

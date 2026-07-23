@@ -49,17 +49,16 @@ cases:
   - id: test_reporter_json_passthrough
     when_arguments:
       first_is: test
-      have_sequence:
+      have_any:
         - -r
-        - json
     passthrough: true
 
   - id: test_reporter_json_long_passthrough
     when_arguments:
       first_is: test
-      have_sequence:
+      have_any:
         - --reporter
-        - json
+        - --file-reporter
     passthrough: true
 
   - id: test

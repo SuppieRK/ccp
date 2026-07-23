@@ -1,1 +1,2 @@
 argv: ["ls", "-l", "--dired", "testdata/benchmarks/ls/_fixture-tree"]
+exit_code: 0

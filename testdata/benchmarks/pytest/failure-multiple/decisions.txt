@@ -1,0 +1,29 @@
+<skip>    | FF                                                                       [100%]
+<skip>    | =================================== FAILURES ===================================
+<skip>    | __________________________________ test_fail ___________________________________
+<skip>    | 
+<skip>    |     def test_fail():
+<skip>    |         print("captured stdout call")
+<skip>    |         left = {"ok": False}
+<skip>    |         right = {"ok": True}
+<skip>    | >       assert left == right
+<skip>    | E       AssertionError: assert {'ok': False} == {'ok': True}
+<skip>    | E         
+<skip>    | E         Differing items:
+<skip>    | E         {'ok': False} != {'ok': True}
+<skip>    | E         Use -v to get more diff
+<skip>    | 
+<skip>    | tests/test_app.py:10: AssertionError
+<skip>    | ----------------------------- Captured stdout call -----------------------------
+<skip>    | captured stdout call
+<skip>    | ______________________ test_can_access_urllib3_attribute _______________________
+<skip>    | 
+<skip>    |     def test_can_access_urllib3_attribute():
+<skip>    | >       requests.packages.does_not_exist
+<skip>    | E       AttributeError: module 'requests.packages' has no attribute 'does_not_exist'
+<skip>    | 
+<skip>    | tests/test_packages.py:5: AttributeError
+<skip>    | =========================== short test summary info ============================
+<skip>    | FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
+<skip>    | FAILED tests/test_packages.py::test_can_access_urllib3_attribute - AttributeE...
+<skip>    | 2 failed in 0.02s

@@ -1,1 +1,2 @@
 argv: ["nx", "run-many", "-t", "build", "-p", "web,shared-ui"]
+exit_code: 1

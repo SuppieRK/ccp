@@ -1,0 +1,1 @@
+npx|package-wrapper-passthrough

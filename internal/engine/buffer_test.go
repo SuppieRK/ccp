@@ -20,42 +20,56 @@ var _ = Describe("OrderedBuffer", func() {
 		Expect(buffer.Joined(contracts.StreamStderr)).To(Equal("b\n"))
 	})
 
-	It("intentionally drops duplicate keys within one stream", func() {
+	It("preserves adjacent duplicate records within one stream", func() {
 		buffer := engine.NewOrderedBuffer()
 		Expect(buffer.Add(contracts.StreamStdout, "x\n")).To(BeTrue())
-		Expect(buffer.Add(contracts.StreamStdout, "x\n")).To(BeFalse())
-		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("x\n"))
+		Expect(buffer.Add(contracts.StreamStdout, "x\n")).To(BeTrue())
+		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("x\nx\n"))
 	})
 
-	It("dedupes within one stream but keeps the same line across different streams", func() {
+	It("preserves multiplicity independently across streams", func() {
 		buffer := engine.NewOrderedBuffer()
 
 		Expect(buffer.Add(contracts.StreamStdout, "same\n")).To(BeTrue())
-		Expect(buffer.Add(contracts.StreamStdout, "same\n")).To(BeFalse())
+		Expect(buffer.Add(contracts.StreamStdout, "same\n")).To(BeTrue())
 		Expect(buffer.Add(contracts.StreamStderr, "same\n")).To(BeTrue())
 
-		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("same\n"))
+		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("same\nsame\n"))
 		Expect(buffer.Joined(contracts.StreamStderr)).To(Equal("same\n"))
 	})
 
-	It("skips blank lines", func() {
+	It("preserves zero-length and blank records", func() {
 		buffer := engine.NewOrderedBuffer()
 
-		Expect(buffer.Add(contracts.StreamStdout, "")).To(BeFalse())
-		Expect(buffer.Add(contracts.StreamStdout, "   \t")).To(BeFalse())
-		Expect(buffer.Add(contracts.StreamStdout, "\n")).To(BeFalse())
-		Expect(buffer.Len()).To(Equal(0))
-		Expect(buffer.Joined(contracts.StreamStdout)).To(BeEmpty())
+		Expect(buffer.Add(contracts.StreamStdout, "")).To(BeTrue())
+		Expect(buffer.Add(contracts.StreamStdout, "   \t")).To(BeTrue())
+		Expect(buffer.Add(contracts.StreamStdout, "\n")).To(BeTrue())
+		Expect(buffer.Len()).To(Equal(3))
+		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("   \t\n"))
 	})
 
-	It("strips ANSI sequences before buffering and deduping", func() {
+	It("preserves ANSI sequences as original output bytes", func() {
 		buffer := engine.NewOrderedBuffer()
 
 		Expect(buffer.Add(contracts.StreamStdout, "\x1b[31mred\x1b[0m\n")).To(BeTrue())
-		Expect(buffer.Add(contracts.StreamStdout, "red\n")).To(BeFalse())
+		Expect(buffer.Add(contracts.StreamStdout, "red\n")).To(BeTrue())
 
-		Expect(buffer.Lines(contracts.StreamStdout)).To(Equal([]string{"red\n"}))
-		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("red\n"))
+		Expect(buffer.Lines(contracts.StreamStdout)).To(Equal([]string{"\x1b[31mred\x1b[0m\n", "red\n"}))
+		Expect(buffer.Joined(contracts.StreamStdout)).To(Equal("\x1b[31mred\x1b[0m\nred\n"))
+	})
+
+	It("records sequence, original bytes, transformed bytes, and newline state", func() {
+		buffer := engine.NewOrderedBuffer()
+		buffer.AddAt(7, contracts.StreamStderr, []byte("before\r"), []byte("after"))
+
+		Expect(buffer.Entries()).To(Equal([]engine.BufferEntry{{
+			Sequence:    7,
+			Stream:      contracts.StreamStderr,
+			Original:    []byte("before\r"),
+			Transformed: []byte("after"),
+			Line:        "after",
+			Newline:     false,
+		}}))
 	})
 
 	It("recomputes joined output after add and clear", func() {

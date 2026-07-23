@@ -1,0 +1,23 @@
+<skip>    |  RUN  v3.2.4 /workspace/todo-lite
+<skip>    | 
+<keep>    |  ❯ src/ui/filter-bar.test.ts (2 tests | 1 failed) 14ms
+<keep>    |    × keeps "all" selected by default 7ms
+<keep>    |      → expected "completed" to be "all" // Object.is equality
+<keep>    |    ✓ renders the remaining filters 2ms
+<skip>    | 
+<skip>    |  ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+<skip>    | 
+<keep>    |   FAIL  src/ui/filter-bar.test.ts > filter bar > keeps "all" selected by default
+<keep>    |  AssertionError: expected "completed" to be "all" // Object.is equality
+<keep>    |  Expected: "all"
+<keep>    |  Received: "completed"
+<keep>    |    ❯ src/ui/filter-bar.test.ts:27:29
+<keep>    |      25 |   renderFilterBar({ selected: 'completed' })
+<keep>    |      26 |   const active = screen.getByRole('button', { name: 'All' })
+<keep>    |      27 |   expect(active.dataset.state).toBe('all')
+<keep>    |         |                             ^
+<skip>    | 
+<replace> |   Test Files  1 failed (1)
+<replace> |        Tests  1 failed | 1 passed (2)
+<skip>    |     Start at  09:15:03
+<skip>    |     Duration  1.32s (transform 71ms, setup 0ms, collect 122ms, tests 14ms, environment 0ms, prepare 197ms)

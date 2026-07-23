@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("hook settings family", func() {
 		),
 		ginkgo.Entry("codebuddy rewrite",
 			hookScript{name: "codebuddy", scriptName: codebuddyHookScriptName, logName: "ccp-codebuddy-hook.log", content: bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")},
-			hookCase{input: `{"tool_input":{"command":"pwd && ls"}}`, withCCP: true, wantCommand: "ccp pwd && ccp ls"},
+			hookCase{input: `{"tool_input":{"command":"git status && ls"}}`, withCCP: true, wantCommand: "ccp git status && ccp ls"},
 		),
 	)
 

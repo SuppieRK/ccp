@@ -1,1 +1,2 @@
 argv: ["dart", "test", "-r", "json", "test/success_test.dart"]
+exit_code: 0

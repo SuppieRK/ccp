@@ -32,6 +32,7 @@ var (
 	upgradeRuntimeOS      = func() string { return runtime.GOOS }
 	upgradeRuntimeArch    = func() string { return runtime.GOARCH }
 	upgradeRunRepair      = runInstalledRepair
+	upgradeValidateStaged = validateStagedBinaryVersion
 )
 
 type githubRelease struct {
@@ -107,6 +108,9 @@ func RunUpgrade(args []string) error {
 	if err != nil {
 		return fmt.Errorf("download/verify/extract upgrade asset: %w; manual download: %s", err, manualURL)
 	}
+	if err := upgradeValidateStaged(srcPath, tag); err != nil {
+		return fmt.Errorf("validate staged upgrade binary: %w", err)
+	}
 
 	return installUpgradeBinary(srcPath, assetName, tag)
 }
@@ -116,28 +120,12 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	if err != nil {
 		return err
 	}
-	backupPath, err := backupBinaryPath(exePath)
-	if err != nil {
-		return err
-	}
-	if err := upgradeReplaceBinary(backupPath, exePath); err != nil {
-		return fmt.Errorf("backup existing binary: %w", err)
-	}
-	restoreBackup := true
-	defer func() {
-		if restoreBackup {
-			_ = upgradeReplaceBinary(exePath, backupPath)
-		}
-		_ = os.Remove(backupPath)
-	}()
-
 	if err := upgradeReplaceBinary(exePath, srcPath); err != nil {
 		return err
 	}
 	if err := ensureUpgradeExecutablePermissions(exePath); err != nil {
 		return err
 	}
-	restoreBackup = false
 	repairMode := repairModeRewrite
 	if err := upgradeRunRepair(exePath, repairMode); err != nil {
 		return fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", err, repairMode.flag())
@@ -349,7 +337,8 @@ func replaceBinary(dest, src string) (err error) {
 	}
 
 	tmp := dest + ".new"
-	df, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+	_ = os.Remove(tmp)
+	df, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
 	if err != nil {
 		return err
 	}
@@ -358,8 +347,17 @@ func replaceBinary(dest, src string) (err error) {
 		if !dfClosed {
 			closeWithErr(df, &err)
 		}
+		if removeErr := os.Remove(tmp); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, removeErr)
+		}
 	}()
 	if _, err := io.Copy(df, sf); err != nil {
+		return err
+	}
+	if err := df.Chmod(info.Mode().Perm()); err != nil {
+		return err
+	}
+	if err := df.Sync(); err != nil {
 		return err
 	}
 	if err := df.Close(); err != nil {
@@ -370,13 +368,22 @@ func replaceBinary(dest, src string) (err error) {
 	if err := os.Rename(tmp, dest); err != nil {
 		return err
 	}
-	if err := os.Chmod(dest, info.Mode()); err != nil {
-		return err
-	}
-	if err := os.Remove(filepath.Clean(tmp)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := syncUpgradeDirectory(filepath.Dir(dest)); err != nil {
 		return err
 	}
 	return nil
+}
+
+func syncUpgradeDirectory(dir string) (err error) {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	file, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer closeWithErr(file, &err)
+	return file.Sync()
 }
 
 func closeWithErr(c io.Closer, retErr *error) {
@@ -386,20 +393,34 @@ func closeWithErr(c io.Closer, retErr *error) {
 }
 
 func extractBinaryFromZip(files []*zip.File, binaryName, tmpDir string) (string, error) {
+	var selected *zip.File
 	for _, f := range files {
-		if filepath.Base(f.Name) != binaryName {
+		name := filepath.ToSlash(f.Name)
+		if filepath.IsAbs(f.Name) || strings.HasPrefix(name, "/") || strings.Contains(name, "../") || strings.Contains(name, `\`) {
+			return "", fmt.Errorf("unsafe archive entry %q", f.Name)
+		}
+		if f.Mode()&os.ModeSymlink != 0 || (!f.FileInfo().Mode().IsRegular() && !f.FileInfo().IsDir()) {
+			return "", fmt.Errorf("archive entry %q is not a regular file", f.Name)
+		}
+		if name != binaryName {
 			continue
 		}
-		dstPath := filepath.Join(tmpDir, binaryName)
-		if err := copyZipFileToPath(f, dstPath); err != nil {
-			return "", err
+		if selected != nil {
+			return "", fmt.Errorf("archive contains duplicate binary entry %q", binaryName)
 		}
-		if err := ensureExecutableIfNeeded(dstPath); err != nil {
-			return "", err
-		}
-		return dstPath, nil
+		selected = f
 	}
-	return "", fmt.Errorf("binary %s not found in archive", binaryName)
+	if selected == nil {
+		return "", fmt.Errorf("binary %s not found in archive", binaryName)
+	}
+	dstPath := filepath.Join(tmpDir, binaryName)
+	if err := copyZipFileToPath(selected, dstPath); err != nil {
+		return "", err
+	}
+	if err := ensureExecutableIfNeeded(dstPath); err != nil {
+		return "", err
+	}
+	return dstPath, nil
 }
 
 func copyZipFileToPath(f *zip.File, dstPath string) (err error) {
@@ -426,10 +447,17 @@ func ensureExecutableIfNeeded(path string) error {
 	return os.Chmod(path, 0o755)
 }
 
-func backupBinaryPath(exePath string) (string, error) {
-	dir := filepath.Dir(exePath)
-	base := filepath.Base(exePath)
-	return filepath.Join(dir, fmt.Sprintf("%s.backup.%d", base, time.Now().UnixNano())), nil
+func validateStagedBinaryVersion(path, expected string) error {
+	cmd := exec.Command(path, "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("run staged --version: %w", err)
+	}
+	actual := strings.TrimSpace(string(output))
+	if actual != expected {
+		return fmt.Errorf("staged version %q does not match requested %q", actual, expected)
+	}
+	return nil
 }
 
 func runInstalledRepair(exePath string, mode repairMode) error {

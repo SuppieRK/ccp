@@ -1,0 +1,2 @@
+argv: ["ls", "-l", "--sort=size"]
+exit_code: 0

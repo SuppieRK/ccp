@@ -1,1 +1,2 @@
 argv: ["ls", "-la"]
+exit_code: 0

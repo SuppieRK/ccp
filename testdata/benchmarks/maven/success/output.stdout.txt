@@ -1,0 +1,6 @@
+example : resources
+example : compile
+example : testResources
+example : testCompile
+example : test
+BUILD SUCCESS

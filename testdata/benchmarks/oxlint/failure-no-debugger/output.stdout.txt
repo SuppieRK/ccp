@@ -1,0 +1,8 @@
+  x eslint(no-debugger): `debugger` statement is not allowed
+   ,-[file:///workspace/src/repo-51/src/index.ts:1:1]
+ 1 | debugger;
+   : ^^^^^^^^^
+ 2 | export * from './cli/index.js';
+   `----
+  help: Remove the debugger statement
+Found 0 warnings and 1 error.

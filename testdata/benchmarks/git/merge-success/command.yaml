@@ -1,1 +1,2 @@
 argv: ["git", "merge", "--ff-only", "feature"]
+exit_code: 0

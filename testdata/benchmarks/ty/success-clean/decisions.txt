@@ -1,0 +1,4 @@
+<skip>    | ty 0.1.0
+<skip>    | Checking 10 files
+<skip>    | 
+<keep>    | All checks passed!

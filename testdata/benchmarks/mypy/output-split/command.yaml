@@ -1,0 +1,2 @@
+argv: ["mypy", "--output", "report.txt", "src"]
+exit_code: 0

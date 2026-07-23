@@ -1,0 +1,1 @@
+<replace> | ?   	fixture-go-notest/pkg	[no test files]

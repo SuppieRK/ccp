@@ -1,1 +1,2 @@
 argv: ["ls", "src", "docs"]
+exit_code: 0

@@ -1,0 +1,1 @@
+Linking .pio/build/esp32dev/firmware.elf
