@@ -18,14 +18,6 @@ cases:
         - --format=freeze
     passthrough: true
 
-  - id: list_freeze_passthrough_split
-    when_arguments:
-      have_sequence:
-        - list
-        - --format
-        - freeze
-    passthrough: true
-
   - id: list_outdated
     variables:
       - name: packages

@@ -1,0 +1,2 @@
+[git-improvements] /mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy
+[detached b7e3b41, prunable] /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/tmp-research-find-relative-root-20260318/worktree

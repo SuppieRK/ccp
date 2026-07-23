@@ -1,0 +1,7 @@
+<skip>    | src/app.py:12: error: Incompatible return value type (got "str", expected "int")  [return-value]
+<skip>    | src/app.py:13: note: Consider using Optional[str]
+<skip>    | src/app.py:18: error: Argument 1 has incompatible type "int"; expected "str"  [arg-type]
+<skip>    | src/app.py:22: error: Unsupported operand types for + ("int" and "str")  [operator]
+<skip>    | src/models.py:8: error: Name "foo" is not defined  [name-defined]
+<skip>    | src/models.py:10: error: Missing return statement  [return]
+<skip>    | Found 5 errors in 2 files (checked 4 source files)

@@ -1,0 +1,10 @@
+<keep>    | === RUN   TestVerbosePass
+<keep>    |     main_test.go:6: running verbose pass
+<keep>    | --- PASS: TestVerbosePass (0.00s)
+<keep>    | === RUN   TestVerboseFail
+<keep>    |     main_test.go:10: before failure
+<keep>    |     main_test.go:11: intentional verbose failure
+<keep>    | --- FAIL: TestVerboseFail (0.00s)
+<keep>    | FAIL
+<keep>    | FAIL	fixture-go-verbose	0.002s
+<keep>    | FAIL

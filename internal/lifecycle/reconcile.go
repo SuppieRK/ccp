@@ -123,7 +123,14 @@ func reconcileManagedHomeLayout() error {
 func cleanupManagedConfigDir(homeDir string) error {
 	configDir := filepath.Join(homeDir, configDirName, "ccp")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
-	if err := removeAllChildrenExcept(configDir, startupMaintenanceLockName, workspacesPath); err != nil {
+	if err := removeAllChildrenExcept(
+		configDir,
+		startupMaintenanceLockName,
+		workspacesPath,
+		"filter-trust.json",
+		"recovery.json",
+		"recovery",
+	); err != nil {
 		return err
 	}
 
@@ -137,7 +144,15 @@ func cleanupManagedConfigDir(homeDir string) error {
 func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
 	configDir := filepath.Join(homeDir, configDirName, "ccp")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
-	if err := removeAllChildrenExcept(configDir, "filters", startupMaintenanceLockName, workspacesPath); err != nil {
+	if err := removeAllChildrenExcept(
+		configDir,
+		"filters",
+		startupMaintenanceLockName,
+		workspacesPath,
+		"filter-trust.json",
+		"recovery.json",
+		"recovery",
+	); err != nil {
 		return err
 	}
 

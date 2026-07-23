@@ -1,0 +1,25 @@
+<keep>    | Waiting for another flutter command to release the startup lock...
+<skip>    | 00:04 +0: throws state error                                                                                                                                                                           
+<skip>    | ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+<keep>    | The following StateError was thrown running a test:
+<skip>    | Bad state: boom
+<skip>    | 
+<skip>    | When the exception was thrown, this was the stack:
+<skip>    | #0      main.<anonymous closure> (file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_extra_demo/test/throws_test.dart:5:5)
+<skip>    | #1      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:29)
+<skip>    | <asynchronous suspension>
+<skip>    | #2      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<skip>    | <asynchronous suspension>
+<skip>    | <asynchronous suspension>
+<skip>    | (elided one frame from package:stack_trace)
+<skip>    | 
+<skip>    | The test description was:
+<skip>    |   throws state error
+<skip>    | ════════════════════════════════════════════════════════════════════════════════════════════════════
+<keep>    | 00:04 +0 -1: throws state error [E]                                                                                                                                                                    
+<skip>    |   Test failed. See exception logs above.
+<skip>    |   The test description was: throws state error
+<skip>    |   
+<skip>    | 
+<skip>    | To run this test again: /home/suppie/flutter/bin/cache/dart-sdk/bin/dart test /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_extra_demo/test/throws_test.dart -p vm --plain-name 'throws state error'
+<replace> | 00:04 +0 -1: Some tests failed.                                                                                                                                                                        

@@ -5,6 +5,18 @@ about: Compact Next.js build output conservatively, keep config-load failures na
 flags_consuming_next_arg: []
 
 cases:
+  - id: build-diagnostic-passthrough
+    when_arguments:
+      first_is: "build"
+      have_any:
+        - --debug
+        - --profile
+        - --experimental-debug-memory-usage
+        - --experimental-build-mode
+        - --webpack
+        - --turbopack
+    passthrough: true
+
   - id: build_help_passthrough
     when_arguments:
       first_is: "build"

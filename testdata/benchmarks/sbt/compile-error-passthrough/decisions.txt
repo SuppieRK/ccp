@@ -1,0 +1,5 @@
+<keep>    | [error] ## Exception when compiling 1 sources to /work/demo/target/scala-3.3.3/classes
+<keep>    | [error] /work/demo/src/main/scala/Main.scala:4:10: Not found: missing
+<keep>    | [error] one error found
+<keep>    | [error] (Compile / compileIncremental) Compilation failed
+<keep>    | [error] Total time: 2 s, completed Mar 20, 2026, 9:21:17 AM

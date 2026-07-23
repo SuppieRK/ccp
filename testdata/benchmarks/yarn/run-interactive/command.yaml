@@ -1,0 +1,2 @@
+argv: ["yarn", "run", "--interactive", "shell"]
+exit_code: 0

@@ -1,1 +1,2 @@
 argv: ["ruff", "check", "src/requests/_ruff_corpus_unused.py"]
+exit_code: 0

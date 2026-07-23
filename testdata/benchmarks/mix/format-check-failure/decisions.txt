@@ -1,0 +1,5 @@
+<skip>    | ** (Mix) mix format failed due to --check-formatted.
+<skip>    | The following files are not formatted:
+<skip>    | 
+<replace> |   * test/ccpmixdemo_test.exs
+<skip>    | 

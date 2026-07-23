@@ -1,0 +1,26 @@
+<keep>    | 60f15a314e2ccb08746086cb01886fb3b190d1e9 1 1 2
+<keep>    | author bench
+<keep>    | author-mail <bench@example.com>
+<keep>    | author-time 1704067200
+<keep>    | author-tz +0000
+<keep>    | committer bench
+<keep>    | committer-mail <bench@example.com>
+<keep>    | committer-time 1704067200
+<keep>    | committer-tz +0000
+<keep>    | summary seed
+<keep>    | boundary
+<keep>    | filename tracked.txt
+<keep>    | 	blame-line-1
+<keep>    | 60f15a314e2ccb08746086cb01886fb3b190d1e9 2 2
+<keep>    | author bench
+<keep>    | author-mail <bench@example.com>
+<keep>    | author-time 1704067200
+<keep>    | author-tz +0000
+<keep>    | committer bench
+<keep>    | committer-mail <bench@example.com>
+<keep>    | committer-time 1704067200
+<keep>    | committer-tz +0000
+<keep>    | summary seed
+<keep>    | boundary
+<keep>    | filename tracked.txt
+<keep>    | 	blame-line-2

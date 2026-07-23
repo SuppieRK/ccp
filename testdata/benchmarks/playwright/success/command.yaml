@@ -1,1 +1,2 @@
 argv: ["./playwright", "test"]
+exit_code: 0

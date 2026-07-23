@@ -1,0 +1,4 @@
+<skip>    | Checking formatting...
+<replace> | [warn] src/bad.js
+<replace> | [warn] src/bad2.js
+<replace> | [warn] Code style issues found in 2 files. Run Prettier with --write to fix.

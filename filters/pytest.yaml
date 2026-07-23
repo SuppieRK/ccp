@@ -2,9 +2,45 @@
 version: 1
 filter: pytest
 about: Compact quiet pytest summaries, preserve reusable failure and error loci, and trim assertion, setup, collection, and mixed-status noise without forcing traceback-mode rewrites.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--basetemp", "--capture", "--color", "--confcutdir", "--durations", "--durations-min", "--html", "--ignore", "--ignore-glob", "--junit-prefix", "--junitxml", "--maxfail", "--override-ini", "--pastebin", "--pdbcls", "--pyargs", "--report-log", "--rootdir", "--tb", "-c", "-k", "-m", "-o"]
 
 cases:
+  - id: diagnostic-inspection-long-passthrough
+    when_arguments:
+      have_any:
+        - --tb
+        - --full-trace
+        - --showlocals
+        - --no-showlocals
+        - --collect-only
+        - --co
+        - --fixtures
+        - --fixtures-per-test
+        - --setup-only
+        - --setup-show
+        - --setup-plan
+        - --trace-config
+        - --markers
+        - --pdb
+        - --pdbcls
+        - --trace
+        - --capture
+        - --junitxml
+        - --json-report
+        - --html
+        - --self-contained-html
+        - --report-log
+        - --pastebin
+        - --verbose
+    passthrough: true
+
+  - id: diagnostic-inspection-short-passthrough
+    when_arguments:
+      have_short_flag:
+        - -v
+        - -s
+    passthrough: true
+
   - id: default
     compress_output:
       combined:
@@ -28,6 +64,7 @@ cases:
             lines:
               keep:
                 - contains: 'AssertionError:'
+                - regex: '^E\s+.+$'
                 - regex: '^(?:tests/|test_).+:\d+: .+$'
                 - contains: 'Captured stdout call'
               replace:
@@ -35,6 +72,8 @@ cases:
                   to: '- $1'
                 - regex: '^captured stdout call$'
                   to: '  captured stdout call'
+                - regex: '^E\s+(.+)$'
+                  to: '$1'
           - id: errors
             starts_with: '==================================== ERRORS'
             initially:

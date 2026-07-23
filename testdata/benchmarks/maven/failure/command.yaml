@@ -1,1 +1,2 @@
 argv: ["./mvnw", "test", "-Dtest=FailureTest"]
+exit_code: 1

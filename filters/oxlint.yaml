@@ -2,9 +2,25 @@
 version: 1
 filter: oxlint
 about: Compact default oxlint text output by dropping blank lines and trailing timing chatter while preserving rule diagnostics, parser failures, code frames, help text, and the final warning/error summary.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--format", "--output-file", "-o", "--config"]
 
 cases:
+  - id: explicit-output-or-fix-passthrough
+    when_arguments:
+      have_any:
+        - --format
+        - --output-file
+        - -o
+        - --fix
+        - --fix-suggestions
+        - --fix-dangerously
+        - --rules
+        - --help
+        - --version
+        - --silent
+        - --quiet
+    passthrough: true
+
   - id: default
     compress_output:
       combined:

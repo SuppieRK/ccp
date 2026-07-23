@@ -5,6 +5,21 @@ about: Compact Prettier check output, preserve parser diagnostics and file lists
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-output-or-inspection-passthrough
+    when_arguments:
+      have_any:
+        - --list-different
+        - -l
+        - --find-config-path
+        - --file-info
+        - --debug-check
+        - --log-level
+        - --cursor-offset
+        - --range-start
+        - --range-end
+        - --stdin-filepath
+    passthrough: true
+
   - id: write
     when_arguments:
       have_any: ["--write"]

@@ -1,0 +1,2 @@
+argv: ["prettier", "--list-different", "."]
+exit_code: 1

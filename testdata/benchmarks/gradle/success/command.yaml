@@ -1,1 +1,2 @@
 argv: ["./gradlew", ":test", "--tests", "example.SuccessTest"]
+exit_code: 0

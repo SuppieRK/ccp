@@ -31,6 +31,8 @@ type stubCaptureRunner struct {
 	gotEvents   []replay.Event
 	gotExitCode int
 	output      string
+	stdout      string
+	stderr      string
 	err         error
 }
 
@@ -38,7 +40,7 @@ func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Ev
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)
 	s.gotExitCode = exitCode
-	return core.ReplayResult{Output: s.output}, s.err
+	return core.ReplayResult{Output: s.output, Stdout: s.stdout, Stderr: s.stderr}, s.err
 }
 
 var _ = Describe("capture", func() {
@@ -64,9 +66,13 @@ var _ = Describe("capture", func() {
 
 	It("writes command, sequenced streams, and CCP output artifacts", func() {
 		tmp := GinkgoT().TempDir()
-		stub := &stubCaptureRunner{output: "proxy output\n"}
+		stub := &stubCaptureRunner{
+			output: "proxy output\n",
+			stdout: "proxy stdout\n",
+			stderr: "proxy stderr\n",
+		}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, stdoutLine, stderrLine := captureSuccessCommand()
@@ -85,11 +91,17 @@ var _ = Describe("capture", func() {
 		for _, arg := range commandArgs {
 			Expect(string(commandData)).To(ContainSubstring(strconv.Quote(arg)))
 		}
-		Expect(string(commandData)).NotTo(ContainSubstring("exit_code:"))
+		Expect(string(commandData)).To(ContainSubstring("exit_code: 0"))
 
 		outputData, err := os.ReadFile(filepath.Join(tmp, captureOutputFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(outputData)).To(Equal("proxy output\n"))
+		outputStdoutData, err := os.ReadFile(filepath.Join(tmp, captureOutputStdoutFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(outputStdoutData)).To(Equal("proxy stdout\n"))
+		outputStderrData, err := os.ReadFile(filepath.Join(tmp, captureOutputStderrFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(outputStderrData)).To(Equal("proxy stderr\n"))
 		Expect(stub.gotArgs).To(Equal(commandArgs))
 		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
@@ -103,13 +115,112 @@ var _ = Describe("capture", func() {
 		Expect(slices.ContainsFunc(stub.gotEvents, func(event replay.Event) bool {
 			return event.Stream == contracts.StreamStderr && normalizeCaptureLineEndings(event.Line) == stderrLine
 		})).To(BeTrue())
+		dirInfo, err := os.Stat(tmp)
+		Expect(err).NotTo(HaveOccurred())
+		if runtime.GOOS != "windows" {
+			Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+		}
+		for _, name := range []string{
+			replay.CommandFileName,
+			captureStdoutFileName,
+			captureStderrFileName,
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
+			info, statErr := os.Stat(filepath.Join(tmp, name))
+			Expect(statErr).NotTo(HaveOccurred())
+			if runtime.GOOS != "windows" {
+				Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)), name)
+			}
+		}
+	})
+
+	It("redacts confidential argv and native streams and marks the fixture", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses unix sh")
+		}
+		auditHome := GinkgoT().TempDir()
+		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
+		DeferCleanup(restoreAudit)
+		DeferCleanup(audit.Reset)
+
+		tmp := GinkgoT().TempDir()
+		secret := "capture-super-secret"
+		stub := &stubCaptureRunner{
+			output: "merged " + secret + "\n",
+			stdout: "stdout " + secret + "\n",
+			stderr: "stderr " + secret + "\n",
+		}
+		var gotConfidential []string
+		prev := newCaptureRunner
+		newCaptureRunner = func(confidential []string) captureVerifier {
+			gotConfidential = slices.Clone(confidential)
+			return stub
+		}
+		DeferCleanup(func() { newCaptureRunner = prev })
+
+		Expect(RunCapture([]string{
+			"--dir", tmp,
+			"--confidential", secret,
+			"--", "sh", "-c", "printf " + secret,
+		})).To(Succeed())
+
+		Expect(gotConfidential).To(Equal([]string{secret}))
+		for _, name := range []string{
+			replay.CommandFileName,
+			captureStdoutFileName,
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
+			body, err := os.ReadFile(filepath.Join(tmp, name))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).NotTo(ContainSubstring(secret))
+		}
+		for _, name := range []string{
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
+			body, err := os.ReadFile(filepath.Join(tmp, name))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring("***"))
+		}
+		command, err := replay.ReadCommand(filepath.Join(tmp, replay.CommandFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(command.Redacted).To(BeTrue())
+		Expect(strings.Join(command.Argv, " ")).To(ContainSubstring("***"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(auditData)).NotTo(ContainSubstring(secret))
+		Expect(string(auditData)).To(ContainSubstring(`"command":"sh -c printf ***"`))
+	})
+
+	It("does not change permissions on an existing capture directory", func() {
+		if runtime.GOOS == "windows" {
+			Skip("Windows does not expose Unix directory permission bits")
+		}
+		tmp := GinkgoT().TempDir()
+		Expect(os.Chmod(tmp, 0o755)).To(Succeed())
+		stub := &stubCaptureRunner{}
+		prev := newCaptureRunner
+		newCaptureRunner = func([]string) captureVerifier { return stub }
+		DeferCleanup(func() { newCaptureRunner = prev })
+
+		commandArgs, _, _ := captureStdoutOnlyCommand()
+		Expect(RunCapture(append([]string{"--dir", tmp, "--"}, commandArgs...))).To(Succeed())
+
+		info, err := os.Stat(tmp)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o755)))
 	})
 
 	It("keeps artifacts when the native command exits non-zero", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{output: "captured failure\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		err := RunCapture(append([]string{"--dir", tmp, "--"}, captureFailureCommand()...))
@@ -134,7 +245,7 @@ var _ = Describe("capture", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{output: "proxy output\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, _, _ := captureStdoutOnlyCommand()
@@ -149,6 +260,28 @@ var _ = Describe("capture", func() {
 		Expect(string(auditData)).To(ContainSubstring(`"output_path":` + strconv.Quote(filepath.Join(tmp, captureOutputFileName))))
 	})
 
+	It("redacts confidential values from failed capture audit fields", func() {
+		auditHome := GinkgoT().TempDir()
+		restoreAudit := audit.WithTestConfig(auditHome, 8, 7)
+		DeferCleanup(restoreAudit)
+		DeferCleanup(audit.Reset)
+		secret := "audit-super-secret"
+
+		err := recordCaptureFailure(
+			[]string{"demo", "--token=" + secret},
+			filepath.Join("captures", secret),
+			[]string{secret},
+			"native_exec",
+			errors.New("could not execute "+secret),
+		)
+
+		Expect(err).To(MatchError("could not execute " + secret))
+		auditData, readErr := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(string(auditData)).NotTo(ContainSubstring(secret))
+		Expect(string(auditData)).To(ContainSubstring("***"))
+	})
+
 	It("preserves carriage-return progress output in captured events", func() {
 		if runtime.GOOS == "windows" {
 			Skip("uses unix sh")
@@ -159,10 +292,11 @@ var _ = Describe("capture", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(exitCode).To(BeZero())
 		Expect(replay.CombinedInput(events)).To(Equal("\rstep 1\rstep 2\rdone\n"))
-		Expect(events).To(ContainElement(replay.Event{
-			Sequence: 0,
-			Stream:   contracts.StreamStdout,
-			Line:     "\rstep 1\rstep 2\rdone\n",
+		Expect(events).To(Equal([]replay.Event{
+			{Sequence: 0, Stream: contracts.StreamStdout, Line: "\r"},
+			{Sequence: 1, Stream: contracts.StreamStdout, Line: "step 1\r"},
+			{Sequence: 2, Stream: contracts.StreamStdout, Line: "step 2\r"},
+			{Sequence: 3, Stream: contracts.StreamStdout, Line: "done\n"},
 		}))
 	})
 
@@ -266,72 +400,6 @@ var _ = Describe("capture", func() {
 		Expect(recorded).To(Equal([]replay.Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok"}}))
 	})
 
-	It("keeps an in-progress line sequence stable until the line is emitted", func() {
-		var (
-			recorded []replay.Event
-			sequence atomic.Int64
-			line     []byte
-			seq      = -1
-		)
-		record := func(seq int, stream contracts.Stream, line string) {
-			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
-		}
-
-		ensureSequencedCaptureLine(&line, &seq, &sequence)
-		Expect(seq).To(Equal(0))
-
-		appendSequencedCaptureByte(&line, &seq, 'o', contracts.StreamStdout, &sequence, record)
-		appendSequencedCaptureByte(&line, &seq, 'k', contracts.StreamStdout, &sequence, record)
-		ensureSequencedCaptureLine(&line, &seq, &sequence)
-		Expect(seq).To(Equal(0))
-
-		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
-
-		Expect(recorded).To(Equal([]replay.Event{{
-			Sequence: 0,
-			Stream:   contracts.StreamStdout,
-			Line:     "ok\n",
-		}}))
-		Expect(line).To(BeEmpty())
-		Expect(seq).To(Equal(-1))
-		Expect(sequence.Load()).To(Equal(int64(1)))
-	})
-
-	It("records newline-only events with a fresh sequence after a reset", func() {
-		var (
-			recorded []replay.Event
-			sequence atomic.Int64
-			line     []byte
-			seq      = -1
-		)
-		record := func(seq int, stream contracts.Stream, line string) {
-			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
-		}
-
-		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
-		appendSequencedCaptureByte(&line, &seq, '\n', contracts.StreamStdout, &sequence, record)
-
-		Expect(recorded).To(Equal([]replay.Event{
-			{Sequence: 0, Stream: contracts.StreamStdout, Line: "\n"},
-			{Sequence: 1, Stream: contracts.StreamStdout, Line: "\n"},
-		}))
-		Expect(line).To(BeEmpty())
-		Expect(seq).To(Equal(-1))
-	})
-
-	It("does not emit an empty trailing line when EOF arrives without buffered bytes", func() {
-		recorded := make([]replay.Event, 0)
-		line := []byte{}
-		seq := -1
-
-		finishSequencedCaptureLine(&line, &seq, contracts.StreamStdout, func(seq int, stream contracts.Stream, line string) {
-			recorded = append(recorded, replay.Event{Sequence: seq, Stream: stream, Line: line})
-		})
-
-		Expect(recorded).To(BeEmpty())
-		Expect(seq).To(Equal(-1))
-	})
-
 	It("counts bytes only from the requested stream", func() {
 		total := streamBytes([]replay.Event{
 			{Sequence: 0, Stream: contracts.StreamStdout, Line: "ok\n"},
@@ -415,7 +483,7 @@ var _ = Describe("capture", func() {
 
 		stub := &stubCaptureRunner{output: "proxy output\n"}
 		prev := newCaptureRunner
-		newCaptureRunner = func() captureVerifier { return stub }
+		newCaptureRunner = func([]string) captureVerifier { return stub }
 		DeferCleanup(func() { newCaptureRunner = prev })
 
 		commandArgs, _, _ := captureStdoutOnlyCommand()

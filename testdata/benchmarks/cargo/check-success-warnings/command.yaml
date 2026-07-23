@@ -1,1 +1,2 @@
 argv: ["cargo", "check", "--color", "never"]
+exit_code: 0

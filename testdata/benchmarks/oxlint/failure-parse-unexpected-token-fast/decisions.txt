@@ -1,0 +1,11 @@
+<skip>    | 
+<keep>    |   x Unexpected token
+<keep>    |    ,-[file:///workspace/src/repo-51/src/index.ts:2:1]
+<keep>    |  1 | export const broken =
+<keep>    |  2 | export * from './cli/index.js';
+<keep>    |    : ^^^^^^
+<keep>    |  3 | export * from './core/index.js';
+<keep>    |    `----
+<skip>    | 
+<keep>    | Found 0 warnings and 1 error.
+<skip>    | Finished in 35ms on 1 file with 93 rules using 16 threads.

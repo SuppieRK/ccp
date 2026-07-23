@@ -1,0 +1,13 @@
+.
+..
+.ccp
+.hidden-fixture
+README.md
+docs
+emptydir
+file-0.bin
+file-1.bin
+file-2.bin
+link-to-main.txt
+node_modules
+src

@@ -1,1 +1,2 @@
 argv: ["jest", "--json"]
+exit_code: 0

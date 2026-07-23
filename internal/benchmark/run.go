@@ -39,9 +39,12 @@ type CaseResult struct {
 	InputHash            string   `json:"input_hash,omitempty"`
 	NativeTokens         int      `json:"native_tokens"`
 	ProxyTokens          int      `json:"proxy_tokens"`
+	NativeBytes          int      `json:"native_bytes"`
+	ProxyBytes           int      `json:"proxy_bytes"`
 	TokenCompactionRatio float64  `json:"token_compaction_ratio"`
 	Success              bool     `json:"success"`
 	Warnings             []string `json:"warnings,omitempty"`
+	Unasserted           []string `json:"unasserted,omitempty"`
 }
 
 type fixtureCase struct {
@@ -181,7 +184,9 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 		return result
 	}
 	result.InputHash = fixtureInputHash(fixture.Command, events)
-	result.NativeTokens = estimateTokens(replay.CombinedInput(events))
+	nativeOutput := replay.CombinedInput(events)
+	result.NativeBytes = len(nativeOutput)
+	result.NativeTokens = estimateTokens(nativeOutput)
 
 	if err := runVerifyFixture(opts.ProxyBinary, artifactDir, opts.Timeout); err != nil {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("verify failed: %v", err))
@@ -189,21 +194,19 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 	}
 
 	verifyOutputPath := filepath.Join(artifactDir, replay.VerifyOutputFileName)
-	verifyOutput, err := os.ReadFile(verifyOutputPath)
-	if err != nil {
-		result.Warnings = append(result.Warnings, fmt.Sprintf("read verify output: %v", err))
+	if err := populateProxyMetrics(&result, verifyOutputPath); err != nil {
+		result.Warnings = append(result.Warnings, err.Error())
 		return result
 	}
-	result.ProxyTokens = estimateTokens(string(verifyOutput))
-	result.TokenCompactionRatio = tokenCompactionRatio(result.NativeTokens, result.ProxyTokens)
+	if result.ProxyBytes > result.NativeBytes {
+		result.Warnings = append(result.Warnings, fmt.Sprintf(
+			"output expansion: native=%d bytes proxy=%d bytes",
+			result.NativeBytes,
+			result.ProxyBytes,
+		))
+	}
 
-	if warning := compareIfPresent(fixture.OutputPath, verifyOutputPath, "output"); warning != "" {
-		result.Warnings = append(result.Warnings, warning)
-	}
-	verifyDecisionsPath := filepath.Join(artifactDir, replay.VerifyDecisionsFileName)
-	if warning := compareIfPresent(fixture.DecisionsPath, verifyDecisionsPath, "decisions"); warning != "" {
-		result.Warnings = append(result.Warnings, warning)
-	}
+	compareFixtureExpectations(&result, fixture, artifactDir, verifyOutputPath)
 	if err := appendCaseMetrics(artifactDir, fixture.Command.Argv, result.NativeTokens, result.ProxyTokens); err != nil {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("persist benchmark metrics: %v", err))
 	}
@@ -211,8 +214,56 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 	return result
 }
 
+func populateProxyMetrics(result *CaseResult, verifyOutputPath string) error {
+	verifyOutput, err := os.ReadFile(verifyOutputPath)
+	if err != nil {
+		return fmt.Errorf("read verify output: %w", err)
+	}
+	result.ProxyTokens = estimateTokens(string(verifyOutput))
+	result.ProxyBytes = len(verifyOutput)
+	result.TokenCompactionRatio = tokenCompactionRatio(result.NativeTokens, result.ProxyTokens)
+	return nil
+}
+
+func compareFixtureExpectations(result *CaseResult, fixture replay.Fixture, artifactDir, verifyOutputPath string) {
+	hasStdoutExpectation := regularFileExists(fixture.OutputStdoutPath)
+	hasStderrExpectation := regularFileExists(fixture.OutputStderrPath)
+	if hasStdoutExpectation || hasStderrExpectation {
+		compareExpectation(result, fixture.OutputStdoutPath, filepath.Join(artifactDir, replay.VerifyStdoutFileName), "stdout")
+		compareExpectation(result, fixture.OutputStderrPath, filepath.Join(artifactDir, replay.VerifyStderrFileName), "stderr")
+	} else if regularFileExists(fixture.OutputPath) {
+		compareExpectation(result, fixture.OutputPath, verifyOutputPath, "output")
+	} else {
+		result.Unasserted = append(result.Unasserted, "output expectation missing")
+	}
+	compareExpectation(result, fixture.DecisionsPath, filepath.Join(artifactDir, replay.VerifyDecisionsFileName), "decisions")
+	compareExpectation(result, fixture.DispatchPath, filepath.Join(artifactDir, replay.VerifyDispatchFileName), "dispatch")
+	if !fixture.Command.ExitCodeAsserted {
+		result.Unasserted = append(result.Unasserted, "exit-code expectation missing")
+	}
+}
+
+func compareExpectation(result *CaseResult, expectedPath, actualPath, label string) {
+	if !regularFileExists(expectedPath) {
+		result.Unasserted = append(result.Unasserted, label+" expectation missing")
+		return
+	}
+	if warning := compareRequired(expectedPath, actualPath, label); warning != "" {
+		result.Warnings = append(result.Warnings, warning)
+	}
+}
+
 func copyFixtureInputs(fixture replay.Fixture, artifactDir string) error {
-	for _, path := range []string{fixture.CommandPath, fixture.StdoutPath, fixture.StderrPath, fixture.OutputPath} {
+	for _, path := range []string{
+		fixture.CommandPath,
+		fixture.StdoutPath,
+		fixture.StderrPath,
+		fixture.OutputPath,
+		fixture.OutputStdoutPath,
+		fixture.OutputStderrPath,
+		fixture.DecisionsPath,
+		fixture.DispatchPath,
+	} {
 		if err := copyIfPresent(path, filepath.Join(artifactDir, filepath.Base(path))); err != nil {
 			return err
 		}
@@ -238,12 +289,9 @@ func copyIfPresent(src, dst string) error {
 	return os.WriteFile(dst, data, 0o644)
 }
 
-func compareIfPresent(expectedPath, actualPath, label string) string {
+func compareRequired(expectedPath, actualPath, label string) string {
 	expected, err := os.ReadFile(expectedPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return ""
-		}
 		return fmt.Sprintf("read %s fixture: %v", label, err)
 	}
 	actual, err := os.ReadFile(actualPath)
@@ -254,6 +302,11 @@ func compareIfPresent(expectedPath, actualPath, label string) string {
 		return fmt.Sprintf("%s mismatch", label)
 	}
 	return ""
+}
+
+func regularFileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTokens int) error {

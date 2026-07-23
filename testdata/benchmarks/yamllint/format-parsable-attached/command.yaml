@@ -1,0 +1,2 @@
+argv: ["yamllint", "--format=parsable", "demo.yaml"]
+exit_code: 1

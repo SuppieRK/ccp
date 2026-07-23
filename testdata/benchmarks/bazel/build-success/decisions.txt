@@ -1,0 +1,16 @@
+<skip>    | Computing main repo mapping: 
+<skip>    | Computing main repo mapping: 
+<skip>    | Computing main repo mapping: 
+<skip>    | Computing main repo mapping: 
+<skip>    | Loading: 
+<skip>    | Loading: 0 packages loaded
+<skip>    | Analyzing: target //:hello (5 packages loaded, 6 targets configured)
+<skip>    | Analyzing: target //:hello (5 packages loaded, 6 targets configured)
+<skip>    | 
+<skip>    | INFO: Analyzed target //:hello (77 packages loaded, 433 targets configured).
+<skip>    | INFO: Found 1 target...
+<keep>    | Target //:hello up-to-date:
+<keep>    |   bazel-bin/hello
+<skip>    | INFO: Elapsed time: 4.192s, Critical Path: 0.01s
+<skip>    | INFO: 6 processes: 6 internal.
+<replace> | INFO: Build completed successfully, 6 total actions

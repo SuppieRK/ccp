@@ -1,1 +1,2 @@
 argv: ["./node_modules/.bin/tsc", "--noEmit", "-p", "tsconfig.ok.json"]
+exit_code: 0

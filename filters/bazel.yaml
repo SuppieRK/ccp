@@ -15,6 +15,14 @@ cases:
         - --test_output=all
         - --test_output=streamed
         - --test_output=errors
+        - --test_output
+        - --build_event_json_file
+        - --build_event_binary_file
+        - --build_event_text_file
+        - --experimental_execution_log_file
+        - --explain
+        - --subcommands
+        - --verbose_failures
     passthrough: true
 
   - id: build

@@ -1,0 +1,2 @@
+<skip>    | .                                                                        [100%]
+<replace> | 1 passed in 0.04s

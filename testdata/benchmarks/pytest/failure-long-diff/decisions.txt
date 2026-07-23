@@ -1,0 +1,23 @@
+<skip>    | F                                                                        [100%]
+<skip>    | =================================== FAILURES ===================================
+<skip>    | ____________________________ test_numbers_fail _____________________________
+<skip>    | 
+<skip>    |     def test_numbers_fail():
+<skip>    |         number_to_text1 = {str(x): x for x in range(5)}
+<skip>    |         number_to_text2 = {str(x * 10): x * 10 for x in range(5)}
+<skip>    | >       assert number_to_text1 == number_to_text2
+<skip>    | E       AssertionError: assert {'0': 0, '1':..., '3': 3, ...} == {'0': 0, '10'...'30': 30, ...}
+<skip>    | E         Omitting 1 identical items, use -vv to show
+<skip>    | E         Left contains 4 more items:
+<skip>    | E         {'1': 1, '2': 2, '3': 3, '4': 4}
+<skip>    | E         Right contains 4 more items:
+<skip>    | E         {'10': 10, '20': 20, '30': 30, '40': 40}
+<skip>    | E         Full diff:
+<skip>    | E         - {'0': 0, '10': 10, '20': 20, '30': 30, '40': 40}
+<skip>    | E         ?            -    -    -    -    -    -    -    -
+<skip>    | E         + {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4}
+<skip>    | 
+<skip>    | test_verbosity_example.py:14: AssertionError
+<skip>    | =========================== short test summary info ============================
+<skip>    | FAILED test_verbosity_example.py::test_numbers_fail - AssertionError: assert {'0': 0, '1':..., '3': 3, ...} == {'0': 0, '10'...'30': 30, ...}
+<skip>    | 1 failed in 0.12s

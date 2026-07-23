@@ -1,1 +1,2 @@
 argv: ["flutter", "test", "--machine", "test/widget_test.dart"]
+exit_code: 0

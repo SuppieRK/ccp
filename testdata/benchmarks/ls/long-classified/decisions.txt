@@ -1,0 +1,3 @@
+<skip>    | total 0
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-one/
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-two/

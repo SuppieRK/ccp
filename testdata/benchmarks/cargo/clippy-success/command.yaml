@@ -1,1 +1,2 @@
 argv: ["cargo", "clippy", "--", "-D", "warnings"]
+exit_code: 0

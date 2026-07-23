@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -31,25 +32,28 @@ type filtersEnvelope struct {
 }
 
 type summaryEnvelope struct {
-	Dataset string               `json:"dataset"`
-	Period  string               `json:"period"`
-	Filters filtersEnvelope      `json:"filters"`
-	Rows    []metrics.SummaryRow `json:"rows"`
-	Total   metrics.SummaryTotal `json:"total"`
+	Dataset string                `json:"dataset"`
+	Period  string                `json:"period"`
+	Filters filtersEnvelope       `json:"filters"`
+	Storage metrics.StorageStatus `json:"storage"`
+	Rows    []metrics.SummaryRow  `json:"rows"`
+	Total   metrics.SummaryTotal  `json:"total"`
 }
 
 type historyEnvelope struct {
-	Dataset string               `json:"dataset"`
-	Period  string               `json:"period"`
-	Filters filtersEnvelope      `json:"filters"`
-	Rows    []metrics.HistoryRow `json:"rows"`
+	Dataset string                `json:"dataset"`
+	Period  string                `json:"period"`
+	Filters filtersEnvelope       `json:"filters"`
+	Storage metrics.StorageStatus `json:"storage"`
+	Rows    []metrics.HistoryRow  `json:"rows"`
 }
 
 type periodEnvelope struct {
-	Dataset string              `json:"dataset"`
-	Period  string              `json:"period"`
-	Filters filtersEnvelope     `json:"filters"`
-	Rows    []metrics.PeriodRow `json:"rows"`
+	Dataset string                `json:"dataset"`
+	Period  string                `json:"period"`
+	Filters filtersEnvelope       `json:"filters"`
+	Storage metrics.StorageStatus `json:"storage"`
+	Rows    []metrics.PeriodRow   `json:"rows"`
 }
 
 const (
@@ -97,6 +101,9 @@ func RunGain(args []string, metricsPath string) error {
 }
 
 func RunHistory(args []string, metricsPath string) error {
+	if len(args) > 0 && args[0] == "purge" {
+		return runHistoryPurge(args[1:], metricsPath)
+	}
 	flags, handled, err := parseReportFlags("history", args)
 	if err != nil {
 		return err
@@ -127,6 +134,7 @@ func RunHistory(args []string, metricsPath string) error {
 			Dataset: "history",
 			Period:  "",
 			Filters: filters,
+			Storage: metrics.InspectStorage(metricsPath),
 			Rows:    rows,
 		})
 	case "csv":
@@ -134,6 +142,118 @@ func RunHistory(args []string, metricsPath string) error {
 	default:
 		return printHistoryTable(rows, filters, flags.limit)
 	}
+}
+
+func runHistoryPurge(args []string, metricsPath string) error {
+	request, handled, err := parseHistoryPurgeRequest(args)
+	if err != nil || handled {
+		return err
+	}
+	sources, err := historyPurgeSources(metricsPath, request.global)
+	if err != nil {
+		return err
+	}
+	removed, err := purgeHistorySources(sources, request.cutoff)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Purged %d history records before %s.\n", removed, request.cutoff.UTC().Format(time.RFC3339))
+	return nil
+}
+
+type historyPurgeRequest struct {
+	cutoff time.Time
+	global bool
+}
+
+func parseHistoryPurgeRequest(args []string) (historyPurgeRequest, bool, error) {
+	fs := newLifecycleFlagSet("history purge")
+	before := fs.String("before", "", "remove history older than this duration (for example 90d)")
+	global := fs.Bool("global", false, "purge every registered workspace")
+	yes := fs.Bool("yes", false, "confirm destructive history removal")
+	setLifecycleUsage(
+		fs,
+		"remove recorded command history older than a duration",
+		[]string{"ccp history purge --before <duration> [--global] --yes"},
+		"Records at the exact cutoff are retained.",
+		"--global applies the same cutoff to registered workspace databases.",
+	)
+	handled, err := parseLifecycleFlags(fs, args)
+	if err != nil {
+		return historyPurgeRequest{}, false, err
+	}
+	if handled {
+		return historyPurgeRequest{}, true, nil
+	}
+	if len(fs.Args()) != 0 {
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge does not accept positional arguments")
+	}
+	if strings.TrimSpace(*before) == "" {
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --before <duration>")
+	}
+	duration, err := parseSince(*before)
+	if err != nil || duration <= 0 {
+		return historyPurgeRequest{}, false, fmt.Errorf("invalid --before %q", *before)
+	}
+	if !*yes {
+		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --yes")
+	}
+	return historyPurgeRequest{
+		cutoff: gainNow().Add(-duration),
+		global: *global,
+	}, false, nil
+}
+
+func historyPurgeSources(metricsPath string, global bool) ([]globalMetricsSource, error) {
+	sources := []globalMetricsSource{currentGlobalMetricsSourceValue(metricsPath)}
+	if !global {
+		return sources, nil
+	}
+	return globalMetricsSources(metricsPath)
+}
+
+func purgeHistorySources(sources []globalMetricsSource, cutoff time.Time) (int, error) {
+	removed := 0
+	for _, source := range sources {
+		if strings.TrimSpace(source.MetricsPath) == "" {
+			continue
+		}
+		count, err := purgeHistorySource(source, cutoff)
+		if err != nil {
+			return removed, fmt.Errorf("purge history %q: %w", source.MetricsPath, err)
+		}
+		removed += count
+	}
+	return removed, nil
+}
+
+func purgeHistorySource(source globalMetricsSource, cutoff time.Time) (int, error) {
+	if projectRoot := containedMetricsProject(source.CWD, source.MetricsPath); projectRoot != "" {
+		return metrics.PurgeProjectBefore(projectRoot, source.MetricsPath, cutoff)
+	}
+	return metrics.PurgeBefore(source.MetricsPath, cutoff)
+}
+
+func currentGlobalMetricsSourceValue(metricsPath string) globalMetricsSource {
+	if source := currentGlobalMetricsSource(metricsPath); source != nil {
+		return *source
+	}
+	return globalMetricsSource{}
+}
+
+func containedMetricsProject(cwd, metricsPath string) string {
+	if strings.TrimSpace(cwd) == "" || strings.TrimSpace(metricsPath) == "" {
+		return ""
+	}
+	root, err := filepath.Abs(filepath.Clean(cwd))
+	if err != nil {
+		return ""
+	}
+	path, err := filepath.Abs(filepath.Clean(metricsPath))
+	if err != nil || path != filepath.Join(root, ".ccp", "gain.db") {
+		return ""
+	}
+	return root
 }
 
 func parseReportFlags(name string, args []string) (reportFlags, bool, error) {
@@ -217,6 +337,7 @@ func renderPeriodDataset(metricsPath string, flags reportFlags, opts metrics.Que
 			Dataset: "period",
 			Period:  opts.Period,
 			Filters: filters,
+			Storage: metrics.InspectStorage(metricsPath),
 			Rows:    rows,
 		})
 	case "csv":
@@ -237,6 +358,7 @@ func renderSummaryDataset(metricsPath string, flags reportFlags, opts, summaryOp
 			Dataset: "summary",
 			Period:  "",
 			Filters: filters,
+			Storage: metrics.InspectStorage(metricsPath),
 			Rows:    rows,
 			Total:   total,
 		})

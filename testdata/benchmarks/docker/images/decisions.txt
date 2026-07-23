@@ -1,0 +1,18 @@
+<keep>    | REPOSITORY                           TAG            IMAGE ID       CREATED         SIZE
+<keep>    | ccp_corpus_dclogs-web                latest         1359ef3558d5   4 days ago      97.9MB
+<keep>    | nginx                                alpine         f46cb72c7df0   8 days ago      92.6MB
+<keep>    | redis                                7-alpine       8b81dd37ff02   3 weeks ago     60.7MB
+<keep>    | mysql                                8.4            a2d126916bc2   3 weeks ago     1.08GB
+<keep>    | postgres                             16-alpine      97ff59a4e30e   4 weeks ago     395MB
+<keep>    | <none>                               <none>         1d13701a5f9f   6 weeks ago     92.5MB
+<keep>    | alpine                               latest         25109184c71b   7 weeks ago     13MB
+<keep>    | quay.io/keycloak/keycloak            26.5           b80a48090594   2 months ago    730MB
+<keep>    | ghcr.io/open-webui/open-webui        main           000b87a6ae72   2 months ago    6.2GB
+<keep>    | kindest/node                         <none>         452d707d4862   3 months ago    1.35GB
+<keep>    | postgres                             18-alpine      154ea39af68f   4 months ago    401MB
+<keep>    | postgres                             17-alpine      9a78577340f3   4 months ago    398MB
+<keep>    | testcontainers/ryuk                  0.13.0         31b31269d066   6 months ago    14.4MB
+<keep>    | testcontainers/ryuk                  0.12.0         dd3f023a6ed7   9 months ago    29MB
+<keep>    | openapitools/openapi-generator-cli   v7.6.0         f86ca8242936   22 months ago   443MB
+<keep>    | redis                                7.2.4-alpine   c8bb255c3559   22 months ago   67.9MB
+<keep>    | quay.io/keycloak/keycloak            24.0.2         b8a3f00fc433   24 months ago   730MB

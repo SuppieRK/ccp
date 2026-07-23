@@ -1,1 +1,2 @@
 argv: ["find", "/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/internal", "-name", "*.go", "-type", "f"]
+exit_code: 0

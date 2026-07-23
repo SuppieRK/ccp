@@ -1,0 +1,7 @@
+<keep>    |  ✓ test/example-1.test.ts (5 tests | 1 skipped) 306ms
+<keep>    |  ✓ test/example-2.test.ts (5 tests | 1 skipped) 307ms
+<skip>    | 
+<replace> |  Test Files  2 passed (2)
+<replace> |       Tests  10 passed | 2 skipped (12)
+<skip>    |    Start at  12:34:32
+<skip>    |    Duration  1.26s (transform 35ms, setup 1ms, collect 90ms, tests 1.47s, environment 0ms, prepare 267ms)

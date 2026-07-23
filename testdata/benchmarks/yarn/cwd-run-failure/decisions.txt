@@ -1,0 +1,6 @@
+<skip>    | yarn run v1.22.22
+<skip>    | $ node scripts/failure.js
+<keep>    | failure-line
+<keep>    | fatal: boom
+<keep>    | error Command failed with exit code 1.
+<skip>    | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

@@ -1,0 +1,33 @@
+<keep>    | PASS src/lib/slugify.test.ts
+<skip>    |   slugify
+<keep>    |     ✓ lowercases labels (2 ms)
+<keep>    |     ✓ collapses duplicate separators
+<keep>    |     ✓ trims edge separators
+<keep>    |     ✓ keeps unicode words
+<keep>    | FAIL src/lib/todo-service.test.ts
+<skip>    |   todo service
+<keep>    |     ✓ creates a todo (1 ms)
+<keep>    |     ✕ rejects empty title (4 ms)
+<keep>    |     ✓ trims completed items
+<keep>    | PASS src/ui/filters.test.ts
+<skip>    |   filters
+<keep>    |     ✓ shows the available filters (3 ms)
+<skip>    |     ○ skipped highlights archived filters separately
+<skip>    | 
+<keep>    |   ● todo service › rejects empty title
+<skip>    | 
+<keep>    |     expect(received).toThrow(expected)
+<skip>    | 
+<skip>    |     Expected substring: "title"
+<skip>    |     Received message:   "todo title is required"
+<skip>    | 
+<keep>    |       16 |   it('rejects empty title', () => {
+<keep>    |       17 |     const subject = () => createTodo({ title: '' })
+<keep>    |     > 18 |     expect(subject).toThrow('title')
+<keep>    |          |                     ^
+<keep>    |       19 |   })
+<skip>    | 
+<replace> | Test Suites: 1 failed, 2 passed, 3 total
+<replace> | Tests:       1 failed, 6 passed, 1 skipped, 8 total
+<skip>    | Time:        1.117 s
+<keep>    | Ran all test suites matching /src\\/lib\\/todo-service.test.ts|src\\/lib\\/slugify.test.ts|src\\/ui\\/filters.test.ts/i.

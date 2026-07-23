@@ -1,1 +1,2 @@
 argv: ["mypy", "test-data/packages/typedpkg/typedpkg/sample.py"]
+exit_code: 1

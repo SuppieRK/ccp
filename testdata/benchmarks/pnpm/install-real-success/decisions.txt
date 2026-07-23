@@ -1,0 +1,53 @@
+<skip>    | Lockfile is up to date, resolution step is skipped
+<skip>    | Progress: resolved 1, reused 0, downloaded 0, added 0
+<skip>    | Packages: +306
+<skip>    | ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+<skip>    | Progress: resolved 306, reused 306, downloaded 0, added 306, done
+<skip>    | 
+<skip>    | dependencies:
+<skip>    | + @inquirer/core 10.2.2
+<skip>    | + @inquirer/prompts 7.8.0
+<skip>    | + chalk 5.5.0
+<skip>    | + commander 14.0.0
+<skip>    | + fast-glob 3.3.3
+<skip>    | + ora 8.2.0
+<skip>    | + posthog-node 5.20.0
+<skip>    | + yaml 2.8.2
+<skip>    | + zod 4.0.17
+<skip>    | 
+<skip>    | devDependencies:
+<skip>    | + @changesets/changelog-github 0.5.2
+<skip>    | + @changesets/cli 2.29.6
+<skip>    | + @types/node 24.2.0
+<skip>    | + @vitest/ui 3.2.4
+<skip>    | + eslint 9.39.2
+<skip>    | + typescript 5.9.3
+<skip>    | + typescript-eslint 8.50.1
+<skip>    | + vitest 3.2.4
+<skip>    | 
+<skip>    | 
+<skip>    | > @fission-ai/openspec@1.2.0 postinstall /workspace/src/repo-55
+<skip>    | > node scripts/postinstall.js
+<skip>    | 
+<skip>    | 
+<skip>    | > @fission-ai/openspec@1.2.0 prepare /workspace/src/repo-55
+<skip>    | > pnpm run build
+<skip>    | 
+<skip>    | 
+<skip>    | > @fission-ai/openspec@1.2.0 build /workspace/src/repo-55
+<skip>    | > node build.js
+<skip>    | 
+<keep>    | 🔨 Building OpenSpec...
+<skip>    | 
+<keep>    | Compiling TypeScript...
+<keep>    | Version 5.9.3
+<skip>    | 
+<keep>    | ✅ Build completed successfully!
+<skip>    | ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+<skip>    | │                                                                              │
+<replace> | │   Ignored build scripts: esbuild@0.25.8.                                     │
+<replace> | │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+<replace> | │   to run scripts.                                                            │
+<skip>    | │                                                                              │
+<skip>    | ╰──────────────────────────────────────────────────────────────────────────────╯
+<keep>    | Done in 2.3s using pnpm v10.30.3

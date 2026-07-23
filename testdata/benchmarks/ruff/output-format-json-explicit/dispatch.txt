@@ -1,0 +1,1 @@
+ruff|explicit_modes_passthrough

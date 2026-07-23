@@ -1,0 +1,72 @@
+<keep>    | [96m.artifacts/tsc-demo/src/fail.ts[0m:[93m1[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m1[0m const one: number = "x";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/fail.ts[0m:[93m2[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m2[0m const two: number = "y";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/fail.ts[0m:[93m3[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m3[0m const three: number = "z";
+<keep>    | [7m [0m [91m      ~~~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/fail.ts[0m:[93m4[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m4[0m const four: number = "w";
+<keep>    | [7m [0m [91m      ~~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/fail2.ts[0m:[93m1[0m:[93m22[0m - [91merror[0m[90m TS2304: [0mCannot find name 'missingSymbol'.
+<keep>    | 
+<keep>    | [7m1[0m export const value = missingSymbol + 1;
+<keep>    | [7m [0m [91m                     ~~~~~~~~~~~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m1[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m1[0m const v01: number = "01";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m2[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m2[0m const v02: number = "02";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m3[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m3[0m const v03: number = "03";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m4[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m4[0m const v04: number = "04";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m5[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m5[0m const v05: number = "05";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m6[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m6[0m const v06: number = "06";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m7[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m7[0m const v07: number = "07";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | [96m.artifacts/tsc-demo/src/overflow.ts[0m:[93m8[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'number'.
+<keep>    | 
+<keep>    | [7m8[0m const v08: number = "08";
+<keep>    | [7m [0m [91m      ~~~[0m
+<keep>    | 
+<keep>    | 
+<keep>    | Found 13 errors in 3 files.
+<keep>    | 
+<keep>    | Errors  Files
+<keep>    |      4  .artifacts/tsc-demo/src/fail.ts[90m:1[0m
+<keep>    |      1  .artifacts/tsc-demo/src/fail2.ts[90m:1[0m
+<keep>    |      8  .artifacts/tsc-demo/src/overflow.ts[90m:1[0m

@@ -1,0 +1,1 @@
+vitest|passthrough_interactive_and_reporters

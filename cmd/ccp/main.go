@@ -80,6 +80,8 @@ func runLifecycleCommand(args []string) (bool, error) {
 		return true, lifecycle.RunGain(tail, defaultMetricsPath())
 	case "history":
 		return true, lifecycle.RunHistory(tail, defaultMetricsPath())
+	case "recovery":
+		return true, lifecycle.RunRecovery(tail)
 	case "verify":
 		return true, lifecycle.RunVerify(tail)
 	case "upgrade":
@@ -148,6 +150,7 @@ Lifecycle commands:
   gain                  Show token savings summary and recent proof output (--global supported)
   filter                YAML filter authoring helpers
   history               Show recorded command history (--global supported)
+  recovery              Manage opt-in bounded raw failure recovery
   repair                Rewrite managed CCP home state to canonical shipped content
   verify                Replay one fixture directory through the current filter
   upgrade               Upgrade ccp

@@ -1,0 +1,25 @@
+<skip>    |  RUN  v3.2.4 /workspace/todo-lite
+<skip>    | 
+<keep>    |  ✓ src/lib/slugify.test.ts (4 tests) 5ms
+<keep>    |  ❯ src/lib/todo-service.test.ts (3 tests | 1 failed) 12ms
+<keep>    |    ✓ creates a todo 2ms
+<keep>    |    × rejects empty title 4ms
+<keep>    |      → expected [Function] to throw error including 'title' but got 'todo title is required'
+<keep>    |    ✓ trims completed items 1ms
+<keep>    |  ✓ src/ui/filters.test.ts (2 tests | 1 skipped) 6ms
+<skip>    | 
+<skip>    |  ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+<skip>    | 
+<keep>    |   FAIL  src/lib/todo-service.test.ts > todo service > rejects empty title
+<keep>    |  AssertionError: expected [Function] to throw error including 'title' but got 'todo title is required'
+<keep>    |    ❯ src/lib/todo-service.test.ts:18:20
+<keep>    |      16 |   it('rejects empty title', () => {
+<keep>    |      17 |     const subject = () => createTodo({ title: '' })
+<keep>    |      18 |     expect(subject).toThrowError('title')
+<keep>    |         |                    ^
+<keep>    |      19 |   })
+<skip>    | 
+<replace> |   Test Files  1 failed | 2 passed (3)
+<skip>    |        Tests  6 passed | 1 failed | 1 skipped (8)
+<skip>    |     Start at  09:14:22
+<skip>    |     Duration  1.48s (transform 74ms, setup 0ms, collect 145ms, tests 23ms, environment 0ms, prepare 228ms)

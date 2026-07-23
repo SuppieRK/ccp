@@ -1,1 +1,2 @@
 argv: ["flutter", "analyze", ".artifacts/flutter_demo"]
+exit_code: 0

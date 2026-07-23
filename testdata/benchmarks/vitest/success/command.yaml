@@ -1,1 +1,2 @@
 argv: ["vitest", "run"]
+exit_code: 0

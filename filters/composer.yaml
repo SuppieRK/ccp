@@ -5,6 +5,21 @@ about: Compact `composer install` repository and download churn while preserving
 flags_consuming_next_arg: ["--audit-format", "--working-dir", "-d"]
 
 cases:
+  - id: explicit-output-or-interactive-passthrough
+    when_arguments:
+      have_any:
+        - --audit-format
+        - --format
+        - --interactive
+        - --quiet
+        - -q
+        - --verbose
+        - -v
+        - -vv
+        - -vvv
+        - --dry-run
+    passthrough: true
+
   - id: install
     when_arguments:
       first_is: install

@@ -1,1 +1,2 @@
 argv: ["shellcheck", "scripts/validate.sh"]
+exit_code: 0

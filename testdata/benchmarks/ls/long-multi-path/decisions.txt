@@ -1,0 +1,9 @@
+<keep>    | testdata/benchmarks/ls/_fixture-tree/path-one:
+<skip>    | total 0
+<replace> | -rwxrwxrwx 1 suppie suppie   10 Mar 18 21:37 plain.txt
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 subdir
+<keep>    | 
+<keep>    | testdata/benchmarks/ls/_fixture-tree/path-two:
+<skip>    | total 0
+<replace> | -rwxrwxrwx 1 suppie suppie   13 Mar 18 21:37 another.md
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 nested

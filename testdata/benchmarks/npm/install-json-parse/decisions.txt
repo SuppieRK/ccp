@@ -1,0 +1,6 @@
+<keep>    | npm error code EJSONPARSE
+<keep>    | npm error path /tmp/npm-local-corpus/package.json
+<keep>    | npm error JSON.parse Expected ',' or '}' after property value in JSON at position 50 (line 3 column 17) while parsing near "...e\",\n  \"version\": 1.0.0,\n"
+<keep>    | npm error JSON.parse Failed to parse JSON data.
+<keep>    | npm error JSON.parse Note: package.json must be actual JSON, not just JavaScript.
+<keep>    | npm error A complete log of this run can be found in: /home/suppie/.npm/_logs/2026-03-15T13_29_53_634Z-debug-0.log

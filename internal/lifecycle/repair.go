@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"go-command-compression-proxy/internal/audit"
 )
 
 var (
@@ -31,7 +33,8 @@ func RunRepair(args []string) error {
 		fs,
 		"rewrite managed CCP home state to canonical shipped content",
 		[]string{"ccp repair [--yes|--no]"},
-		"Repair rewrites the fully managed ~/.config/ccp directory and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
+		"Repair rewrites managed ~/.config/ccp state and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
+		"Project filter approvals in ~/.config/ccp/filter-trust.json are preserved.",
 		"Repair also removes obsolete managed ~/.ccp remnants.",
 		"Rewrite repair also runs guarded current-repository CCP migrations, including repo-local .ccp ignore migration.",
 		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings without mutating repository files.",
@@ -123,6 +126,9 @@ func rewriteManagedRepairState() error {
 }
 
 func rewriteManagedRepairStateLocked() error {
+	// The rewrite removes managed home state, including audit logs. Windows
+	// cannot remove the active audit file while lumberjack still has it open.
+	audit.Reset()
 	if err := syncCanonicalHomeLayout(); err != nil {
 		return err
 	}

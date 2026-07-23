@@ -1,0 +1,1 @@
+jest|passthrough_machine_and_watch

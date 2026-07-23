@@ -5,13 +5,26 @@ about: Compact common read-only and success-path git flows while preserving nati
 flags_consuming_next_arg: ["-C", "-c", "--config-env", "--contains", "--format", "--git-dir", "--merged", "--namespace", "--no-contains", "--no-merged", "--points-at", "--set-upstream-to", "--sort", "--work-tree"]
 
 cases:
+  - id: status-explicit-long-representation-passthrough
+    when_arguments:
+      first_is: status
+      have_any:
+        - --short
+        - --porcelain
+        - --null
+    passthrough: true
+
+  - id: status-explicit-short-representation-passthrough
+    when_arguments:
+      first_is: status
+      have_short_flag:
+        - -s
+        - -z
+    passthrough: true
+
   - id: status
     when_arguments:
       first_is: status
-    normalize_command:
-      append_if_missing:
-        - --porcelain
-        - -b
     compress_output:
       stdout:
         lines:
@@ -55,6 +68,42 @@ cases:
             - regex: '^\t(.+)$'
               to: '?? $1'
 
+  - id: diff-explicit-long-representation-passthrough
+    when_arguments:
+      first_is: diff
+      have_any:
+        - --stat
+        - --numstat
+        - --shortstat
+        - --dirstat
+        - --summary
+        - --name-only
+        - --name-status
+        - --raw
+        - --patch-with-raw
+        - --patch-with-stat
+        - --no-patch
+        - --quiet
+        - --check
+        - --word-diff
+        - --word-diff-regex
+        - --color-words
+        - --binary
+        - --output
+        - --line-prefix
+        - --output-indicator-new
+        - --output-indicator-old
+        - --output-indicator-context
+    passthrough: true
+
+  - id: diff-explicit-short-representation-passthrough
+    when_arguments:
+      first_is: diff
+      have_short_flag:
+        - -s
+        - -z
+    passthrough: true
+
   - id: diff
     variables:
       - name: files
@@ -75,7 +124,6 @@ cases:
             - starts_with: 'index '
             - starts_with: '--- '
             - starts_with: '+++ '
-            - starts_with: '@@ '
           replace:
             - regex: '^diff --git a/(.+) b/.+$'
               to: '$1'
@@ -92,8 +140,35 @@ cases:
               on_match:
                 - variable: adds
                   increment: 1
-    finally:
-      print: "summary: {{files}} files changed, +{{adds}} -{{deletes}}"
+  - id: log-explicit-long-representation-passthrough
+    when_arguments:
+      first_is: log
+      have_any:
+        - --oneline
+        - --pretty
+        - --format
+        - --graph
+        - --decorate
+        - --stat
+        - --numstat
+        - --shortstat
+        - --dirstat
+        - --summary
+        - --name-only
+        - --name-status
+        - --raw
+        - --patch
+        - --no-patch
+        - --show-signature
+        - --log-size
+    passthrough: true
+
+  - id: log-explicit-short-representation-passthrough
+    when_arguments:
+      first_is: log
+      have_short_flag:
+        - -p
+    passthrough: true
 
   - id: log
     when_arguments:
@@ -101,6 +176,39 @@ cases:
     normalize_command:
       append_if_missing:
         - '--pretty=format:%h %aI %an <%ae> | %s'
+
+  - id: show-explicit-long-representation-passthrough
+    when_arguments:
+      first_is: show
+      have_any:
+        - --oneline
+        - --pretty
+        - --format
+        - --stat
+        - --numstat
+        - --shortstat
+        - --dirstat
+        - --summary
+        - --name-only
+        - --name-status
+        - --raw
+        - --no-patch
+        - --quiet
+        - --check
+        - --word-diff
+        - --word-diff-regex
+        - --color-words
+        - --binary
+        - --show-signature
+    passthrough: true
+
+  - id: show-explicit-short-representation-passthrough
+    when_arguments:
+      first_is: show
+      have_short_flag:
+        - -s
+        - -z
+    passthrough: true
 
   - id: show
     variables:
@@ -122,7 +230,6 @@ cases:
             - starts_with: 'index '
             - starts_with: '--- '
             - starts_with: '+++ '
-            - starts_with: '@@ '
             - regex: '^$'
           replace:
             - regex: '^commit ([0-9a-f]{12})[0-9a-f]+$'
@@ -148,9 +255,6 @@ cases:
               on_match:
                 - variable: adds
                   increment: 1
-    finally:
-      print: "summary: {{files}} files changed, +{{adds}} -{{deletes}}"
-
   - id: worktree-list
     when_arguments:
       have_sequence:

@@ -1,1 +1,2 @@
 argv: ["git", "worktree", "list"]
+exit_code: 0

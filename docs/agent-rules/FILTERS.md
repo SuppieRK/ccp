@@ -10,7 +10,11 @@ without rebuilding CCP.
 - Local iteration happens in `./.ccp/filters`.
 - Project-local filters are committable; generated repo-local CCP state is ignored through CCP-owned `./.ccp/.gitignore`.
 - Managed home-scoped filters live in `~/.config/ccp/filters`.
-- Release builds load `./.ccp/filters` first and `~/.config/ccp/filters` second.
+- Release builds load an explicitly trusted `./.ccp/filters` first and
+  `~/.config/ccp/filters` second.
+- `ccp filter trust` approves the exact current project source. Any path,
+  mapping, addition, removal, rename, or content change requires approval
+  again; `ccp filter untrust` removes approval.
 - Project-local filter definitions override home-scoped definitions with the same canonical filter id.
 - Project-local `.mappings.yaml` aliases override home-scoped aliases with the same key.
 - Shipped filters are embedded from `filters/` and materialized into `~/.config/ccp/filters` by `ccp repair` and startup
@@ -112,8 +116,12 @@ Recommended iteration loop:
 4. `ccp capture -- <tool> ...`
 5. edit `./.ccp/filters/<filter-id>.yaml`
 6. `ccp verify`
-7. compare `output.txt` with `verify-output.txt`
+7. compare `output.txt` with `verify-output.txt` and the stream-specific
+   `output.stdout.txt` / `output.stderr.txt` expectations with
+   `verify-stdout.txt` / `verify-stderr.txt`
 8. inspect `verify-decisions.txt` when behavior is unclear
+9. run `ccp filter trust` only after reviewing the complete project filter
+   source that should become active
 
 For brand-new filters with no existing source, the short loop is:
 
@@ -122,8 +130,11 @@ For brand-new filters with no existing source, the short loop is:
 3. `ccp capture -- <tool> ...`
 4. edit `./.ccp/filters/<filter-id>.yaml`
 5. `ccp verify`
-6. compare `output.txt` with `verify-output.txt`
+6. compare merged and stream-specific output expectations with the matching
+   `verify-*` artifacts
 7. inspect `verify-decisions.txt` when behavior is unclear
+8. run `ccp filter trust` only after reviewing the complete project filter
+   source that should become active
 
 If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local
 filter acts as the active override.
@@ -149,18 +160,30 @@ Capture a real command with:
 ccp capture -- my-tool --flag value
 ```
 
+Capture creates a private directory (`0700`) and private files (`0600`).
+Because native output may include secrets, use
+`ccp capture --confidential value1,value2 -- my-tool --flag value` for known
+literal values and review the fixture before committing it. Redacted captures
+set `redacted: true` in `command.yaml`.
+
 Capture writes:
 
 - `command.yaml`
 - `stdout.txt`
 - `stderr.txt`
 - `output.txt`
+- `output.stdout.txt`
+- `output.stderr.txt`
 
 Capture rules:
 
 - `stdout.txt` and `stderr.txt` use `00000|` sequence prefixes to preserve cross-stream ordering
+- records that cannot be represented as one newline-terminated fixture line
+  use the runtime's `@ccp/base64:` payload encoding; do not decode or rewrite
+  them by hand
 - capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap
-  `output.txt`
+  merged and stream-specific output expectations
+- `command.yaml` records `exit_code` even when it is zero
 - non-zero exits still write artifacts so failures can be iterated locally
 
 ### Verify
@@ -186,12 +209,24 @@ Verify reads:
 Verify writes:
 
 - `verify-output.txt`
+- `verify-stdout.txt`
+- `verify-stderr.txt`
+- `verify-decisions.txt`
+- `verify-dispatch.txt`
+
+Promote the exact `filter|case` value in `verify-dispatch.txt` to
+`dispatch.txt` only after checking that argument matching selected the
+intended case.
+- `verify-stdout.txt`
+- `verify-stderr.txt`
 - `verify-decisions.txt`
 
 Verification rules:
 
 - missing `stdout.txt` or `stderr.txt` means that stream is empty
 - broken sequence numbering is an error
+- merged `output.txt` remains supported, while `output.stdout.txt` and
+  `output.stderr.txt` assert exact destinations
 - `verify-decisions.txt` is always generated and shows why lines were kept, replaced, skipped, or emitted synthetically
 
 ### Repair
@@ -225,6 +260,10 @@ and missing shipped `.mappings.yaml` entries without mutating repository files.
 - Treat warning-bearing success paths as first-class behavior. Clean success fixtures alone are often misleading.
 - Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the current filter
   contract already defines normalization.
+- Declare value-taking options in `flags_consuming_next_arg`. Matching then
+  treats `--flag=value` and `--flag value` equivalently, stops at `--`, and
+  leaves the argv sent to the child untouched. Short-option clusters are not
+  split generically.
 - Be skeptical of table rewrites. Many native tables are already near the token floor.
 - Be skeptical of log compression. Tool-defined build/test output is often compressible; user application logs usually
   are not.

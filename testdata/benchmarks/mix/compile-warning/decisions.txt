@@ -1,0 +1,5 @@
+<skip>    | Compiling 2 files (.ex)
+<keep>    | warning: variable "unused" is unused (if the variable is not meant to be used, prefix it with an underscore)
+<keep>    |   lib/ccpmixdemo.ex:16: Ccpmixdemo.hello/0
+<skip>    | 
+<keep>    | Generated ccpmixdemo app

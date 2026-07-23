@@ -1,1 +1,2 @@
 argv: ["nx", "affected", "-t", "lint", "--base=origin/main", "--head=HEAD"]
+exit_code: 0

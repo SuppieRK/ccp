@@ -1,0 +1,15 @@
+<keep>    | warning: The following rules have been removed and ignoring them has no effect:
+<keep>    |     - UP038
+<keep>    | 
+<keep>    | F401 [*] `json` imported but unused
+<keep>    |  --> src/requests/_ruff_corpus_unused.py:1:8
+<keep>    |   |
+<keep>    | 1 | import json
+<keep>    |   |        ^^^^
+<keep>    | 2 |
+<keep>    | 3 | VALUE = 1
+<keep>    |   |
+<keep>    | help: Remove unused import: `json`
+<keep>    | 
+<keep>    | Found 1 error.
+<keep>    | [*] 1 fixable with the `--fix` option.

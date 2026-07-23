@@ -1,0 +1,8 @@
+<keep>    | Legend: production dependency, optional only, dev only
+<keep>    | 
+<keep>    | @bench/root@1.0.0 /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/pnpm/projects/workspace (PRIVATE)
+<keep>    | │
+<keep>    | │   dependencies:
+<skip>    | └── @bench/lib@link:packages/lib
+<keep>    | 
+<keep>    | 1 package

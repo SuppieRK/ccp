@@ -1,0 +1,2 @@
+argv: ["bun", "install", "--quiet"]
+exit_code: 0

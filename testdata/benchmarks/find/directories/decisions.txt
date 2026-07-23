@@ -1,0 +1,13 @@
+<skip>    | .
+<replace> | ./.ccp
+<replace> | ./.hidden
+<replace> | ./docs
+<replace> | ./internal
+<replace> | ./internal/engine
+<replace> | ./internal/runner
+<replace> | ./pkg
+<replace> | ./pkg/a
+<replace> | ./pkg/b
+<replace> | ./pkg/calc
+<replace> | ./vendor
+<replace> | ./vendor/x

@@ -1,0 +1,2 @@
+<keep>    | ^60f15a3 (bench 2024-01-01 00:00:00 +0000 1) blame-line-1
+<keep>    | ^60f15a3 (bench 2024-01-01 00:00:00 +0000 2) blame-line-2

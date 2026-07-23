@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pytest", "-q", "test_example.py::test_error"]
+exit_code: 1

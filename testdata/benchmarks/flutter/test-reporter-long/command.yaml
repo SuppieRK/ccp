@@ -1,0 +1,2 @@
+argv: ["flutter", "test", "--reporter=json"]
+exit_code: 0

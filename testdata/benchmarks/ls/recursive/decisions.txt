@@ -1,0 +1,6 @@
+<keep>    | src:
+<keep>    | main.go
+<keep>    | util
+<keep>    | 00003|
+<keep>    | src/util:
+<keep>    | util.go

@@ -1,1 +1,2 @@
 argv: ["poetry", "update", "--no-interaction"]
+exit_code: 0

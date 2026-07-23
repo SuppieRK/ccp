@@ -1,12 +1,35 @@
 package agents
 
-import "strings"
+import (
+	"fmt"
+	"os"
+	"strings"
+)
 
 func hookAgentTitle(agent string) string {
 	if agent == "" {
 		return ""
 	}
 	return strings.ToUpper(agent[:1]) + agent[1:]
+}
+
+func verifyBashRewriteHook(path string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	content := string(raw)
+	for _, snippet := range []string{
+		"tokenize_segment()",
+		"is_shell_builtin_or_keyword()",
+		"consume_env_prefix()",
+		"consume_sudo_prefix()",
+	} {
+		if !strings.Contains(content, snippet) {
+			return fmt.Errorf("hook script lacks conservative command classification: %s", path)
+		}
+	}
+	return nil
 }
 
 func bashJSONHelpers() string {
@@ -82,14 +105,172 @@ json_escape() {
 
 func bashRewriteHelpers() string {
 	return `
-normalize_segment() {
-  local trimmed
-  trimmed="$(trim_whitespace "$1")"
-  [[ -n "$trimmed" ]] || return 0
-  case "$trimmed" in
-    ccp|ccp\ *) printf '%s' "$trimmed" ;;
-    *) printf 'ccp %s' "$trimmed" ;;
+is_shell_builtin_or_keyword() {
+  case "$1" in
+    .|:|\[|alias|bg|bind|break|builtin|caller|cd|command|compgen|complete|compopt|continue|coproc|declare|dirs|disown|echo|enable|eval|exec|exit|export|false|fc|fg|getopts|hash|help|history|jobs|kill|let|local|logout|mapfile|popd|printf|pushd|pwd|read|readarray|readonly|return|set|shift|shopt|source|suspend|test|times|trap|true|type|typeset|ulimit|umask|unalias|unset|wait|case|do|done|elif|else|esac|fi|for|function|if|in|select|then|time|until|while|\{|\}) return 0 ;;
   esac
+  return 1
+}
+
+tokenize_segment() {
+  local input="$1" i=0 len=${#1} char
+  local token="" start=0 started=0 in_single=0 in_double=0 escape=0
+  TOKENS=()
+  TOKEN_STARTS=()
+  while (( i < len )); do
+    char="${input:i:1}"
+    if (( escape )); then
+      token+="$char"
+      escape=0
+      ((i++))
+      continue
+    fi
+    if (( in_single )); then
+      if [[ "$char" == "'" ]]; then
+        in_single=0
+      else
+        token+="$char"
+      fi
+      ((i++))
+      continue
+    fi
+    if (( in_double )); then
+      case "$char" in
+        "\\") escape=1 ;;
+        '"') in_double=0 ;;
+        '$'|$'\x60') return 1 ;;
+        *) token+="$char" ;;
+      esac
+      ((i++))
+      continue
+    fi
+    if [[ "$char" =~ [[:space:]] ]]; then
+      if (( started )); then
+        TOKENS+=("$token")
+        TOKEN_STARTS+=("$start")
+        token=""
+        started=0
+      fi
+      ((i++))
+      continue
+    fi
+    if (( ! started )); then
+      start=$i
+      started=1
+    fi
+    case "$char" in
+      "\\") escape=1 ;;
+      "'") in_single=1 ;;
+      '"') in_double=1 ;;
+      '$'|$'\x60'|'<'|'>'|'|'|'&'|';'|'('|')'|'{'|'}'|'#') return 1 ;;
+      *) token+="$char" ;;
+    esac
+    ((i++))
+  done
+  (( escape == 0 && in_single == 0 && in_double == 0 )) || return 1
+  if (( started )); then
+    TOKENS+=("$token")
+    TOKEN_STARTS+=("$start")
+  fi
+  ((${#TOKENS[@]} > 0))
+}
+
+is_assignment_token() {
+  [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*= ]]
+}
+
+consume_env_prefix() {
+  local count=${#TOKENS[@]}
+  ((TOKEN_INDEX++))
+  while (( TOKEN_INDEX < count )); do
+    case "${TOKENS[TOKEN_INDEX]}" in
+      --) ((TOKEN_INDEX++)); return 0 ;;
+      -u|--unset|-C|--chdir|--argv0)
+        (( TOKEN_INDEX + 1 < count )) || return 1
+        ((TOKEN_INDEX+=2))
+        ;;
+      --unset=*|--chdir=*|--argv0=*|-i|--ignore-environment|-0|--null)
+        ((TOKEN_INDEX++))
+        ;;
+      -*)
+        return 1
+        ;;
+      *)
+        if is_assignment_token "${TOKENS[TOKEN_INDEX]}"; then
+          ((TOKEN_INDEX++))
+        else
+          return 0
+        fi
+        ;;
+    esac
+  done
+  return 1
+}
+
+consume_sudo_prefix() {
+  local count=${#TOKENS[@]}
+  ((TOKEN_INDEX++))
+  while (( TOKEN_INDEX < count )); do
+    case "${TOKENS[TOKEN_INDEX]}" in
+      --) ((TOKEN_INDEX++)); return 0 ;;
+      -u|-g|-h|-p|-C|-T|-R|-D|-r|-t|--user|--group|--host|--prompt|--close-from|--command-timeout|--chroot|--chdir|--role|--type)
+        (( TOKEN_INDEX + 1 < count )) || return 1
+        ((TOKEN_INDEX+=2))
+        ;;
+      --user=*|--group=*|--host=*|--prompt=*|--close-from=*|--command-timeout=*|--chroot=*|--chdir=*|--role=*|--type=*|-A|-b|-E|-e|-H|-K|-k|-n|-P|-S|-V|-v|-l|-i|-s)
+        ((TOKEN_INDEX++))
+        ;;
+      -*)
+        return 1
+        ;;
+      *)
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
+rewrite_segment() {
+  local segment="$1" count command token start i
+  tokenize_segment "$segment" || return 1
+  count=${#TOKENS[@]}
+  TOKEN_INDEX=0
+  while (( TOKEN_INDEX < count )) && is_assignment_token "${TOKENS[TOKEN_INDEX]}"; do
+    ((TOKEN_INDEX++))
+  done
+  while (( TOKEN_INDEX < count )); do
+    case "${TOKENS[TOKEN_INDEX]}" in
+      env) consume_env_prefix || return 1 ;;
+      sudo) consume_sudo_prefix || return 1 ;;
+      *) break ;;
+    esac
+    while (( TOKEN_INDEX < count )) && is_assignment_token "${TOKENS[TOKEN_INDEX]}"; do
+      ((TOKEN_INDEX++))
+    done
+  done
+  (( TOKEN_INDEX < count )) || return 1
+  command="${TOKENS[TOKEN_INDEX]}"
+  if [[ "$command" == "ccp" ]]; then
+    printf '%s' "$segment"
+    return 0
+  fi
+  is_shell_builtin_or_keyword "$command" && return 1
+  case "$command" in
+    xargs) return 1 ;;
+    sh|bash|dash|zsh|ksh)
+      for token in "${TOKENS[@]:TOKEN_INDEX+1}"; do
+        [[ "$token" == "-c" || "$token" == "-lc" ]] && return 1
+      done
+      ;;
+    find)
+      for token in "${TOKENS[@]:TOKEN_INDEX+1}"; do
+        [[ "$token" == "-exec" || "$token" == "-execdir" || "$token" == "-ok" || "$token" == "-okdir" ]] && return 1
+      done
+      ;;
+  esac
+  start=${TOKEN_STARTS[TOKEN_INDEX]}
+  printf '%sccp %s' "${segment:0:start}" "${segment:start}"
 }
 
 rewrite_command() {
@@ -121,6 +302,7 @@ rewrite_command() {
       case "$char" in
         "\\") escape=1 ;;
         '"') in_double=0 ;;
+        '$'|$'\x60') printf '%s' "$input"; return 0 ;;
       esac
       ((i++))
       continue
@@ -145,18 +327,17 @@ rewrite_command() {
         ((i++))
         continue
         ;;
+      '$'|$'\x60'|'<'|'>'|'('|')'|'{'|'}'|'#'|$'\n'|$'\r')
+        printf '%s' "$input"
+        return 0
+        ;;
     esac
 
     if [[ "$pair" == "&&" || "$pair" == "||" ]]; then
-      piece="$(normalize_segment "$segment")"
-      if [[ -n "$piece" ]]; then
-        [[ -n "$out" ]] && out+=" "
-        out+="$piece $pair"
-      elif [[ -n "$out" ]]; then
-        out+=" $pair"
-      else
-        out+="$pair"
-      fi
+      segment="${segment%"${segment##*[![:space:]]}"}"
+      piece="$(rewrite_segment "$segment")" || { printf '%s' "$input"; return 0; }
+      [[ -n "$out" ]] && out+=" "
+      out+="$piece $pair"
       segment=""
       ((i+=2))
       while [[ "${input:i:1}" =~ [[:space:]] ]]; do
@@ -164,16 +345,15 @@ rewrite_command() {
       done
       continue
     fi
-    if [[ "$char" == "|" || "$char" == ";" ]]; then
-      piece="$(normalize_segment "$segment")"
-      if [[ -n "$piece" ]]; then
-        [[ -n "$out" ]] && out+=" "
-        out+="$piece $char"
-      elif [[ -n "$out" ]]; then
-        out+=" $char"
-      else
-        out+="$char"
-      fi
+    if [[ "$char" == "|" || "$char" == "&" ]]; then
+      printf '%s' "$input"
+      return 0
+    fi
+    if [[ "$char" == ";" ]]; then
+      segment="${segment%"${segment##*[![:space:]]}"}"
+      piece="$(rewrite_segment "$segment")" || { printf '%s' "$input"; return 0; }
+      [[ -n "$out" ]] && out+=" "
+      out+="$piece $char"
       segment=""
       ((i++))
       while [[ "${input:i:1}" =~ [[:space:]] ]]; do
@@ -186,11 +366,10 @@ rewrite_command() {
     ((i++))
   done
 
-  piece="$(normalize_segment "$segment")"
-  if [[ -n "$piece" ]]; then
-    [[ -n "$out" ]] && out+=" "
-    out+="$piece"
-  fi
+  (( escape == 0 && in_single == 0 && in_double == 0 )) || { printf '%s' "$input"; return 0; }
+  piece="$(rewrite_segment "$segment")" || { printf '%s' "$input"; return 0; }
+  [[ -n "$out" ]] && out+=" "
+  out+="$piece"
   printf '%s' "$out"
 }
 `

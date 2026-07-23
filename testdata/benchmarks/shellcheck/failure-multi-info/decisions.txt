@@ -1,0 +1,18 @@
+<skip>    | 
+<keep>    | In /tmp/tmp.mUu4ej6Uhv line 2:
+<keep>    | for f in $FILES; do echo $f; done
+<keep>    |                          ^-- SC2086 (info): Double quote to prevent globbing and word splitting.
+<skip>    | 
+<keep>    | Did you mean: 
+<keep>    | for f in $FILES; do echo "$f"; done
+<skip>    | 
+<skip>    | 
+<keep>    | In /tmp/tmp.mUu4ej6Uhv line 3:
+<keep>    | echo $UNQUOTED
+<keep>    |      ^-------^ SC2086 (info): Double quote to prevent globbing and word splitting.
+<skip>    | 
+<keep>    | Did you mean: 
+<keep>    | echo "$UNQUOTED"
+<skip>    | 
+<skip>    | For more information:
+<skip>    |   https://www.shellcheck.net/wiki/SC2086 -- Double quote to prevent globbing ...

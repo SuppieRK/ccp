@@ -1,1 +1,2 @@
 argv: ["git", "blame", "--line-porcelain", "tracked.txt"]
+exit_code: 0

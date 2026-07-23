@@ -1,0 +1,26 @@
+<skip>    | 
+<skip>    | > ccp-npm-benchmark-basic@1.0.0 success-noisy
+<skip>    | > node --test test/success.test.js
+<skip>    | 
+<skip>    | TAP version 13
+<keep>    | # Subtest: add computes sums
+<keep>    | ok 1 - add computes sums
+<skip>    |   ---
+<skip>    |   duration_ms: 0.366266
+<skip>    |   type: 'test'
+<skip>    |   ...
+<keep>    | # Subtest: divide computes quotient
+<keep>    | ok 2 - divide computes quotient
+<skip>    |   ---
+<skip>    |   duration_ms: 0.067165
+<skip>    |   type: 'test'
+<skip>    |   ...
+<keep>    | 1..2
+<keep>    | # tests 2
+<skip>    | # suites 0
+<keep>    | # pass 2
+<keep>    | # fail 0
+<skip>    | # cancelled 0
+<skip>    | # skipped 0
+<skip>    | # todo 0
+<keep>    | # duration_ms 37.905034

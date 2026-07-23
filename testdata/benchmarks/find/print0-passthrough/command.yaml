@@ -1,0 +1,2 @@
+argv: ["find", ".", "-type", "f", "-print0"]
+exit_code: 0

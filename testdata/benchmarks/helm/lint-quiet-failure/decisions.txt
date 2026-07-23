@@ -1,0 +1,8 @@
+<keep>    | samplechart:
+<keep>    |   validation: chart.metadata.version is required
+<keep>    | Error: 1 chart(s) linted, 1 chart(s) failed
+<keep>    | [ERROR] Chart.yaml: version should be of type string but it's of type <nil>
+<keep>    | [ERROR] Chart.yaml: version is required
+<keep>    | [WARNING] Chart.yaml: version '' is not a valid SemVerV2
+<keep>    | [ERROR] templates/: validation: chart.metadata.version is required
+<keep>    | [ERROR] : unable to load chart

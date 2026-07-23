@@ -1,1 +1,2 @@
 argv: ["sbt", "-error", "compile"]
+exit_code: 1

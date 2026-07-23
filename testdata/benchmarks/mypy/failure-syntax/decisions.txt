@@ -1,0 +1,2 @@
+<skip>    | test-data/packages/typedpkg/typedpkg/pkg/aaa.py:1: error: Expected ':'  [syntax]
+<skip>    | Found 1 error in 1 file (errors prevented further checking)

@@ -1,0 +1,6 @@
+<keep>    | yarn run v1.22.22
+<keep>    | $ node scripts/failure.js
+<keep>    | failure-line
+<keep>    | fatal: boom
+<keep>    | error Command failed with exit code 1.
+<keep>    | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

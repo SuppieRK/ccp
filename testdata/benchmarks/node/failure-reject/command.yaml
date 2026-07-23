@@ -1,1 +1,2 @@
 argv: ["node", "unhandled_rejection.js"]
+exit_code: 1

@@ -1,0 +1,13 @@
+<skip>    | .artifacts/tsc-demo/src/fail.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/fail.ts(2,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/fail.ts(3,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/fail.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/fail2.ts(1,22): error TS2304: Cannot find name 'missingSymbol'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(2,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(3,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(5,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(6,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(7,7): error TS2322: Type 'string' is not assignable to type 'number'.
+<skip>    | .artifacts/tsc-demo/src/overflow.ts(8,7): error TS2322: Type 'string' is not assignable to type 'number'.

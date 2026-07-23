@@ -43,11 +43,11 @@ func MatchesNotHaveAllShortFlags(args, flags []string) bool {
 }
 
 func MatchesPositionalsLackAny(args, disallowed, valueFlags []string) bool {
-	return len(disallowed) == 0 || !containsAny(positionals(args, valueFlags), disallowed)
+	return len(disallowed) == 0 || !containsAny(ParseArguments(args, valueFlags).Positionals(), disallowed)
 }
 
 func HasExplicitPositionals(args, valueFlags []string) bool {
-	return len(positionals(args, valueFlags)) > 0
+	return len(ParseArguments(args, valueFlags).Positionals()) > 0
 }
 
 func MatchesNoPositionals(args, valueFlags []string, want bool, allowLeadingCommand bool) bool {
@@ -58,9 +58,9 @@ func MatchesNoPositionals(args, valueFlags []string, want bool, allowLeadingComm
 		return true
 	}
 	if allowLeadingCommand {
-		return len(positionals(args[1:], valueFlags)) == 0
+		return len(ParseArguments(args[1:], valueFlags).Positionals()) == 0
 	}
-	return len(positionals(args, valueFlags)) == 0
+	return len(ParseArguments(args, valueFlags).Positionals()) == 0
 }
 
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
@@ -146,35 +146,6 @@ func containsRune(value string, want rune) bool {
 		}
 	}
 	return false
-}
-
-func positionals(args, valueFlags []string) []string {
-	out := make([]string, 0, len(args))
-	afterSeparator := false
-	skipNextValue := false
-	for _, arg := range args {
-		if skipNextValue {
-			skipNextValue = false
-			continue
-		}
-		if afterSeparator {
-			out = append(out, arg)
-			continue
-		}
-		if arg == "--" {
-			afterSeparator = true
-			continue
-		}
-		if takesStandaloneValue(arg, valueFlags) {
-			skipNextValue = true
-			continue
-		}
-		if len(arg) > 0 && arg[0] == '-' {
-			continue
-		}
-		out = append(out, arg)
-	}
-	return out
 }
 
 func takesStandaloneValue(arg string, flags []string) bool {

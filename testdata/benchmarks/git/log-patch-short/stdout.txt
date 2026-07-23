@@ -1,0 +1,2 @@
+00000|commit deadbeef
+00001|diff --git a/a b/a

@@ -1,0 +1,2 @@
+argv: ["pytest", "--tb", "native"]
+exit_code: 1

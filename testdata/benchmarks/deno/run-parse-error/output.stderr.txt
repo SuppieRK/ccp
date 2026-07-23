@@ -1,0 +1,4 @@
+[0m[1m[31merror[0m: The module's source code could not be parsed: Unexpected token `<eof>`. Expected identifier, string literal, numeric literal or [ for the computed key at file:///tmp/deno-local-corpus/main.ts:1:14
+
+  function x( {
+               ~

@@ -1,0 +1,13 @@
+<keep>    | PASS src/lib/slugify.test.ts
+<skip>    |   slugify
+<keep>    |     ✓ lowercases labels (2 ms)
+<keep>    |     ✓ collapses duplicate separators
+<keep>    | PASS src/lib/todo-count.test.ts
+<skip>    |   todo count
+<keep>    |     ✓ counts active todos
+<keep>    |     ✓ ignores completed todos
+<skip>    | 
+<replace> | Test Suites: 2 passed, 2 total
+<replace> | Tests:       4 passed, 4 total
+<skip>    | Time:        0.892 s
+<keep>    | Ran all test suites.

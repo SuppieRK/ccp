@@ -5,6 +5,20 @@ about: Compact `mix compile` and `mix format --check-formatted` output by droppi
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-diagnostic-or-output-passthrough
+    when_arguments:
+      have_any:
+        - --verbose
+        - --force
+        - --warnings-as-errors
+        - --no-archives-check
+        - --no-deps-check
+        - --no-elixir-version-check
+        - --dry-run
+        - --check-equivalent
+        - --stdin-filename
+    passthrough: true
+
   - id: compile
     when_arguments:
       first_is: compile

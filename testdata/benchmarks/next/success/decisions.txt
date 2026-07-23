@@ -1,0 +1,7 @@
+<keep>    | ▲ Next.js 15.2.0
+<skip>    | Creating an optimized production build ...
+<skip>    | ✓ Compiled successfully
+<keep>    | Route (app)                    Size     First Load JS
+<keep>    | ├ ○ /                          1.2 kB        132 kB
+<keep>    | └ ● /dashboard                 2.5 kB        156 kB
+<skip>    | ✓ Built in 34.2s

@@ -1,0 +1,34 @@
+<keep>    |    ▲ Next.js 15.5.12
+<skip>    | 
+<skip>    |    Creating an optimized production build ...
+<keep>    | (node:127122) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+<keep>    | (Use `node --trace-deprecation ...` to show where the warning was created)
+<skip>    | successCallback /tmp/repo-43a/.contentlayer
+<keep>    | Local search index generated...
+<keep>    | Generated 13 documents in .contentlayer
+<keep>    | Failed to compile.
+<skip>    | 
+<keep>    | ./app/page.tsx
+<keep>    | Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+<keep>    |    ,-[[36;1;4m/tmp/repo-43a/app/page.tsx[0m:9:1]
+<skip>    |  [2m6[0m |   const sortedPosts = sortPosts(allBlogs)
+<skip>    |  [2m7[0m |   const posts = allCoreContent(sortedPosts)
+<skip>    |  [2m8[0m |   return <Main posts={posts} >
+<skip>    |  [2m9[0m | }
+<keep>    |    : [35;1m^[0m
+<keep>    |    `----
+<keep>    |   [31mx[0m Unexpected eof
+<keep>    |    ,-[[36;1;4m/tmp/repo-43a/app/page.tsx[0m:9:3]
+<skip>    |  [2m7[0m |   const posts = allCoreContent(sortedPosts)
+<skip>    |  [2m8[0m |   return <Main posts={posts} >
+<skip>    |  [2m9[0m | }
+<keep>    |    `----
+<skip>    | 
+<keep>    | Caused by:
+<keep>    |     Syntax Error
+<skip>    | 
+<keep>    | Import trace for requested module:
+<keep>    | ./app/page.tsx
+<skip>    | 
+<skip>    | 
+<keep>    | > Build failed because of webpack errors

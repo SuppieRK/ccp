@@ -1,0 +1,6 @@
+.
+
+1 pass
+0 fail
+1 expect() calls
+Ran 1 test across 1 file. [16.00ms]

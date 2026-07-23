@@ -1,0 +1,2 @@
+<skip>    | Compiling 2 files (.ex)
+<keep>    | Generated ccpmixdemo app

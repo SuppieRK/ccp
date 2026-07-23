@@ -1,0 +1,11 @@
+ at testdata/tool-fixtures/npx-prettier/projects/basic/src/bad.js format ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  × Formatter would have printed the following content:
+    1   │ - function··sum(a,b){return·a+b}
+    2   │ - module.exports={sum}
+      1 │ + function·sum(a,·b)·{
+      2 │ + → return·a·+·b;
+      3 │ + }
+      4 │ + module.exports·=·{·sum·};
+    3 5 │   
+Checked 1 file in 2ms. No fixes applied.
+Found 1 error.

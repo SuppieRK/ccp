@@ -1,0 +1,1 @@
+ls|long_dired_passthrough

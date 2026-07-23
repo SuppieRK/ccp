@@ -1,0 +1,14 @@
+error details:
+___________________ ERROR collecting tests/test_packages.py ____________________
+E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+E       def test_can_access_urllib3_attribute(:
+E                                             ^
+E   SyntaxError: invalid syntax
+___________________ ERROR collecting tests/test_packages.py ____________________
+E     File "/tmp/requests-corpus/tests/test_packages.py", line 4
+E       def test_can_access_urllib3_attribute(:
+E                                             ^
+E   SyntaxError: invalid syntax
+summary:
+ERROR tests/test_packages.py
+ERROR tests/test_packages.py

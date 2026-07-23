@@ -28,6 +28,7 @@ var _ = Describe("replay fixtures", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(spec.Argv).To(Equal([]string{"grep", "-r", "-n", "needle", "./internal"}))
 			Expect(spec.ExitCode).To(BeZero())
+			Expect(spec.ExitCodeAsserted).To(BeTrue())
 		})
 
 		It("writes and reads non-zero exit codes when present", func() {
@@ -43,6 +44,17 @@ var _ = Describe("replay fixtures", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(spec.Argv).To(Equal([]string{"git", "show"}))
 			Expect(spec.ExitCode).To(Equal(128))
+			Expect(spec.ExitCodeAsserted).To(BeTrue())
+		})
+
+		It("distinguishes an omitted exit assertion from an asserted zero", func() {
+			path := filepath.Join(GinkgoT().TempDir(), CommandFileName)
+			Expect(os.WriteFile(path, []byte("argv: [\"git\", \"status\"]\n"), 0o644)).To(Succeed())
+
+			spec, err := ReadCommand(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.ExitCode).To(BeZero())
+			Expect(spec.ExitCodeAsserted).To(BeFalse())
 		})
 
 		DescribeTable("rejecting malformed command fixtures",
@@ -60,7 +72,7 @@ var _ = Describe("replay fixtures", func() {
 	})
 
 	Describe("sequenced streams", func() {
-		DescribeTable("reading replay lines with carriage returns at EOF",
+		DescribeTable("reading replay lines without normalizing carriage returns",
 			func(input string, expectedLine string, expectedErr error) {
 				line, err := readReplayLine(bufio.NewReader(strings.NewReader(input)))
 
@@ -71,15 +83,12 @@ var _ = Describe("replay fixtures", func() {
 				}
 				Expect(err).To(MatchError(expectedErr))
 			},
-			Entry("drops a trailing bare carriage return", "spinner\r", "", io.EOF),
-			Entry("keeps only the final overwritten line at EOF", "spinner\rdone", "done", nil),
+			Entry("preserves a trailing bare carriage return", "spinner\r", "spinner\r", nil),
+			Entry("preserves all carriage-return redraw bytes", "spinner\rdone", "spinner\rdone", nil),
+			Entry("returns EOF for an empty reader", "", "", io.EOF),
 		)
 
-		It("preserves the separator when resetting a replay line payload", func() {
-			Expect(string(resetReplayLinePayload([]byte("|spinner")))).To(Equal("|"))
-		})
-
-		DescribeTable("preserving sequenced prefixes across carriage-return redraws",
+		DescribeTable("preserving carriage-return redraws in sequenced records",
 			func(raw string, expected []Event) {
 				path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
 				Expect(os.WriteFile(path, []byte(raw), 0o644)).To(Succeed())
@@ -90,11 +99,11 @@ var _ = Describe("replay fixtures", func() {
 			},
 			Entry("keeps the sequence prefix for git rebase redraw output",
 				"00000|Rebasing (1/1)\r\r\x1b[KSuccessfully rebased and updated refs/heads/feature.\n",
-				[]Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "\x1b[KSuccessfully rebased and updated refs/heads/feature.\n"}},
+				[]Event{{Sequence: 0, Stream: contracts.StreamStdout, Line: "Rebasing (1/1)\r\r\x1b[KSuccessfully rebased and updated refs/heads/feature.\n"}},
 			),
 			Entry("keeps the sequence prefix for spinner redraw output",
 				"00004|\r⠋ [1/2] compiling calculator.js...\r⠋ [2/2] compiling legacy.js...\n",
-				[]Event{{Sequence: 4, Stream: contracts.StreamStdout, Line: "⠋ [2/2] compiling legacy.js...\n"}},
+				[]Event{{Sequence: 4, Stream: contracts.StreamStdout, Line: "\r⠋ [1/2] compiling calculator.js...\r⠋ [2/2] compiling legacy.js...\n"}},
 			),
 		)
 
@@ -110,13 +119,15 @@ var _ = Describe("replay fixtures", func() {
 
 			body, err := os.ReadFile(path)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(body)).To(Equal("00000|one\n00001|two\n00002|three\n"))
+			Expect(string(body)).To(ContainSubstring("00000|one\n"))
+			Expect(string(body)).To(ContainSubstring("00001|" + encodedPayloadPrefix))
+			Expect(string(body)).To(ContainSubstring("00002|three\n"))
 
 			loaded, err := ReadSequenced(path, contracts.StreamStdout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(loaded).To(Equal([]Event{
 				{Sequence: 0, Stream: contracts.StreamStdout, Line: "one\n"},
-				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two\n"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two"},
 				{Sequence: 2, Stream: contracts.StreamStdout, Line: "three\n"},
 			}))
 		})
@@ -157,16 +168,29 @@ var _ = Describe("replay fixtures", func() {
 			Expect(loaded).To(Equal(events))
 		})
 
-		It("normalizes CRLF sequenced fixtures without leaking stray carriage returns", func() {
+		It("preserves CRLF sequenced fixtures exactly", func() {
 			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
 			Expect(os.WriteFile(path, []byte("00000|one\r\n00001|two\r\n"), 0o644)).To(Succeed())
 
 			loaded, err := ReadSequenced(path, contracts.StreamStdout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(loaded).To(Equal([]Event{
-				{Sequence: 0, Stream: contracts.StreamStdout, Line: "one\n"},
-				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two\n"},
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "one\r\n"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "two\r\n"},
 			}))
+		})
+
+		It("round-trips invalid UTF-8 and reserved-prefix payloads", func() {
+			path := filepath.Join(GinkgoT().TempDir(), StdoutFileName)
+			events := []Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: string([]byte{0xff, 0xfe, 'x'})},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: encodedPayloadPrefix + "literal\n"},
+			}
+
+			Expect(WriteSequenced(path, events)).To(Succeed())
+			loaded, err := ReadSequenced(path, contracts.StreamStdout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded).To(Equal(events))
 		})
 
 		It("treats missing sequenced files as absent events", func() {

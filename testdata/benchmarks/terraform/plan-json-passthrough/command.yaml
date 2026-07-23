@@ -1,1 +1,2 @@
 argv: ["terraform", "plan", "-json", "-input=false", "-refresh=false"]
+exit_code: 0

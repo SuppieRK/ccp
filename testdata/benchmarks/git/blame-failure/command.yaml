@@ -1,1 +1,2 @@
 argv: ["git", "blame", "missing.txt"]
+exit_code: 128

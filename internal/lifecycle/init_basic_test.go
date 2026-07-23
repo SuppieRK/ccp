@@ -188,8 +188,7 @@ var _ = Describe("init basic behavior", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			content := string(body)
-			Expect(content).To(ContainSubstring(`trimmed.startsWith("ccp ")`))
-			Expect(content).To(ContainSubstring(`trimmed === "ccp"`))
+			Expect(content).To(ContainSubstring(`if (command === "ccp") return segment;`))
 		})
 
 		It("keeps conservative fallback handling for complex commands", func() {
@@ -197,9 +196,10 @@ var _ = Describe("init basic behavior", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			content := string(body)
-			Expect(content).To(ContainSubstring(`if (/\$\(|\$\{|<</.test(command))`))
-			Expect(content).NotTo(ContainSubstring(`if (/['"\\]|\$\(|\$\{|<</.test(command))`))
-			Expect(content).To(ContainSubstring(`command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ")`))
+			Expect(content).To(ContainSubstring(`function rewriteCommand(input)`))
+			Expect(content).To(ContainSubstring(`shellBuiltinsAndKeywords`))
+			Expect(content).To(ContainSubstring(`command === "find"`))
+			Expect(content).To(ContainSubstring(`if (char === "|" || char === "&") return null;`))
 			Expect(content).To(ContainSubstring(`output.args.command = rewritten;`))
 		})
 

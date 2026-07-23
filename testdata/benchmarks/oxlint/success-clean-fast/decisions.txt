@@ -1,0 +1,2 @@
+<keep>    | Found 0 warnings and 0 errors.
+<skip>    | Finished in 20ms on 1 file with 93 rules using 16 threads.

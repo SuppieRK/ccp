@@ -1,0 +1,2 @@
+argv: ["git", "diff", "-s"]
+exit_code: 0

@@ -22,6 +22,8 @@ type stubVerifyRunner struct {
 	gotEvents   []replay.Event
 	gotExitCode int
 	output      string
+	stdout      string
+	stderr      string
 	decisions   string
 	err         error
 }
@@ -30,7 +32,12 @@ func (s *stubVerifyRunner) ReplayWithExitCode(args []string, events []replay.Eve
 	s.gotArgs = append([]string(nil), args...)
 	s.gotEvents = append([]replay.Event(nil), events...)
 	s.gotExitCode = exitCode
-	return core.ReplayResult{Output: s.output, Decisions: s.decisions}, s.err
+	return core.ReplayResult{
+		Output:    s.output,
+		Stdout:    s.stdout,
+		Stderr:    s.stderr,
+		Decisions: s.decisions,
+	}, s.err
 }
 
 var _ = Describe("verify", func() {
@@ -100,6 +107,8 @@ var _ = Describe("verify", func() {
 	It("replays fixtures and writes verify artifacts", func() {
 		stub := &stubVerifyRunner{
 			output:    "filtered output\n",
+			stdout:    "filtered stdout\n",
+			stderr:    "filtered stderr\n",
 			decisions: "<keep>    | native stdout\n",
 		}
 		DeferCleanup(stubVerifyRunnerForTest(stub))
@@ -121,6 +130,12 @@ var _ = Describe("verify", func() {
 		outputData, err := os.ReadFile(filepath.Join(tmp, replay.VerifyOutputFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(outputData)).To(Equal("filtered output\n"))
+		stdoutData, err := os.ReadFile(filepath.Join(tmp, replay.VerifyStdoutFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(stdoutData)).To(Equal("filtered stdout\n"))
+		stderrData, err := os.ReadFile(filepath.Join(tmp, replay.VerifyStderrFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(stderrData)).To(Equal("filtered stderr\n"))
 		decisionData, err := os.ReadFile(filepath.Join(tmp, replay.VerifyDecisionsFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(decisionData)).To(Equal("<keep>    | native stdout\n"))

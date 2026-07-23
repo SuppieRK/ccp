@@ -1,1 +1,2 @@
 argv: ["./ruff", "src"]
+exit_code: 1

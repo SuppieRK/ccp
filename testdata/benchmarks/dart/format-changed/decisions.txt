@@ -1,0 +1,2 @@
+<replace> | Formatted .artifacts/dart-demo-format/main.dart
+<replace> | Formatted 1 file (1 changed) in 0.02 seconds.

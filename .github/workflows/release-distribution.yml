@@ -7,17 +7,26 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag without v prefix (for example: 1.2.3)'
+        description: 'Existing release tag without v prefix (for example: 1.2.3)'
         required: true
         type: string
 
 jobs:
   preflight:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.resolve-tag.outputs.tag }}
+      source_sha: ${{ steps.resolve-tag.outputs.source_sha }}
+      tag_oid: ${{ steps.resolve-tag.outputs.tag_oid }}
     steps:
-      - name: Resolve and validate release tag
+      - name: Checkout release resolver
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+
+      - name: Resolve and validate existing release tag
         id: resolve-tag
         shell: bash
         run: |
@@ -39,29 +48,37 @@ jobs:
             echo "release tag must match X.Y.Z exactly: ${TAG}" >&2
             exit 1
           fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
+          TAG_OID="$(git rev-parse "refs/ccp-release-tags/${TAG}")"
+          SOURCE_SHA="$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")"
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          {
+            echo "tag=${TAG}"
+            echo "tag_oid=${TAG_OID}"
+            echo "source_sha=${SOURCE_SHA}"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Fail if release already exists for tag
+      - name: Fail if release or draft already exists for tag
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.resolve-tag.outputs.tag }}
           REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
           API_URL="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
-          status=$(curl -sS -o /tmp/release.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          status="$(curl -sS -o /tmp/release.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "${API_URL}")
+            "${API_URL}")"
           if [[ "$status" == "200" ]]; then
-            echo "release already exists for tag ${TAG}; refusing to overwrite"
-            cat /tmp/release.json
+            echo "release or draft already exists for tag ${TAG}; follow the documented draft-repair procedure"
+            jq '{id, tag_name, draft, prerelease, html_url}' /tmp/release.json
             exit 1
           fi
           if [[ "$status" != "404" ]]; then
             echo "unexpected API status while checking tag ${TAG}: ${status}"
-            cat /tmp/release.json || true
+            jq . /tmp/release.json || true
             exit 1
           fi
 
@@ -74,17 +91,34 @@ jobs:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.preflight.outputs.source_sha }}
+          fetch-depth: 1
+
+      - name: Verify checkout and tag identity
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.preflight.outputs.source_sha }}
+          EXPECTED_TAG_OID: ${{ needs.preflight.outputs.tag_oid }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
 
-      - name: Build archive
+      - name: Build and inspect archive
         env:
           TAG: ${{ needs.preflight.outputs.tag }}
+          SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         shell: bash
@@ -96,24 +130,43 @@ jobs:
             bin_name="ccp.exe"
           fi
           out_bin="dist/${bin_name}"
+          ldflags="-s -w -X go-command-compression-proxy/internal/version.Version=${TAG}"
           CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
-            go build -trimpath -ldflags "-s -w -X go-command-compression-proxy/internal/version.Version=${TAG}" \
-            -o "$out_bin" ./cmd/ccp
+            go build -trimpath -ldflags "$ldflags" -o "$out_bin" ./cmd/ccp
+          grep -aFq "${TAG}" "$out_bin"
+
+          host_probe="dist/ccp-version-probe"
+          CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$host_probe" ./cmd/ccp
+          test "$("$host_probe" --version)" = "${TAG}"
+          rm -f "$host_probe"
+
           asset="ccp_${TAG}_${GOOS}_${GOARCH}.zip"
           (
             cd dist
             zip -q "$asset" "$bin_name"
+            test "$(unzip -Z1 "$asset")" = "$bin_name"
+            rm -f "$bin_name"
           )
-          rm -f "$out_bin"
+          jq -n \
+            --arg tag "$TAG" \
+            --arg source_sha "$SOURCE_SHA" \
+            --arg goos "$GOOS" \
+            --arg goarch "$GOARCH" \
+            --arg asset "$asset" \
+            --arg go_version "$(go version)" \
+            '{tag:$tag,source_sha:$source_sha,goos:$goos,goarch:$goarch,asset:$asset,go_version:$go_version,archive_entries:1}' \
+            > "dist/${asset}.metadata.json"
 
-      - name: Upload matrix asset
-        uses: actions/upload-artifact@v7
+      - name: Upload matrix asset and source metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.metadata.json
           retention-days: 1
 
-  publish:
+  create-draft:
     needs: [preflight, build-artifacts]
     permissions:
       contents: write
@@ -121,40 +174,58 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.preflight.outputs.source_sha }}
+          fetch-depth: 1
+
       - name: Download all assets
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: dist
 
-      - name: Flatten artifacts
+      - name: Verify immutable identity and artifact set
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.preflight.outputs.source_sha }}
+          EXPECTED_TAG_OID: ${{ needs.preflight.outputs.tag_oid }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release
-          find dist -type f -name '*.zip' -exec cp {} release/ \;
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
 
-      - name: Generate checksums for release archives
-        shell: bash
-        run: |
-          set -euo pipefail
+          mkdir -p release metadata
+          find dist -type f -name '*.zip' -exec cp {} release/ \;
+          find dist -type f -name '*.metadata.json' -exec cp {} metadata/ \;
+          test "$(find release -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 6
+          test "$(find metadata -maxdepth 1 -type f -name '*.metadata.json' | wc -l)" -eq 6
+          for goos in linux darwin windows; do
+            for goarch in amd64 arm64; do
+              asset="ccp_${TAG}_${goos}_${goarch}.zip"
+              test -f "release/${asset}"
+              metadata_file="metadata/${asset}.metadata.json"
+              test -f "$metadata_file"
+              test "$(jq -r .tag "$metadata_file")" = "$TAG"
+              test "$(jq -r .source_sha "$metadata_file")" = "$EXPECTED_SHA"
+              test "$(jq -r .asset "$metadata_file")" = "$asset"
+              test "$(jq -r .archive_entries "$metadata_file")" -eq 1
+              expected_binary="ccp"
+              [[ "$goos" == "windows" ]] && expected_binary="ccp.exe"
+              test "$(unzip -Z1 "release/${asset}")" = "$expected_binary"
+            done
+          done
           (
             cd release
-            # Keep this aligned with .goreleaser.yaml checksum configuration.
             sha256sum ./*.zip > ./ccp_checksums.txt
+            test "$(wc -l < ./ccp_checksums.txt)" -eq 6
           )
 
-      - name: Publish GitHub release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: ${{ needs.preflight.outputs.tag }}
-          tag_name: ${{ needs.preflight.outputs.tag }}
-          fail_on_unmatched_files: true
-          files: |
-            ./release/*.zip
-            ./release/ccp_checksums.txt
-
       - name: Generate binary archive attestations
-        uses: actions/attest@v4
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
         with:
           subject-path: ./release/*.zip
           predicate-type: https://schemas.go-command-compression-proxy.dev/release/binary-archive-attestation/v1
@@ -163,90 +234,109 @@ jobs:
               "repository": "${{ github.repository }}",
               "workflow": "release-distribution",
               "scope": "binary-archives-only",
-              "attestationActionRef": "actions/attest@v4"
+              "sourceSha": "${{ needs.preflight.outputs.source_sha }}",
+              "tag": "${{ needs.preflight.outputs.tag }}",
+              "attestationActionRef": "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
             }
 
-      - name: Record periodic review reminder for attest action major pin
-        if: always()
-        shell: bash
-        run: |
-          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            {
-              echo "### Attestation action version review"
-              echo "- Current pin: \`actions/attest@v4\`"
-              echo "- Review cadence: quarterly"
-              echo "- Scope reminder: binary archives only (\`release/*.zip\`)."
-            } >> "${GITHUB_STEP_SUMMARY}"
-          fi
+      - name: Create private draft release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          name: ${{ needs.preflight.outputs.tag }}
+          tag_name: ${{ needs.preflight.outputs.tag }}
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            ./release/*.zip
+            ./release/ccp_checksums.txt
 
-  smoke-install:
-    needs: [preflight, publish]
+  smoke-draft:
+    needs: [preflight, create-draft]
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Wait for release asset to become available
+      - name: Download draft assets
         env:
-          VERSION: ${{ needs.preflight.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
           REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
           case "${{ runner.os }}" in
-            Windows) asset="ccp_${VERSION}_windows_amd64.zip" ;;
-            *) asset="ccp_${VERSION}_linux_amd64.zip" ;;
+            Windows) asset="ccp_${TAG}_windows_amd64.zip" ;;
+            *) asset="ccp_${TAG}_linux_amd64.zip" ;;
           esac
-          url="https://github.com/${REPO}/releases/download/${VERSION}/${asset}"
-          echo "Waiting for ${url}"
-          for attempt in $(seq 1 24); do
-            status="$(curl --proto '=https' --tlsv1.2 -sS -L -o /dev/null -w "%{http_code}" "$url" || true)"
-            if [[ "$status" == "200" ]]; then
-              echo "Release asset is available"
-              exit 0
-            fi
-            echo "Attempt ${attempt}/24: asset not ready yet (HTTP ${status:-error})"
-            sleep 5
-          done
-          echo "release asset did not become available: ${url}" >&2
-          exit 1
+          gh release download "$TAG" --repo "$REPO" --pattern "$asset" --pattern ccp_checksums.txt
 
-      - name: Run install script smoke test (Unix)
+      - name: Smoke install draft asset on Unix
         if: runner.os != 'Windows'
         env:
-          VERSION: ${{ needs.preflight.outputs.tag }}
+          TAG: ${{ needs.preflight.outputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
-          sh ./scripts/install.sh
-          if [[ -x "/usr/local/bin/ccp" ]]; then
-            /usr/local/bin/ccp --version
-          elif [[ -x "$HOME/.local/bin/ccp" ]]; then
-            "$HOME/.local/bin/ccp" --version
-          elif [[ -x "$PWD/bin/ccp" ]]; then
-            "$PWD/bin/ccp" --version
-          else
-            echo "ccp binary not found in expected install targets" >&2
-            exit 1
-          fi
+          asset="ccp_${TAG}_linux_amd64.zip"
+          grep " ./${asset}$" ccp_checksums.txt | sha256sum --check -
+          mkdir -p test-bin
+          test "$(unzip -Z1 "$asset")" = "ccp"
+          unzip -q "$asset" -d test-bin
+          chmod 0755 test-bin/ccp
+          test "$(test-bin/ccp --version)" = "$TAG"
 
-      - name: Run install smoke test (Windows)
+      - name: Smoke install draft asset on Windows
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          REPO: ${{ github.repository }}
-          VERSION: ${{ needs.preflight.outputs.tag }}
+          TAG: ${{ needs.preflight.outputs.tag }}
         run: |
           $ErrorActionPreference = "Stop"
-          $asset = "ccp_${env:VERSION}_windows_amd64.zip"
-          $url = "https://github.com/$env:REPO/releases/download/$env:VERSION/$asset"
+          $asset = "ccp_${env:TAG}_windows_amd64.zip"
+          $checksumLine = Get-Content ccp_checksums.txt | Where-Object { $_ -match [regex]::Escape("./$asset") }
+          if (-not $checksumLine) { throw "missing checksum for $asset" }
+          $expected = ($checksumLine -split '\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "checksum mismatch for $asset" }
+          $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $asset)).Entries
+          if ($entries.Count -ne 1 -or $entries[0].FullName -ne "ccp.exe") {
+            throw "unexpected archive shape"
+          }
           $outDir = Join-Path $PWD "test-bin"
-          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-          $zipPath = Join-Path $PWD $asset
-          Invoke-WebRequest -Uri $url -OutFile $zipPath
-          Expand-Archive -Path $zipPath -DestinationPath $outDir -Force
-          & (Join-Path $outDir "ccp.exe") --version
+          Expand-Archive -Path $asset -DestinationPath $outDir
+          $version = & (Join-Path $outDir "ccp.exe") --version
+          if ($version -ne $env:TAG) { throw "unexpected binary version: $version" }
+
+  publish:
+    needs: [preflight, smoke-draft]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.preflight.outputs.source_sha }}
+          fetch-depth: 1
+
+      - name: Publish the validated draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.preflight.outputs.source_sha }}
+          EXPECTED_TAG_OID: ${{ needs.preflight.outputs.tag_oid }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
+          test "$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq .isDraft)" = "true"
+          gh release edit "$TAG" --repo "$REPO" --draft=false --latest

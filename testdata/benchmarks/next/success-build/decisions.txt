@@ -1,0 +1,58 @@
+<keep>    |    ▲ Next.js 15.5.12
+<skip>    | 
+<skip>    |    Creating an optimized production build ...
+<keep>    | (node:125847) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+<keep>    | (Use `node --trace-deprecation ...` to show where the warning was created)
+<skip>    | successCallback /tmp/repo-43a/.contentlayer
+<keep>    | Local search index generated...
+<keep>    | Generated 13 documents in .contentlayer
+<replace> |  ✓ Compiled successfully in 9.8s
+<skip>    |    Linting and checking validity of types ...
+<keep>    |  ⚠ TypeScript project references are not fully supported. Attempting to build in incremental mode.
+<skip>    |    Collecting page data ...
+<skip>    |    Generating static pages (0/60) ...
+<skip>    |    Generating static pages (15/60) 
+<skip>    |    Generating static pages (30/60) 
+<skip>    |    Generating static pages (45/60) 
+<replace> |  ✓ Generating static pages (60/60)
+<skip>    |    Finalizing page optimization ...
+<skip>    |    Collecting build traces ...
+<skip>    | 
+<keep>    | Route (app)                                 Size  First Load JS
+<keep>    | ┌ ○ /                                    1.12 kB         107 kB
+<keep>    | ├ ○ /_not-found                            134 B         102 kB
+<keep>    | ├ ○ /about                                 483 B         108 kB
+<keep>    | ├ ƒ /api/newsletter                        134 B         102 kB
+<keep>    | ├ ○ /blog                                  124 B         112 kB
+<keep>    | ├ ● /blog/[...slug]                      4.08 kB         115 kB
+<skip>    | ├   ├ /blog/code-sample
+<skip>    | ├   ├ /blog/deriving-ols-estimator
+<skip>    | ├   ├ /blog/github-markdown-guide
+<skip>    | ├   └ [+8 more paths]
+<keep>    | ├ ● /blog/page/[page]                      124 B         112 kB
+<skip>    | ├   ├ /blog/page/1
+<skip>    | ├   ├ /blog/page/2
+<skip>    | ├   └ /blog/page/3
+<keep>    | ├ ○ /projects                              173 B         111 kB
+<keep>    | ├ ○ /robots.txt                            134 B         102 kB
+<keep>    | ├ ○ /sitemap.xml                           134 B         102 kB
+<keep>    | ├ ○ /tags                                  161 B         106 kB
+<keep>    | ├ ● /tags/[tag]                            124 B         112 kB
+<skip>    | ├   ├ /tags/markdown
+<skip>    | ├   ├ /tags/code
+<skip>    | ├   ├ /tags/features
+<skip>    | ├   └ [+14 more paths]
+<keep>    | └ ● /tags/[tag]/page/[page]                124 B         112 kB
+<skip>    |     ├ /tags/markdown/page/1
+<skip>    |     ├ /tags/code/page/1
+<skip>    |     ├ /tags/features/page/1
+<skip>    |     └ [+15 more paths]
+<keep>    | + First Load JS shared by all             102 kB
+<skip>    |   ├ chunks/255-300146a1fbdb333d.js       45.9 kB
+<skip>    |   ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+<skip>    |   └ other shared chunks (total)          1.98 kB
+<skip>    | 
+<skip>    | 
+<keep>    | ○  (Static)   prerendered as static content
+<keep>    | ●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+<keep>    | ƒ  (Dynamic)  server-rendered on demand

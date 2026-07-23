@@ -1,1 +1,2 @@
 argv: ["composer", "install", "--no-interaction", "--no-progress"]
+exit_code: 0

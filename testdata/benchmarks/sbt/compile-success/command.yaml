@@ -1,1 +1,2 @@
 argv: ["sbt", "compile"]
+exit_code: 0

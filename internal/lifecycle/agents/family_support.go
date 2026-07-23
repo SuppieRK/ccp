@@ -14,10 +14,7 @@ func updateInstallResult(res *InstallResult, changed bool) {
 }
 
 func writeManagedArtifact(path string, body []byte, perm os.FileMode) error {
-	if err := projectfiles.RejectSymlinkPath(path); err != nil {
-		return err
-	}
-	return os.WriteFile(path, body, perm)
+	return projectfiles.AtomicWriteFile(path, body, perm)
 }
 
 func applyManagedFileChange(path, updated string, changed bool, removeAll bool) (InstallResult, error) {

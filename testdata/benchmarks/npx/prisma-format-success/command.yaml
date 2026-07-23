@@ -1,1 +1,2 @@
 argv: ["npx", "prisma", "format", "--schema", "prisma/format.prisma"]
+exit_code: 0

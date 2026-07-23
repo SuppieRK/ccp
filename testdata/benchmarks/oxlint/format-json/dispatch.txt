@@ -1,0 +1,1 @@
+oxlint|explicit-output-or-fix-passthrough

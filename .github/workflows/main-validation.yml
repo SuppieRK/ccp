@@ -63,25 +63,20 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Cache validation tools and lint state
+      - name: Cache validation tool builds and lint state
         uses: actions/cache@v6
         with:
           path: |
-            ~/go/bin
-            ~/.cache/golangci-lint
+            .gocache
+            .cache/golangci-lint
           key: validation-tools-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum', './scripts/validate.sh', '.github/workflows/main-validation.yml', '.github/workflows/pr-validation.yml') }}
           restore-keys: |
             validation-tools-${{ runner.os }}-
 
-      - name: Install validation tools
+      - name: Download locked dependencies
         shell: bash
         run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@latest
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          go install github.com/gordonklaus/ineffassign@latest
-          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          curl --proto "=https" -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.3
+          go mod download
 
       - name: Run local validation helper
         shell: bash

@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 )
 
 type toolState struct {
@@ -172,19 +171,7 @@ func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool
 	if bytes.Equal(old, data) {
 		return false, nil
 	}
-	tmp := fmt.Sprintf("%s.tmp.%d", path, time.Now().UnixNano())
-	if err := projectfiles.RejectSymlinkPath(tmp); err != nil {
-		return false, err
-	}
-	if err := os.WriteFile(tmp, data, perm); err != nil {
-		return false, err
-	}
-	if err := projectfiles.RejectSymlinkPath(path); err != nil {
-		_ = os.Remove(tmp)
-		return false, err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
+	if err := projectfiles.AtomicWriteFile(path, data, perm); err != nil {
 		return false, err
 	}
 	return true, nil

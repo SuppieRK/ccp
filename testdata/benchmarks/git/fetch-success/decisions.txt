@@ -1,0 +1,7 @@
+<skip>    | From ./tmp/remote
+<skip>    |    f921715..132f45a  main       -> origin/main
+<replace> |  * [new branch]      feature-a  -> origin/feature-a
+<replace> |  * [new branch]      feature-b  -> origin/feature-b
+<replace> |  * [new branch]      feature-c  -> origin/feature-c
+<replace> |  * [new tag]         v2         -> v2
+<replace> |  * [new tag]         v3         -> v3

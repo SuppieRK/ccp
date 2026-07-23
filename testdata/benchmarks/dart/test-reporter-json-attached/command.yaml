@@ -1,0 +1,2 @@
+argv: ["dart", "test", "--reporter=json"]
+exit_code: 0

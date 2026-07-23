@@ -1,1 +1,2 @@
 argv: ["grep", "-r", "-n", "needle", "."]
+exit_code: 0

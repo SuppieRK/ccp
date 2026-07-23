@@ -1,0 +1,21 @@
+<skip>    | 
+<skip>    |  NX   Running target build for 2 projects:
+<skip>    | 
+<skip>    | - web
+<skip>    | - shared-ui
+<skip>    | 
+<keep>    | > nx run shared-ui:build
+<skip>    | 
+<skip>    | vite v6.3.1 building for production...
+<skip>    | ✓ 4 modules transformed.
+<skip>    | 
+<keep>    | > nx run web:build
+<skip>    | 
+<keep>    | ERROR in src/app/app.ts:17:12
+<keep>    | Error: Cannot find module './missing'
+<skip>    | 
+<replace> | Running target build for project web failed
+<skip>    | 
+<keep>    | Failed tasks:
+<skip>    | 
+<keep>    | - web:build

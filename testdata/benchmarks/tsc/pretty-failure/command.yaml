@@ -1,1 +1,2 @@
 argv: ["tsc", "--pretty", "true", "--noEmit", "-p", ".artifacts/tsc-demo/tsconfig.json"]
+exit_code: 1

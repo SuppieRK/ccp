@@ -1,0 +1,3 @@
+<skip>    | total 0
+<replace> | -rwxrwxrwx 1 suppie suppie   10 Mar 18 21:37 plain.txt
+<replace> | drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 subdir

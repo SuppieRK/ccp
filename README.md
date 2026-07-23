@@ -20,7 +20,9 @@ Keep command truth intact while shaping noisy output to fit your workflow. Own d
 
 Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
 
-Validated on every build across `52` tool families and `382` replay cases.
+Validated on every build across the shipped filter inventory and replay
+corpus. The generated runtime inventory is available in
+[docs/generated/CLI_FACTS.md](docs/generated/CLI_FACTS.md).
 
 ## See It Work
 
@@ -151,12 +153,23 @@ Useful commands:
 ```bash
 ccp gain --global
 ccp history --global
+ccp history purge --before 90d --yes
+ccp recovery enable
+ccp recovery list
 ccp repair
 ccp uninstall --tools codex
 ccp uninstall
 ```
 
 Successful pre-1.0 upgrades run rewrite repair through the newly installed binary, including guarded current-repository CCP migrations. Downgrades are rejected by `ccp upgrade`; uninstall and reinstall explicitly if you need an older version.
+
+Project metrics are private, crash-safe, and retained for 90 days. A
+project-local spool preserves concurrent writes while the database is busy;
+pending events are consolidated on later commands. Raw failure recovery is
+disabled by default. When explicitly enabled, it stores only bounded,
+failed-and-compacted command output and excludes raw, passthrough,
+confidential, zero-byte, and oversized runs. Use `ccp recovery purge` to
+remove those artifacts.
 
 ## Own The Compression Rules
 
@@ -171,7 +184,22 @@ Project-local filters are meant to be committed when they describe repo behavior
 
 Use `ccp filter prompt` to print an embedded, agent-ready workflow for creating or improving filters. The workflow starts by copying any matching global/home filter into `./.ccp/filters` before editing; global filters are not edited unless you explicitly ask for a global change.
 
-Project scope overrides home scope. That gives you a clean model:
+`ccp capture` writes private (`0700` directory, `0600` files) native and
+replayed stream fixtures. Captures may contain source, paths, credentials, or
+other sensitive output. Use
+`ccp capture --confidential value1,value2 -- <command>` to replace known
+literal values before they are persisted; review every capture before
+committing it.
+
+Release builds ignore project-local filters until you approve their exact
+current bytes with `ccp filter trust`. Approval is scoped to the canonical
+project directory and covers every YAML file plus `.mappings.yaml`; additions,
+removals, renames, mapping edits, or content edits change the status to
+`changed` and require approval again. Use `ccp filter status` to inspect the
+decision and `ccp filter untrust` to remove approval. Home filters remain
+available while project filters are absent, untrusted, changed, or unsafe.
+
+Once trusted, project scope overrides home scope. That gives you a clean model:
 
 - experiment in one repo without touching anything else
 - ship shared defaults across a team
@@ -179,6 +207,10 @@ Project scope overrides home scope. That gives you a clean model:
 - handle domain-specific logs without pretending one generic filter fits every project
 
 Read more details in [FILTERS.md](FILTERS.md)
+
+The execution hot path resolves the invoked command and loads only its
+effective filter from each source. Full inventory scans remain limited to
+administrative commands such as filter status and repair.
 
 ## Capability Matrix
 

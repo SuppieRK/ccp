@@ -1,0 +1,2 @@
+argv: ["ls", "-lt"]
+exit_code: 0

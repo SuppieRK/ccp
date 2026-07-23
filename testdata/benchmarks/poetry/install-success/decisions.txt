@@ -1,0 +1,20 @@
+<keep>    | Updating dependencies
+<skip>    | Resolving dependencies...
+<skip>    | 
+<keep>    | Package operations: 5 installs, 0 updates, 0 removals
+<skip>    | 
+<skip>    |   - Installing certifi (2026.2.25)
+<skip>    |   - Installing charset-normalizer (3.4.5)
+<skip>    |   - Installing idna (3.11)
+<skip>    |   - Installing urllib3 (2.6.3)
+<skip>    |   - Installing requests (2.32.5)
+<skip>    | 
+<keep>    | Writing lock file
+<skip>    | 
+<keep>    | Installing the current project: poetry-corpus-example (0.1.0)
+<skip>    | 
+<skip>    | Creating virtualenv poetry-corpus-example-b-8BxJID-py3.12 in /home/suppie/.cache/pypoetry/virtualenvs
+<keep>    | Warning: The current project could not be installed: No file/folder found for package poetry-corpus-example
+<keep>    | If you do not want to install the current project use --no-root.
+<keep>    | If you want to use Poetry only for dependency management but not for packaging, you can disable package mode by setting package-mode = false in your pyproject.toml file.
+<keep>    | In a future version of Poetry this warning will become an error!

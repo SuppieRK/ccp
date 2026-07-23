@@ -3,26 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-warn_missing_tool() {
-  local tool="$1"
-  local install="$2"
-  echo "[validate] warning: ${tool} not found; install with:" >&2
-  echo "[validate]   ${install}" >&2
-  return 0
-}
-
-run_if_available() {
-  local tool="$1"
-  local install="$2"
-  shift 2
-  if command -v "$tool" >/dev/null 2>&1; then
-    echo "[validate] $*"
-    "$@"
-    return 0
-  fi
-  warn_missing_tool "$tool" "$install"
-}
-
 declare -a PARALLEL_PIDS=()
 declare -a PARALLEL_NAMES=()
 
@@ -92,11 +72,8 @@ EOF
   run_in_background "go test -count=1 -race ./..." go test -count=1 -race ./...
 
   run_in_background \
-    "staticcheck ./..." \
-    run_if_available \
-    staticcheck \
-    "go install honnef.co/go/tools/cmd/staticcheck@latest" \
-    staticcheck ./...
+    "go tool staticcheck ./..." \
+    go tool staticcheck ./...
 
   #run_in_background \
   #  "gosec ./..." \
@@ -106,32 +83,20 @@ EOF
   #  gosec ./...
 
   run_in_background \
-    "govulncheck ./..." \
-    run_if_available \
-    govulncheck \
-    "go install golang.org/x/vuln/cmd/govulncheck@latest" \
-    govulncheck ./...
+    "go tool govulncheck ./..." \
+    go tool govulncheck ./...
 
   run_in_background \
-    "golangci-lint run ./..." \
-    run_if_available \
-    golangci-lint \
-    "curl --proto \"=https\" -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.3" \
-    golangci-lint run ./...
+    "go tool golangci-lint run ./..." \
+    go tool golangci-lint run ./...
 
   run_in_background \
-    "ineffassign ./..." \
-    run_if_available \
-    ineffassign \
-    "go install github.com/gordonklaus/ineffassign@latest" \
-    ineffassign ./...
+    "go tool ineffassign ./..." \
+    go tool ineffassign ./...
 
   run_in_background \
-    "gocyclo -over 15 ." \
-    run_if_available \
-    gocyclo \
-    "go install github.com/fzipp/gocyclo/cmd/gocyclo@latest" \
-    gocyclo -over 15 .
+    "go tool gocyclo -over 15 ." \
+    go tool gocyclo -over 15 .
 
   wait_for_background_jobs
 

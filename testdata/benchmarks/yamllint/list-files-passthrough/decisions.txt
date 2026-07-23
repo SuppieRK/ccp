@@ -1,0 +1,2 @@
+<keep>    | .goreleaser.yaml
+<keep>    | filters/.mappings.yaml

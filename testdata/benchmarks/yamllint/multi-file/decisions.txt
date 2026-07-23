@@ -1,0 +1,22 @@
+<keep>    | .goreleaser.yaml
+<replace> |   1:1       warning  missing document start "---"  (document-start)
+<skip>    | 
+<keep>    | .github/workflows/main-validation.yml
+<replace> |   1:1       warning  missing document start "---"  (document-start)
+<replace> |   3:1       warning  truthy value should be one of [false, true]  (truthy)
+<replace> |   36:81     error    line too long (190 > 80 characters)  (line-length)
+<replace> |   48:81     error    line too long (117 > 80 characters)  (line-length)
+<replace> |   59:81     error    line too long (91 > 80 characters)  (line-length)
+<replace> |   98:81     error    line too long (83 > 80 characters)  (line-length)
+<replace> |   120:81    error    line too long (110 > 80 characters)  (line-length)
+<replace> |   128:81    error    line too long (88 > 80 characters)  (line-length)
+<replace> |   129:81    error    line too long (90 > 80 characters)  (line-length)
+<replace> |   130:81    error    line too long (84 > 80 characters)  (line-length)
+<replace> |   149:81    error    line too long (82 > 80 characters)  (line-length)
+<replace> |   155:81    error    line too long (124 > 80 characters)  (line-length)
+<replace> |   162:81    error    line too long (111 > 80 characters)  (line-length)
+<replace> |   171:81    error    line too long (124 > 80 characters)  (line-length)
+<replace> |   174:81    error    line too long (110 > 80 characters)  (line-length)
+<replace> |   207:81    error    line too long (124 > 80 characters)  (line-length)
+<replace> |   216:81    error    line too long (126 > 80 characters)  (line-length)
+<replace> |   224:81    error    line too long (86 > 80 characters)  (line-length)

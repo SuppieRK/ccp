@@ -1,0 +1,1 @@
+uv|pip_list_json_passthrough_inline

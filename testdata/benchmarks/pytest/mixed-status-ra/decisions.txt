@@ -1,0 +1,24 @@
+<skip>    | .FE sxX                                               [100%]
+<skip>    | ==================================== ERRORS ====================================
+<skip>    | _______________________ ERROR at setup of test_error _______________________
+<skip>    | 
+<skip>    |     @pytest.fixture
+<skip>    |     def error_fixture():
+<skip>    | >       assert 0
+<skip>    | E       assert 0
+<skip>    | test_example.py:6: AssertionError
+<skip>    | =================================== FAILURES ===================================
+<skip>    | ________________________________ test_fail _________________________________
+<skip>    | 
+<skip>    |     def test_fail():
+<skip>    | >       assert 0
+<skip>    | E       assert 0
+<skip>    | test_example.py:14: AssertionError
+<skip>    | ========================= short test summary info ==========================
+<skip>    | SKIPPED [1] test_example.py:22: skipping this test
+<skip>    | XFAIL test_example.py::test_xfail
+<skip>    |   reason: xfailing this test
+<skip>    | XPASS test_example.py::test_xpass always xfail
+<skip>    | ERROR test_example.py::test_error - assert 0
+<skip>    | FAILED test_example.py::test_fail - assert 0
+<skip>    | == 1 failed, 1 passed, 1 skipped, 1 xfailed, 1 xpassed, 1 error in 0.12s ===

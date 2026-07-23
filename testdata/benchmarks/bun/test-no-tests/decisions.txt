@@ -1,0 +1,8 @@
+<skip>    | bun test v1.3.11 (af24e281)
+<keep>    | The following filters did not match any test files:
+<keep>    |  does-not-exist
+<keep>    | 4 files were searched [10.00ms]
+<skip>    | 
+<keep>    | note: Tests need ".test", "_test_", ".spec" or "_spec_" in the filename (ex: "MyApp.test.ts")
+<skip>    | 
+<keep>    | Learn more about bun test: https://bun.com/docs/cli/test

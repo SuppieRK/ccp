@@ -1,0 +1,36 @@
+<skip>    | 00:01 +0: counter stays at zero                                                                                                                                                                        
+<skip>    | ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+<keep>    | The following TestFailure was thrown running a test:
+<keep>    | Expected: no matching candidates
+<keep>    |   Actual: _TextWidgetFinder:<Found 1 widget with text "0": [
+<skip>    |             Text("0", debugLabel: (englishLike headlineMedium 2021).merge((blackMountainView
+<skip>    | headlineMedium).apply), inherit: false, color: Color(alpha: 1.0000, red: 0.1137, green: 0.1059,
+<skip>    | blue: 0.1255, colorSpace: ColorSpace.sRGB), family: Roboto, size: 28.0, weight: 400, letterSpacing:
+<skip>    | 0.0, baseline: alphabetic, height: 1.3x, leadingDistribution: even, decoration: Color(alpha: 1.0000,
+<skip>    | red: 0.1137, green: 0.1059, blue: 0.1255, colorSpace: ColorSpace.sRGB) TextDecoration.none,
+<skip>    | dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+<skip>    |           ]>
+<keep>    |    Which: means one was found but none were expected
+<skip>    | 
+<skip>    | When the exception was thrown, this was the stack:
+<skip>    | #4      main.<anonymous closure> (file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart:10:5)
+<skip>    | <asynchronous suspension>
+<skip>    | #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<skip>    | <asynchronous suspension>
+<skip>    | #6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<skip>    | <asynchronous suspension>
+<skip>    | <asynchronous suspension>
+<skip>    | (elided one frame from package:stack_trace)
+<skip>    | 
+<skip>    | This was caught by the test expectation on the following line:
+<keep>    |   file:///mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart line 10
+<skip>    | The test description was:
+<skip>    |   counter stays at zero
+<skip>    | ════════════════════════════════════════════════════════════════════════════════════════════════════
+<keep>    | 00:01 +0 -1: counter stays at zero [E]                                                                                                                                                                 
+<skip>    |   Test failed. See exception logs above.
+<skip>    |   The test description was: counter stays at zero
+<skip>    |   
+<skip>    | 
+<skip>    | To run this test again: /home/suppie/flutter/bin/cache/dart-sdk/bin/dart test /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/flutter_demo/test/failure_test.dart -p vm --plain-name 'counter stays at zero'
+<replace> | 00:01 +0 -1: Some tests failed.                                                                                                                                                                        

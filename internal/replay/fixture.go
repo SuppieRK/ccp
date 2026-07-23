@@ -3,6 +3,7 @@ package replay
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -22,14 +23,23 @@ const (
 	StdoutFileName          = "stdout.txt"
 	StderrFileName          = "stderr.txt"
 	OutputFileName          = "output.txt"
+	OutputStdoutFileName    = "output.stdout.txt"
+	OutputStderrFileName    = "output.stderr.txt"
 	DecisionsFileName       = "decisions.txt"
+	DispatchFileName        = "dispatch.txt"
 	VerifyOutputFileName    = "verify-output.txt"
+	VerifyStdoutFileName    = "verify-stdout.txt"
+	VerifyStderrFileName    = "verify-stderr.txt"
 	VerifyDecisionsFileName = "verify-decisions.txt"
+	VerifyDispatchFileName  = "verify-dispatch.txt"
+	encodedPayloadPrefix    = "@ccp/base64:"
 )
 
 type CommandSpec struct {
-	Argv     []string `yaml:"argv"`
-	ExitCode int      `yaml:"exit_code,omitempty"`
+	Argv             []string `yaml:"argv"`
+	ExitCode         int      `yaml:"exit_code,omitempty"`
+	Redacted         bool     `yaml:"redacted,omitempty"`
+	ExitCodeAsserted bool     `yaml:"-"`
 }
 
 type Event struct {
@@ -39,15 +49,21 @@ type Event struct {
 }
 
 type Fixture struct {
-	Dir             string
-	Command         CommandSpec
-	CommandPath     string
-	StdoutPath      string
-	StderrPath      string
-	OutputPath      string
-	DecisionsPath   string
-	VerifyOutput    string
-	VerifyDecisions string
+	Dir              string
+	Command          CommandSpec
+	CommandPath      string
+	StdoutPath       string
+	StderrPath       string
+	OutputPath       string
+	OutputStdoutPath string
+	OutputStderrPath string
+	DecisionsPath    string
+	DispatchPath     string
+	VerifyOutput     string
+	VerifyStdout     string
+	VerifyStderr     string
+	VerifyDecisions  string
+	VerifyDispatch   string
 }
 
 func FixturePaths(dir string) map[string]string {
@@ -56,13 +72,23 @@ func FixturePaths(dir string) map[string]string {
 		StdoutFileName:          filepath.Join(dir, StdoutFileName),
 		StderrFileName:          filepath.Join(dir, StderrFileName),
 		OutputFileName:          filepath.Join(dir, OutputFileName),
+		OutputStdoutFileName:    filepath.Join(dir, OutputStdoutFileName),
+		OutputStderrFileName:    filepath.Join(dir, OutputStderrFileName),
 		DecisionsFileName:       filepath.Join(dir, DecisionsFileName),
+		DispatchFileName:        filepath.Join(dir, DispatchFileName),
 		VerifyOutputFileName:    filepath.Join(dir, VerifyOutputFileName),
+		VerifyStdoutFileName:    filepath.Join(dir, VerifyStdoutFileName),
+		VerifyStderrFileName:    filepath.Join(dir, VerifyStderrFileName),
 		VerifyDecisionsFileName: filepath.Join(dir, VerifyDecisionsFileName),
+		VerifyDispatchFileName:  filepath.Join(dir, VerifyDispatchFileName),
 	}
 }
 
 func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
+	return WriteCommandWithExitCodeMode(path, args, exitCode, false, 0o644)
+}
+
+func WriteCommandWithExitCodeMode(path string, args []string, exitCode int, redacted bool, mode os.FileMode) error {
 	root := yaml.Node{
 		Kind: yaml.MappingNode,
 		Content: []*yaml.Node{
@@ -81,10 +107,14 @@ func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
 			Value: arg,
 		})
 	}
-	if exitCode != 0 {
+	root.Content = append(root.Content,
+		&yaml.Node{Kind: yaml.ScalarNode, Value: "exit_code"},
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: strconv.Itoa(exitCode)},
+	)
+	if redacted {
 		root.Content = append(root.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: "exit_code"},
-			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: strconv.Itoa(exitCode)},
+			&yaml.Node{Kind: yaml.ScalarNode, Value: "redacted"},
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
 		)
 	}
 	var buf bytes.Buffer
@@ -96,7 +126,7 @@ func WriteCommandWithExitCode(path string, args []string, exitCode int) error {
 	if err := enc.Close(); err != nil {
 		return fmt.Errorf("close command yaml encoder: %w", err)
 	}
-	return WriteArtifact(path, buf.Bytes(), 0o644)
+	return WriteArtifact(path, buf.Bytes(), mode)
 }
 
 func ReadCommand(path string) (CommandSpec, error) {
@@ -108,6 +138,11 @@ func ReadCommand(path string) (CommandSpec, error) {
 	if err := yaml.Unmarshal(body, &spec); err != nil {
 		return CommandSpec{}, fmt.Errorf("parse command fixture: %w", err)
 	}
+	var document yaml.Node
+	if err := yaml.Unmarshal(body, &document); err != nil {
+		return CommandSpec{}, fmt.Errorf("parse command fixture: %w", err)
+	}
+	spec.ExitCodeAsserted = mappingHasKey(&document, "exit_code")
 	if len(spec.Argv) == 0 {
 		return CommandSpec{}, fmt.Errorf("parse command fixture: argv is required")
 	}
@@ -120,18 +155,26 @@ func ReadCommand(path string) (CommandSpec, error) {
 }
 
 func WriteSequenced(path string, events []Event) error {
+	return WriteSequencedMode(path, events, 0o644)
+}
+
+func WriteSequencedMode(path string, events []Event, mode os.FileMode) error {
 	sorted := slices.Clone(events)
 	slices.SortFunc(sorted, func(a, b Event) int {
 		return a.Sequence - b.Sequence
 	})
 	var buf strings.Builder
 	for _, event := range sorted {
-		_, _ = fmt.Fprintf(&buf, "%05d|%s", event.Sequence, event.Line)
-		if !strings.HasSuffix(event.Line, "\n") {
+		_, _ = fmt.Fprintf(&buf, "%05d|", event.Sequence)
+		if replayPayloadNeedsEncoding(event.Line) {
+			buf.WriteString(encodedPayloadPrefix)
+			buf.WriteString(base64.StdEncoding.EncodeToString([]byte(event.Line)))
 			buf.WriteByte('\n')
+			continue
 		}
+		buf.WriteString(event.Line)
 	}
-	return WriteArtifact(path, []byte(buf.String()), 0o644)
+	return WriteArtifact(path, []byte(buf.String()), mode)
 }
 
 func WriteArtifact(path string, body []byte, perm os.FileMode) error {
@@ -142,13 +185,17 @@ func WriteArtifact(path string, body []byte, perm os.FileMode) error {
 }
 
 func WriteSequencedEvents(path string, events []Event, stream contracts.Stream) error {
+	return WriteSequencedEventsMode(path, events, stream, 0o644)
+}
+
+func WriteSequencedEventsMode(path string, events []Event, stream contracts.Stream, mode os.FileMode) error {
 	selected := make([]Event, 0, len(events))
 	for _, event := range events {
 		if event.Stream == stream {
 			selected = append(selected, event)
 		}
 	}
-	return WriteSequenced(path, selected)
+	return WriteSequencedMode(path, selected, mode)
 }
 
 func ReadSequenced(path string, stream contracts.Stream) ([]Event, error) {
@@ -213,10 +260,14 @@ func readSequencedFromReader(r io.Reader, stream contracts.Stream, path string) 
 		if err != nil {
 			return nil, fmt.Errorf("read sequenced stream %s: invalid sequence %q: %w", path, line[:sep], err)
 		}
+		payload, decodeErr := decodeReplayPayload(line[sep+1:])
+		if decodeErr != nil {
+			return nil, fmt.Errorf("read sequenced stream %s: %w", path, decodeErr)
+		}
 		events = append(events, Event{
 			Sequence: sequence,
 			Stream:   stream,
-			Line:     line[sep+1:],
+			Line:     payload,
 		})
 	}
 }
@@ -275,70 +326,102 @@ func LoadFixture(dir string) (Fixture, error) {
 		return Fixture{}, fmt.Errorf("fixture %q must contain at least one of %s, %s, or %s", resolved, StdoutFileName, StderrFileName, OutputFileName)
 	}
 	return Fixture{
-		Dir:             resolved,
-		Command:         command,
-		CommandPath:     paths[CommandFileName],
-		StdoutPath:      paths[StdoutFileName],
-		StderrPath:      paths[StderrFileName],
-		OutputPath:      paths[OutputFileName],
-		DecisionsPath:   paths[DecisionsFileName],
-		VerifyOutput:    paths[VerifyOutputFileName],
-		VerifyDecisions: paths[VerifyDecisionsFileName],
+		Dir:              resolved,
+		Command:          command,
+		CommandPath:      paths[CommandFileName],
+		StdoutPath:       paths[StdoutFileName],
+		StderrPath:       paths[StderrFileName],
+		OutputPath:       paths[OutputFileName],
+		OutputStdoutPath: paths[OutputStdoutFileName],
+		OutputStderrPath: paths[OutputStderrFileName],
+		DecisionsPath:    paths[DecisionsFileName],
+		DispatchPath:     paths[DispatchFileName],
+		VerifyOutput:     paths[VerifyOutputFileName],
+		VerifyStdout:     paths[VerifyStdoutFileName],
+		VerifyStderr:     paths[VerifyStderrFileName],
+		VerifyDecisions:  paths[VerifyDecisionsFileName],
+		VerifyDispatch:   paths[VerifyDispatchFileName],
 	}, nil
 }
 
 func readReplayLine(reader *bufio.Reader) (string, error) {
-	var current []byte
-	pendingCR := false
+	line, err := reader.ReadString('\n')
+	if len(line) > 0 {
+		return line, nil
+	}
+	return "", err
+}
+
+// ReadStreamRecord reads one live-output record. Bare carriage returns are
+// record boundaries, while CRLF remains a single boundary.
+func ReadStreamRecord(reader *bufio.Reader) ([]byte, error) {
+	first, err := reader.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	return CompleteStreamRecord(reader, first)
+}
+
+// CompleteStreamRecord finishes a record after its first byte has already
+// been observed. Capture uses this form so cross-stream sequence numbers are
+// assigned at the same point that native output first becomes visible.
+func CompleteStreamRecord(reader *bufio.Reader, first byte) ([]byte, error) {
+	record := make([]byte, 0, 256)
+	record = append(record, first)
 	for {
-		b, err := reader.ReadByte()
-		if err == io.EOF {
-			return finishReplayLine(current, pendingCR)
+		switch record[len(record)-1] {
+		case '\n':
+			return record, nil
+		case '\r':
+			if next, peekErr := reader.Peek(1); peekErr == nil && next[0] == '\n' {
+				newline, readErr := reader.ReadByte()
+				if readErr != nil {
+					return record, readErr
+				}
+				record = append(record, newline)
+			}
+			return record, nil
 		}
+
+		next, err := reader.ReadByte()
 		if err != nil {
-			return "", err
+			return record, err
 		}
-		nextCurrent, line, done, nextPendingCR := appendReplayLineByte(current, b, pendingCR)
-		if done {
-			return line, nil
-		}
-		current = nextCurrent
-		pendingCR = nextPendingCR
+		record = append(record, next)
 	}
 }
 
-func appendReplayLineByte(current []byte, b byte, pendingCR bool) ([]byte, string, bool, bool) {
-	if pendingCR {
-		if b == '\n' {
-			return current, string(append(current, '\n')), true, false
+func replayPayloadNeedsEncoding(line string) bool {
+	if !strings.HasSuffix(line, "\n") || strings.Count(line, "\n") != 1 {
+		return true
+	}
+	return strings.HasPrefix(line, encodedPayloadPrefix)
+}
+
+func decodeReplayPayload(payload string) (string, error) {
+	if !strings.HasPrefix(payload, encodedPayloadPrefix) {
+		return payload, nil
+	}
+	encoded := strings.TrimSuffix(strings.TrimPrefix(payload, encodedPayloadPrefix), "\n")
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", fmt.Errorf("decode base64 replay payload: %w", err)
+	}
+	return string(body), nil
+}
+
+func mappingHasKey(document *yaml.Node, key string) bool {
+	if document == nil || len(document.Content) == 0 {
+		return false
+	}
+	root := document.Content[0]
+	if root.Kind != yaml.MappingNode {
+		return false
+	}
+	for index := 0; index+1 < len(root.Content); index += 2 {
+		if root.Content[index].Value == key {
+			return true
 		}
-		current = resetReplayLinePayload(current)
 	}
-
-	switch b {
-	case '\r':
-		return current, "", false, true
-	case '\n':
-		return current, string(append(current, '\n')), true, false
-	default:
-		return append(current, b), "", false, false
-	}
-}
-
-func finishReplayLine(current []byte, pendingCR bool) (string, error) {
-	if pendingCR {
-		current = resetReplayLinePayload(current)
-	}
-	if len(current) == 0 {
-		return "", io.EOF
-	}
-	return string(current), nil
-}
-
-func resetReplayLinePayload(current []byte) []byte {
-	sep := bytes.IndexByte(current, '|')
-	if sep < 0 {
-		return current[:0]
-	}
-	return current[:sep+1]
+	return false
 }

@@ -1,1 +1,2 @@
 argv: ["golangci-lint", "run", "--no-config", "--enable-only", "errcheck,govet", "--path-mode", "abs", "./..."]
+exit_code: 1

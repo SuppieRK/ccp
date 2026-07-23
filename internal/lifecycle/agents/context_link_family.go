@@ -106,6 +106,7 @@ type ManagedHookSettingsAdapterSpec struct {
 	PlanSettingsContent func(hookPath string) string
 	UpsertSettings      func(settingsPath, hookPath string) (string, error)
 	VerifySettings      func(settingsPath, hookPath string) error
+	VerifyHook          func(hookPath string) error
 	UninstallSettings   func(settingsPath, hookPath string) (InstallResult, error)
 	MissingHookFmt      string
 	MissingSettingsFmt  string
@@ -186,6 +187,11 @@ func (a ManagedHookSettingsAdapter) Verify(ctx Context) error {
 	}
 	if err := verifyHookArtifactExecutable(hookPath); err != nil {
 		return err
+	}
+	if a.spec.VerifyHook != nil {
+		if err := a.spec.VerifyHook(hookPath); err != nil {
+			return err
+		}
 	}
 	if a.spec.VerifySettings == nil {
 		return nil

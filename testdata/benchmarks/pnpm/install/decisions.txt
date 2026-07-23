@@ -1,0 +1,5 @@
+<skip>    | Scope: all 3 workspace projects
+<skip>    | Lockfile is up to date, resolution step is skipped
+<skip>    | Already up to date
+<skip>    | 
+<keep>    | Done in 244ms using pnpm v10.30.3

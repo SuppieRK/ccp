@@ -1,0 +1,2 @@
+argv: ["pyright", "--outputjson", "src"]
+exit_code: 0

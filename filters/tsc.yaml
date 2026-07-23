@@ -2,7 +2,7 @@
 version: 1
 filter: tsc
 about: Compact plain TypeScript diagnostics by file path, keep explicit pretty output native, and preserve watch/build-style modes as passthrough.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--jsx", "--lib", "--locale", "--module", "--moduleResolution", "--out", "--outDir", "--outFile", "--pretty", "--project", "--target", "--tsBuildInfoFile", "-p"]
 
 cases:
   - id: diagnostics_pretty_false
@@ -38,13 +38,6 @@ cases:
               replace:
                 - regex: '^.*$'
                   to: '{{line}}:{{column}} {{code}} {{message}}'
-              max:
-                count: 6
-                print: "\n+{{value}}"
-        lines:
-          max:
-            count: 40
-            print: "\n{{value}} lines"
 
   - id: passthrough_unsupported
     when_arguments:
@@ -98,10 +91,3 @@ cases:
               replace:
                 - regex: '^.*$'
                   to: '{{line}}:{{column}} {{code}} {{message}}'
-              max:
-                count: 6
-                print: "\n+{{value}}"
-        lines:
-          max:
-            count: 40
-            print: "\n{{value}} lines"

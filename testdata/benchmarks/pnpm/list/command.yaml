@@ -1,1 +1,2 @@
 argv: ["pnpm", "list"]
+exit_code: 0

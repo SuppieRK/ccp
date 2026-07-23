@@ -1,0 +1,7 @@
+==================== Test output for //:fail_test:
+intentional bazel test failure
+================================================================================
+//:fail_test                                                             FAILED in 0.0s
+  /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log
+
+Executed 1 out of 1 test: 1 fails locally.

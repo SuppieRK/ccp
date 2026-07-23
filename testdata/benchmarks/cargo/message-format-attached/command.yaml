@@ -1,0 +1,2 @@
+argv: ["cargo", "check", "--message-format=json"]
+exit_code: 0

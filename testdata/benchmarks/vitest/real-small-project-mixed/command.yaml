@@ -1,1 +1,2 @@
 argv: ["vitest", "run", "src/lib/todo-service.test.ts", "src/lib/slugify.test.ts", "src/ui/filters.test.ts"]
+exit_code: 1

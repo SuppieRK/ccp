@@ -1,1 +1,2 @@
 argv: ["npx", "tsc", "--version"]
+exit_code: 0

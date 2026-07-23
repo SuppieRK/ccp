@@ -23,11 +23,43 @@ import (
 	"go-command-compression-proxy/internal/engine"
 	corefilters "go-command-compression-proxy/internal/filters"
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
+	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/metrics"
+	"go-command-compression-proxy/internal/recovery"
 	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/version"
 	"go-command-compression-proxy/internal/workspaces"
 )
+
+var _ = Describe("recoveryEvents", func() {
+	It("renumbers retained entries after unbuffered records create sequence gaps", func() {
+		events := recoveryEvents([]engine.BufferEntry{
+			{
+				Sequence: 2,
+				Stream:   contracts.StreamStdout,
+				Original: []byte("retained stdout\n"),
+			},
+			{
+				Sequence: 5,
+				Stream:   contracts.StreamStderr,
+				Original: []byte("retained stderr\n"),
+			},
+		})
+
+		Expect(events).To(Equal([]recovery.Event{
+			{
+				Sequence: 0,
+				Stream:   contracts.StreamStdout,
+				Data:     []byte("retained stdout\n"),
+			},
+			{
+				Sequence: 1,
+				Stream:   contracts.StreamStderr,
+				Data:     []byte("retained stderr\n"),
+			},
+		}))
+	})
+})
 
 var _ = Describe("Runner", func() {
 	var (
@@ -82,7 +114,7 @@ var _ = Describe("Runner", func() {
 			Expect(sources[0]).To(Equal(corefilters.RepositorySource(filteryaml.ProjectRootFromSource())))
 		})
 
-		It("uses project and home filters by default in non-dev builds", func() {
+		It("ignores untrusted project filters and retains home filters in non-dev builds", func() {
 			oldVersion := version.Version
 			version.Version = "1.2.3"
 			DeferCleanup(func() {
@@ -91,11 +123,9 @@ var _ = Describe("Runner", func() {
 
 			sources := filteryaml.DefaultSources()
 
-			Expect(sources).To(HaveLen(2))
-			Expect(sources[0].Kind).To(Equal(corefilters.SourceProject))
-			Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".ccp", "filters")))
-			Expect(sources[1].Kind).To(Equal(corefilters.SourceHome))
-			Expect(sources[1].Directory).To(HaveSuffix(filepath.Join(".config", "ccp", "filters")))
+			Expect(sources).To(HaveLen(1))
+			Expect(sources[0].Kind).To(Equal(corefilters.SourceHome))
+			Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".config", "ccp", "filters")))
 		})
 
 		It("leaves default filter sources and metrics path unset when os.Getwd fails", func() {
@@ -130,7 +160,7 @@ var _ = Describe("Runner", func() {
 			Expect(err).To(MatchError("no command provided"))
 		})
 
-		It("returns command start errors with shell-not-found exit semantics", func() {
+		It("returns command start errors with shell-not-found exit semantics", Label("live-smoke"), func() {
 			runner := &Runner{sources: []corefilters.FilterSource{}}
 
 			code, err := runner.Run([]string{"__ccp_missing_binary__"})
@@ -289,7 +319,7 @@ var _ = Describe("Runner", func() {
 			}, false),
 		)
 
-		DescribeTable("normalizes carriage-return stream behavior before emit",
+		DescribeTable("preserves carriage-return stream records byte for byte",
 			func(input string, expectedStdout string, rawBytes int, keptBytes int) {
 				runner := &Runner{sources: []corefilters.FilterSource{}}
 				stats := &streamStats{}
@@ -298,13 +328,14 @@ var _ = Describe("Runner", func() {
 					return []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: line}}
 				}, stats, runner.writeEntries)).NotTo(HaveOccurred())
 
-				Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal(expectedStdout))
+				Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal(expectedStdout))
 				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 				Expect(stats.rawBytes).To(Equal(rawBytes))
 				Expect(stats.keptBytes).To(Equal(keptBytes))
 			},
-			Entry("for in-place carriage return overwrites", "\r⠋ first\r⠙ second\rDone\n", "Done\n", len("\r⠋ first\r⠙ second\rDone\n"), len("Done\n")),
-			Entry("for ordinary CRLF endings", "runner-win\r\n", "runner-win\n", len("runner-win\r\n"), len("runner-win\n")),
+			Entry("for in-place carriage return overwrites", "\r⠋ first\r⠙ second\rDone\n", "\r⠋ first\r⠙ second\rDone\n", len("\r⠋ first\r⠙ second\rDone\n"), len("\r⠋ first\r⠙ second\rDone\n")),
+			Entry("for ordinary CRLF endings", "runner-win\r\n", "runner-win\r\n", len("runner-win\r\n"), len("runner-win\r\n")),
+			Entry("for invalid UTF-8 without a final newline", string([]byte{0xff, 0xfe, 'x'}), string([]byte{0xff, 0xfe, 'x'}), 3, 3),
 		)
 
 		It("treats nil stream readers as empty input", func() {
@@ -318,7 +349,7 @@ var _ = Describe("Runner", func() {
 		})
 	})
 
-	Context("when executing real commands", func() {
+	Context("when executing real commands", Label("live-smoke"), func() {
 		It("executes a real command and preserves piped stdin on unix", func() {
 			if runtime.GOOS == "windows" {
 				Skip("unix stdin integration uses cat")
@@ -379,6 +410,32 @@ var _ = Describe("Runner", func() {
 	})
 
 	Context("when recording metrics", func() {
+		It("redacts confidential values before persisting command history", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses unix sh")
+			}
+			tmpDir := GinkgoT().TempDir()
+			secret := "metrics-super-secret"
+			runner := &Runner{
+				sources:     []corefilters.FilterSource{},
+				metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+				workingDir:  tmpDir,
+				opts:        Options{Confidential: []string{secret}},
+			}
+
+			code, err := runner.Run([]string{"sh", "-c", "printf " + secret})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(Equal(0))
+			_ = closeAndRead(stdoutReader, stdoutWriter)
+			_ = closeAndRead(stderrReader, stderrWriter)
+			history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Command).To(ContainSubstring("***"))
+			Expect(history[0].Command).NotTo(ContainSubstring(secret))
+		})
+
 		It("writes gain metrics using the resolved filter dispatch key", func() {
 			tmpDir, err := os.MkdirTemp("", "core-runner-metrics-*")
 			Expect(err).NotTo(HaveOccurred())
@@ -488,7 +545,12 @@ var _ = Describe("Runner", func() {
 					Dispatch: "ccp",
 				}
 
-				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, true, 0, 1, 32, 32)
+				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+					passthrough: true,
+					durationMS:  1,
+					rawBytes:    32,
+					keptBytes:   32,
+				})
 
 				history, err := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -506,11 +568,15 @@ var _ = Describe("Runner", func() {
 			})
 			restore := workspaces.WithTestConfig(tmpDir, nil)
 			DeferCleanup(restore)
+			repo := filepath.Join(tmpDir, "repo")
+			Expect(os.MkdirAll(repo, 0o755)).To(Succeed())
+			canonicalRepo, err := filepath.EvalSymlinks(repo)
+			Expect(err).NotTo(HaveOccurred())
 
 			runner := &Runner{
 				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(tmpDir, "repo", ".ccp", "gain.db"),
-				workingDir:  filepath.Join(tmpDir, "repo"),
+				metricsPath: filepath.Join(repo, ".ccp", "gain.db"),
+				workingDir:  repo,
 			}
 
 			command := contracts.Command{
@@ -520,15 +586,61 @@ var _ = Describe("Runner", func() {
 				Dispatch: "go",
 			}
 
-			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 32, 16)
+			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   32,
+				keptBytes:  16,
+			})
 
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
 			entries, err := workspaces.ListPath(registryPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].CWD).To(Equal(filepath.Join(tmpDir, "repo")))
-			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(tmpDir, "repo", ".ccp", "gain.db")))
+			Expect(entries[0].CWD).To(Equal(canonicalRepo))
+			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(canonicalRepo, ".ccp", "gain.db")))
+		})
+
+		It("skips redirected automatic metrics without registering the unsafe path", func() {
+			tmpDir := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(tmpDir, nil)
+			DeferCleanup(restore)
+			restoreAudit := audit.WithTestConfig(tmpDir, 8, 7)
+			DeferCleanup(restoreAudit)
+			DeferCleanup(audit.Reset)
+			project := filepath.Join(tmpDir, "repo")
+			ccpDir := filepath.Join(project, ".ccp")
+			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			outside := filepath.Join(tmpDir, "outside.db")
+			metricsPath := filepath.Join(ccpDir, "gain.db")
+			if err := os.Symlink(filepath.Join("..", "..", filepath.Base(outside)), metricsPath); err != nil {
+				Skip("symlink creation unavailable: " + err.Error())
+			}
+			runner := &Runner{metricsPath: metricsPath, workingDir: project}
+			command := contracts.Command{
+				RawInput: "go test ./...",
+				Args:     []string{"go", "test", "./..."},
+				Tool:     "go",
+				Dispatch: "go",
+			}
+
+			runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   32,
+				keptBytes:  16,
+			})
+
+			Expect(outside).NotTo(BeAnExistingFile())
+			registryPath, err := workspaces.DefaultPath()
+			Expect(err).NotTo(HaveOccurred())
+			entries, err := workspaces.ListPath(registryPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(BeEmpty())
+			auditBytes, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(auditBytes)).To(ContainSubstring(`"msg":"metrics_storage_error"`))
+			Expect(string(auditBytes)).To(ContainSubstring(`"tool":"go"`))
+			Expect(string(auditBytes)).NotTo(ContainSubstring(command.RawInput))
 		})
 
 		It("records append metrics no-ops for raw mode, failed writes, and blank working directories", func() {
@@ -544,7 +656,11 @@ var _ = Describe("Runner", func() {
 			}
 
 			rawRunner := NewRunnerWithOptions(Options{Raw: true, MetricsPath: filepath.Join(tmpDir, "raw.db")})
-			rawRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			rawRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			history, err := metrics.QueryHistory(rawRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(BeEmpty())
@@ -552,7 +668,11 @@ var _ = Describe("Runner", func() {
 			parentFile := filepath.Join(tmpDir, "not-a-dir")
 			Expect(os.WriteFile(parentFile, []byte("x"), 0o644)).To(Succeed())
 			brokenRunner := &Runner{metricsPath: filepath.Join(parentFile, "gain.db"), workingDir: filepath.Join(tmpDir, "repo")}
-			brokenRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			brokenRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			registryPath, err := workspaces.DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
 			entries, err := workspaces.ListPath(registryPath)
@@ -560,7 +680,11 @@ var _ = Describe("Runner", func() {
 			Expect(entries).To(BeEmpty())
 
 			blankRunner := &Runner{metricsPath: filepath.Join(tmpDir, "blank.db"), workingDir: "   "}
-			blankRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, false, 0, 1, 10, 5)
+			blankRunner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
+				durationMS: 1,
+				rawBytes:   10,
+				keptBytes:  5,
+			})
 			history, err = metrics.QueryHistory(blankRunner.metricsPath, metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(HaveLen(1))
@@ -697,7 +821,7 @@ var _ = Describe("Runner", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("cancels managed subprocesses when the execution context ends", func() {
+		It("cancels managed subprocesses when the execution context ends", Label("live-smoke"), func() {
 			startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
 			markerPath := filepath.Join(GinkgoT().TempDir(), "late.txt")
 			name, args := cancellableCommand(startedPath, markerPath)
@@ -851,6 +975,8 @@ var _ = Describe("Runner", func() {
 			collector.recordExit(contracts.Action{}, []engine.BufferEntry{{Stream: contracts.StreamStdout, Line: "exit\n"}})
 
 			Expect(collector.output.String()).To(Equal("rewritten\nexit\n"))
+			Expect(collector.stdout.String()).To(Equal("rewritten\nexit\n"))
+			Expect(collector.stderr.String()).To(BeEmpty())
 			Expect(collector.decisions.String()).To(ContainSubstring("<replace> | replace me"))
 			Expect(collector.decisions.String()).To(ContainSubstring("<emit>    | rewritten"))
 			Expect(collector.decisions.String()).To(ContainSubstring("<skip>    | skip me"))
@@ -1115,6 +1241,8 @@ cases:
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Output).To(Equal("stderr-only\n"))
+				Expect(result.Stdout).To(BeEmpty())
+				Expect(result.Stderr).To(Equal("stderr-only\n"))
 				Expect(result.Decisions).To(ContainSubstring("<keep>    | stderr-only"))
 			})
 		})
@@ -1210,6 +1338,10 @@ cases:
           keep:
             - regex: '^'
 `), 0o644)).To(Succeed())
+					restoreTrust := filtertrust.WithTestHome(homeRoot)
+					DeferCleanup(restoreTrust)
+					_, err = filtertrust.Trust(projectRoot)
+					Expect(err).NotTo(HaveOccurred())
 
 					runner := &Runner{sources: []corefilters.FilterSource{
 						corefilters.ProjectSource(projectRoot),
@@ -1233,7 +1365,77 @@ cases:
 		})
 
 		Context("when applying YAML-authored execution behavior", func() {
-			DescribeTable("applies YAML-authored execution behavior before command output is emitted",
+			It("falls back before command normalization when a terminal descriptor is attached", Label("live-smoke"), func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix printf")
+				}
+
+				repoRoot := GinkgoT().TempDir()
+				restoreAudit := audit.WithTestConfig(repoRoot, 8, 7)
+				DeferCleanup(restoreAudit)
+				DeferCleanup(audit.Reset)
+				filterDir := filepath.Join(repoRoot, "filters")
+				Expect(os.MkdirAll(filterDir, 0o755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(filterDir, "printf.yaml"), []byte(`
+version: 1
+filter: printf
+cases:
+  - id: terminal_guard
+    normalize_command:
+      append_if_missing: ["mutated"]
+    compress_output:
+      stdout:
+        lines:
+          replace:
+            - starts_with: native
+              to: filtered
+`), 0o644)).To(Succeed())
+
+				previousTerminalCheck := terminalDescriptorAttached
+				terminalDescriptorAttached = func() bool { return true }
+				DeferCleanup(func() {
+					terminalDescriptorAttached = previousTerminalCheck
+				})
+
+				runner := &Runner{
+					sources: []corefilters.FilterSource{
+						corefilters.RepositorySource(repoRoot),
+					},
+					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+				}
+				code, err := runner.Run([]string{"printf", "native"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(code).To(Equal(0))
+				Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("native"))
+				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+
+				auditData, err := os.ReadFile(filepath.Join(repoRoot, ".config", "ccp", "audit", "audit.log"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_terminal_fallback"`))
+			})
+
+			It("keeps confidential redaction as an interception boundary when a terminal is attached", func() {
+				if runtime.GOOS == "windows" {
+					Skip("uses unix printf")
+				}
+
+				previousTerminalCheck := terminalDescriptorAttached
+				terminalDescriptorAttached = func() bool { return true }
+				DeferCleanup(func() {
+					terminalDescriptorAttached = previousTerminalCheck
+				})
+
+				runner := NewRunnerWithOptions(Options{Raw: true, Confidential: []string{"secret"}})
+				code, err := runner.Run([]string{"printf", "secret"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(code).To(Equal(0))
+				Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("***"))
+				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
+			})
+
+			DescribeTable("applies YAML-authored execution behavior before command output is emitted", Label("live-smoke"),
 				func(skipReason string, setup func(string) *Runner, command []string, expectedStdout string, expectedStderr string, checkHistory func(string)) {
 					if runtime.GOOS == "windows" {
 						Skip(skipReason)
@@ -1380,7 +1582,7 @@ cases:
 				Expect(normalizeNL(closeAndRead(stderrReader, stderrWriter))).To(Equal("TS2367 [ERROR]: boom\nerror: fail\n"))
 			})
 
-			It("does not report negative savings when exit handling emits synthetic output", func() {
+			It("rejects expanding synthetic exit output and records native passthrough", func() {
 				if runtime.GOOS == "windows" {
 					Skip("uses unix sh")
 				}
@@ -1418,18 +1620,19 @@ cases:
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(code).To(Equal(0))
-				Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("x\nsummary: synthetic exit expansion\n"))
+				Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("x\n"))
 				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 
 				history, queryErr := metrics.QueryHistory(runner.metricsPath, metrics.QueryOptions{})
 				Expect(queryErr).NotTo(HaveOccurred())
 				Expect(history).To(HaveLen(1))
-				Expect(history[0].DroppedBytes).To(BeNumerically(">=", 0))
-				Expect(history[0].DropRatio).To(BeNumerically(">=", 0))
-				Expect(history[0].EstimatedSavedTokens).To(BeNumerically(">=", 0))
+				Expect(history[0].Passthrough).To(BeTrue())
+				Expect(history[0].DroppedBytes).To(BeZero())
+				Expect(history[0].DropRatio).To(BeZero())
+				Expect(history[0].EstimatedSavedTokens).To(BeZero())
 			})
 
-			DescribeTable("preserves output semantics for direct execution modes",
+			DescribeTable("preserves output semantics for direct execution modes", Label("live-smoke"),
 				func(runner *Runner, command []string, expectedStdout string, expectedStderr string) {
 					if runtime.GOOS == "windows" {
 						Skip("uses unix sh")
@@ -1443,6 +1646,8 @@ cases:
 					Expect(normalizeNL(closeAndRead(stderrReader, stderrWriter))).To(Equal(expectedStderr))
 				},
 				Entry("in raw mode", NewRunnerWithOptions(Options{Raw: true}), []string{"sh", "-c", "printf 'same\\nsame\\n'"}, "same\nsame\n", ""),
+				Entry("in raw mode without a final newline", NewRunnerWithOptions(Options{Raw: true}), []string{"sh", "-c", "printf '\\377raw-tail'"}, string([]byte{0xff})+"raw-tail", ""),
+				Entry("in raw mode with zero output", NewRunnerWithOptions(Options{Raw: true}), []string{"sh", "-c", ":"}, "", ""),
 				Entry("with confidential redaction", NewRunnerWithOptions(Options{Confidential: []string{"hello"}}), []string{"sh", "-c", "printf 'hello-stdout\\n'; printf 'hello-stderr\\n' >&2"}, "***-stdout\n", "***-stderr\n"),
 			)
 		})

@@ -14,6 +14,7 @@ cases:
           keep:
             - contains: "ExperimentalWarning:"
             - starts_with: "(Use `node --trace-warnings"
+            - regex: '^\s+at .+:\d+:\d+\)?$'
             - regex: '^application payload$'
 
   - id: eval_loader_stack_trim

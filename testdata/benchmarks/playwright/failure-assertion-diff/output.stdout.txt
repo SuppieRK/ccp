@@ -1,0 +1,9 @@
+  ✘  1 [chrome] › tests/capabilities.spec.ts:19:5 › test snapshot tool list (378ms)
+    Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m
+      19 | test('test snapshot tool list', async ({ client }) => {
+      20 |   const { tools } = await client.listTools();
+         |                                           ^
+      22 |     'browser_click',
+      23 |     'browser_console_messages',
+      24 |     'browser_drag',
+        at /workspace/src/repo-54/packages/playwright-mcp/tests/capabilities.spec.ts:21:43

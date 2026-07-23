@@ -203,7 +203,7 @@ var _ = Describe("runner execution edge cases", func() {
 
 	Context("when downstream writes fail after execution starts", func() {
 		DescribeTable("surfaces write failures while preserving non-zero exit codes",
-			func(makeRunner func() *Runner, command []string) {
+			func(makeRunner func() *Runner, command []string, expectWriteError bool) {
 				if runtime.GOOS == "windows" {
 					Skip("uses unix sh")
 				}
@@ -220,16 +220,22 @@ var _ = Describe("runner execution edge cases", func() {
 				runner := makeRunner()
 				code, err := runner.Run(command)
 
-				Expect(err).To(HaveOccurred())
+				if expectWriteError {
+					Expect(err).To(HaveOccurred())
+				} else {
+					Expect(err).NotTo(HaveOccurred())
+				}
 				Expect(code).To(Equal(7))
 			},
 			Entry("for filtered stdout writes",
 				func() *Runner { return &Runner{sources: []corefilters.FilterSource{}} },
 				[]string{"sh", "-c", "printf 'hello from ccp\\n'; exit 7"},
+				true,
 			),
-			Entry("for raw-mode writes",
+			Entry("for direct raw-mode descriptors where native execution owns write handling",
 				func() *Runner { return NewRunnerWithOptions(Options{Raw: true}) },
 				[]string{"sh", "-c", "printf 'raw-fail'; exit 7"},
+				false,
 			),
 		)
 	})

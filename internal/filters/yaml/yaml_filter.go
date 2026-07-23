@@ -81,24 +81,54 @@ func (f *YamlFilter) OnStderr(line string, context contracts.Context) contracts.
 }
 
 func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
+	actions := f.OnStdoutExitActions(context)
+	if len(actions) == 0 {
+		return contracts.Action{Kind: contracts.ActionKeep}
+	}
+	return actions[0]
+}
+
+func (f *YamlFilter) OnStdoutExitActions(context contracts.Context) []contracts.Action {
 	f.prepareInvocation(context.Args())
 	cs, ok := f.caseForArgs(context.Args())
 	if !ok || cs.passthrough {
-		return contracts.Action{Kind: contracts.ActionKeep}
+		return []contracts.Action{{Kind: contracts.ActionKeep}}
 	}
-	// Exit handling is intentionally stdout-oriented. Shared/combined scopes may
-	// summarize merged buffered output, but stderr-only exit rewrites are not a
-	// supported contract and stderr otherwise passes through unchanged.
-	scope, _ := cs.scope(contracts.StreamStdout)
-	exitStream := contracts.StreamStdout
-	if cs.shared != nil {
-		exitStream = contracts.StreamCombined
+	switch {
+	case cs.shared != nil:
+		return []contracts.Action{renderScopedExitAction(context, contracts.StreamCombined, cs.shared, cs, true)}
+	case cs.stdout == nil && cs.stderr == nil:
+		return []contracts.Action{renderUnscopedExitAction(context, cs)}
+	default:
+		return renderStreamExitActions(context, cs)
 	}
-	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(exitStream), ""), scope, context.ExitCode())
+}
+
+func renderStreamExitActions(context contracts.Context, cs *compiledCase) []contracts.Action {
+	actions := make([]contracts.Action, 0, 2)
+	if cs.stdout != nil {
+		actions = append(actions, renderScopedExitAction(context, contracts.StreamStdout, cs.stdout, cs, true))
+	}
+	if cs.stderr != nil {
+		actions = append(actions, renderScopedExitAction(context, contracts.StreamStderr, cs.stderr, cs, cs.stdout == nil))
+	}
+	return actions
+}
+
+func renderScopedExitAction(context contracts.Context, stream contracts.Stream, scope *compiledScope, cs *compiledCase, includeFinally bool) contracts.Action {
+	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(stream), ""), scope, context.ExitCode())
+	if includeFinally && cs.onExit != nil {
+		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
+	}
+	return exitActionForOutput(output, stream)
+}
+
+func renderUnscopedExitAction(context contracts.Context, cs *compiledCase) contracts.Action {
+	output := strings.Join(context.BufferedLines(contracts.StreamStdout), "")
 	if cs.onExit != nil {
 		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
 	}
-	return exitActionForOutput(output, exitStream)
+	return exitActionForOutput(output, contracts.StreamStdout)
 }
 
 func renderStdoutExitOutput(output string, scope *compiledScope, exitCode int) string {
@@ -142,9 +172,7 @@ func exitActionForOutput(output string, stream contracts.Stream) contracts.Actio
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
 	action := contracts.Action{Kind: contracts.ActionReplace, Output: output}
-	if stream == contracts.StreamCombined {
-		action.Stream = stream
-	}
+	action.Stream = stream
 	return action
 }
 
@@ -160,7 +188,7 @@ func (f *YamlFilter) PrepareCommand(command contracts.Command) (contracts.Comman
 }
 
 func (f *YamlFilter) Dispatch(command contracts.Command) string {
-	cs, ok := f.caseForArgs(command.Args)
+	cs, ok := f.caseForArgs(command.ArgsForMatching())
 	if !ok {
 		return f.spec.Filter
 	}
@@ -171,7 +199,7 @@ func (f *YamlFilter) Dispatch(command contracts.Command) string {
 }
 
 func (f *YamlFilter) ReportsPassthrough(command contracts.Command) bool {
-	cs, ok := f.caseForArgs(command.Args)
+	cs, ok := f.caseForArgs(command.ArgsForMatching())
 	return ok && cs.passthrough
 }
 
@@ -1302,7 +1330,7 @@ func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []s
 		mutated = addShortFlagIfMissing(mutated, flag)
 	}
 	for _, arg := range command.appendIfMissing {
-		if slices.Contains(mutated, arg) {
+		if argumentPresent(mutated, arg, flagsWithValues) {
 			continue
 		}
 		mutated = append(mutated, arg)
@@ -1315,6 +1343,17 @@ func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []s
 		mutated = append(mutated, command.appendIfNoPositionals...)
 	}
 	return mutated
+}
+
+func argumentPresent(args []string, want string, flagsWithValues []string) bool {
+	if strings.HasPrefix(want, "--") {
+		view := operations.ParseArguments(args, flagsWithValues)
+		if name, value, ok := strings.Cut(want, "="); ok {
+			return view.HasLongOptionValue(name, value)
+		}
+		return view.HasLongOption(want)
+	}
+	return slices.Contains(args, want)
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
@@ -1344,15 +1383,16 @@ func containsShortFlag(args []string, want rune) bool {
 
 func matchesWhenArguments(when compiledWhen, flagsWithValues, args []string) bool {
 	leadingCommandContext := when.firstIs != "" || len(when.firstIn) > 0
+	view := operations.ParseArguments(args, flagsWithValues)
 	return operations.MatchesFirstIs(args, when.firstIs) &&
 		operations.MatchesFirstIn(args, when.firstIn) &&
-		operations.MatchesHaveAny(args, when.haveAny) &&
-		operations.MatchesLackAny(args, when.lackAny) &&
-		operations.MatchesHaveSequence(args, when.haveSequence) &&
-		operations.MatchesHaveShortFlag(args, when.haveShortFlag) &&
-		operations.MatchesNotHaveShortFlag(args, when.notHaveShortFlag) &&
-		operations.MatchesHaveAllShortFlags(args, when.haveAllShortFlags) &&
-		operations.MatchesNotHaveAllShortFlags(args, when.notHaveAllShortFlags) &&
+		view.MatchesHaveAny(when.haveAny) &&
+		view.MatchesLackAny(when.lackAny) &&
+		view.MatchesHaveSequence(when.haveSequence) &&
+		operations.MatchesHaveShortFlag(view.BeforeSeparator(), when.haveShortFlag) &&
+		operations.MatchesNotHaveShortFlag(view.BeforeSeparator(), when.notHaveShortFlag) &&
+		operations.MatchesHaveAllShortFlags(view.BeforeSeparator(), when.haveAllShortFlags) &&
+		operations.MatchesNotHaveAllShortFlags(view.BeforeSeparator(), when.notHaveAllShortFlags) &&
 		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny, flagsWithValues) &&
 		operations.MatchesNoPositionals(args, flagsWithValues, when.noPositionals, leadingCommandContext)
 }

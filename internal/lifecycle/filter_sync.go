@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"go-command-compression-proxy/internal/projectfiles"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,7 +74,7 @@ func copyMissingFilterFile(srcPath, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dstPath, body, 0o644)
+	return projectfiles.AtomicWriteFile(dstPath, body, 0o644)
 }
 
 func fileMissing(path string) (bool, error) {
@@ -94,7 +96,7 @@ func mergeMissingMappings(srcPath, dstPath string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(dstPath, body, 0o644)
+		return projectfiles.AtomicWriteFile(dstPath, body, 0o644)
 	} else if err != nil {
 		return err
 	}
@@ -119,7 +121,7 @@ func mergeMissingMappings(srcPath, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dstPath, body, 0o644)
+	return projectfiles.AtomicWriteFile(dstPath, body, 0o644)
 }
 
 func readLifecycleMappings(path string) (lifecycleMappingsFile, error) {

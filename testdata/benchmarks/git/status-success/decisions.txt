@@ -1,0 +1,20 @@
+<replace> | On branch git-improvements
+<skip>    | Changes not staged for commit:
+<skip>    |   (use "git add <file>..." to update what will be committed)
+<skip>    |   (use "git restore <file>..." to discard changes in working directory)
+<replace> | 	modified:   testdata/benchmarks/git/status-success-porcelain/output.txt
+<replace> | 	modified:   testdata/benchmarks/git/status-success-porcelain/stdout.txt
+<replace> | 	modified:   testdata/benchmarks/git/status-success/output.txt
+<replace> | 	modified:   testdata/benchmarks/git/status-success/stdout.txt
+<skip>    | 
+<skip>    | Untracked files:
+<skip>    |   (use "git add <file>..." to include in what will be committed)
+<replace> | 	FIND.md
+<replace> | 	GIT.md
+<replace> | 	GREP.md
+<replace> | 	LS.md
+<replace> | 	TOOL_EXPLORATION_LOG.md
+<replace> | 	testdata/benchmarks/git/status-success-porcelain/stderr.txt
+<replace> | 	testdata/benchmarks/git/status-success/stderr.txt
+<skip>    | 
+<skip>    | no changes added to commit (use "git add" and/or "git commit -a")

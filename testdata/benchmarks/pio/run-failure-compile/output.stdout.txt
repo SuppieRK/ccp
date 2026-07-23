@@ -1,0 +1,3 @@
+src/main.cpp:10:3: error: 'LED_BUILTINN' was not declared in this scope
+*** [.pio/build/esp32dev/src/main.cpp.o] Error 1
+========================== [FAILED] Took 1.23 seconds ==========================

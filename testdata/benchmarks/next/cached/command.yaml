@@ -1,1 +1,2 @@
 argv: ["./next", "build", "--cached"]
+exit_code: 0

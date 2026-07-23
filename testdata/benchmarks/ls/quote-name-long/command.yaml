@@ -1,0 +1,2 @@
+argv: ["ls", "-l", "--quote-name"]
+exit_code: 0

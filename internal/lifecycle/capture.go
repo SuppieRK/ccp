@@ -21,46 +21,39 @@ import (
 )
 
 const (
-	captureStdoutFileName = "stdout.txt"
-	captureStderrFileName = "stderr.txt"
-	captureOutputFileName = "output.txt"
+	captureStdoutFileName       = "stdout.txt"
+	captureStderrFileName       = "stderr.txt"
+	captureOutputFileName       = "output.txt"
+	captureOutputStdoutFileName = "output.stdout.txt"
+	captureOutputStderrFileName = "output.stderr.txt"
 )
 
 type captureVerifier interface {
 	ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error)
 }
 
-var newCaptureRunner = func() captureVerifier {
-	return core.NewRunnerWithOptions(core.Options{})
+var newCaptureRunner = func(confidential []string) captureVerifier {
+	return core.NewRunnerWithOptions(core.Options{Confidential: confidential})
 }
 
 func RunCapture(args []string) error {
-	recordFailure := func(commandArgs []string, dir, stage string, err error) error {
-		audit.MustAppend("capture_invocation_finish", map[string]any{
-			"command": strings.Join(commandArgs, " "),
-			"dir":     dir,
-			"success": false,
-			"stage":   stage,
-			"error":   err.Error(),
-		})
-		return err
-	}
-
 	fs := newLifecycleFlagSet("capture")
 	dirFlag := fs.String("dir", "", "directory where capture artifacts are written")
+	confidentialFlag := fs.String("confidential", "", "comma-separated literal values to redact from captured argv and output")
 	setLifecycleUsage(
 		fs,
 		"capture native stdout/stderr and replay CCP output for local filter iteration",
 		[]string{"ccp capture [--dir <path>] -- <command> [args...]"},
-		"capture writes command.yaml, stdout.txt, stderr.txt, and output.txt.",
+		"capture writes command.yaml, sequenced native streams, merged output.txt, and exact output.stdout.txt/output.stderr.txt expectations.",
 		"when --dir is omitted, capture writes to the current working directory.",
 		"stdout.txt and stderr.txt use sequenced 00000| prefixes so replay preserves cross-stream ordering.",
 		"capture runs the command natively once, then replays the captured streams through the current YAML runtime.",
 		"non-zero command exits still write artifacts so the failure can be iterated on locally.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
+	confidential := captureConfidentialValues(*confidentialFlag)
 	if err != nil {
-		return recordFailure(nil, "", "parse_flags", err)
+		return recordCaptureFailure(nil, "", confidential, "parse_flags", err)
 	}
 	if handled {
 		audit.MustAppend("capture_invocation_finish", map[string]any{
@@ -73,60 +66,97 @@ func RunCapture(args []string) error {
 	commandArgs := fs.Args()
 	dirValue := strings.TrimSpace(*dirFlag)
 	if len(commandArgs) == 0 {
-		return recordFailure(commandArgs, dirValue, "validate_flags", fmt.Errorf("missing command after '--'"))
+		return recordCaptureFailure(commandArgs, dirValue, confidential, "validate_flags", fmt.Errorf("missing command after '--'"))
 	}
 
 	captureDir, err := resolveCaptureDir(dirValue, commandArgs[0])
 	if err != nil {
-		return recordFailure(commandArgs, dirValue, "resolve_dir", err)
+		return recordCaptureFailure(commandArgs, dirValue, confidential, "resolve_dir", err)
+	}
+	return executeCapture(commandArgs, captureDir, confidential)
+}
+
+func recordCaptureFailure(commandArgs []string, dir string, confidential []string, stage string, err error) error {
+	audit.MustAppend("capture_invocation_finish", map[string]any{
+		"command": captureAuditCommand(commandArgs, confidential),
+		"dir":     redactCaptureText(dir, confidential),
+		"success": false,
+		"stage":   stage,
+		"error":   redactCaptureText(err.Error(), confidential),
+	})
+	return err
+}
+
+func executeCapture(commandArgs []string, captureDir string, confidential []string) error {
+	auditCommand := captureAuditCommand(commandArgs, confidential)
+	recordFailure := func(stage string, err error) error {
+		return recordCaptureFailure(commandArgs, captureDir, confidential, stage, err)
 	}
 	audit.MustAppend("capture_invocation_start", map[string]any{
-		"command": strings.Join(commandArgs, " "),
-		"dir":     captureDir,
+		"command": auditCommand,
+		"dir":     redactCaptureText(captureDir, confidential),
 	})
 
 	events, exitCode, err := runNativeCapture(commandArgs)
 	if err != nil {
-		return recordFailure(commandArgs, captureDir, "native_exec", err)
+		return recordFailure("native_exec", err)
 	}
-	if err := os.MkdirAll(captureDir, 0o755); err != nil {
-		return recordFailure(commandArgs, captureDir, "mkdir", err)
+	if err := ensureCaptureDirectory(captureDir); err != nil {
+		return recordFailure("mkdir", err)
 	}
 
 	commandPath := filepath.Join(captureDir, replay.CommandFileName)
 	stdoutPath := filepath.Join(captureDir, captureStdoutFileName)
 	stderrPath := filepath.Join(captureDir, captureStderrFileName)
 	outputPath := filepath.Join(captureDir, captureOutputFileName)
-	if err := replay.WriteCommandWithExitCode(commandPath, commandArgs, exitCode); err != nil {
-		return recordFailure(commandArgs, captureDir, "write_command", err)
+	outputStdoutPath := filepath.Join(captureDir, captureOutputStdoutFileName)
+	outputStderrPath := filepath.Join(captureDir, captureOutputStderrFileName)
+	if err := tightenCaptureTargets([]string{commandPath, stdoutPath, stderrPath, outputPath, outputStdoutPath, outputStderrPath}); err != nil {
+		return recordFailure("tighten_targets", err)
 	}
-	if err := replay.WriteSequencedEvents(stdoutPath, events, contracts.StreamStdout); err != nil {
-		return recordFailure(commandArgs, captureDir, "write_stdout", err)
+	storedArgs := redactCaptureArgs(commandArgs, confidential)
+	storedEvents := redactCaptureEvents(events, confidential)
+	if err := replay.WriteCommandWithExitCodeMode(commandPath, storedArgs, exitCode, len(confidential) > 0, 0o600); err != nil {
+		return recordFailure("write_command", err)
 	}
-	if err := replay.WriteSequencedEvents(stderrPath, events, contracts.StreamStderr); err != nil {
-		return recordFailure(commandArgs, captureDir, "write_stderr", err)
+	if err := replay.WriteSequencedEventsMode(stdoutPath, storedEvents, contracts.StreamStdout, 0o600); err != nil {
+		return recordFailure("write_stdout", err)
+	}
+	if err := replay.WriteSequencedEventsMode(stderrPath, storedEvents, contracts.StreamStderr, 0o600); err != nil {
+		return recordFailure("write_stderr", err)
 	}
 
-	replayed, err := newCaptureRunner().ReplayWithExitCode(commandArgs, events, exitCode)
+	replayed, err := newCaptureRunner(confidential).ReplayWithExitCode(commandArgs, events, exitCode)
 	if err != nil {
-		return recordFailure(commandArgs, captureDir, "replay_output", err)
+		return recordFailure("replay_output", err)
 	}
-	if err := replay.WriteArtifact(outputPath, []byte(replayed.Output), 0o644); err != nil {
-		return recordFailure(commandArgs, captureDir, "write_output", err)
+	storedOutput := redactCaptureText(replayed.Output, confidential)
+	storedStdout := redactCaptureText(replayed.Stdout, confidential)
+	storedStderr := redactCaptureText(replayed.Stderr, confidential)
+	if err := replay.WriteArtifact(outputPath, []byte(storedOutput), 0o600); err != nil {
+		return recordFailure("write_output", err)
+	}
+	if err := replay.WriteArtifact(outputStdoutPath, []byte(storedStdout), 0o600); err != nil {
+		return recordFailure("write_output_stdout", err)
+	}
+	if err := replay.WriteArtifact(outputStderrPath, []byte(storedStderr), 0o600); err != nil {
+		return recordFailure("write_output_stderr", err)
 	}
 
 	audit.MustAppend("capture_invocation_finish", map[string]any{
-		"command":      strings.Join(commandArgs, " "),
-		"dir":          captureDir,
-		"command_path": commandPath,
-		"stdout_path":  stdoutPath,
-		"stderr_path":  stderrPath,
-		"output_path":  outputPath,
-		"exit_code":    exitCode,
-		"stdout_bytes": streamBytes(events, contracts.StreamStdout),
-		"stderr_bytes": streamBytes(events, contracts.StreamStderr),
-		"output_bytes": len(replayed.Output),
-		"success":      true,
+		"command":            auditCommand,
+		"dir":                redactCaptureText(captureDir, confidential),
+		"command_path":       redactCaptureText(commandPath, confidential),
+		"stdout_path":        redactCaptureText(stdoutPath, confidential),
+		"stderr_path":        redactCaptureText(stderrPath, confidential),
+		"output_path":        redactCaptureText(outputPath, confidential),
+		"output_stdout_path": redactCaptureText(outputStdoutPath, confidential),
+		"output_stderr_path": redactCaptureText(outputStderrPath, confidential),
+		"exit_code":          exitCode,
+		"stdout_bytes":       streamBytes(events, contracts.StreamStdout),
+		"stderr_bytes":       streamBytes(events, contracts.StreamStderr),
+		"output_bytes":       len(storedOutput),
+		"success":            true,
 	})
 
 	if exitCode != 0 {
@@ -135,11 +165,85 @@ func RunCapture(args []string) error {
 	return nil
 }
 
+func captureAuditCommand(commandArgs, confidential []string) string {
+	return strings.Join(redactCaptureArgs(commandArgs, confidential), " ")
+}
+
 func resolveCaptureDir(dir, _ string) (string, error) {
 	if strings.TrimSpace(dir) != "" {
 		return filepath.Abs(dir)
 	}
 	return os.Getwd()
+}
+
+func ensureCaptureDirectory(path string) error {
+	info, err := os.Stat(path)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("capture path %q is not a directory", path)
+		}
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o700)
+}
+
+func tightenCaptureTargets(paths []string) error {
+	for _, path := range paths {
+		info, err := os.Lstat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("refuse non-regular capture target %q", path)
+		}
+		if err := os.Chmod(path, 0o600); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func captureConfidentialValues(raw string) []string {
+	values := make([]string, 0, 4)
+	for value := range strings.SplitSeq(raw, ",") {
+		if value = strings.TrimSpace(value); value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
+func redactCaptureArgs(args, confidential []string) []string {
+	out := make([]string, len(args))
+	for index, arg := range args {
+		out[index] = redactCaptureText(arg, confidential)
+	}
+	return out
+}
+
+func redactCaptureEvents(events []replay.Event, confidential []string) []replay.Event {
+	out := make([]replay.Event, len(events))
+	for index, event := range events {
+		event.Line = redactCaptureText(event.Line, confidential)
+		out[index] = event
+	}
+	return out
+}
+
+func redactCaptureText(value string, confidential []string) string {
+	for _, secret := range confidential {
+		value = strings.ReplaceAll(value, secret, "***")
+	}
+	return value
 }
 
 func runNativeCapture(args []string) ([]replay.Event, int, error) {
@@ -214,54 +318,24 @@ func runNativeCaptureContext(ctx context.Context, args []string) ([]replay.Event
 func readSequencedCapture(src io.ReadCloser, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) error {
 	defer func() { _ = src.Close() }()
 	reader := bufio.NewReader(src)
-	var (
-		currentLine []byte
-		currentSeq  = -1
-	)
 	for {
-		b, err := reader.ReadByte()
+		first, err := reader.ReadByte()
 		if err != nil {
-			finishSequencedCaptureLine(&currentLine, &currentSeq, stream, record)
 			if errors.Is(err, io.EOF) {
 				return nil
 			}
 			return fmt.Errorf("read %s stream: %w", stream, err)
 		}
-		appendSequencedCaptureByte(&currentLine, &currentSeq, b, stream, sequence, record)
+		currentSeq := int(sequence.Add(1) - 1)
+		currentRecord, readErr := replay.CompleteStreamRecord(reader, first)
+		record(currentSeq, stream, string(currentRecord))
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				return nil
+			}
+			return fmt.Errorf("read %s stream: %w", stream, readErr)
+		}
 	}
-}
-
-func appendSequencedCaptureByte(currentLine *[]byte, currentSeq *int, b byte, stream contracts.Stream, sequence *atomic.Int64, record func(int, contracts.Stream, string)) {
-	ensureSequencedCaptureLine(currentLine, currentSeq, sequence)
-	switch b {
-	case '\n':
-		emitSequencedCaptureLine(currentLine, currentSeq, true, stream, record)
-	default:
-		*currentLine = append(*currentLine, b)
-	}
-}
-
-func ensureSequencedCaptureLine(currentLine *[]byte, currentSeq *int, sequence *atomic.Int64) {
-	if len(*currentLine) > 0 || *currentSeq >= 0 {
-		return
-	}
-	*currentSeq = int(sequence.Add(1) - 1)
-}
-
-func finishSequencedCaptureLine(currentLine *[]byte, currentSeq *int, stream contracts.Stream, record func(int, contracts.Stream, string)) {
-	if len(*currentLine) == 0 {
-		return
-	}
-	record(*currentSeq, stream, string(*currentLine))
-}
-
-func emitSequencedCaptureLine(currentLine *[]byte, currentSeq *int, includeNewline bool, stream contracts.Stream, record func(int, contracts.Stream, string)) {
-	if includeNewline {
-		*currentLine = append(*currentLine, '\n')
-	}
-	record(*currentSeq, stream, string(*currentLine))
-	*currentLine = (*currentLine)[:0]
-	*currentSeq = -1
 }
 
 func streamBytes(events []replay.Event, stream contracts.Stream) int {

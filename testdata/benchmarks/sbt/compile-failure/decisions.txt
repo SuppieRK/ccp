@@ -1,0 +1,12 @@
+<skip>    | [info] welcome to sbt 1.10.1 (Eclipse Adoptium Java 21.0.6)
+<skip>    | [info] loading settings for project root-build from plugins.sbt ...
+<skip>    | [info] loading project definition from /work/demo/project
+<skip>    | [info] set current project to demo (in build file:/work/demo/)
+<skip>    | [info] compiling 1 Scala source to /work/demo/target/scala-3.3.3/classes ...
+<keep>    | [error] -- [E008] Not Found Error: /work/demo/src/main/scala/Main.scala:4:10
+<keep>    | [error] 4 |  println(missing)
+<keep>    | [error]   |          ^^^^^^^
+<keep>    | [error]   |          Not found: missing
+<keep>    | [error] one error found
+<keep>    | [error] (Compile / compileIncremental) Compilation failed
+<keep>    | [error] Total time: 3 s, completed Mar 20, 2026, 9:16:08 AM

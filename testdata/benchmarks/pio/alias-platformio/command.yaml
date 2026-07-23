@@ -1,0 +1,2 @@
+argv: ["platformio", "run"]
+exit_code: 0

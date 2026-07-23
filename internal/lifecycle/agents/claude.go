@@ -111,6 +111,9 @@ func (a ClaudeAdapter) Verify(ctx Context) error {
 	if err := verifyClaudeGuideBlock(filepath.Join(root, claudeGuideName)); err != nil {
 		return err
 	}
+	if err := verifyBashRewriteHook(filepath.Join(root, "hooks", claudeHookScriptName)); err != nil {
+		return err
+	}
 	return nil
 }
 

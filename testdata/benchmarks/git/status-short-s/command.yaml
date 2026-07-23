@@ -1,0 +1,2 @@
+argv: ["git", "status", "-s"]
+exit_code: 0

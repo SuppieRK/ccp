@@ -1,1 +1,2 @@
 argv: ["npx", "node", "runtime_failure.js"]
+exit_code: 1

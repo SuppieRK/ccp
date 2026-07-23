@@ -1,1 +1,2 @@
 argv: ["./.venv/bin/pytest", "-q"]
+exit_code: 5

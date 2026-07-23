@@ -1,0 +1,17 @@
+<keep>    | /tmp/repo-44a/data/siteMetadata.js:103
+<keep>    | module.exports = missingSiteMetadata
+<keep>    |                  ^
+<keep>    | 
+<keep>    | ReferenceError: missingSiteMetadata is not defined
+<keep>    |     at Object.<anonymous> (/tmp/repo-44a/data/siteMetadata.js:103:18)
+<skip>    |     at Module._compile (node:internal/modules/cjs/loader:1705:14)
+<skip>    |     at Object..js (node:internal/modules/cjs/loader:1838:10)
+<skip>    |     at Module.load (node:internal/modules/cjs/loader:1441:32)
+<skip>    |     at Function._load (node:internal/modules/cjs/loader:1263:12)
+<skip>    |     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+<skip>    |     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+<skip>    |     at Module.require (node:internal/modules/cjs/loader:1463:12)
+<skip>    |     at require (node:internal/modules/helpers:147:16)
+<keep>    |     at [eval]:1:1
+<keep>    | 
+<keep>    | Node.js v22.22.1

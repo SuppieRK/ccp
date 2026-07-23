@@ -1,0 +1,2 @@
+argv: ["prisma", "--help"]
+exit_code: 0

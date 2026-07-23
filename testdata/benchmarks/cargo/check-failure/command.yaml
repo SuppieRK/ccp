@@ -1,1 +1,2 @@
 argv: ["cargo", "check"]
+exit_code: 101

@@ -94,12 +94,106 @@ var _ = Describe("replaceBinary", func() {
 			Expect(os.MkdirAll(dst, 0o755)).To(Succeed())
 		})
 
-		It("returns the rename error and keeps the staged file", func() {
+		It("returns the rename error, preserves the destination, and removes staging", func() {
 			err := replaceBinary(dst, src)
 			Expect(err).To(HaveOccurred())
 			Expect(dst).To(BeADirectory())
-			Expect(dst + ".new").To(BeAnExistingFile())
+			Expect(dst + ".new").NotTo(BeAnExistingFile())
 		})
+	})
+})
+
+var _ = Describe("installUpgradeReplacement", func() {
+	It("moves the running Windows image aside before installing the staged binary", func() {
+		tmpDir := GinkgoT().TempDir()
+		src := filepath.Join(tmpDir, "staged.exe")
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevOS := upgradeRuntimeOS
+		prevReplace := upgradeReplaceBinary
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeReplaceBinary = func(dest, source string) error {
+			if _, err := os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
+				return errors.New("destination is still mapped")
+			}
+			return replaceBinary(dest, source)
+		}
+		DeferCleanup(func() {
+			upgradeRuntimeOS = prevOS
+			upgradeReplaceBinary = prevReplace
+		})
+
+		backupPath, err := installUpgradeReplacement(dst, src)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(backupPath).NotTo(BeEmpty())
+		Expect(os.ReadFile(dst)).To(Equal([]byte(newBinaryContent)))
+		Expect(os.ReadFile(backupPath)).To(Equal([]byte("old-binary")))
+	})
+
+	It("restores the Windows binary when staged installation fails", func() {
+		tmpDir := GinkgoT().TempDir()
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevOS := upgradeRuntimeOS
+		prevReplace := upgradeReplaceBinary
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeReplaceBinary = func(string, string) error { return errors.New("install failed") }
+		DeferCleanup(func() {
+			upgradeRuntimeOS = prevOS
+			upgradeReplaceBinary = prevReplace
+		})
+
+		_, err := installUpgradeReplacement(dst, filepath.Join(tmpDir, "staged.exe"))
+
+		Expect(err).To(MatchError(ContainSubstring("install failed")))
+		Expect(os.ReadFile(dst)).To(Equal([]byte("old-binary")))
+	})
+
+	It("repairs the new Windows binary before scheduling removal of the old image", func() {
+		tmpDir := GinkgoT().TempDir()
+		src := filepath.Join(tmpDir, "staged.exe")
+		dst := filepath.Join(tmpDir, "ccp.exe")
+		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
+		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
+
+		prevExec := upgradeExecutablePath
+		prevOS := upgradeRuntimeOS
+		prevRepair := upgradeRunRepair
+		prevSchedule := upgradeScheduleRemove
+		prevPrintf := upgradePrintf
+		repaired := false
+		scheduledPath := ""
+		upgradeExecutablePath = func() (string, error) { return dst, nil }
+		upgradeRuntimeOS = func() string { return "windows" }
+		upgradeRunRepair = func(path string, mode repairMode) error {
+			Expect(path).To(Equal(dst))
+			Expect(mode).To(Equal(repairModeRewrite))
+			repaired = true
+			return nil
+		}
+		upgradeScheduleRemove = func(path string) error {
+			Expect(repaired).To(BeTrue())
+			scheduledPath = path
+			return nil
+		}
+		upgradePrintf = func(string, ...any) (int, error) { return 0, nil }
+		DeferCleanup(func() {
+			upgradeExecutablePath = prevExec
+			upgradeRuntimeOS = prevOS
+			upgradeRunRepair = prevRepair
+			upgradeScheduleRemove = prevSchedule
+			upgradePrintf = prevPrintf
+		})
+
+		Expect(installUpgradeBinary(src, "asset.zip", "1.2.3")).To(Succeed())
+
+		Expect(scheduledPath).NotTo(BeEmpty())
+		Expect(os.ReadFile(scheduledPath)).To(Equal([]byte("old-binary")))
+		Expect(os.ReadFile(dst)).To(Equal([]byte(newBinaryContent)))
 	})
 })
 
@@ -184,6 +278,34 @@ var _ = Describe("upgrade helper functions", func() {
 
 		_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
 		Expect(err).To(MatchError(ContainSubstring("binary ccp not found in archive")))
+	})
+
+	DescribeTable("rejects unsafe binary archive entries",
+		func(entries []zipTestEntry, message string) {
+			tmpDir := GinkgoT().TempDir()
+			zipPath := filepath.Join(tmpDir, "asset.zip")
+			Expect(os.WriteFile(zipPath, makeZipEntries(entries), 0o644)).To(Succeed())
+			zr, err := zip.OpenReader(zipPath)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { _ = zr.Close() })
+
+			_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
+			Expect(err).To(MatchError(ContainSubstring(message)))
+		},
+		Entry("path traversal", []zipTestEntry{{name: "../ccp", body: "x"}}, "unsafe archive entry"),
+		Entry("absolute path", []zipTestEntry{{name: "/ccp", body: "x"}}, "unsafe archive entry"),
+		Entry("duplicate binaries", []zipTestEntry{{name: "ccp", body: "one"}, {name: "ccp", body: "two"}}, "duplicate binary"),
+		Entry("symlink binary", []zipTestEntry{{name: "ccp", body: "target", mode: os.ModeSymlink | 0o777}}, "not a regular file"),
+	)
+
+	It("requires exact staged --version output", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses a unix shell script")
+		}
+		path := filepath.Join(GinkgoT().TempDir(), "ccp")
+		Expect(os.WriteFile(path, []byte("#!/bin/sh\nprintf '1.2.3\\n'\n"), 0o755)).To(Succeed())
+		Expect(validateStagedBinaryVersion(path, "1.2.3")).To(Succeed())
+		Expect(validateStagedBinaryVersion(path, "1.2.4")).To(MatchError(ContainSubstring("does not match requested")))
 	})
 
 	It("preserves an existing error when a closer also fails", func() {
@@ -699,6 +821,31 @@ func makeZipArchive(name string, content []byte) []byte {
 	return buf.Bytes()
 }
 
+type zipTestEntry struct {
+	name string
+	body string
+	mode os.FileMode
+}
+
+func makeZipEntries(entries []zipTestEntry) []byte {
+	var buf bytes.Buffer
+	writer := zip.NewWriter(&buf)
+	for _, item := range entries {
+		header := &zip.FileHeader{Name: item.name, Method: zip.Store}
+		if item.mode != 0 {
+			header.SetMode(item.mode)
+		} else {
+			header.SetMode(0o755)
+		}
+		entry, err := writer.CreateHeader(header)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = entry.Write([]byte(item.body))
+		Expect(err).NotTo(HaveOccurred())
+	}
+	Expect(writer.Close()).To(Succeed())
+	return buf.Bytes()
+}
+
 func jsonHTTPResponse(status int, payload string) *http.Response {
 	return bytesHTTPResponse(status, "application/json", []byte(payload))
 }
@@ -737,16 +884,19 @@ func stubUpgradeRuntimeDeps(
 	prevArch := upgradeRuntimeArch
 	prevHTTP := upgradeHTTPClient
 	prevRepair := upgradeRunRepair
+	prevValidate := upgradeValidateStaged
 	upgradeExecutablePath = execFn
 	upgradeRuntimeOS = osFn
 	upgradeRuntimeArch = archFn
 	upgradeHTTPClient = httpClient
 	upgradeRunRepair = repairFn
+	upgradeValidateStaged = func(string, string) error { return nil }
 	return func() {
 		upgradeExecutablePath = prevExec
 		upgradeRuntimeOS = prevOS
 		upgradeRuntimeArch = prevArch
 		upgradeHTTPClient = prevHTTP
 		upgradeRunRepair = prevRepair
+		upgradeValidateStaged = prevValidate
 	}
 }

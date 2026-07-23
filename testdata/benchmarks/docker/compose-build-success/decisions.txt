@@ -1,0 +1,96 @@
+<skip>    | #1 [internal] load local bake definitions
+<skip>    | #1 reading from stdin 1.24kB done
+<skip>    | #1 DONE 0.0s
+<skip>    | 
+<skip>    | #2 [web internal] load build definition from Dockerfile
+<skip>    | #2 transferring dockerfile: 124B 0.0s done
+<skip>    | #2 DONE 0.0s
+<skip>    | 
+<skip>    | #3 [api internal] load build definition from Dockerfile
+<skip>    | #3 transferring dockerfile: 129B 0.0s done
+<skip>    | #3 DONE 0.0s
+<skip>    | 
+<skip>    | #4 [api internal] load metadata for docker.io/library/golang:1.26-alpine
+<skip>    | #4 ...
+<skip>    | 
+<skip>    | #5 [web internal] load metadata for docker.io/library/node:20-alpine
+<skip>    | #5 DONE 0.2s
+<skip>    | 
+<skip>    | #4 [api internal] load metadata for docker.io/library/golang:1.26-alpine
+<skip>    | #4 DONE 0.2s
+<skip>    | 
+<skip>    | #6 [web internal] load .dockerignore
+<skip>    | #6 transferring context: 2B done
+<skip>    | #6 DONE 0.0s
+<skip>    | 
+<skip>    | #7 [api internal] load .dockerignore
+<skip>    | #7 transferring context: 2B done
+<skip>    | #7 DONE 0.0s
+<skip>    | 
+<skip>    | #8 [web 1/4] FROM docker.io/library/node:20-alpine@sha256:b88333c42c23fbd91596ebd7fd10de239cedab9617de04142dde7315e3bc0afa
+<skip>    | #8 resolve docker.io/library/node:20-alpine@sha256:b88333c42c23fbd91596ebd7fd10de239cedab9617de04142dde7315e3bc0afa 0.0s done
+<skip>    | #8 DONE 0.0s
+<skip>    | 
+<skip>    | #9 [api 1/4] FROM docker.io/library/golang:1.26-alpine@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039
+<skip>    | #9 resolve docker.io/library/golang:1.26-alpine@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 0.0s done
+<skip>    | #9 DONE 0.0s
+<skip>    | 
+<skip>    | #10 [api internal] load build context
+<skip>    | #10 transferring context: 29B 0.0s done
+<skip>    | #10 DONE 0.0s
+<skip>    | 
+<skip>    | #11 [web internal] load build context
+<skip>    | #11 transferring context: 34B 0.0s done
+<skip>    | #11 DONE 0.0s
+<skip>    | 
+<skip>    | #12 [web 2/4] WORKDIR /app
+<skip>    | #12 CACHED
+<skip>    | 
+<skip>    | #13 [web 3/4] COPY package.json ./
+<skip>    | #13 CACHED
+<skip>    | 
+<skip>    | #14 [web 4/4] RUN npm install --ignore-scripts
+<skip>    | #14 CACHED
+<skip>    | 
+<skip>    | #15 [api 2/4] WORKDIR /src
+<skip>    | #15 CACHED
+<skip>    | 
+<skip>    | #16 [api 3/4] COPY hello.go ./
+<skip>    | #16 CACHED
+<skip>    | 
+<skip>    | #17 [api 4/4] RUN go build -o /out/hello ./hello.go
+<skip>    | #17 CACHED
+<skip>    | 
+<skip>    | #18 [api] exporting to image
+<skip>    | #18 exporting layers done
+<skip>    | #18 exporting manifest sha256:91377a471d1251bbabc5a5c383953120aa235832ece5e3a82a1665d606220408 0.0s done
+<skip>    | #18 exporting config sha256:b2edf7591148f92eec7ffa0e9aaf2c52123819c88827c47c651ac84dfa725985 0.0s done
+<skip>    | #18 exporting attestation manifest sha256:da035271c0213c50801cfb719e41771b18f679c2da1b1b921194920e8152027f
+<skip>    | #18 exporting attestation manifest sha256:da035271c0213c50801cfb719e41771b18f679c2da1b1b921194920e8152027f 0.1s done
+<skip>    | #18 exporting manifest list sha256:38d58604673166630452eb6a4c2e2336a895aa2a4dd833cdb1c34bde74a20185 0.0s done
+<skip>    | #18 naming to docker.io/library/project-api:latest
+<skip>    | #18 ...
+<skip>    | 
+<skip>    | #19 [web] exporting to image
+<skip>    | #19 exporting layers done
+<skip>    | #19 exporting manifest sha256:2ed10c7fdcc4eedfe81356a858cb021daedeb47b1312fa9e88521887e8f7ef92 done
+<skip>    | #19 exporting config sha256:6c0a3cb669617dbbcc3e9b1da9a71c384433f905bfdb6cf8bba25196054d44fe 0.0s done
+<skip>    | #19 exporting attestation manifest sha256:5e7b576a7dd93a828fcbdf7a5fc72e9607d3e81422ffe952bf6814a43f231219 0.1s done
+<skip>    | #19 exporting manifest list sha256:bb5ed3552fa5b13e43a000617d0ec680a4d9c3dcbddc42920a3cb9d6a52399d0 0.0s done
+<skip>    | #19 naming to docker.io/library/project-web:latest 0.0s done
+<skip>    | #19 unpacking to docker.io/library/project-web:latest 0.1s done
+<skip>    | #19 DONE 0.3s
+<skip>    | 
+<skip>    | #18 [api] exporting to image
+<skip>    | #18 naming to docker.io/library/project-api:latest done
+<skip>    | #18 unpacking to docker.io/library/project-api:latest
+<skip>    | #18 unpacking to docker.io/library/project-api:latest 0.2s done
+<skip>    | #18 DONE 0.4s
+<skip>    | 
+<skip>    | #20 [web] resolving provenance for metadata file
+<skip>    | #20 DONE 0.0s
+<skip>    | 
+<skip>    | #21 [api] resolving provenance for metadata file
+<skip>    | #21 DONE 0.0s
+<replace> |  project-api  Built
+<replace> |  project-web  Built

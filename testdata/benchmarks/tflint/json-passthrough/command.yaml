@@ -1,1 +1,2 @@
 argv: ["tflint", "--format=json"]
+exit_code: 0

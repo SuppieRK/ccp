@@ -1,0 +1,3 @@
+<keep>    | .goreleaser.yaml
+<replace> |   1:1       warning  missing document start "---"  (document-start)
+<replace> |   2:1       error    syntax error: expected ',' or ']', but got '<stream end>' (syntax)

@@ -1,1 +1,2 @@
 argv: ["terraform", "plan", "-destroy", "-input=false", "-refresh=false", "-no-color"]
+exit_code: 0

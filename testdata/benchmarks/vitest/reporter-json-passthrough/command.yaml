@@ -1,1 +1,2 @@
 argv: ["vitest", "run", "--reporter=json"]
+exit_code: 0

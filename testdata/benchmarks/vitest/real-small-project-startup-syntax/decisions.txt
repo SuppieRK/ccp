@@ -1,0 +1,13 @@
+<skip>    |  RUN  v3.2.4 /workspace/todo-lite
+<skip>    | 
+<keep>    |  SyntaxError: /workspace/todo-lite/src/ui/filter-bar.test.ts: Unexpected token, expected "," (4:26)
+<keep>    |    2 | import { render } from '@testing-library/react'
+<keep>    |    3 | import { describe, it, expect } from 'vitest'
+<keep>    |  > 4 | import { FilterBar from './FilterBar'
+<keep>    |      |                          ^
+<keep>    |    5 |
+<keep>    |    6 | describe('filter bar', () => {
+<keep>    |    7 |   it('keeps all selected by default', () => {
+<keep>    |  at src/ui/filter-bar.test.ts:4:26
+<skip>    | 
+<keep>    |  No test files found, exiting with code 1

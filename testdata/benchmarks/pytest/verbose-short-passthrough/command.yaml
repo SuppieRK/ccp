@@ -1,0 +1,2 @@
+argv: ["pytest", "-vv"]
+exit_code: 0

@@ -1,0 +1,2 @@
+<keep>    | No tests found, exiting with code 1
+<keep>    | Pattern: src/never-matched/*.test.ts - 0 matches

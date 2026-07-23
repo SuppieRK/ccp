@@ -1,0 +1,3 @@
+<replace> | * git-improvements
+<replace> |   main
+<replace> |   remotes/origin/main

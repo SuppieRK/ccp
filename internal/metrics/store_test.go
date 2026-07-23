@@ -2,11 +2,14 @@ package metrics
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -92,6 +95,242 @@ var _ = Describe("metrics storage", func() {
 	It("fails when the target path is a directory", func() {
 		err := Append(tempDir, RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
 		Expect(err).To(HaveOccurred())
+	})
+
+	Describe("contained project appends", func() {
+		It("writes and reads a normal project database", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+
+			Expect(AppendProject(project, path, RunMetric{
+				Tool:      "go",
+				Command:   metricsGoTestCommand,
+				RawBytes:  10,
+				KeptBytes: 4,
+			})).To(Succeed())
+
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+		})
+
+		It("rejects a dangling database symlink without creating its target", func() {
+			project := filepath.Join(tempDir, "project")
+			ccpDir := filepath.Join(project, ".ccp")
+			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			outside := filepath.Join(tempDir, "outside.db")
+			path := filepath.Join(ccpDir, gainDBFileName)
+			if err := os.Symlink(outside, path); err != nil {
+				Skip("symlink creation unavailable: " + err.Error())
+			}
+
+			err := AppendProject(project, path, RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
+
+			Expect(err).To(HaveOccurred())
+			Expect(outside).NotTo(BeAnExistingFile())
+		})
+
+		It("rejects a symlinked project state directory", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			outside := filepath.Join(tempDir, "outside")
+			Expect(os.Mkdir(outside, 0o755)).To(Succeed())
+			if err := os.Symlink(outside, filepath.Join(project, ".ccp")); err != nil {
+				Skip("symlink creation unavailable: " + err.Error())
+			}
+
+			err := AppendProject(project, filepath.Join(project, ".ccp", gainDBFileName), RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
+
+			Expect(err).To(HaveOccurred())
+			Expect(filepath.Join(outside, gainDBFileName)).NotTo(BeAnExistingFile())
+		})
+
+		It("rejects a metrics path outside the project root", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			outside := filepath.Join(tempDir, "outside.db")
+
+			err := AppendProject(project, outside, RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
+
+			Expect(err).To(HaveOccurred())
+			Expect(outside).NotTo(BeAnExistingFile())
+		})
+
+		It("consolidates 100 concurrent durable spool events without loss", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+
+			var wg sync.WaitGroup
+			errs := make(chan error, 100)
+			for index := range 100 {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					errs <- AppendProject(project, path, RunMetric{
+						Timestamp: time.Now().UTC(),
+						Command:   "go test ./pkg/" + fmt.Sprint(index),
+						Tool:      "go",
+						RawBytes:  10,
+						KeptBytes: 5,
+					})
+				}()
+			}
+			wg.Wait()
+			close(errs)
+			for err := range errs {
+				Expect(err).NotTo(HaveOccurred())
+			}
+			Expect(consolidateProjectSpool(project, path)).To(Succeed())
+
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(100))
+			status := ProjectStorageStatus(project, path)
+			Expect(status.Observed).To(Equal(100))
+			Expect(status.Pending).To(BeZero())
+		})
+
+		It("leaves a pending event while Bolt is locked and commits it later", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+			Expect(AppendProject(project, path, RunMetric{Tool: "seed", RawBytes: 1, KeptBytes: 1})).To(Succeed())
+
+			db, err := openDBAt(project, path, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(AppendProject(project, path, RunMetric{Tool: "pending", RawBytes: 2, KeptBytes: 1})).To(Succeed())
+			Expect(ProjectStorageStatus(project, path).Pending).To(Equal(1))
+			Expect(db.Close()).To(Succeed())
+
+			Expect(consolidateProjectSpool(project, path)).To(Succeed())
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(2))
+			Expect(ProjectStorageStatus(project, path).Pending).To(BeZero())
+		})
+
+		It("consolidates pending events before purging the requested cutoff", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+			cutoff := time.Now().UTC().Truncate(time.Second)
+			Expect(AppendProject(project, path, RunMetric{
+				Timestamp: cutoff.Add(time.Second),
+				Tool:      "retained",
+				RawBytes:  1,
+				KeptBytes: 1,
+			})).To(Succeed())
+
+			db, err := openDBAt(project, path, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(AppendProject(project, path, RunMetric{
+				Timestamp: cutoff.Add(-time.Second),
+				Tool:      "pending-old",
+				RawBytes:  2,
+				KeptBytes: 1,
+			})).To(Succeed())
+			Expect(ProjectStorageStatus(project, path).Pending).To(Equal(1))
+			Expect(db.Close()).To(Succeed())
+
+			removed, err := PurgeProjectBefore(project, path, cutoff)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(removed).To(Equal(1))
+			Expect(ProjectStorageStatus(project, path).Pending).To(BeZero())
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Tool).To(Equal("retained"))
+		})
+
+		It("commits duplicate spool event IDs exactly once", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+			Expect(ensureSchema(project, path)).To(Succeed())
+			db, err := openDBAt(project, path, false)
+			Expect(err).NotTo(HaveOccurred())
+			event := spoolEvent{
+				ID:     "duplicate-event",
+				Record: normalizeMetric(RunMetric{Tool: "go", RawBytes: 2, KeptBytes: 1}),
+			}
+			Expect(commitSpoolEvent(db, event)).To(Succeed())
+			Expect(commitSpoolEvent(db, event)).To(Succeed())
+			Expect(db.Close()).To(Succeed())
+
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+		})
+
+		It("bounds exactly-once markers with the same retention policy", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+			Expect(ensureSchema(project, path)).To(Succeed())
+			db, err := openDBAt(project, path, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			oldTimestamp := time.Now().UTC().Add(-defaultRetention - time.Hour).Unix()
+			recentTimestamp := time.Now().UTC().Unix()
+			Expect(db.Update(func(tx *bolt.Tx) error {
+				events := tx.Bucket(eventsBucket)
+				if err := events.Put([]byte("old"), encodeRunKey(oldTimestamp, 0)[:8]); err != nil {
+					return err
+				}
+				if err := events.Put([]byte("recent"), encodeRunKey(recentTimestamp, 0)[:8]); err != nil {
+					return err
+				}
+				return pruneOldEventIDs(events, time.Now().UTC().Add(-defaultRetention), pruneBatchLimit)
+			})).To(Succeed())
+			Expect(db.View(func(tx *bolt.Tx) error {
+				events := tx.Bucket(eventsBucket)
+				Expect(events.Get([]byte("old"))).To(BeNil())
+				Expect(events.Get([]byte("recent"))).NotTo(BeNil())
+				return nil
+			})).To(Succeed())
+			Expect(db.Close()).To(Succeed())
+		})
+
+		It("uses private modes for automatic metrics state", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+
+			Expect(AppendProject(project, path, RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})).To(Succeed())
+
+			ccpInfo, err := os.Stat(filepath.Join(project, ".ccp"))
+			Expect(err).NotTo(HaveOccurred())
+			spoolInfo, err := os.Stat(filepath.Join(project, ".ccp", spoolDirectoryName))
+			Expect(err).NotTo(HaveOccurred())
+			dbInfo, err := os.Stat(path)
+			Expect(err).NotTo(HaveOccurred())
+			if runtime.GOOS != "windows" {
+				Expect(ccpInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+				Expect(spoolInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+				Expect(dbInfo.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+			}
+		})
+	})
+
+	It("purges records strictly before the requested cutoff", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+		cutoff := time.Now().UTC().Truncate(time.Second)
+		appendRunMetrics(path,
+			RunMetric{Timestamp: cutoff.Add(-time.Second), Tool: "old", RawBytes: 1, KeptBytes: 1},
+			RunMetric{Timestamp: cutoff, Tool: "boundary", RawBytes: 1, KeptBytes: 1},
+			RunMetric{Timestamp: cutoff.Add(time.Second), Tool: "new", RawBytes: 1, KeptBytes: 1},
+		)
+
+		removed, err := PurgeBefore(path, cutoff)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(removed).To(Equal(1))
+		history, err := QueryHistory(path, QueryOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(history).To(HaveLen(2))
+		Expect([]string{history[0].Tool, history[1].Tool}).To(ConsistOf("boundary", "new"))
 	})
 
 	It("opens writable metrics databases with durable sync enabled", func() {

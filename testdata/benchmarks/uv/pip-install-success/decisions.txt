@@ -1,0 +1,11 @@
+<skip>    | Using Python 3.11.15 environment at: /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/uv-demo-venv
+<skip>    | Resolved 1 package in 18ms
+<skip>    |    Building uv-demo-pkg @ file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-pkg
+<skip>    |       Built uv-demo-pkg @ file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-pkg
+<skip>    | Prepared 1 package in 806ms
+<keep>    | Uninstalled 1 package in 35ms
+<keep>    | warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+<keep>    |          If the cache and target directories are on different filesystems, hardlinking may not be supported.
+<keep>    |          If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+<keep>    | Installed 1 package in 127ms
+<keep>    |  ~ uv-demo-pkg==0.1.0 (from file:///mnt/c/users/suppi/ideaprojects/go-exec-compress-proxy/.artifacts/uv-demo-pkg)

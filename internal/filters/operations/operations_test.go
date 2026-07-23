@@ -142,3 +142,72 @@ var _ = Describe("Predicate helpers", func() {
 		Expect(operations.MatchesNoPositionals([]string{"--", "-n"}, nil, true, false)).To(BeFalse())
 	})
 })
+
+var _ = Describe("ArgumentView", func() {
+	DescribeTable("matches equivalent attached and split long-option values",
+		func(args []string, matcher []string) {
+			view := operations.ParseArguments(args, []string{"--format"})
+			Expect(view.MatchesHaveAny(matcher)).To(BeTrue())
+			Expect(view.MatchesHaveSequence(matcher)).To(BeTrue())
+		},
+		Entry("attached argv and attached matcher", []string{"--format=json"}, []string{"--format=json"}),
+		Entry("split argv and attached matcher", []string{"--format", "json"}, []string{"--format=json"}),
+		Entry("attached argv and split matcher", []string{"--format=json"}, []string{"--format", "json"}),
+		Entry("split argv and split matcher", []string{"--format", "json"}, []string{"--format", "json"}),
+	)
+
+	It("preserves values containing equals signs and empty values", func() {
+		withEquals := operations.ParseArguments([]string{"--format=a=b"}, []string{"--format"})
+		Expect(withEquals.HasLongOptionValue("--format", "a=b")).To(BeTrue())
+		Expect(withEquals.MatchesHaveSequence([]string{"--format", "a=b"})).To(BeTrue())
+
+		empty := operations.ParseArguments([]string{"--format="}, []string{"--format"})
+		Expect(empty.HasLongOptionValue("--format", "")).To(BeTrue())
+		Expect(empty.MatchesHaveAny([]string{"--format="})).To(BeTrue())
+	})
+
+	It("uses the final repeated option value without losing earlier presence", func() {
+		view := operations.ParseArguments(
+			[]string{"--format=text", "--format", "json"},
+			[]string{"--format"},
+		)
+
+		value, ok := view.LastLongOptionValue("--format")
+		Expect(ok).To(BeTrue())
+		Expect(value).To(Equal("json"))
+		Expect(view.HasLongOptionValue("--format", "text")).To(BeTrue())
+		Expect(view.HasLongOptionValue("--format", "json")).To(BeTrue())
+	})
+
+	It("stops option interpretation at the delimiter", func() {
+		view := operations.ParseArguments(
+			[]string{"--format=json", "--", "--format=xml", "-v"},
+			[]string{"--format"},
+		)
+
+		Expect(view.HasLongOptionValue("--format", "json")).To(BeTrue())
+		Expect(view.HasLongOptionValue("--format", "xml")).To(BeFalse())
+		Expect(view.MatchesHaveAny([]string{"--format=xml"})).To(BeFalse())
+		Expect(view.Positionals()).To(Equal([]string{"--format=xml", "-v"}))
+	})
+
+	It("does not consume unsupported values or split short-option clusters", func() {
+		view := operations.ParseArguments(
+			[]string{"--unknown", "value", "-ovalue", "tail"},
+			[]string{"--format", "-o"},
+		)
+
+		Expect(view.Positionals()).To(Equal([]string{"value", "tail"}))
+		Expect(view.HasLongOptionValue("--unknown", "value")).To(BeFalse())
+		Expect(view.BeforeSeparator()).To(Equal([]string{"--unknown", "value", "-ovalue", "tail"}))
+	})
+
+	It("returns cloned positional and pre-delimiter views", func() {
+		args := []string{"--format", "json", "file", "--", "--literal"}
+		view := operations.ParseArguments(args, []string{"--format"})
+		args[0] = "mutated"
+
+		Expect(view.Positionals()).To(Equal([]string{"file", "--literal"}))
+		Expect(view.BeforeSeparator()).To(Equal([]string{"--format", "json", "file"}))
+	})
+})

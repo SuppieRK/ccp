@@ -1,0 +1,18 @@
+<skip>    | Computing main repo mapping: 
+<skip>    | Loading: 
+<skip>    | Loading: 0 packages loaded
+<skip>    | Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+<skip>    | Analyzing: target //:fail_test (0 packages loaded, 0 targets configured)
+<skip>    | 
+<skip>    | INFO: Analyzed target //:fail_test (0 packages loaded, 2 targets configured).
+<keep>    | FAIL: //:fail_test (Exit 1) (see /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log)
+<skip>    | INFO: Found 1 test target...
+<keep>    | Target //:fail_test up-to-date:
+<keep>    |   bazel-bin/fail_test
+<skip>    | INFO: Elapsed time: 0.155s, Critical Path: 0.03s
+<skip>    | INFO: 7 processes: 6 internal, 2 linux-sandbox.
+<keep>    | INFO: Build completed, 1 test FAILED, 7 total actions
+<keep>    | //:fail_test                                                             FAILED in 0.0s
+<keep>    |   /home/suppie/.cache/bazel/_bazel_suppie/f4a4723d9b00881f5b27aa7b76ddaa9e/execroot/_main/bazel-out/k8-fastbuild/testlogs/fail_test/test.log
+<skip>    | 
+<keep>    | Executed 1 out of 1 test: 1 fails locally.

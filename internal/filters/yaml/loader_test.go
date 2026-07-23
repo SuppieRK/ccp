@@ -8,6 +8,7 @@ import (
 	"go-command-compression-proxy/internal/audit"
 	"go-command-compression-proxy/internal/contracts"
 	v2filters "go-command-compression-proxy/internal/filters"
+	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -121,6 +122,92 @@ cases:
 		Expect(timing.Sources[0].Compiled).To(Equal(int64(1)))
 		Expect(timing.Sources[0].DurationMS).To(BeNumerically(">=", 0))
 		Expect(timing.Sources[0].Error).To(BeEmpty())
+	})
+
+	It("loads the exact invoked filter plus later override candidates on the execution path", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "pytest.yaml"), []byte(validLoaderStatusFilterYAML("pytest")), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "git")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("git"))
+		Expect(filters).NotTo(HaveKey("pytest"))
+		Expect(timing.Sources).To(HaveLen(1))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
+		Expect(timing.Sources[0].Compiled).To(Equal(int64(1)))
+	})
+
+	It("preserves lexicographically later same-source overrides on the execution path", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "git.yaml"), []byte(`
+version: 1
+filter: git
+cases:
+  - id: canonical
+    passthrough: true
+`), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "zz-git-override.yaml"), []byte(`
+version: 1
+filter: git
+cases:
+  - id: override
+    passthrough: true
+`), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "git")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("git"))
+		Expect(filters["git"].Dispatch(contracts.Command{
+			Tool: "git",
+			Args: []string{"git"},
+		})).To(Equal("git|override"))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
+	})
+
+	It("resolves aliases before loading their exact canonical filter", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  mvn: maven\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "maven.yaml"), []byte(validLoaderStatusFilterYAML("maven")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "pytest.yaml"), []byte(validLoaderStatusFilterYAML("pytest")), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "mvn")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("mvn"))
+		Expect(filters).NotTo(HaveKey("maven"))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
+		Expect(filters["mvn"].Dispatch(contracts.Command{Tool: "mvn", Args: []string{"mvn"}})).To(Equal("maven|passthrough"))
+	})
+
+	It("uses a compatibility scan only for a legacy arbitrary filename", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "legacy-name.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "other.yaml"), []byte(validLoaderStatusFilterYAML("pytest")), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "git")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("git"))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
+		Expect(timing.Sources[0].Compiled).To(Equal(int64(1)))
+	})
+
+	It("returns an empty targeted registry for an unknown command", func() {
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "unknown")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(BeEmpty())
+		Expect(timing.Sources).To(HaveLen(1))
+		Expect(timing.Sources[0].Compiled).To(BeZero())
 	})
 
 	It("skips invalid YAML scaffolds instead of failing registry construction", func() {
@@ -257,24 +344,89 @@ var _ = Describe("DefaultSources", func() {
 		}))
 	})
 
-	It("uses project and home sources in release builds", func() {
+	It("ignores an absent or untrusted project source in release builds", func() {
 		prevVersion := version.Version
 		version.Version = "1.2.3"
 		DeferCleanup(func() { version.Version = prevVersion })
 
-		cwd, err := os.Getwd()
-		Expect(err).NotTo(HaveOccurred())
 		home, err := os.UserHomeDir()
 		Expect(err).NotTo(HaveOccurred())
 
 		sources := DefaultSources()
 
 		Expect(sources).To(Equal([]v2filters.FilterSource{
-			v2filters.ProjectSource(cwd),
 			v2filters.HomeSource(home),
 		}))
 	})
+
+	It("uses an explicitly trusted project source before home in release builds", func() {
+		prevVersion := version.Version
+		version.Version = "1.2.3"
+		DeferCleanup(func() { version.Version = prevVersion })
+		project := GinkgoT().TempDir()
+		home := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(project, ".ccp", "filters"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(project, ".ccp", "filters", "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		previousCWD, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(project)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
+		setLoaderTestHome(home)
+		restoreTrust := filtertrust.WithTestHome(home)
+		DeferCleanup(restoreTrust)
+		_, err = filtertrust.Trust(project)
+		Expect(err).NotTo(HaveOccurred())
+		canonicalProject, err := filtertrust.CanonicalRoot(project)
+		Expect(err).NotTo(HaveOccurred())
+
+		sources := DefaultSources()
+
+		Expect(sources).To(Equal([]v2filters.FilterSource{
+			v2filters.ProjectSource(canonicalProject),
+			v2filters.HomeSource(home),
+		}))
+	})
+
+	It("falls open to the home filter when project filter bytes are untrusted", func() {
+		prevVersion := version.Version
+		version.Version = "1.2.3"
+		DeferCleanup(func() { version.Version = prevVersion })
+		project := GinkgoT().TempDir()
+		home := GinkgoT().TempDir()
+		projectFilters := filepath.Join(project, ".ccp", "filters")
+		homeFilters := filepath.Join(home, ".config", "ccp", "filters")
+		Expect(os.MkdirAll(projectFilters, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(homeFilters, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(homeFilters, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		previousCWD, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(project)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
+		setLoaderTestHome(home)
+		restoreTrust := filtertrust.WithTestHome(home)
+		DeferCleanup(restoreTrust)
+		_, err = filtertrust.Trust(project)
+		Expect(err).NotTo(HaveOccurred())
+		sources := DefaultSources()
+		Expect(sources).To(HaveLen(2))
+		Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(
+			validLoaderStatusFilterYAML("git")+"# changed after approval\n",
+		), 0o644)).To(Succeed())
+
+		filters, err := LoadRegistryFiltersFromSources(sources)
+
+		Expect(err).NotTo(HaveOccurred())
+		provenance, ok := filters["git"].(contracts.ProvenanceFilter)
+		Expect(ok).To(BeTrue())
+		Expect(provenance.FilterProvenance().SourceKind).To(Equal(string(v2filters.SourceHome)))
+	})
 })
+
+func setLoaderTestHome(home string) {
+	GinkgoT().Setenv("HOME", home)
+	GinkgoT().Setenv("USERPROFILE", home)
+}
 
 var _ = Describe("LoadRegistryStatusFromSources", func() {
 	It("reports active, overridden, and broken entries while keeping runtime winners", func() {

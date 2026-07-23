@@ -1,0 +1,32 @@
+<skip>    | #0 building with "default" instance using docker driver
+<skip>    | 
+<skip>    | #1 [internal] load build definition from Dockerfile
+<skip>    | #1 transferring dockerfile: 105B done
+<skip>    | #1 DONE 0.0s
+<skip>    | 
+<skip>    | #2 [internal] load metadata for docker.io/library/alpine:latest
+<skip>    | #2 DONE 0.0s
+<skip>    | 
+<skip>    | #3 [internal] load .dockerignore
+<skip>    | #3 transferring context: 2B done
+<skip>    | #3 DONE 0.0s
+<skip>    | 
+<skip>    | #4 [1/3] FROM docker.io/library/alpine:latest@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
+<skip>    | #4 resolve docker.io/library/alpine:latest@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 0.0s done
+<skip>    | #4 DONE 0.0s
+<skip>    | 
+<skip>    | #5 [2/3] WORKDIR /work
+<skip>    | #5 CACHED
+<skip>    | 
+<skip>    | #6 [3/3] RUN echo hello > /work/hello.txt
+<skip>    | #6 CACHED
+<skip>    | 
+<skip>    | #7 exporting to image
+<skip>    | #7 exporting layers done
+<skip>    | #7 exporting manifest sha256:1ca07fc63f798b04dc7e110ed355c8469ea5f79dfe2c4f76f822fe07fda62943 done
+<skip>    | #7 exporting config sha256:49420d98608b3ff1151264216c23b3318683ec317721d41a144a81030e2cf129 done
+<skip>    | #7 exporting attestation manifest sha256:750024b06efe283eba9e9f479d3e03472a211d6f8cfcd5e352208ee073509ac1 0.0s done
+<skip>    | #7 exporting manifest list sha256:ef3a6643992f4e87e01e6a2d1b66f797507044dd65d9164d397dbc111279391e 0.0s done
+<replace> | #7 naming to docker.io/library/ccp-corpus-docker-build:latest done
+<skip>    | #7 unpacking to docker.io/library/ccp-corpus-docker-build:latest done
+<skip>    | #7 DONE 0.1s

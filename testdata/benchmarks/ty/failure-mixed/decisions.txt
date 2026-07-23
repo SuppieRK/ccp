@@ -1,0 +1,18 @@
+<skip>    | ty 0.1.0
+<skip>    | Checking 15 files
+<skip>    | 
+<keep>    | error[unresolved-reference]: Name `foo` used when not defined
+<keep>    |   --> app/main.py:10:5
+<keep>    |    |
+<keep>    | 10 |     foo()
+<keep>    |    |     ^^^
+<keep>    |    |
+<skip>    | 
+<keep>    | warning[unused-variable]: Variable `x` is not used
+<keep>    |   --> app/utils.py:8:9
+<keep>    |    |
+<keep>    |  8 |     x = 42
+<keep>    |    |     ^
+<keep>    |    |
+<skip>    | 
+<keep>    | Found 1 error, 1 warning

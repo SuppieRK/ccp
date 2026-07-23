@@ -1,1 +1,2 @@
 argv: ["docker", "images"]
+exit_code: 0

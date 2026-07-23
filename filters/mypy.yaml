@@ -2,7 +2,7 @@
 version: 1
 filter: mypy
 about: Group mypy diagnostics by file, preserve exact line and error-code context, drop only the trailing summary footer, and keep clean success output native.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--cobertura-xml-report", "--custom-typing-module", "--html-report", "--junit-xml", "--linecount-report", "--lineprecision-report", "--output", "--package", "--python-executable", "--python-version", "--shadow-file", "--txt-report", "--xml-report", "-O", "-p"]
 
 cases:
   - id: explicit_output_passthrough
@@ -17,6 +17,13 @@ cases:
         - --show-error-code-links
         - --hide-error-codes
         - --no-error-summary
+        - --junit-xml
+        - --cobertura-xml-report
+        - --html-report
+        - --linecount-report
+        - --lineprecision-report
+        - --txt-report
+        - --xml-report
     passthrough: true
 
   - id: diagnostics

@@ -1,1 +1,2 @@
 argv: ["node", "-p", "require('./data/siteMetadata.js').title"]
+exit_code: 1

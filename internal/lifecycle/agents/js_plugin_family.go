@@ -70,7 +70,11 @@ func (a ManagedJSPluginAdapter) Verify(ctx Context) error {
 		return err
 	}
 	content := string(data)
-	for _, req := range a.spec.VerifyRequirements {
+	requirements := append([]jsPluginVerifyRequirement{
+		{Snippet: `function rewriteCommand(input)`, Msg: "managed plugin missing conservative command classifier: %s"},
+		{Snippet: `shellBuiltinsAndKeywords`, Msg: "managed plugin missing builtin guard: %s"},
+	}, a.spec.VerifyRequirements...)
+	for _, req := range requirements {
 		if !strings.Contains(content, req.Snippet) {
 			return fmt.Errorf(req.Msg, pluginPath)
 		}
@@ -102,7 +106,226 @@ func managedJSPluginConfigRoot(ctx Context, configDirName string) string {
 }
 
 func managedBashRewritePluginContent() string {
-	return `export default async function ccpRewritePlugin() {
+	return `const shellBuiltinsAndKeywords = new Set([
+  ".", ":", "[", "alias", "bg", "bind", "break", "builtin", "caller", "cd",
+  "command", "compgen", "complete", "compopt", "continue", "coproc", "declare",
+  "dirs", "disown", "echo", "enable", "eval", "exec", "exit", "export", "false",
+  "fc", "fg", "getopts", "hash", "help", "history", "jobs", "kill", "let",
+  "local", "logout", "mapfile", "popd", "printf", "pushd", "pwd", "read",
+  "readarray", "readonly", "return", "set", "shift", "shopt", "source", "suspend",
+  "test", "times", "trap", "true", "type", "typeset", "ulimit", "umask",
+  "unalias", "unset", "wait", "case", "do", "done", "elif", "else", "esac",
+  "fi", "for", "function", "if", "in", "select", "then", "time", "until",
+  "while", "{", "}",
+]);
+
+function assignmentToken(token) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token);
+}
+
+function tokenizeSegment(input) {
+  const tokens = [];
+  const starts = [];
+  let token = "";
+  let start = 0;
+  let started = false;
+  let single = false;
+  let double = false;
+  let escape = false;
+  for (let i = 0; i < input.length; i += 1) {
+    const char = input[i];
+    if (escape) {
+      token += char;
+      escape = false;
+      continue;
+    }
+    if (single) {
+      if (char === "'") single = false;
+      else token += char;
+      continue;
+    }
+    if (double) {
+      if (char === "\\") escape = true;
+      else if (char === '"') double = false;
+      else if (char === "$" || char.charCodeAt(0) === 96) return null;
+      else token += char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (started) {
+        tokens.push(token);
+        starts.push(start);
+        token = "";
+        started = false;
+      }
+      continue;
+    }
+    if (!started) {
+      start = i;
+      started = true;
+    }
+    if (char === "\\") escape = true;
+    else if (char === "'") single = true;
+    else if (char === '"') double = true;
+    else if ("$<>|&;(){}#".includes(char) || char.charCodeAt(0) === 96) return null;
+    else token += char;
+  }
+  if (escape || single || double) return null;
+  if (started) {
+    tokens.push(token);
+    starts.push(start);
+  }
+  return tokens.length === 0 ? null : { tokens, starts };
+}
+
+function consumeEnv(tokens, index) {
+  index += 1;
+  while (index < tokens.length) {
+    const token = tokens[index];
+    if (token === "--") return index + 1;
+    if (["-u", "--unset", "-C", "--chdir", "--argv0"].includes(token)) {
+      if (index + 1 >= tokens.length) return -1;
+      index += 2;
+    } else if (/^(--unset=|--chdir=|--argv0=)/.test(token) ||
+      ["-i", "--ignore-environment", "-0", "--null"].includes(token)) {
+      index += 1;
+    } else if (token.startsWith("-")) {
+      return -1;
+    } else if (assignmentToken(token)) {
+      index += 1;
+    } else {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function consumeSudo(tokens, index) {
+  const consuming = new Set([
+    "-u", "-g", "-h", "-p", "-C", "-T", "-R", "-D", "-r", "-t", "--user",
+    "--group", "--host", "--prompt", "--close-from", "--command-timeout",
+    "--chroot", "--chdir", "--role", "--type",
+  ]);
+  const standalone = new Set([
+    "-A", "-b", "-E", "-e", "-H", "-K", "-k", "-n", "-P", "-S", "-V", "-v",
+    "-l", "-i", "-s",
+  ]);
+  index += 1;
+  while (index < tokens.length) {
+    const token = tokens[index];
+    if (token === "--") return index + 1;
+    if (consuming.has(token)) {
+      if (index + 1 >= tokens.length) return -1;
+      index += 2;
+    } else if (/^--(user|group|host|prompt|close-from|command-timeout|chroot|chdir|role|type)=/.test(token) ||
+      standalone.has(token)) {
+      index += 1;
+    } else if (token.startsWith("-")) {
+      return -1;
+    } else {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function rewriteSegment(segment) {
+  const parsed = tokenizeSegment(segment);
+  if (!parsed) return null;
+  const { tokens, starts } = parsed;
+  let index = 0;
+  while (index < tokens.length && assignmentToken(tokens[index])) index += 1;
+  while (index < tokens.length) {
+    if (tokens[index] === "env") index = consumeEnv(tokens, index);
+    else if (tokens[index] === "sudo") index = consumeSudo(tokens, index);
+    else break;
+    if (index < 0) return null;
+    while (index < tokens.length && assignmentToken(tokens[index])) index += 1;
+  }
+  if (index >= tokens.length) return null;
+  const command = tokens[index];
+  if (command === "ccp") return segment;
+  if (shellBuiltinsAndKeywords.has(command) || command === "xargs") return null;
+  const tail = tokens.slice(index + 1);
+  if (["sh", "bash", "dash", "zsh", "ksh"].includes(command) &&
+      tail.some((token) => token === "-c" || token === "-lc")) return null;
+  if (command === "find" &&
+      tail.some((token) => ["-exec", "-execdir", "-ok", "-okdir"].includes(token))) return null;
+  const start = starts[index];
+  return segment.slice(0, start) + "ccp " + segment.slice(start);
+}
+
+function rewriteCommand(input) {
+  let output = "";
+  let segment = "";
+  let single = false;
+  let double = false;
+  let escape = false;
+  for (let i = 0; i < input.length; i += 1) {
+    const char = input[i];
+    const pair = input.slice(i, i + 2);
+    if (escape) {
+      segment += char;
+      escape = false;
+      continue;
+    }
+    if (single) {
+      segment += char;
+      if (char === "'") single = false;
+      continue;
+    }
+    if (double) {
+      segment += char;
+      if (char === "\\") escape = true;
+      else if (char === '"') double = false;
+      else if (char === "$" || char.charCodeAt(0) === 96) return null;
+      continue;
+    }
+    if (char === "\\") {
+      segment += char;
+      escape = true;
+      continue;
+    }
+    if (char === "'") {
+      segment += char;
+      single = true;
+      continue;
+    }
+    if (char === '"') {
+      segment += char;
+      double = true;
+      continue;
+    }
+    if ("$<>(){}#\n\r".includes(char) || char.charCodeAt(0) === 96) return null;
+    if (pair === "&&" || pair === "||") {
+      segment = segment.replace(/\s+$/, "");
+      const rewritten = rewriteSegment(segment);
+      if (rewritten === null) return null;
+      output += (output ? " " : "") + rewritten + " " + pair;
+      segment = "";
+      i += 1;
+      while (i + 1 < input.length && /\s/.test(input[i + 1])) i += 1;
+      continue;
+    }
+    if (char === "|" || char === "&") return null;
+    if (char === ";") {
+      segment = segment.replace(/\s+$/, "");
+      const rewritten = rewriteSegment(segment);
+      if (rewritten === null) return null;
+      output += (output ? " " : "") + rewritten + " ;";
+      segment = "";
+      while (i + 1 < input.length && /\s/.test(input[i + 1])) i += 1;
+      continue;
+    }
+    segment += char;
+  }
+  if (escape || single || double) return null;
+  const rewritten = rewriteSegment(segment);
+  if (rewritten === null) return null;
+  return output + (output ? " " : "") + rewritten;
+}
+
+export default async function ccpRewritePlugin() {
   return {
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "bash") {
@@ -112,15 +335,8 @@ func managedBashRewritePluginContent() string {
       if (typeof command !== "string") {
         return;
       }
-      const trimmed = command.trimStart();
-      if (trimmed === "ccp" || trimmed.startsWith("ccp ")) {
-        return;
-      }
-	      if (/\$\(|\$\{|<</.test(command)) {
-	        return;
-	      }
-      const rewritten = command.replace(/(^|\|\||&&|\||;)\s*(?!ccp\b)/g, "$1 ccp ");
-      if (rewritten === command) {
+      const rewritten = rewriteCommand(command);
+      if (rewritten === null || rewritten === command) {
         return;
       }
       output.args = output.args || {};

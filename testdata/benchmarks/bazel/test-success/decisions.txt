@@ -1,0 +1,17 @@
+<skip>    | Computing main repo mapping: 
+<skip>    | Loading: 
+<skip>    | Loading: 0 packages loaded
+<skip>    | Analyzing: target //:ok_test (0 packages loaded, 0 targets configured)
+<skip>    | Analyzing: target //:ok_test (0 packages loaded, 0 targets configured)
+<skip>    | 
+<skip>    | INFO: Analyzed target //:ok_test (1 packages loaded, 410 targets configured).
+<skip>    | INFO: Found 1 test target...
+<keep>    | Target //:ok_test up-to-date:
+<keep>    |   bazel-bin/ok_test
+<skip>    | INFO: Elapsed time: 0.338s, Critical Path: 0.05s
+<skip>    | INFO: 7 processes: 6 internal, 2 linux-sandbox.
+<replace> | INFO: Build completed successfully, 7 total actions
+<keep>    | //:ok_test                                                               PASSED in 0.0s
+<skip>    | 
+<keep>    | Executed 1 out of 1 test: 1 test passes.
+<skip>    | There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.

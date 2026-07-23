@@ -1,0 +1,4 @@
+plain.txt  10
+subdir/
+
+1 dirs, 1 files

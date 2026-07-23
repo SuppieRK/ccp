@@ -1,0 +1,2 @@
+argv: ["eslint", "--format", "json", "src"]
+exit_code: 0

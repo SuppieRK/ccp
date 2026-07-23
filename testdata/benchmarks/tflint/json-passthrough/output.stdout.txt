@@ -1,0 +1,1 @@
+[{"rule":{"name":"terraform_required_providers"},"message":"Missing version constraint for provider \"aws\" in `required_providers`","range":{"filename":"main.tf","start":{"line":32,"column":1}},"severity":"warning"}]

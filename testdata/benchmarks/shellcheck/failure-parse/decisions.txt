@@ -1,0 +1,12 @@
+<skip>    | 
+<keep>    | In scripts/validate.sh line 2:
+<keep>    | if [ "$x" = ]; then
+<keep>    | ^-- SC1009 (info): The mentioned syntax error was in this if expression.
+<keep>    |    ^-- SC1073 (error): Couldn't parse this test expression. Fix to allow more checks.
+<keep>    |           ^-- SC1027 (error): Expected another argument for this operator.
+<keep>    |              ^-- SC1072 (error): Unexpected . Fix any mentioned problems and try again.
+<skip>    | 
+<skip>    | For more information:
+<skip>    |   https://www.shellcheck.net/wiki/SC1027 -- Expected another argument for thi...
+<skip>    |   https://www.shellcheck.net/wiki/SC1072 -- Unexpected . Fix any mentioned pr...
+<skip>    |   https://www.shellcheck.net/wiki/SC1073 -- Couldn't parse this test expressi...

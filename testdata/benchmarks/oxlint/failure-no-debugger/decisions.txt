@@ -1,0 +1,11 @@
+<skip>    | 
+<keep>    |   x eslint(no-debugger): `debugger` statement is not allowed
+<keep>    |    ,-[file:///workspace/src/repo-51/src/index.ts:1:1]
+<keep>    |  1 | debugger;
+<keep>    |    : ^^^^^^^^^
+<keep>    |  2 | export * from './cli/index.js';
+<keep>    |    `----
+<keep>    |   help: Remove the debugger statement
+<skip>    | 
+<keep>    | Found 0 warnings and 1 error.
+<skip>    | Finished in 34ms on 1 file with 93 rules using 16 threads.

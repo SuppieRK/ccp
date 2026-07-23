@@ -1,0 +1,1 @@
+test_demo.py::test_ok PASSED

@@ -1,0 +1,3 @@
+<skip>    |    Checking my-crate v0.1.0
+<skip>    |    Fresh wasm-bindgen v0.2.92
+<keep>    |    Finished release [optimized] target(s) in 12.01s

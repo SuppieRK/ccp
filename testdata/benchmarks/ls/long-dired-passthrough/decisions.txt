@@ -1,0 +1,5 @@
+<keep>    |   total 0
+<keep>    |   drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-one
+<keep>    |   drwxrwxrwx 1 suppie suppie 4096 Mar 18 21:37 path-two
+<keep>    | //DIRED// 57 65 113 121
+<keep>    | //DIRED-OPTIONS// --quoting-style=literal

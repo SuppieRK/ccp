@@ -2,7 +2,7 @@
 version: 1
 filter: bun
 about: Compact default `bun install` and `bun test` output by dropping Bun's version banner and spacer lines while preserving package changes, failure loci, and summary lines. Explicit reporter modes stay native.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--reporter"]
 
 cases:
   - id: test_reporter_passthrough_inline
@@ -10,6 +10,7 @@ cases:
       first_is: test
       have_any:
         - --dots
+        - --reporter
         - --reporter=dots
         - --reporter=junit
     passthrough: true

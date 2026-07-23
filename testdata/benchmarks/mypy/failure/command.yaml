@@ -1,1 +1,2 @@
 argv: ["./mypy", "src"]
+exit_code: 1

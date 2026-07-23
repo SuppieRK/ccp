@@ -1,1 +1,2 @@
 argv: ["git", "commit", "-m", "bench commit"]
+exit_code: 1

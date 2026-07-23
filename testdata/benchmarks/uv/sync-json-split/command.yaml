@@ -1,0 +1,2 @@
+argv: ["uv", "sync", "--output-format", "json"]
+exit_code: 0

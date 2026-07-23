@@ -1,0 +1,66 @@
+<skip>    | WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+<skip>    | WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/home/suppie/.m2/wrapper/dists/apache-maven-3.9.11/a2d47e15/lib/guice-5.1.0-classes.jar)
+<skip>    | WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+<skip>    | WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+<skip>    | [INFO] Scanning for projects...
+<skip>    | [INFO] 
+<skip>    | [INFO] --------------------------< example:example >---------------------------
+<skip>    | [INFO] Building example 1.0-SNAPSHOT
+<skip>    | [INFO]   from pom.xml
+<skip>    | [INFO] --------------------------------[ jar ]---------------------------------
+<skip>    | [INFO] 
+<replace> | [INFO] --- resources:3.3.1:resources (default-resources) @ example ---
+<skip>    | [INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/main/resources
+<skip>    | [INFO] 
+<replace> | [INFO] --- compiler:3.13.0:compile (default-compile) @ example ---
+<skip>    | [INFO] No sources to compile
+<skip>    | [INFO] 
+<replace> | [INFO] --- resources:3.3.1:testResources (default-testResources) @ example ---
+<skip>    | [INFO] skip non existing resourceDirectory /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/src/test/resources
+<skip>    | [INFO] 
+<replace> | [INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ example ---
+<skip>    | [INFO] Nothing to compile - all classes are up to date.
+<skip>    | [INFO] 
+<replace> | [INFO] --- surefire:3.2.5:test (default-test) @ example ---
+<skip>    | [INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+<skip>    | [INFO] 
+<skip>    | [INFO] -------------------------------------------------------
+<skip>    | [INFO]  T E S T S
+<skip>    | [INFO] -------------------------------------------------------
+<skip>    | [INFO] Running example.FailureTest
+<keep>    | [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.059 s <<< FAILURE! -- in example.FailureTest
+<keep>    | [ERROR] example.FailureTest.test -- Time elapsed: 0.035 s <<< FAILURE!
+<keep>    | org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+<keep>    | 	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+<keep>    | 	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:139)
+<keep>    | 	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:69)
+<keep>    | 	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:41)
+<keep>    | 	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:35)
+<keep>    | 	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:195)
+<keep>    | 	at example.FailureTest.test(FailureTest.java:9)
+<keep>    | 
+<skip>    | [INFO] 
+<skip>    | [INFO] Results:
+<skip>    | [INFO] 
+<keep>    | [ERROR] Failures: 
+<keep>    | [ERROR]   FailureTest.test:9 expected: <true> but was: <false>
+<skip>    | [INFO] 
+<keep>    | [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+<skip>    | [INFO] 
+<skip>    | [INFO] ------------------------------------------------------------------------
+<replace> | [INFO] BUILD FAILURE
+<skip>    | [INFO] ------------------------------------------------------------------------
+<skip>    | [INFO] Total time:  1.339 s
+<skip>    | [INFO] Finished at: 2026-02-27T23:32:18+01:00
+<skip>    | [INFO] ------------------------------------------------------------------------
+<keep>    | [ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project example: There are test failures.
+<keep>    | [ERROR] 
+<keep>    | [ERROR] Please refer to /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/testdata/tool-fixtures/maven/projects/example/target/surefire-reports for the individual test results.
+<keep>    | [ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+<keep>    | [ERROR] -> [Help 1]
+<keep>    | [ERROR] 
+<keep>    | [ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+<keep>    | [ERROR] Re-run Maven using the -X switch to enable full debug logging.
+<keep>    | [ERROR] 
+<keep>    | [ERROR] For more information about the errors and possible solutions, please read the following articles:
+<keep>    | [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

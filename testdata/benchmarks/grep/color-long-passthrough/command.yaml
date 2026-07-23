@@ -1,0 +1,2 @@
+argv: ["grep", "--color=never", "needle", "file.txt"]
+exit_code: 0

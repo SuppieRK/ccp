@@ -1,0 +1,1 @@
+<replace> | The schema at prisma/schema.prisma is valid 🚀

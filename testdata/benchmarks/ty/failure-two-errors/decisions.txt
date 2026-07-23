@@ -1,0 +1,18 @@
+<skip>    | ty 0.1.2
+<skip>    | Checking 2 files
+<skip>    | 
+<keep>    | error[unresolved-reference]: Name `foo` used when not defined
+<keep>    |   --> app/main.py:10:5
+<keep>    |    |
+<keep>    | 10 |     foo()
+<keep>    |    |     ^^^
+<keep>    |    |
+<skip>    | 
+<keep>    | error[invalid-return-type]: Expression of type `str` cannot be returned as type `int`
+<keep>    |   --> app/utils.py:4:12
+<keep>    |    |
+<keep>    |  4 |     return "oops"
+<keep>    |    |            ^^^^^^
+<keep>    |    |
+<skip>    | 
+<keep>    | Found 2 errors

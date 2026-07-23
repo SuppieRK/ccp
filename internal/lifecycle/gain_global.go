@@ -20,10 +20,11 @@ type globalHistoryRow struct {
 }
 
 type globalHistoryEnvelope struct {
-	Dataset string             `json:"dataset"`
-	Period  string             `json:"period"`
-	Filters filtersEnvelope    `json:"filters"`
-	Rows    []globalHistoryRow `json:"rows"`
+	Dataset string                `json:"dataset"`
+	Period  string                `json:"period"`
+	Filters filtersEnvelope       `json:"filters"`
+	Storage metrics.StorageStatus `json:"storage"`
+	Rows    []globalHistoryRow    `json:"rows"`
 }
 
 type globalMetricsSource struct {
@@ -66,6 +67,7 @@ func renderGlobalPeriodGain(session *globalQuerySession, flags reportFlags, opts
 			Dataset: "period",
 			Period:  opts.Period,
 			Filters: filters,
+			Storage: session.storageStatus(),
 			Rows:    rows,
 		})
 	case "csv":
@@ -89,6 +91,7 @@ func renderGlobalSummaryGain(session *globalQuerySession, flags reportFlags, opt
 			Dataset: "summary",
 			Period:  "",
 			Filters: filters,
+			Storage: session.storageStatus(),
 			Rows:    rows,
 			Total:   total,
 		})
@@ -139,6 +142,7 @@ func runGlobalHistory(flags reportFlags, opts metrics.QueryOptions, filters filt
 			Dataset: "history",
 			Period:  "",
 			Filters: filters,
+			Storage: session.storageStatus(),
 			Rows:    rows,
 		})
 	case "csv":
@@ -175,6 +179,21 @@ func (s *globalQuerySession) recordFailure(source globalMetricsSource, err error
 		MetricsPath: source.MetricsPath,
 		Err:         err,
 	}
+}
+
+func (s *globalQuerySession) storageStatus() metrics.StorageStatus {
+	var total metrics.StorageStatus
+	if s == nil {
+		return total
+	}
+	for _, source := range s.sources {
+		current := metrics.InspectStorage(source.MetricsPath)
+		total.Observed += current.Observed
+		total.Pending += current.Pending
+		total.Rejected += current.Rejected
+		total.StorageErrors += current.StorageErrors
+	}
+	return total
 }
 
 func (s *globalQuerySession) writeWarnings(command string) {

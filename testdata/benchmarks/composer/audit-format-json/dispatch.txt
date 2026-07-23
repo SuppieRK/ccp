@@ -1,0 +1,1 @@
+composer|explicit-output-or-interactive-passthrough

@@ -1,1 +1,2 @@
 argv: ["npx", "tsc", "--noEmit", "-p", "tsconfig.fail.json"]
+exit_code: 1

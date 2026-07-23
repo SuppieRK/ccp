@@ -1,1 +1,2 @@
 argv: ["deno", "run", "main.ts"]
+exit_code: 1

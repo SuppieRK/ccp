@@ -1,0 +1,5 @@
+<keep>    | Waiting for another flutter command to release the startup lock...
+<keep>    | 
+<keep>    |   error • The name 'MissingWidget' isn't a class • .artifacts/flutter_demo/lib/bad.dart:8:18 • creation_with_non_type
+<keep>    | 
+<keep>    | 1 issue found. (ran in 2.8s)

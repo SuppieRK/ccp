@@ -54,7 +54,8 @@ The short version:
 - the Go runtime under `internal/` owns command parsing, source ordering, stream handling, metrics, audit, and lifecycle
   behavior
 - filter behavior is authored in YAML
-- release builds load filters from project-local `./.ccp/filters` first and home-scoped `~/.config/ccp/filters` second
+- release builds load explicitly trusted project-local `./.ccp/filters` first
+  and home-scoped `~/.config/ccp/filters` second
 - project-local YAML overrides home-scoped YAML for both filter ids and `.mappings.yaml` aliases
 - shipped filters in `filters/` are embedded into the binary and materialized into `~/.config/ccp/filters` through
   `ccp repair` and startup maintenance
@@ -69,9 +70,9 @@ All contributors must run the following from the repository root before submitti
 ./scripts/validate.sh
 ```
 
-The script runs `gofmt`, `go vet`, `go test`, `go mod tidy`, `go test -race`, internal coverage-gate verification, and
-the local quality tools `staticcheck`, `ineffassign`, and `gocyclo` when they are installed. If one of those CLI tools
-is missing, the script prints an installation suggestion instead of failing on the missing binary.
+The script runs `gofmt`, `go vet`, `go test`, `go mod tidy`, `go test -race`, internal coverage-gate verification,
+and the validation tools declared in the repository's `go.mod` `tool` block. Go resolves every tool through the
+versions and checksums recorded in `go.mod` and `go.sum`.
 
 CI is authoritative. Pull requests must pass all CI checks.
 
@@ -119,7 +120,9 @@ When adding or modifying command filters:
 
 Current YAML scope and precedence:
 
-- release builds load `./.ccp/filters` before `~/.config/ccp/filters`
+- release builds load an exact-source-approved `./.ccp/filters` before
+  `~/.config/ccp/filters`; use `ccp filter trust` after reviewing all project
+  filter and mapping bytes
 - project-local filter definitions override home-scoped definitions with the same canonical filter id
 - project-local `.mappings.yaml` aliases override home-scoped aliases with the same key
 - shipped filters in `filters/` are reference material while developing in-repo and are the source embedded into release
@@ -136,6 +139,10 @@ ccp filter new my-tool
 ccp capture -- my-tool ...
 ccp verify
 ```
+
+Capture artifacts contain native command output and are private by default.
+Use `ccp capture --confidential value1,value2 -- my-tool ...` for known
+literal secrets, and inspect the resulting fixture before committing it.
 
 Recommended authoring flow:
 
@@ -222,9 +229,17 @@ Requirements:
     - optional `stdout.txt`
     - optional `stderr.txt`
     - optional `output.txt`
+    - optional `output.stdout.txt` and `output.stderr.txt`
+    - optional `decisions.txt`
+    - required `dispatch.txt`
 - At least one of `stdout.txt`, `stderr.txt`, or `output.txt` must exist in each fixture directory.
 - `stdout.txt` and `stderr.txt` are sequenced replay streams and must keep contiguous `00000|` ordering.
-- Assertions must be deterministic and default to exact file equality when `output.txt` exists.
+- Assertions must be deterministic. `output.txt` checks the merged diagnostic
+  view; stream-specific output files additionally check exact destinations.
+- Author explicit `exit_code`, including zero, plus decisions and output
+  expectations. Assert the selected `filter|case` in `dispatch.txt`; the
+  harness reports every omitted assertion.
+- Exact-byte expansion fails a benchmark case.
 - Replay fixture outputs are derived from `ccp verify`; benchmarks do not execute copied project trees anymore.
 - Token-oriented metrics are the primary KPI.
 - Proxy overhead must be tracked.
@@ -250,6 +265,17 @@ For a full contributor check, use:
 ```bash
 ./scripts/validate.sh
 ```
+
+After changing lifecycle commands, execution flags, or the built-in agent
+inventory, regenerate and verify the runtime-owned facts:
+
+```bash
+go run ./cmd/ccp-docgen
+go test -count=1 ./cmd/ccp-docgen
+```
+
+The generated file is `docs/generated/CLI_FACTS.md`; architectural rationale
+stays in handwritten documentation.
 
 Benchmark token metrics are derived from generated runtime artifacts rather than committed snapshots. The replay runner
 consumes fixture directories; it does not execute copied benchmark projects.

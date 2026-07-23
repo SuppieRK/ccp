@@ -1,1 +1,2 @@
 argv: ["yarn", "run", "test:failure"]
+exit_code: 1

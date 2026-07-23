@@ -1,0 +1,5 @@
+In scripts/validate.sh line 94:
+for f in $FILES; do echo $f; done
+                         ^-- SC2086 (info): Double quote to prevent globbing and word splitting.
+Did you mean: 
+for f in $FILES; do echo "$f"; done

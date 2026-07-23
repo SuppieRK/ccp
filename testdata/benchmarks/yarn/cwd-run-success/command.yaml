@@ -1,1 +1,2 @@
 argv: ["yarn", "--cwd", ".artifacts/yarn-demo", "run", "success"]
+exit_code: 0

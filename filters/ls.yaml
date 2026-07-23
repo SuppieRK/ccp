@@ -5,6 +5,36 @@ about: Compact long ls listings while preserving explicit path roots, recursive 
 flags_consuming_next_arg: ["--block-size", "--format", "--hide", "--ignore", "--indicator-style", "--quoting-style", "--sort", "--tabsize", "--time", "--time-style", "--width", "-I", "-T", "-w"]
 
 cases:
+  - id: long-precision-long-passthrough
+    when_arguments:
+      have_any:
+        - --block-size
+        - --format
+        - --quoting-style
+        - --sort
+        - --time
+        - --time-style
+        - --width
+        - --full-time
+        - --author
+        - --context
+        - --inode
+    passthrough: true
+
+  - id: long-precision-short-passthrough
+    when_arguments:
+      have_short_flag:
+        - -b
+        - -c
+        - -i
+        - -N
+        - -n
+        - -q
+        - -S
+        - -t
+        - -u
+    passthrough: true
+
   - id: long_dired_passthrough
     when_arguments:
       have_any:
@@ -34,11 +64,6 @@ cases:
       have_all_short_flags:
         - -l
         - -R
-    normalize_command:
-      add_short_flags:
-        - -h
-      append_if_no_positionals:
-        - .
     compress_output:
       combined:
         groups:
@@ -76,12 +101,6 @@ cases:
     when_arguments:
       have_short_flag:
         - -l
-    normalize_command:
-      add_short_flags:
-        - -a
-        - -h
-      append_if_no_positionals:
-        - .
     compress_output:
       combined:
         lines:
@@ -98,6 +117,5 @@ cases:
                   increment: 1
           skip:
             - regex: '^(?i)(total|insgesamt)\s+'
-            - regex: '^[^\n]*\s\.\.?$'
     finally:
       print: "\n{{dirs}} dirs, {{files}} files"

@@ -5,6 +5,17 @@ about: Compact low-value Prisma config and schema-load banners for validate and 
 flags_consuming_next_arg: []
 
 cases:
+  - id: explicit-schema-config-or-output-passthrough
+    when_arguments:
+      have_any:
+        - --json
+        - --print
+        - --help
+        - -h
+        - --version
+        - -v
+    passthrough: true
+
   - id: validate
     when_arguments:
       first_is: validate

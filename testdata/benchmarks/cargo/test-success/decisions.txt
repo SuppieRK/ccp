@@ -1,0 +1,13 @@
+<skip>    | 
+<skip>    | running 3 tests
+<skip>    | test tests::adds_negative_numbers ... ok
+<skip>    | test tests::adds_mixed_numbers ... ok
+<skip>    | test tests::adds_positive_numbers ... ok
+<skip>    | 
+<replace> | test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+<skip>    | 
+<skip>    | 
+<skip>    | running 0 tests
+<skip>    | 
+<replace> | test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+<skip>    | 

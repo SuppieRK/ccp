@@ -1,0 +1,6 @@
+<skip>    | bun install v1.3.11 (af24e281)
+<keep>    | 3 |   "version": "1.0.0",
+<keep>    |                          ^
+<keep>    | error: Expected string but found end of file
+<keep>    |     at /mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-bad-json/package.json:3:22
+<keep>    | ParserError: failed to parse '/mnt/c/Users/suppi/IdeaProjects/go-exec-compress-proxy/.artifacts/bun-bad-json/package.json'

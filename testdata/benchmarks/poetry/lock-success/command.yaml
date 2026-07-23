@@ -1,1 +1,2 @@
 argv: ["poetry", "lock", "--no-interaction"]
+exit_code: 0

@@ -70,7 +70,7 @@ var _ = Describe("benchmark replay runner", func() {
 		})
 	})
 
-	DescribeTable("compares expected files when present",
+	DescribeTable("compares required expected files",
 		func(expected string, actual string, label string, matcher OmegaMatcher) {
 			tempDir := GinkgoT().TempDir()
 			expectedPath := filepath.Join(tempDir, "expected.txt")
@@ -82,9 +82,9 @@ var _ = Describe("benchmark replay runner", func() {
 				Expect(os.WriteFile(actualPath, []byte(actual), 0o644)).To(Succeed())
 			}
 
-			Expect(compareIfPresent(expectedPath, actualPath, label)).To(matcher)
+			Expect(compareRequired(expectedPath, actualPath, label)).To(matcher)
 		},
-		Entry("missing expected file is ignored", "", "actual\n", "output", BeEmpty()),
+		Entry("missing expected file is reported", "", "actual\n", "output", ContainSubstring("read output fixture:")),
 		Entry("mismatch is reported", "expected\n", "actual\n", "output", Equal("output mismatch")),
 		Entry("missing verify output is reported", "expected\n", "", "output", ContainSubstring("read verify output:")),
 	)
@@ -287,6 +287,90 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(report.Results).To(HaveLen(1))
 			Expect(report.Results[0].Warnings).To(ContainElement(ContainSubstring("read verify output:")))
+		})
+
+		It("fails exact-byte expansion even when no expected output is authored", func() {
+			fixtureDir := filepath.Join(root, "grep", "expansion")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\"]\nexit_code: 0\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|x\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyOutputFileName), []byte("expanded\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStdoutFileName), []byte("expanded\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStderrFileName), nil, 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyDecisionsFileName), nil, 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			report, err := Run(RunOptions{FixturesRoot: root, ArtifactsDir: artifacts, Timeout: time.Second})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Failed).To(BeTrue())
+			Expect(report.Results[0].NativeBytes).To(Equal(2))
+			Expect(report.Results[0].ProxyBytes).To(Equal(9))
+			Expect(report.Results[0].Warnings).To(ContainElement("output expansion: native=2 bytes proxy=9 bytes"))
+			Expect(report.Results[0].Unasserted).To(ConsistOf(
+				"output expectation missing",
+				"decisions expectation missing",
+				"dispatch expectation missing",
+			))
+		})
+
+		It("detects stream relocation even when merged bytes match", func() {
+			fixtureDir := filepath.Join(root, "demo", "stream-relocation")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"demo\"]\nexit_code: 0\n")
+			writeFixtureFile(fixtureDir, "stderr.txt", "00000|diagnostic\n")
+			writeFixtureFile(fixtureDir, replay.OutputStdoutFileName, "")
+			writeFixtureFile(fixtureDir, replay.OutputStderrFileName, "diagnostic\n")
+			writeFixtureFile(fixtureDir, replay.DecisionsFileName, "<keep>    | diagnostic\n")
+			writeFixtureFile(fixtureDir, replay.DispatchFileName, "demo|default\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyOutputFileName), []byte("diagnostic\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStdoutFileName), []byte("diagnostic\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStderrFileName), nil, 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyDecisionsFileName), []byte("<keep>    | diagnostic\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyDispatchFileName), []byte("demo|default\n"), 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			report, err := Run(RunOptions{FixturesRoot: root, ArtifactsDir: artifacts, Timeout: time.Second})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Failed).To(BeTrue())
+			Expect(report.Results[0].Warnings).To(ConsistOf("stdout mismatch", "stderr mismatch"))
+			Expect(report.Results[0].Unasserted).To(BeEmpty())
+		})
+
+		It("reports every omitted assertion without treating disclosure as a mismatch", func() {
+			fixtureDir := filepath.Join(root, "demo", "unasserted")
+			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"demo\"]\n")
+			writeFixtureFile(fixtureDir, "stdout.txt", "00000|native\n")
+
+			prev := runVerifyFixture
+			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyOutputFileName), []byte("native\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStdoutFileName), []byte("native\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyStderrFileName), nil, 0o644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(dir, replay.VerifyDecisionsFileName), nil, 0o644)).To(Succeed())
+				return nil
+			}
+			DeferCleanup(func() { runVerifyFixture = prev })
+
+			report, err := Run(RunOptions{FixturesRoot: root, ArtifactsDir: artifacts, Timeout: time.Second})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(report.Failed).To(BeFalse())
+			Expect(report.Results[0].Unasserted).To(ConsistOf(
+				"output expectation missing",
+				"decisions expectation missing",
+				"dispatch expectation missing",
+				"exit-code expectation missing",
+			))
 		})
 
 		It("marks report failed when any case fails and writes report.json", func() {

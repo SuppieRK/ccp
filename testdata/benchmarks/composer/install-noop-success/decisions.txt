@@ -1,0 +1,8 @@
+<keep>    | No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+<skip>    | Loading composer repositories with package information
+<skip>    | Updating dependencies
+<keep>    | Nothing to modify in lock file
+<keep>    | Writing lock file
+<keep>    | Installing dependencies from lock file (including require-dev)
+<keep>    | Nothing to install, update or remove
+<keep>    | Generating autoload files

@@ -152,6 +152,9 @@ var _ = Describe("RunGain", func() {
 
 			var env summaryEnvelope
 			Expect(json.Unmarshal([]byte(out), &env)).To(Succeed())
+			Expect(env.Storage.Observed).To(Equal(1))
+			Expect(env.Storage.Pending).To(BeZero())
+			Expect(env.Storage.StorageErrors).To(BeZero())
 			Expect(env.Total.RawBytes).To(Equal(int64(8)))
 			Expect(env.Total.KeptBytes).To(Equal(int64(42)))
 			Expect(env.Total.DroppedBytes).To(Equal(int64(0)))
@@ -838,6 +841,7 @@ var _ = Describe("RunHistory", func() {
 			var env historyEnvelope
 			Expect(json.Unmarshal([]byte(jsonOut), &env)).To(Succeed())
 			Expect(env.Rows).To(HaveLen(2))
+			Expect(env.Storage.Observed).To(Equal(2))
 
 			csvOut := runHistory(flagFormat, "csv", flagLimit, "1")
 			Expect(strings.Count(strings.TrimSpace(csvOut), "\n")).To(Equal(2))
@@ -912,6 +916,30 @@ var _ = Describe("RunHistory", func() {
 			Expect(env.Rows[0].Tool).To(Equal("ls"))
 			Expect(env.Rows[0].Passthrough).To(BeTrue())
 		})
+	})
+
+	Context("when purging history", func() {
+		It("requires confirmation and removes only records older than the cutoff", func() {
+			Expect(RunHistory([]string{"purge", "--before", "90m"}, path)).To(MatchError(ContainSubstring("requires --yes")))
+
+			out := runHistory("purge", "--before", "90m", "--yes")
+
+			Expect(out).To(ContainSubstring("Purged 1 history records"))
+			rows, err := metrics.QueryHistory(path, metrics.QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Tool).To(Equal("git"))
+		})
+
+		DescribeTable("rejects invalid purge invocations",
+			func(args []string, message string) {
+				Expect(RunHistory(append([]string{"purge"}, args...), path)).To(MatchError(ContainSubstring(message)))
+			},
+			Entry("without a cutoff", []string{"--yes"}, "requires --before"),
+			Entry("with a zero cutoff", []string{"--before", "0h", "--yes"}, "invalid --before"),
+			Entry("with an invalid cutoff", []string{"--before", "later", "--yes"}, "invalid --before"),
+			Entry("with positional arguments", []string{"--before", "1h", "--yes", "extra"}, "does not accept positional"),
+		)
 	})
 
 	Context("when the history database is empty", func() {

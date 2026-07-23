@@ -1,0 +1,4 @@
+▲ Next.js 15.2.0
+Route (app)                    Size     First Load JS
+├ ○ /                          1.2 kB        132 kB
+└ ● /dashboard                 2.5 kB        156 kB

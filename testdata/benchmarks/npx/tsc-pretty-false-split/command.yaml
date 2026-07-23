@@ -1,0 +1,2 @@
+argv: ["npx", "tsc", "--pretty", "false"]
+exit_code: 1

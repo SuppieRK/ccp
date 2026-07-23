@@ -1,0 +1,14 @@
+<skip>    | turbo 2.0.6
+<skip>    | 
+<skip>    | • Packages in scope: web, shared-ui
+<skip>    | • Running test in 2 packages
+<skip>    | • Remote caching disabled
+<skip>    | 
+<keep>    | shared-ui:test: cache miss, executing 83b4c9ef
+<keep>    | shared-ui:test: PASS src/lib/slugify.spec.ts
+<keep>    | web:test: cache miss, executing aa17f9e1
+<keep>    | web:test: PASS src/app/app.spec.ts
+<skip>    | 
+<replace> |  Tasks:    2 successful, 2 total
+<skip>    |  Cached:   0 cached, 2 total
+<skip>    |  Time:     1.122s

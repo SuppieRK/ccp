@@ -1,1 +1,2 @@
 argv: ["npx", "prettier", "--check", "src/bad.js", "src/bad2.js"]
+exit_code: 1

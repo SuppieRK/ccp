@@ -1,1 +1,2 @@
 argv: ["cargo", "test"]
+exit_code: 0

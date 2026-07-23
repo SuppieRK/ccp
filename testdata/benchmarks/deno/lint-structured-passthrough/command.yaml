@@ -1,1 +1,2 @@
 argv: ["deno", "lint", "--json", "lint_target.ts"]
+exit_code: 0

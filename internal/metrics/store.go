@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"cmp"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -22,10 +24,14 @@ const (
 	maxCommandTextRunes   = 1024
 	defaultMissedTopLimit = 5
 	dateFormatYMD         = "2006-01-02"
+	defaultRetention      = 90 * 24 * time.Hour
+	pruneBatchLimit       = 100
+	projectMetricsFile    = "gain.db"
 )
 
 var (
-	runsBucket = []byte("runs")
+	runsBucket   = []byte("runs")
+	eventsBucket = []byte("event_ids")
 )
 
 type RunMetric struct {
@@ -247,18 +253,48 @@ type derivedMetricTargets struct {
 }
 
 func Append(path string, metric RunMetric) (err error) {
+	return appendMetric("", path, metric)
+}
+
+// AppendProject appends a runtime metric while requiring the database and all
+// writable state to remain beneath projectRoot.
+func AppendProject(projectRoot, path string, metric RunMetric) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	if err := ensureLocalCCPGitignore(path); err != nil {
+	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+		return err
+	}
+	if _, err := os.Lstat(path); err == nil {
+		if err := projectfiles.ValidateRegularFileBeneath(projectRoot, path); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	rec := normalizeMetric(metric)
+	if err := spoolProjectMetric(projectRoot, path, rec); err != nil {
+		return err
+	}
+	// A durable spool item is success for the foreground command. A locked or
+	// temporarily unavailable database is retried by the next invocation.
+	_ = consolidateProjectSpool(projectRoot, path)
+	return nil
+}
+
+func appendMetric(projectRoot, path string, metric RunMetric) (err error) {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	if err := ensureLocalCCPGitignore(projectRoot, path); err != nil {
 		return err
 	}
 	if !fileExists(path) {
-		if err := ensureSchema(path); err != nil {
+		if err := ensureSchema(projectRoot, path); err != nil {
 			return err
 		}
 	}
-	db, err := openDB(path, false)
+	db, err := openDBAt(projectRoot, path, false)
 	if err != nil {
 		return err
 	}
@@ -276,10 +312,10 @@ func Append(path string, metric RunMetric) (err error) {
 		return err
 	}
 	db = nil
-	if err := ensureSchema(path); err != nil {
+	if err := ensureSchema(projectRoot, path); err != nil {
 		return err
 	}
-	db, err = openDB(path, false)
+	db, err = openDBAt(projectRoot, path, false)
 	if err != nil {
 		return err
 	}
@@ -329,6 +365,48 @@ func writeRunRecord(db *bolt.DB, rec runRecord) error {
 		val := encodeRunRecord(rec)
 		return b.Put(key, val)
 	})
+}
+
+// PurgeBefore removes records strictly older than cutoff.
+func PurgeBefore(path string, cutoff time.Time) (int, error) {
+	return purgeBefore("", path, cutoff)
+}
+
+// PurgeProjectBefore applies PurgeBefore through the contained project opener.
+func PurgeProjectBefore(projectRoot, path string, cutoff time.Time) (int, error) {
+	if err := consolidateProjectSpool(projectRoot, path); err != nil {
+		return 0, err
+	}
+	return purgeBefore(projectRoot, path, cutoff)
+}
+
+func purgeBefore(projectRoot, path string, cutoff time.Time) (removed int, err error) {
+	if strings.TrimSpace(path) == "" || !fileExists(path) {
+		return 0, nil
+	}
+	db, err := openDBAt(projectRoot, path, false)
+	if err != nil {
+		return 0, err
+	}
+	defer closeBoltDBWithErr(db, &err)
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(runsBucket)
+		if bucket == nil {
+			return nil
+		}
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if len(key) < 8 || getBoundedInt64FromU64(key[:8]) >= cutoff.UTC().Unix() {
+				break
+			}
+			if err := cursor.Delete(); err != nil {
+				return err
+			}
+			removed++
+		}
+		return nil
+	})
+	return removed, err
 }
 
 func LoadSummary(path string) (Summary, error) {
@@ -518,16 +596,18 @@ func QueryMissedOpportunities(path string, opts QueryOptions, limit int) (opps [
 	for cmd, cnt := range grouped {
 		out = append(out, MissedOpportunity{Command: cmd, Count: cnt})
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Count != out[j].Count {
-			return out[i].Count > out[j].Count
-		}
-		return out[i].Command < out[j].Command
-	})
+	slices.SortFunc(out, compareMissedOpportunities)
 	if len(out) > limit {
 		out = out[:limit]
 	}
 	return out, nil
+}
+
+func compareMissedOpportunities(left, right MissedOpportunity) int {
+	if order := cmp.Compare(right.Count, left.Count); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Command, right.Command)
 }
 
 func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err error) {
@@ -639,22 +719,24 @@ func QueryPerformanceRows(path string, opts QueryOptions) (rows []PerformanceRow
 		fillPerformanceDerived(&row, acc.duration)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedSavedTokens != out[j].EstimatedSavedTokens {
-			return out[i].EstimatedSavedTokens > out[j].EstimatedSavedTokens
-		}
-		if out[i].Tool != out[j].Tool {
-			return out[i].Tool < out[j].Tool
-		}
-		if out[i].Filter != out[j].Filter {
-			return out[i].Filter < out[j].Filter
-		}
-		return out[i].Case < out[j].Case
-	})
+	slices.SortFunc(out, comparePerformanceRows)
 	return out, nil
+}
+
+func comparePerformanceRows(left, right PerformanceRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedSavedTokens, left.EstimatedSavedTokens); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Tool, right.Tool); order != 0 {
+		return order
+	}
+	if order := strings.Compare(left.Filter, right.Filter); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Case, right.Case)
 }
 
 func QueryRegistryBuild(path string, opts QueryOptions) (summary RegistryBuildSummary, sourceRows []RegistrySourceBuildRow, err error) {
@@ -936,10 +1018,23 @@ func periodRowFromAcc(acc *periodAcc) PeriodRow {
 }
 
 func openDB(path string, readOnly bool) (*bolt.DB, error) {
+	return openDBAt("", path, readOnly)
+}
+
+func openDBAt(projectRoot, path string, readOnly bool) (*bolt.DB, error) {
 	opts := &bolt.Options{
 		ReadOnly:       readOnly,
 		Timeout:        writeTimeout,
 		NoFreelistSync: true,
+	}
+	if strings.TrimSpace(projectRoot) != "" {
+		expectedPath := filepath.Clean(path)
+		opts.OpenFile = func(name string, flag int, mode os.FileMode) (*os.File, error) {
+			if filepath.Clean(name) != expectedPath {
+				return nil, fmt.Errorf("refuse unexpected metrics database path %q", name)
+			}
+			return projectfiles.OpenFileBeneath(projectRoot, name, flag, mode)
+		}
 	}
 	db, err := bolt.Open(path, 0o600, opts)
 	if err != nil {
@@ -1399,23 +1494,28 @@ func max0i64(v int64) int64 {
 	return v
 }
 
-func ensureSchema(path string) (err error) {
+func ensureSchema(projectRoot, path string) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	if err := ensureLocalCCPGitignore(path); err != nil {
+	if err := ensureLocalCCPGitignore(projectRoot, path); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	if strings.TrimSpace(projectRoot) == "" {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
 	}
-	db, err := openDB(path, false)
+	db, err := openDBAt(projectRoot, path, false)
 	if err != nil {
 		return err
 	}
 	defer closeBoltDBWithErr(db, &err)
 	return db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(runsBucket)
+		if _, err := tx.CreateBucketIfNotExists(runsBucket); err != nil {
+			return err
+		}
+		_, err := tx.CreateBucketIfNotExists(eventsBucket)
 		return err
 	})
 }
@@ -1426,38 +1526,69 @@ func closeBoltDBWithErr(db *bolt.DB, retErr *error) {
 	}
 }
 
-func ensureLocalCCPGitignore(path string) error {
-	cleanPath, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
+func ensureLocalCCPGitignore(projectRoot, path string) error {
+	cleanPath, pathProjectRoot, ok := localProjectMetricsPath(path)
+	if !ok {
 		return nil
 	}
-	if filepath.Base(cleanPath) != "gain.db" {
-		return nil
+	projectRoot, pathProjectRoot, ok, err := resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, path)
+	if err != nil || !ok {
+		return err
 	}
-	ccpDir := filepath.Dir(cleanPath)
-	if filepath.Base(ccpDir) != ".ccp" {
-		return nil
-	}
-	projectRoot := filepath.Dir(ccpDir)
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	cwd, err = canonicalExistingPath(cwd)
-	if err != nil {
-		return nil
-	}
-	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
-	if err != nil || cwd != canonicalProjectRoot {
-		return nil
-	}
-	gitMeta := filepath.Join(projectRoot, ".git")
+	gitMeta := filepath.Join(pathProjectRoot, ".git")
 	info, err := os.Stat(gitMeta)
 	if err != nil || !info.IsDir() {
 		return nil
 	}
 
 	return projectfiles.EnsureNestedCCPGitignore(projectRoot)
+}
+
+func localProjectMetricsPath(path string) (string, string, bool) {
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil || filepath.Base(cleanPath) != projectMetricsFile {
+		return "", "", false
+	}
+	ccpDir := filepath.Dir(cleanPath)
+	if filepath.Base(ccpDir) != ".ccp" {
+		return "", "", false
+	}
+	return cleanPath, filepath.Dir(ccpDir), true
+}
+
+func resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, originalPath string) (string, string, bool, error) {
+	if strings.TrimSpace(projectRoot) == "" {
+		return resolveImplicitMetricsProjectRoot(pathProjectRoot)
+	}
+	canonicalPath, err := projectfiles.CanonicalPathBeneath(projectRoot, cleanPath)
+	if err != nil {
+		return "", "", false, err
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
+	if err != nil {
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+	}
+	expectedPath := filepath.Join(canonicalProjectRoot, ".ccp", projectMetricsFile)
+	if filepath.Clean(canonicalPath) != filepath.Clean(expectedPath) {
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+	}
+	return canonicalProjectRoot, canonicalProjectRoot, true, nil
+}
+
+func resolveImplicitMetricsProjectRoot(pathProjectRoot string) (string, string, bool, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", "", false, nil
+	}
+	cwd, err = canonicalExistingPath(cwd)
+	if err != nil {
+		return "", "", false, nil
+	}
+	canonicalProjectRoot, err := canonicalExistingPath(pathProjectRoot)
+	if err != nil || cwd != canonicalProjectRoot {
+		return "", "", false, nil
+	}
+	return pathProjectRoot, pathProjectRoot, true, nil
 }
 
 func canonicalExistingPath(path string) (string, error) {
@@ -1473,7 +1604,7 @@ func canonicalExistingPath(path string) (string, error) {
 }
 
 func Bootstrap(path string) error {
-	return ensureSchema(path)
+	return ensureSchema("", path)
 }
 
 func IsTimeoutOrBusy(err error) bool {

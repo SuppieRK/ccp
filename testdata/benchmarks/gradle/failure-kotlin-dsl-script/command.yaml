@@ -1,1 +1,2 @@
 argv: ["./gradlew", "assemble"]
+exit_code: 1

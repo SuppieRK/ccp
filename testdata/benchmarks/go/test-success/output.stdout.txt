@@ -1,0 +1,3 @@
+? fixture-go-test/no-test
+ok fixture-go-test
+ok fixture-go-test/test

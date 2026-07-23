@@ -2,7 +2,7 @@
 version: 1
 filter: ruff
 about: Compact structured Ruff diagnostics conservatively and normalize simple `ruff check` flows to Ruff's own grouped format while preserving explicit format, fix, diff, and watch modes.
-flags_consuming_next_arg: []
+flags_consuming_next_arg: ["--config", "--extend-exclude", "--extend-fixable", "--extend-ignore", "--extend-per-file-ignores", "--extend-select", "--fixable", "--ignore", "--output-file", "--output-format", "--per-file-ignores", "--select", "--target-version", "--unfixable", "-o"]
 
 cases:
   - id: explicit_modes_passthrough
@@ -19,6 +19,8 @@ cases:
         - --watch
         - --fix
         - --diff
+        - --output-file
+        - -o
     passthrough: true
 
   - id: check_grouped_normalized
@@ -35,6 +37,8 @@ cases:
         - --watch
         - --fix
         - --diff
+        - --output-file
+        - -o
     normalize_command:
       append_if_missing:
         - --output-format=grouped

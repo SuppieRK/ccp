@@ -1,1 +1,2 @@
 argv: ["mix", "format", "--check-formatted"]
+exit_code: 0

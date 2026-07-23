@@ -1,1 +1,2 @@
 argv: ["dart", "format", "-o", "json", ".artifacts/dart-demo-clean/main.dart"]
+exit_code: 0

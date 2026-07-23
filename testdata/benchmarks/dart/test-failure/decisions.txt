@@ -1,0 +1,14 @@
+<skip>    | 00:00 +0: loading test/failure_test.dart
+<skip>    | 00:00 +0: shows failure details
+<keep>    | 00:00 +0 -1: shows failure details [E]
+<keep>    |   Expected: {'left': 2}
+<keep>    |     Actual: {'left': 1}
+<keep>    |      Which: at location ['left'] is <1> instead of <2>
+<skip>    |   
+<skip>    |   package:matcher             expect
+<keep>    |   test/failure_test.dart 5:5  main.<fn>
+<skip>    |   
+<replace> | 00:00 +0 -1: Some tests failed.
+<skip>    | 
+<skip>    | Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+<skip>    | For example, 'dart test --chain-stack-traces'.

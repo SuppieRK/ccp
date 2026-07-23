@@ -2,14 +2,34 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
+
+const confidentialFlag = "--confidential"
+
+func LifecycleCommands() []string {
+	commands := make([]string, 0, len(lifecycleCommands)+len(filterCommands))
+	for command := range lifecycleCommands {
+		commands = append(commands, command)
+	}
+	for command := range filterCommands {
+		commands = append(commands, command)
+	}
+	slices.Sort(commands)
+	return commands
+}
+
+func ExecutionFlags() []string {
+	return []string{confidentialFlag, "--help", "--raw", "--version", "-h"}
+}
 
 var lifecycleCommands = map[string]struct{}{
 	"capture":   {},
 	"init":      {},
 	"gain":      {},
 	"history":   {},
+	"recovery":  {},
 	"verify":    {},
 	"upgrade":   {},
 	"uninstall": {},
@@ -68,8 +88,8 @@ func parseFlagArg(args []string, index int, opts *Options) (bool, int, error) {
 	case "--raw":
 		opts.Raw = true
 		return true, index, nil
-	case "--confidential":
-		value, next, err := requireFlagValue(args, index, "--confidential")
+	case confidentialFlag:
+		value, next, err := requireFlagValue(args, index, confidentialFlag)
 		if err != nil {
 			return true, index, err
 		}

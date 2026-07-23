@@ -1,0 +1,9 @@
+<keep>    |  ⨯ Failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error
+<skip>    | 
+<keep>    | > Build error occurred
+<keep>    | [Error: Cannot find module '@next/definitely-missing-package'
+<keep>    | Require stack:
+<keep>    | - /tmp/repo-43a/next.config.js] {
+<keep>    |   code: 'MODULE_NOT_FOUND',
+<keep>    |   requireStack: [Array]
+<keep>    | }

@@ -1,1 +1,2 @@
 argv: ["sbt", "test"]
+exit_code: 1
