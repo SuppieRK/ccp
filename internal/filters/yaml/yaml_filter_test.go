@@ -112,6 +112,55 @@ var _ = Describe("YamlFilter", func() {
 		Expect(action.Kind).To(Equal(contracts.ActionIgnore))
 	})
 
+	It("finalizes stdout and stderr independently when both scopes are configured", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{{
+				ID: "both-streams",
+				CompressOutput: &OutputShape{
+					Stdout: &OutputScope{
+						Lines: &OutputLines{
+							Max: &MaxRule{Count: 1, Print: "{{value}} hidden"},
+						},
+					},
+					Stderr: &OutputScope{
+						Lines: &OutputLines{
+							Keep: []SkipOrKeepRule{{StartsWith: "warning:"}},
+						},
+					},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filter.OnStdout("first\n", yamlFilterContext{args: []string{"demo"}}).Kind).To(Equal(contracts.ActionKeep))
+		Expect(filter.OnStdout("second\n", yamlFilterContext{
+			args:   []string{"demo"},
+			stdout: []string{"first\n"},
+		}).Kind).To(Equal(contracts.ActionIgnore))
+		Expect(filter.OnStderr("warning: retained\n", yamlFilterContext{args: []string{"demo"}}).Kind).To(Equal(contracts.ActionKeep))
+
+		actions := filter.OnStdoutExitActions(yamlFilterContext{
+			args:   []string{"demo"},
+			stdout: []string{"first\n"},
+			stderr: []string{"warning: retained\n"},
+		})
+
+		Expect(actions).To(Equal([]contracts.Action{
+			{
+				Kind:   contracts.ActionReplace,
+				Stream: contracts.StreamStdout,
+				Output: "first\n1 hidden",
+			},
+			{
+				Kind:   contracts.ActionReplace,
+				Stream: contracts.StreamStderr,
+				Output: "warning: retained\n",
+			},
+		}))
+	})
+
 	It("clones compiled configuration without carrying invocation state", func() {
 		spec := &FilterDefinition{
 			Version:               1,

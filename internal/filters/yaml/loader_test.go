@@ -124,7 +124,7 @@ cases:
 		Expect(timing.Sources[0].Error).To(BeEmpty())
 	})
 
-	It("loads only the exact invoked filter on the execution path", func() {
+	It("loads the exact invoked filter plus later override candidates on the execution path", func() {
 		Expect(os.WriteFile(filepath.Join(filterDir, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filterDir, "pytest.yaml"), []byte(validLoaderStatusFilterYAML("pytest")), 0o644)).To(Succeed())
 
@@ -136,8 +136,37 @@ cases:
 		Expect(filters).To(HaveKey("git"))
 		Expect(filters).NotTo(HaveKey("pytest"))
 		Expect(timing.Sources).To(HaveLen(1))
-		Expect(timing.Sources[0].Definitions).To(Equal(int64(1)))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
 		Expect(timing.Sources[0].Compiled).To(Equal(int64(1)))
+	})
+
+	It("preserves lexicographically later same-source overrides on the execution path", func() {
+		Expect(os.WriteFile(filepath.Join(filterDir, "git.yaml"), []byte(`
+version: 1
+filter: git
+cases:
+  - id: canonical
+    passthrough: true
+`), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(filterDir, "zz-git-override.yaml"), []byte(`
+version: 1
+filter: git
+cases:
+  - id: override
+    passthrough: true
+`), 0o644)).To(Succeed())
+
+		filters, timing, err := LoadExecutionFilterFromSourcesWithTiming([]v2filters.FilterSource{
+			v2filters.RepositorySource(root),
+		}, "git")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filters).To(HaveKey("git"))
+		Expect(filters["git"].Dispatch(contracts.Command{
+			Tool: "git",
+			Args: []string{"git"},
+		})).To(Equal("git|override"))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
 	})
 
 	It("resolves aliases before loading their exact canonical filter", func() {
@@ -152,7 +181,7 @@ cases:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(filters).To(HaveKey("mvn"))
 		Expect(filters).NotTo(HaveKey("maven"))
-		Expect(timing.Sources[0].Definitions).To(Equal(int64(1)))
+		Expect(timing.Sources[0].Definitions).To(Equal(int64(2)))
 		Expect(filters["mvn"].Dispatch(contracts.Command{Tool: "mvn", Args: []string{"mvn"}})).To(Equal("maven|passthrough"))
 	})
 

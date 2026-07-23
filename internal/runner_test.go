@@ -25,10 +25,41 @@ import (
 	filteryaml "go-command-compression-proxy/internal/filters/yaml"
 	"go-command-compression-proxy/internal/filtertrust"
 	"go-command-compression-proxy/internal/metrics"
+	"go-command-compression-proxy/internal/recovery"
 	"go-command-compression-proxy/internal/replay"
 	"go-command-compression-proxy/internal/version"
 	"go-command-compression-proxy/internal/workspaces"
 )
+
+var _ = Describe("recoveryEvents", func() {
+	It("renumbers retained entries after unbuffered records create sequence gaps", func() {
+		events := recoveryEvents([]engine.BufferEntry{
+			{
+				Sequence: 2,
+				Stream:   contracts.StreamStdout,
+				Original: []byte("retained stdout\n"),
+			},
+			{
+				Sequence: 5,
+				Stream:   contracts.StreamStderr,
+				Original: []byte("retained stderr\n"),
+			},
+		})
+
+		Expect(events).To(Equal([]recovery.Event{
+			{
+				Sequence: 0,
+				Stream:   contracts.StreamStdout,
+				Data:     []byte("retained stdout\n"),
+			},
+			{
+				Sequence: 1,
+				Stream:   contracts.StreamStderr,
+				Data:     []byte("retained stderr\n"),
+			},
+		}))
+	})
+})
 
 var _ = Describe("Runner", func() {
 	var (

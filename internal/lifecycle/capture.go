@@ -130,13 +130,16 @@ func executeCapture(commandArgs []string, captureDir string, confidential []stri
 	if err != nil {
 		return recordFailure("replay_output", err)
 	}
-	if err := replay.WriteArtifact(outputPath, []byte(replayed.Output), 0o600); err != nil {
+	storedOutput := redactCaptureText(replayed.Output, confidential)
+	storedStdout := redactCaptureText(replayed.Stdout, confidential)
+	storedStderr := redactCaptureText(replayed.Stderr, confidential)
+	if err := replay.WriteArtifact(outputPath, []byte(storedOutput), 0o600); err != nil {
 		return recordFailure("write_output", err)
 	}
-	if err := replay.WriteArtifact(outputStdoutPath, []byte(replayed.Stdout), 0o600); err != nil {
+	if err := replay.WriteArtifact(outputStdoutPath, []byte(storedStdout), 0o600); err != nil {
 		return recordFailure("write_output_stdout", err)
 	}
-	if err := replay.WriteArtifact(outputStderrPath, []byte(replayed.Stderr), 0o600); err != nil {
+	if err := replay.WriteArtifact(outputStderrPath, []byte(storedStderr), 0o600); err != nil {
 		return recordFailure("write_output_stderr", err)
 	}
 
@@ -152,7 +155,7 @@ func executeCapture(commandArgs []string, captureDir string, confidential []stri
 		"exit_code":          exitCode,
 		"stdout_bytes":       streamBytes(events, contracts.StreamStdout),
 		"stderr_bytes":       streamBytes(events, contracts.StreamStderr),
-		"output_bytes":       len(replayed.Output),
+		"output_bytes":       len(storedOutput),
 		"success":            true,
 	})
 

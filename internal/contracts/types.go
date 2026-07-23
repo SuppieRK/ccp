@@ -74,6 +74,11 @@ type Filter interface {
 	OnStdoutExit(context Context) Action
 }
 
+// ExitActionsFilter optionally finalizes multiple output streams atomically.
+type ExitActionsFilter interface {
+	OnStdoutExitActions(context Context) []Action
+}
+
 type CloneableFilter interface {
 	CloneFilter() Filter
 }

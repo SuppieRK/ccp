@@ -147,7 +147,11 @@ var _ = Describe("capture", func() {
 
 		tmp := GinkgoT().TempDir()
 		secret := "capture-super-secret"
-		stub := &stubCaptureRunner{output: "***\n", stdout: "***\n"}
+		stub := &stubCaptureRunner{
+			output: "merged " + secret + "\n",
+			stdout: "stdout " + secret + "\n",
+			stderr: "stderr " + secret + "\n",
+		}
 		var gotConfidential []string
 		prev := newCaptureRunner
 		newCaptureRunner = func(confidential []string) captureVerifier {
@@ -163,10 +167,25 @@ var _ = Describe("capture", func() {
 		})).To(Succeed())
 
 		Expect(gotConfidential).To(Equal([]string{secret}))
-		for _, name := range []string{replay.CommandFileName, captureStdoutFileName, captureOutputFileName} {
+		for _, name := range []string{
+			replay.CommandFileName,
+			captureStdoutFileName,
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
 			body, err := os.ReadFile(filepath.Join(tmp, name))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).NotTo(ContainSubstring(secret))
+		}
+		for _, name := range []string{
+			captureOutputFileName,
+			captureOutputStdoutFileName,
+			captureOutputStderrFileName,
+		} {
+			body, err := os.ReadFile(filepath.Join(tmp, name))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(body)).To(ContainSubstring("***"))
 		}
 		command, err := replay.ReadCommand(filepath.Join(tmp, replay.CommandFileName))
 		Expect(err).NotTo(HaveOccurred())

@@ -372,6 +372,9 @@ func PurgeBefore(path string, cutoff time.Time) (int, error) {
 
 // PurgeProjectBefore applies PurgeBefore through the contained project opener.
 func PurgeProjectBefore(projectRoot, path string, cutoff time.Time) (int, error) {
+	if err := consolidateProjectSpool(projectRoot, path); err != nil {
+		return 0, err
+	}
 	return purgeBefore(projectRoot, path, cutoff)
 }
 

@@ -197,23 +197,28 @@ func (r *Runner) maybeStoreRecovery(command contracts.Command, filter contracts.
 		return
 	}
 	entries := state.RecoveryEntries()
-	events := make([]recovery.Event, 0, len(entries))
-	for _, entry := range entries {
-		if len(entry.Original) == 0 {
-			continue
-		}
-		events = append(events, recovery.Event{
-			Sequence: int(entry.Sequence),
-			Stream:   entry.Stream,
-			Data:     slices.Clone(entry.Original),
-		})
-	}
+	events := recoveryEvents(entries)
 	if _, err := recovery.Store(command.ArgsForMatching(), events, exitCode); err != nil {
 		audit.MustAppend("recovery_storage_error", map[string]any{
 			"tool":   command.Tool,
 			"reason": err.Error(),
 		})
 	}
+}
+
+func recoveryEvents(entries []engine.BufferEntry) []recovery.Event {
+	events := make([]recovery.Event, 0, len(entries))
+	for _, entry := range entries {
+		if len(entry.Original) == 0 {
+			continue
+		}
+		events = append(events, recovery.Event{
+			Sequence: len(events),
+			Stream:   entry.Stream,
+			Data:     slices.Clone(entry.Original),
+		})
+	}
+	return events
 }
 
 func (r *Runner) loadExecutionRegistry(auditCommand, tool string) (*engine.Registry, contracts.FilterRegistryBuildTiming, error) {

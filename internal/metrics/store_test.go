@@ -211,6 +211,40 @@ var _ = Describe("metrics storage", func() {
 			Expect(ProjectStorageStatus(project, path).Pending).To(BeZero())
 		})
 
+		It("consolidates pending events before purging the requested cutoff", func() {
+			project := filepath.Join(tempDir, "project")
+			Expect(os.Mkdir(project, 0o755)).To(Succeed())
+			path := filepath.Join(project, ".ccp", gainDBFileName)
+			cutoff := time.Now().UTC().Truncate(time.Second)
+			Expect(AppendProject(project, path, RunMetric{
+				Timestamp: cutoff.Add(time.Second),
+				Tool:      "retained",
+				RawBytes:  1,
+				KeptBytes: 1,
+			})).To(Succeed())
+
+			db, err := openDBAt(project, path, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(AppendProject(project, path, RunMetric{
+				Timestamp: cutoff.Add(-time.Second),
+				Tool:      "pending-old",
+				RawBytes:  2,
+				KeptBytes: 1,
+			})).To(Succeed())
+			Expect(ProjectStorageStatus(project, path).Pending).To(Equal(1))
+			Expect(db.Close()).To(Succeed())
+
+			removed, err := PurgeProjectBefore(project, path, cutoff)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(removed).To(Equal(1))
+			Expect(ProjectStorageStatus(project, path).Pending).To(BeZero())
+			history, err := QueryHistory(path, QueryOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Tool).To(Equal("retained"))
+		})
+
 		It("commits duplicate spool event IDs exactly once", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())

@@ -88,6 +88,17 @@ func (f *combinedExitFilter) OnStdoutExit(context contracts.Context) contracts.A
 	}
 }
 
+type multiExitFilter struct {
+	exitNoopFilter
+}
+
+func (f *multiExitFilter) OnStdoutExitActions(contracts.Context) []contracts.Action {
+	return []contracts.Action{
+		{Kind: contracts.ActionReplace, Stream: contracts.StreamStdout, Output: "S\n"},
+		{Kind: contracts.ActionReplace, Stream: contracts.StreamStderr, Output: "E\n"},
+	}
+}
+
 type scriptedFilter struct {
 	stdoutAction contracts.Action
 	stderrAction contracts.Action
@@ -327,6 +338,26 @@ var _ = Describe("Engine integration", func() {
 			Expect(entryLines(entries)).To(Equal([]string{"S\n"}))
 			Expect(entryStreams(entries)).To(Equal([]contracts.Stream{contracts.StreamStderr}))
 		})
+	})
+
+	It("applies independent stdout and stderr exit actions", func() {
+		registry := NewRegistry()
+		registry.Register("multi", &multiExitFilter{})
+		state := NewEngine(registry).Start(contracts.Command{
+			Args: []string{"multi"},
+			Tool: "multi",
+		})
+
+		Expect(state.Stdout("long stdout line\n")).To(BeEmpty())
+		Expect(state.Stderr("long stderr line\n")).To(BeEmpty())
+
+		entries := state.Exit(0)
+		Expect(entryLines(entries)).To(Equal([]string{"S\n", "E\n"}))
+		Expect(entryStreams(entries)).To(Equal([]contracts.Stream{
+			contracts.StreamStdout,
+			contracts.StreamStderr,
+		}))
+		Expect(state.Passthrough()).To(BeFalse())
 	})
 
 	Context("when action helpers are used directly", func() {

@@ -234,11 +234,19 @@ func loadExecutionFilterFromSource(source v2filters.FilterSource, tool string) (
 			return nil, inspected, err
 		}
 		if found {
+			override, scanned, overridden, err := loadLegacyTargetDefinitionAfter(prepared, []string{target}, loaded.Path)
+			inspected += scanned
+			if err != nil {
+				return nil, inspected, err
+			}
+			if overridden {
+				loaded = override
+			}
 			return compileExecutionFilter(source, loaded), inspected, nil
 		}
 	}
 
-	loaded, inspected, found, err := loadLegacyTargetDefinition(prepared, targets)
+	loaded, inspected, found, err := loadLegacyTargetDefinitionAfter(prepared, targets, "")
 	if err != nil || !found {
 		return nil, inspected, err
 	}
@@ -277,7 +285,7 @@ func loadExactTargetDefinition(source preparedFilterSource, target string) (Load
 	return selected, inspected, selected.Spec != nil, nil
 }
 
-func loadLegacyTargetDefinition(source preparedFilterSource, targets []string) (LoadedFilter, int, bool, error) {
+func loadLegacyTargetDefinitionAfter(source preparedFilterSource, targets []string, after string) (LoadedFilter, int, bool, error) {
 	paths, err := source.matchedFilterFiles()
 	if err != nil {
 		return LoadedFilter{}, 0, false, err
@@ -289,6 +297,9 @@ func loadLegacyTargetDefinition(source preparedFilterSource, targets []string) (
 	var selected LoadedFilter
 	inspected := 0
 	for _, path := range paths {
+		if after != "" && strings.Compare(path, after) <= 0 {
+			continue
+		}
 		raw, err := source.readFile(path)
 		if err != nil {
 			return LoadedFilter{}, inspected, false, fmt.Errorf("read filter %s: %w", path, err)
