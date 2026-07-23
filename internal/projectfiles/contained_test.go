@@ -45,6 +45,24 @@ var _ = Describe("contained project files", func() {
 		Expect(outside).NotTo(BeAnExistingFile())
 	})
 
+	It("rejects canonical paths outside the root", func() {
+		root := GinkgoT().TempDir()
+		outside := filepath.Join(GinkgoT().TempDir(), "gain.db")
+
+		_, err := CanonicalPathBeneath(root, outside)
+
+		Expect(err).To(MatchError(ContainSubstring("outside contained root")))
+	})
+
+	It("reports a missing regular file during validation", func() {
+		root := GinkgoT().TempDir()
+		path := filepath.Join(root, ".ccp", "missing.db")
+
+		err := ValidateRegularFileBeneath(root, path)
+
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("rejects symlinked parent directories", func() {
 		root := GinkgoT().TempDir()
 		outside := GinkgoT().TempDir()

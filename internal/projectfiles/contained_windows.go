@@ -203,6 +203,7 @@ func openWindowsRelative(parent windows.Handle, name string, flag int, options u
 		access = windows.FILE_GENERIC_READ | windows.FILE_GENERIC_WRITE
 	}
 	if flag&os.O_APPEND != 0 {
+		access &^= windows.FILE_WRITE_DATA
 		access |= windows.FILE_APPEND_DATA
 	}
 	if flag&os.O_EXCL != 0 {
