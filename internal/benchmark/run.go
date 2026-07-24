@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 type RunOptions struct {
@@ -109,7 +109,7 @@ func withDefaults(opts RunOptions) RunOptions {
 		opts.ArtifactsDir = filepath.Join(".artifacts", "benchmark")
 	}
 	if strings.TrimSpace(opts.ProxyBinary) == "" {
-		opts.ProxyBinary = "ccp"
+		opts.ProxyBinary = "cmdshape"
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = 2 * time.Minute
@@ -312,10 +312,10 @@ func regularFileExists(path string) bool {
 func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTokens int) error {
 	rawBytes := nativeTokens * 4
 	keptBytes := proxyTokens * 4
-	if err := os.MkdirAll(filepath.Join(artifactDir, ".ccp"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(artifactDir, ".cmdshape"), 0o755); err != nil {
 		return err
 	}
-	return metrics.Append(filepath.Join(artifactDir, ".ccp", "gain.db"), metrics.RunMetric{
+	return metrics.Append(filepath.Join(artifactDir, ".cmdshape", "gain.db"), metrics.RunMetric{
 		Timestamp:  time.Now().UTC(),
 		Command:    strings.Join(args, " "),
 		Tool:       args[0],

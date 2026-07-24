@@ -1,4 +1,4 @@
-# AGENTS.md – Command Compression Proxy
+# AGENTS.md – cmdshape
 
 If instructions conflict:
 1. Follow explicit user instructions.
@@ -32,7 +32,7 @@ CI is the canonical definition of release build mechanics.
 - MUST execute the command shape exactly as typed unless the filter contract defines normalization.
 - MUST preserve native output affordances when possible, especially line-oriented forms that coding agents can reuse in follow-up shell expressions.
 - MUST treat structured/precision modes as byte-preserving passthrough when required.
-- `ccp capture` MUST preserve native command execution semantics while recording sequenced replay fixtures.
+- `cmdshape capture` MUST preserve native command execution semantics while recording sequenced replay fixtures.
 
 ---
 

@@ -1,7 +1,7 @@
 package version_test
 
 import (
-	vcmd "go-command-compression-proxy/internal/version"
+	vcmd "github.com/SuppieRK/cmdshape/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

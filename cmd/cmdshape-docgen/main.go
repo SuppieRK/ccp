@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/cli"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
 )
 
 func main() {
@@ -30,8 +30,8 @@ func renderGeneratedFacts() ([]byte, error) {
 		return nil, err
 	}
 	var body strings.Builder
-	body.WriteString("# Generated CCP CLI facts\n\n")
-	body.WriteString("This file is generated from runtime command and integration metadata. Run `go run ./cmd/ccp-docgen` after changing either inventory.\n\n")
+	body.WriteString("# Generated cmdshape CLI facts\n\n")
+	body.WriteString("This file is generated from runtime command and integration metadata. Run `go run ./cmd/cmdshape-docgen` after changing either inventory.\n\n")
 	body.WriteString("## Execution flags\n\n")
 	for _, flag := range cli.ExecutionFlags() {
 		fmt.Fprintf(&body, "- `%s`\n", flag)

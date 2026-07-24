@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 )
 
 const (
 	storeVersion = 1
-	digestDomain = "ccp-project-filter-trust-v1"
+	digestDomain = "cmdshape-project-filter-trust-v1"
 )
 
 type State string
@@ -65,7 +65,7 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "ccp", "filter-trust.json"), nil
+	return filepath.Join(home, ".config", "cmdshape", "filter-trust.json"), nil
 }
 
 func CanonicalRoot(root string) (string, error) {
@@ -142,7 +142,7 @@ func Trust(root string) (Decision, error) {
 		return Decision{Root: canonical, State: StateUnsafe, Reason: err.Error()}, err
 	}
 	if !present {
-		return Decision{Root: canonical, State: StateAbsent}, fmt.Errorf("no project filters found at %s", filepath.Join(canonical, ".ccp", "filters"))
+		return Decision{Root: canonical, State: StateAbsent}, fmt.Errorf("no project filters found at %s", filepath.Join(canonical, ".cmdshape", "filters"))
 	}
 	store, err := loadDefaultStore()
 	if err != nil {
@@ -199,8 +199,28 @@ func sourceDigest(root string) (string, bool, error) {
 	return sourceFilesDigest(root, files), true, nil
 }
 
+// ProjectDigestForDomain returns the digest of the current project filter
+// bytes under an explicitly supplied domain. Lifecycle migration uses it to
+// validate an approval before translating that approval to the current domain.
+func ProjectDigestForDomain(root, domain string) (canonical, digest string, present bool, err error) {
+	canonical, err = CanonicalRoot(root)
+	if err != nil {
+		return "", "", false, err
+	}
+	files, present, err := readSourceFiles(canonical)
+	if err != nil || !present {
+		return canonical, "", present, err
+	}
+	return canonical, sourceFilesDigestWithDomain(canonical, files, domain), true, nil
+}
+
+// ProjectDigest returns the current-domain digest of the project filter bytes.
+func ProjectDigest(root string) (canonical, digest string, present bool, err error) {
+	return ProjectDigestForDomain(root, digestDomain)
+}
+
 func readSourceFiles(root string) ([]SourceFile, bool, error) {
-	filtersDir := filepath.Join(root, ".ccp", "filters")
+	filtersDir := filepath.Join(root, ".cmdshape", "filters")
 	if err := projectfiles.RejectSymlinkPath(filtersDir); err != nil {
 		return nil, false, fmt.Errorf("project filter source is unsafe: %w", err)
 	}
@@ -230,8 +250,12 @@ func readSourceFiles(root string) ([]SourceFile, bool, error) {
 }
 
 func sourceFilesDigest(root string, files []SourceFile) string {
+	return sourceFilesDigestWithDomain(root, files, digestDomain)
+}
+
+func sourceFilesDigestWithDomain(root string, files []SourceFile, domain string) string {
 	hash := sha256.New()
-	writeDigestPart(hash, digestDomain)
+	writeDigestPart(hash, domain)
 	writeDigestPart(hash, filepath.ToSlash(root))
 	for _, file := range files {
 		writeDigestPart(hash, filepath.ToSlash(file.Name))

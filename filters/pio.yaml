@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: pio
 about: Compact default `pio run` build chatter by dropping repetitive PlatformIO setup and object-build noise while preserving compiler failures and keeping verbose mode native.

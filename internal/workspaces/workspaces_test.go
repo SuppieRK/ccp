@@ -2,6 +2,7 @@ package workspaces
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -16,14 +17,14 @@ var _ = Describe("workspace registry", func() {
 		Expect(writeTimeout).To(Equal(100 * time.Millisecond))
 	})
 
-	It("uses ~/.config/ccp/workspaces.db by default", func() {
+	It("uses ~/.config/cmdshape/workspaces.db by default", func() {
 		home := GinkgoT().TempDir()
 		restore := WithTestConfig(home, nil)
 		DeferCleanup(restore)
 
 		path, err := DefaultPath()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(path).To(Equal(filepath.Join(home, ".config", "ccp", "workspaces.db")))
+		Expect(path).To(Equal(filepath.Join(home, ".config", "cmdshape", "workspaces.db")))
 	})
 
 	It("returns the home directory lookup error", func() {
@@ -61,7 +62,7 @@ var _ = Describe("workspace registry", func() {
 		DeferCleanup(restore)
 
 		cwd := filepath.Join(base, "repo", ".", "subdir")
-		metricsPath := filepath.Join(base, "repo", ".ccp", "gain.db")
+		metricsPath := filepath.Join(base, "repo", ".cmdshape", "gain.db")
 
 		Expect(UpsertPath(registryPath, cwd, metricsPath)).To(Succeed())
 		Expect(UpsertPath(registryPath, filepath.Join(base, "repo", "subdir"), metricsPath)).To(Succeed())
@@ -79,8 +80,8 @@ var _ = Describe("workspace registry", func() {
 		base := GinkgoT().TempDir()
 		registryPath := filepath.Join(base, "workspaces.db")
 
-		Expect(UpsertPath(registryPath, filepath.Join(base, "z-repo"), filepath.Join(base, "z-repo", ".ccp", "gain.db"))).To(Succeed())
-		Expect(UpsertPath(registryPath, filepath.Join(base, "a-repo"), filepath.Join(base, "a-repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(UpsertPath(registryPath, filepath.Join(base, "z-repo"), filepath.Join(base, "z-repo", ".cmdshape", "gain.db"))).To(Succeed())
+		Expect(UpsertPath(registryPath, filepath.Join(base, "a-repo"), filepath.Join(base, "a-repo", ".cmdshape", "gain.db"))).To(Succeed())
 
 		entries, err := ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
@@ -92,7 +93,7 @@ var _ = Describe("workspace registry", func() {
 	It("deletes a registered workspace by cwd", func() {
 		base := GinkgoT().TempDir()
 		registryPath := filepath.Join(base, "workspaces.db")
-		Expect(UpsertPath(registryPath, filepath.Join(base, "repo"), filepath.Join(base, "repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(UpsertPath(registryPath, filepath.Join(base, "repo"), filepath.Join(base, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 
 		Expect(DeletePath(registryPath, filepath.Join(base, "repo"))).To(Succeed())
 
@@ -110,7 +111,7 @@ var _ = Describe("workspace registry", func() {
 		registryPath, err := DefaultPath()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(UpsertPath(registryPath, filepath.Join(home, "repo"), filepath.Join(home, "repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(UpsertPath(registryPath, filepath.Join(home, "repo"), filepath.Join(home, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 
 		entries, err := ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
@@ -121,7 +122,7 @@ var _ = Describe("workspace registry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(BeEmpty())
 
-		Expect(UpsertPath("", filepath.Join(home, "repo"), filepath.Join(home, "repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(UpsertPath("", filepath.Join(home, "repo"), filepath.Join(home, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 		Expect(DeletePath("", filepath.Join(home, "repo"))).To(Succeed())
 	})
 
@@ -133,7 +134,7 @@ var _ = Describe("workspace registry", func() {
 		base := GinkgoT().TempDir()
 		registryPath := filepath.Join(base, "workspaces.db")
 
-		Expect(UpsertPath(registryPath, "", filepath.Join(base, "repo", ".ccp", "gain.db"))).To(MatchError(ContainSubstring("path must not be empty")))
+		Expect(UpsertPath(registryPath, "", filepath.Join(base, "repo", ".cmdshape", "gain.db"))).To(MatchError(ContainSubstring("path must not be empty")))
 		Expect(DeletePath(registryPath, "")).To(MatchError(ContainSubstring("path must not be empty")))
 	})
 
@@ -141,7 +142,7 @@ var _ = Describe("workspace registry", func() {
 		base := GinkgoT().TempDir()
 		registryPath := filepath.Join(base, "workspaces.db")
 		cwd := filepath.Join(base, "repo")
-		metricsPath := filepath.Join(base, "repo", ".ccp", "gain.db")
+		metricsPath := filepath.Join(base, "repo", ".cmdshape", "gain.db")
 
 		Expect(UpsertPath(registryPath, cwd, metricsPath)).To(Succeed())
 		Expect(UpsertPath(registryPath, cwd, "")).To(Succeed())
@@ -150,6 +151,27 @@ var _ = Describe("workspace registry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
 		Expect(entries[0].MetricsPath).To(Equal(metricsPath))
+	})
+
+	It("rewrites legacy metrics paths once and leaves later retries byte-stable", func() {
+		base := GinkgoT().TempDir()
+		registryPath := filepath.Join(base, "workspaces.db")
+		cwd := filepath.Join(base, "repo")
+		legacyMetricsPath := filepath.Join(cwd, ".ccp", "gain.db")
+
+		Expect(UpsertPath(registryPath, cwd, legacyMetricsPath)).To(Succeed())
+		Expect(RewriteProjectStateDir(registryPath, ".ccp", ".cmdshape")).To(Succeed())
+		entries, err := ListPath(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+		Expect(entries[0].MetricsPath).To(Equal(filepath.Join(cwd, ".cmdshape", "gain.db")))
+		afterFirstRewrite, err := os.ReadFile(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(RewriteProjectStateDir(registryPath, ".ccp", ".cmdshape")).To(Succeed())
+		afterRetry, err := os.ReadFile(registryPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(afterRetry).To(Equal(afterFirstRewrite))
 	})
 
 	It("returns an error when a stored workspace entry is malformed", func() {
@@ -236,7 +258,7 @@ var _ = Describe("workspace helper functions", func() {
 		Entry("treats blank registry paths as a noop",
 			"   ",
 			filepath.Join("repo"),
-			filepath.Join("repo", ".ccp", "gain.db"),
+			filepath.Join("repo", ".cmdshape", "gain.db"),
 			normalizedWorkspaceInput{},
 			false,
 			false,
@@ -244,7 +266,7 @@ var _ = Describe("workspace helper functions", func() {
 		Entry("returns normalized absolute paths for valid input",
 			"./workspaces.db",
 			"./repo",
-			"./repo/.ccp/gain.db",
+			"./repo/.cmdshape/gain.db",
 			normalizedWorkspaceInput{
 				CWD: func() string {
 					abs, err := filepath.Abs("./repo")
@@ -252,7 +274,7 @@ var _ = Describe("workspace helper functions", func() {
 					return filepath.Clean(abs)
 				}(),
 				MetricsPath: func() string {
-					abs, err := filepath.Abs("./repo/.ccp/gain.db")
+					abs, err := filepath.Abs("./repo/.cmdshape/gain.db")
 					Expect(err).NotTo(HaveOccurred())
 					return filepath.Clean(abs)
 				}(),
@@ -263,7 +285,7 @@ var _ = Describe("workspace helper functions", func() {
 		Entry("rejects invalid cwd values when the registry path is set",
 			"./workspaces.db",
 			"   ",
-			"./repo/.ccp/gain.db",
+			"./repo/.cmdshape/gain.db",
 			normalizedWorkspaceInput{},
 			false,
 			true,
@@ -272,7 +294,7 @@ var _ = Describe("workspace helper functions", func() {
 
 	It("merges existing workspace entries while preserving first seen and prior metrics path", func() {
 		ts := time.Date(2026, 3, 20, 12, 0, 0, 0, time.UTC)
-		raw := []byte(`{"cwd":"/repo","metrics_path":"/repo/.ccp/gain.db","first_seen_at":"2026-03-19T12:00:00Z","last_seen_at":"2026-03-19T13:00:00Z"}`)
+		raw := []byte(`{"cwd":"/repo","metrics_path":"/repo/.cmdshape/gain.db","first_seen_at":"2026-03-19T12:00:00Z","last_seen_at":"2026-03-19T13:00:00Z"}`)
 
 		entry, err := mergedWorkspaceEntry(raw, normalizedWorkspaceInput{
 			CWD:         "/repo",
@@ -281,7 +303,7 @@ var _ = Describe("workspace helper functions", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entry.CWD).To(Equal("/repo"))
-		Expect(entry.MetricsPath).To(Equal("/repo/.ccp/gain.db"))
+		Expect(entry.MetricsPath).To(Equal("/repo/.cmdshape/gain.db"))
 		Expect(entry.FirstSeenAt).To(Equal(time.Date(2026, 3, 19, 12, 0, 0, 0, time.UTC)))
 		Expect(entry.LastSeenAt).To(Equal(ts))
 	})

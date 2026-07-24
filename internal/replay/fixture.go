@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	"gopkg.in/yaml.v3"
 )
@@ -32,7 +32,7 @@ const (
 	VerifyStderrFileName    = "verify-stderr.txt"
 	VerifyDecisionsFileName = "verify-decisions.txt"
 	VerifyDispatchFileName  = "verify-dispatch.txt"
-	encodedPayloadPrefix    = "@ccp/base64:"
+	encodedPayloadPrefix    = "@cmdshape/base64:"
 )
 
 type CommandSpec struct {

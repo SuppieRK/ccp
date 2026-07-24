@@ -2,55 +2,54 @@ package lifecycle
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"go-command-compression-proxy/internal/audit"
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/filtertrust"
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("filter", func() {
-	captureStdout := func(fn func() error) string {
-		orig := os.Stdout
+	captureOutput := func(stream **os.File, fn func() error) string {
+		orig := *stream
 		r, w, err := os.Pipe()
 		Expect(err).NotTo(HaveOccurred())
-		os.Stdout = w
-		DeferCleanup(func() { os.Stdout = orig })
-
-		Expect(fn()).To(Succeed())
-		Expect(w.Close()).To(Succeed())
+		*stream = w
+		defer func() {
+			*stream = orig
+		}()
 
 		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Close()).To(Succeed())
+		copyDone := make(chan error, 1)
+		go func() {
+			_, copyErr := io.Copy(&buf, r)
+			copyDone <- copyErr
+		}()
+
+		runErr := fn()
+		*stream = orig
+		writeCloseErr := w.Close()
+		copyErr := <-copyDone
+		readCloseErr := r.Close()
+		Expect(errors.Join(runErr, writeCloseErr, copyErr, readCloseErr)).To(Succeed())
 		return buf.String()
 	}
 
+	captureStdout := func(fn func() error) string {
+		return captureOutput(&os.Stdout, fn)
+	}
 	captureStderr := func(fn func() error) string {
-		orig := os.Stderr
-		r, w, err := os.Pipe()
-		Expect(err).NotTo(HaveOccurred())
-		os.Stderr = w
-		DeferCleanup(func() { os.Stderr = orig })
-
-		Expect(fn()).To(Succeed())
-		Expect(w.Close()).To(Succeed())
-
-		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Close()).To(Succeed())
-		return buf.String()
+		return captureOutput(&os.Stderr, fn)
 	}
 
 	setHomeDir := func(home string) {
@@ -67,13 +66,13 @@ var _ = Describe("filter", func() {
 		for _, args := range [][]string{{"--help"}, {"-h"}} {
 			out := captureStderr(func() error { return RunFilter(args) })
 			for _, part := range []string{
-				"ccp filter - YAML filter authoring and inspection helpers",
+				"cmdshape filter - YAML filter authoring and inspection helpers",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"ccp filter <subcommand> [args...]",
+				"cmdshape filter <subcommand> [args...]",
 				"subcommands: new, performance, prompt, status",
-				"agents creating or improving filters should start with 'ccp filter prompt [name]'",
+				"agents creating or improving filters should start with 'cmdshape filter prompt [name]'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -103,7 +102,7 @@ var _ = Describe("filter", func() {
 
 		cwd, err := os.Getwd()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(compactFilterStatusPath(filepath.Join(cwd, ".ccp", "filters", "demo.yaml"))).To(Equal("." + string(filepath.Separator) + filepath.Join(".ccp", "filters", "demo.yaml")))
+		Expect(compactFilterStatusPath(filepath.Join(cwd, ".cmdshape", "filters", "demo.yaml"))).To(Equal("." + string(filepath.Separator) + filepath.Join(".cmdshape", "filters", "demo.yaml")))
 	})
 
 	It("compacts paths relative to the home directory when they are outside the working tree", func() {
@@ -118,7 +117,7 @@ var _ = Describe("filter", func() {
 		DeferCleanup(func() { _ = os.Chdir(prev) })
 		setHomeDir(home)
 
-		Expect(compactFilterStatusPath(filepath.Join(home, ".config", "ccp", "filters", "demo.yaml"))).To(Equal("~" + string(filepath.Separator) + filepath.Join(".config", "ccp", "filters", "demo.yaml")))
+		Expect(compactFilterStatusPath(filepath.Join(home, ".config", "cmdshape", "filters", "demo.yaml"))).To(Equal("~" + string(filepath.Separator) + filepath.Join(".config", "cmdshape", "filters", "demo.yaml")))
 	})
 
 	DescribeTable("compacting explicit roots",
@@ -157,11 +156,11 @@ var _ = Describe("filter", func() {
 		It("renders help output", func() {
 			out := captureStderr(func() error { return RunFilter([]string{"new", "--help"}) })
 			for _, part := range []string{
-				"ccp filter new - generate a commented YAML scaffold for a new filter",
+				"cmdshape filter new - generate a commented YAML scaffold for a new filter",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"./.ccp/filters/<name>.yaml",
+				"./.cmdshape/filters/<name>.yaml",
 				".mappings.yaml",
 			} {
 				Expect(out).To(ContainSubstring(part))
@@ -177,15 +176,15 @@ var _ = Describe("filter", func() {
 
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
 
-			filterPath := filepath.Join(tmp, ".ccp", "filters", "demo-tool.yaml")
-			mappingsPath := filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml")
+			filterPath := filepath.Join(tmp, ".cmdshape", "filters", "demo-tool.yaml")
+			mappingsPath := filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml")
 			scaffold, err := os.ReadFile(filterPath)
 			Expect(err).NotTo(HaveOccurred())
 			mappings, err := os.ReadFile(mappingsPath)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(scaffold)).To(ContainSubstring("version: 1"))
-			Expect(string(scaffold)).To(ContainSubstring("# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json"))
+			Expect(string(scaffold)).To(ContainSubstring("# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json"))
 			Expect(string(scaffold)).To(ContainSubstring("filter: demo-tool"))
 			Expect(string(scaffold)).To(ContainSubstring("passthrough: true"))
 			Expect(string(scaffold)).To(ContainSubstring("Authoring reference:"))
@@ -201,12 +200,12 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(tmp)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 
-			Expect(os.MkdirAll(filepath.Join(tmp, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"), []byte("version: 1\nmap:\n  npm: npm\n"), 0o644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"), []byte("version: 1\nmap:\n  npm: npm\n"), 0o644)).To(Succeed())
 
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
 
-			mappings, err := os.ReadFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"))
+			mappings, err := os.ReadFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(mappings)).To(ContainSubstring("npm: npm"))
 			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
@@ -219,12 +218,12 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(tmp)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 
-			Expect(os.MkdirAll(filepath.Join(tmp, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"), []byte("version: 1\nmap:\n  demo-tool: \"   \"\n"), 0o644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"), []byte("version: 1\nmap:\n  demo-tool: \"   \"\n"), 0o644)).To(Succeed())
 
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
 
-			mappings, err := os.ReadFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"))
+			mappings, err := os.ReadFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
 		})
@@ -236,12 +235,12 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(tmp)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 
-			Expect(os.MkdirAll(filepath.Join(tmp, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"), []byte("map:\n  npm: npm\n"), 0o644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"), []byte("map:\n  npm: npm\n"), 0o644)).To(Succeed())
 
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
 
-			mappings, err := os.ReadFile(filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml"))
+			mappings, err := os.ReadFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(mappings)).To(HavePrefix("version: 1\n"))
 			Expect(string(mappings)).To(ContainSubstring("npm: npm"))
@@ -259,8 +258,8 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(tmp)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 
-			Expect(os.MkdirAll(filepath.Join(tmp, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(tmp, ".ccp", "filters", "demo-tool.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", "demo-tool.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
 
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(MatchError(ContainSubstring("already exists")))
 		})
@@ -295,14 +294,14 @@ var _ = Describe("filter", func() {
 			Expect(os.Chdir(tmp)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 
-			mappingsPath := filepath.Join(tmp, ".ccp", "filters", ".mappings.yaml")
+			mappingsPath := filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml")
 			Expect(os.MkdirAll(mappingsPath, 0o755)).To(Succeed())
 
 			err = RunFilter([]string{"new", "demo-tool"})
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("read mappings file"))
-			Expect(filepath.Join(tmp, ".ccp", "filters", "demo-tool.yaml")).To(BeAnExistingFile())
+			Expect(filepath.Join(tmp, ".cmdshape", "filters", "demo-tool.yaml")).To(BeAnExistingFile())
 		})
 	})
 
@@ -310,13 +309,13 @@ var _ = Describe("filter", func() {
 		It("renders help output", func() {
 			out := captureStderr(func() error { return RunFilter([]string{"performance", "--help"}) })
 			for _, part := range []string{
-				"ccp filter performance - show YAML filter and case performance",
+				"cmdshape filter performance - show YAML filter and case performance",
 				"Usage:",
 				"Flags:",
-				"ccp filter performance [--format text|json|csv]",
+				"cmdshape filter performance [--format text|json|csv]",
 				"grouped by invoked tool, resolved filter, case",
 				"Use --tool <tool> for focused improvements",
-				"Pair this report with 'ccp filter prompt <name>'",
+				"Pair this report with 'cmdshape filter prompt <name>'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -330,7 +329,7 @@ var _ = Describe("filter", func() {
 				return RunFilterWithMetrics([]string{"performance", "--limit", "10"}, path)
 			})
 
-			Expect(out).To(ContainSubstring("ccp filter performance"))
+			Expect(out).To(ContainSubstring("cmdshape filter performance"))
 			Expect(out).To(ContainSubstring("| TOOL"))
 			Expect(out).To(ContainSubstring("| FILTER"))
 			Expect(out).To(ContainSubstring("| CASE"))
@@ -392,12 +391,12 @@ var _ = Describe("filter", func() {
 				KeptBytes:             10,
 				DurationMS:            20,
 				FilterSourceKind:      "project",
-				FilterPath:            "/repo/.ccp/filters/python.yaml",
+				FilterPath:            "/repo/.cmdshape/filters/python.yaml",
 				FilterHash:            "hash-a",
 				RegistryBuildRecorded: true,
 				RegistryBuildMS:       10,
 				RegistrySources: []metrics.RegistrySourceBuildMetric{
-					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 1, Compiled: 1, DurationMS: 8},
+					{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 1, Compiled: 1, DurationMS: 8},
 				},
 			})).To(Succeed())
 			Expect(metrics.Append(secondPath, metrics.RunMetric{
@@ -408,12 +407,12 @@ var _ = Describe("filter", func() {
 				KeptBytes:             10,
 				DurationMS:            40,
 				FilterSourceKind:      "project",
-				FilterPath:            "/repo/.ccp/filters/python.yaml",
+				FilterPath:            "/repo/.cmdshape/filters/python.yaml",
 				FilterHash:            "hash-a",
 				RegistryBuildRecorded: true,
 				RegistryBuildMS:       30,
 				RegistrySources: []metrics.RegistrySourceBuildMetric{
-					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 22},
+					{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 2, DurationMS: 22},
 				},
 			})).To(Succeed())
 
@@ -460,13 +459,13 @@ var _ = Describe("filter", func() {
 		It("renders help output", func() {
 			out := captureStderr(func() error { return RunFilter([]string{"prompt", "--help"}) })
 			for _, part := range []string{
-				"ccp filter prompt - print an embedded agent prompt for creating or improving filters",
+				"cmdshape filter prompt - print an embedded agent prompt for creating or improving filters",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"ccp filter prompt [name]",
-				"embedded in the ccp binary",
-				"copy global filters into ./.ccp/filters before editing",
+				"cmdshape filter prompt [name]",
+				"embedded in the cmdshape binary",
+				"copy global filters into ./.cmdshape/filters before editing",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -475,24 +474,24 @@ var _ = Describe("filter", func() {
 		It("prints the generic embedded authoring prompt", func() {
 			out := captureStdout(func() error { return RunFilter([]string{"prompt"}) })
 
-			Expect(out).To(ContainSubstring("# CCP Filter Authoring Prompt"))
-			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `<filter-id>`."))
+			Expect(out).To(ContainSubstring("# cmdshape Filter Authoring Prompt"))
+			Expect(out).To(ContainSubstring("You are helping create or improve a cmdshape YAML filter for `<filter-id>`."))
 			Expect(out).To(ContainSubstring("When using the generic prompt, `<filter-id>` is a placeholder."))
-			Expect(out).To(ContainSubstring("Start by working in the project-local filter directory: `./.ccp/filters`."))
-			Expect(out).To(ContainSubstring("copy it into `./.ccp/filters` first and edit that project-local copy"))
-			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/ccp/filters` unless the user directly asks"))
+			Expect(out).To(ContainSubstring("Start by working in the project-local filter directory: `./.cmdshape/filters`."))
+			Expect(out).To(ContainSubstring("copy it into `./.cmdshape/filters` first and edit that project-local copy"))
+			Expect(out).To(ContainSubstring("Do not edit global/home filters under `~/.config/cmdshape/filters` unless the user directly asks"))
 			Expect(out).To(ContainSubstring("Do not edit shipped built-in filters under `filters/` unless the user directly asks"))
-			Expect(out).To(ContainSubstring("ccp filter performance --tool <tool> --limit 30"))
+			Expect(out).To(ContainSubstring("cmdshape filter performance --tool <tool> --limit 30"))
 			Expect(out).To(ContainSubstring("The `--tool` value is the invoked tool name"))
 			Expect(out).To(ContainSubstring("`review-case` hints"))
 			Expect(out).To(ContainSubstring("`failure-heavy` hints"))
 			Expect(out).To(ContainSubstring("`passthrough-opportunity` hints"))
 			Expect(out).To(ContainSubstring("Read `RUNS` as frequency"))
 			Expect(out).To(ContainSubstring("`PASS` as passthrough rate"))
-			Expect(out).To(ContainSubstring("ccp filter new <filter-id>"))
-			Expect(out).To(ContainSubstring("ccp capture -- <tool> <args...>"))
-			Expect(out).To(ContainSubstring("./.ccp/filters/<filter-id>.yaml"))
-			Expect(out).To(ContainSubstring("ccp verify --dir <fixture-dir>"))
+			Expect(out).To(ContainSubstring("cmdshape filter new <filter-id>"))
+			Expect(out).To(ContainSubstring("cmdshape capture -- <tool> <args...>"))
+			Expect(out).To(ContainSubstring("./.cmdshape/filters/<filter-id>.yaml"))
+			Expect(out).To(ContainSubstring("cmdshape verify --dir <fixture-dir>"))
 			Expect(out).NotTo(ContainSubstring("{{FILTER_ID}}"))
 			Expect(out).NotTo(ContainSubstring("{{COMMAND_EXAMPLE}}"))
 			Expect(out).NotTo(ContainSubstring("my-tool"))
@@ -501,11 +500,11 @@ var _ = Describe("filter", func() {
 		It("personalizes the embedded prompt for a valid filter id", func() {
 			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
 
-			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
-			Expect(out).To(ContainSubstring("ccp filter new demo-tool"))
-			Expect(out).To(ContainSubstring("ccp capture -- demo-tool <args...>"))
-			Expect(out).To(ContainSubstring("./.ccp/filters/demo-tool.yaml"))
-			Expect(out).NotTo(ContainSubstring("ccp filter new my-tool"))
+			Expect(out).To(ContainSubstring("You are helping create or improve a cmdshape YAML filter for `demo-tool`."))
+			Expect(out).To(ContainSubstring("cmdshape filter new demo-tool"))
+			Expect(out).To(ContainSubstring("cmdshape capture -- demo-tool <args...>"))
+			Expect(out).To(ContainSubstring("./.cmdshape/filters/demo-tool.yaml"))
+			Expect(out).NotTo(ContainSubstring("cmdshape filter new my-tool"))
 		})
 
 		It("rejects invalid filter ids", func() {
@@ -525,7 +524,7 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"prompt", "demo-tool"}) })
 
-			Expect(out).To(ContainSubstring("You are helping create or improve a CCP YAML filter for `demo-tool`."))
+			Expect(out).To(ContainSubstring("You are helping create or improve a cmdshape YAML filter for `demo-tool`."))
 			Expect(filepath.Join(tmp, "docs", "agent-rules", "FILTERS.md")).NotTo(BeAnExistingFile())
 		})
 	})
@@ -540,12 +539,12 @@ var _ = Describe("filter", func() {
 		It("renders help output", func() {
 			out := captureStderr(func() error { return RunFilter([]string{"status", "--help"}) })
 			for _, part := range []string{
-				"ccp filter status - show active, overridden, and broken filter registrations",
+				"cmdshape filter status - show active, overridden, and broken filter registrations",
 				"Usage:",
 				"Flags:",
 				"Notes:",
 				"project-local filters override home-scoped filters",
-				"agents creating or improving filters should run 'ccp filter prompt [name]'",
+				"agents creating or improving filters should run 'cmdshape filter prompt [name]'",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}
@@ -557,14 +556,14 @@ var _ = Describe("filter", func() {
 			project := filepath.Join(tmp, "repo")
 			prev, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(os.MkdirAll(filepath.Join(project, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Join(home, ".config", "ccp"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(project, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(home, ".config", "cmdshape"), 0o755)).To(Succeed())
 			Expect(os.Chdir(project)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 			setHomeDir(home)
 
-			projectFilters := filepath.Join(project, ".ccp", "filters")
-			homeFilters := filepath.Join(home, ".config", "ccp", "filters")
+			projectFilters := filepath.Join(project, ".cmdshape", "filters")
+			homeFilters := filepath.Join(home, ".config", "cmdshape", "filters")
 			Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(projectFilters, "broken.yaml"), []byte("version: 1\nfilter: broken\n"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(projectFilters, ".mappings.yaml"), []byte("version: 1\nmap:\n  gs: git\n"), 0o644)).To(Succeed())
@@ -573,7 +572,7 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"status"}) })
 
-			Expect(out).To(ContainSubstring("ccp filter status\n\nproject trust: untrusted (.)\n\nshowing 4 rows"))
+			Expect(out).To(ContainSubstring("cmdshape filter status\n\nproject trust: untrusted (.)\n\nshowing 4 rows"))
 			Expect(out).To(ContainSubstring("| TOOL"))
 			Expect(out).To(ContainSubstring("| FILTER"))
 			Expect(out).To(ContainSubstring("| SOURCE"))
@@ -581,17 +580,17 @@ var _ = Describe("filter", func() {
 			Expect(out).To(ContainSubstring("| git"))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(filepath.Join(projectFilters, "git.yaml"))))
 			Expect(out).To(ContainSubstring("| gs"))
-			Expect(out).To(ContainSubstring(displayFilterStatusPath(filteryaml.RegistryStatusRow{
+			Expect(out).To(ContainSubstring(truncateTailForDisplay(displayFilterStatusPath(filteryaml.RegistryStatusRow{
 				FilterPath: filepath.Join(projectFilters, ".mappings.yaml"),
 				Target:     "git",
-			})))
+			}), 38)))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(filepath.Join(projectFilters, "broken.yaml"))))
 			Expect(out).To(ContainSubstring("invalid filter:"))
 			Expect(out).To(ContainSubstring("untrusted"))
 			Expect(out).To(ContainSubstring("| -"))
 			Expect(out).To(ContainSubstring(compactFilterStatusPath(homeFilters)))
 			Expect(out).To(ContainSubstring("source error:"))
-			Expect(out).To(ContainSubstring("Next: run `ccp filter prompt <filter-id>` for the embedded agent workflow"))
+			Expect(out).To(ContainSubstring("Next: run `cmdshape filter prompt <filter-id>` for the embedded agent workflow"))
 		})
 
 		It("shows project overrides and mapping target failures", func() {
@@ -600,14 +599,14 @@ var _ = Describe("filter", func() {
 			project := filepath.Join(tmp, "repo")
 			prev, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(os.MkdirAll(filepath.Join(project, ".ccp", "filters"), 0o755)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Join(home, ".config", "ccp", "filters"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(project, ".cmdshape", "filters"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(home, ".config", "cmdshape", "filters"), 0o755)).To(Succeed())
 			Expect(os.Chdir(project)).To(Succeed())
 			DeferCleanup(func() { _ = os.Chdir(prev) })
 			setHomeDir(home)
 
-			projectFilters := filepath.Join(project, ".ccp", "filters")
-			homeFilters := filepath.Join(home, ".config", "ccp", "filters")
+			projectFilters := filepath.Join(project, ".cmdshape", "filters")
+			homeFilters := filepath.Join(home, ".config", "cmdshape", "filters")
 			Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(homeFilters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(homeFilters, ".mappings.yaml"), []byte("version: 1\nmap:\n  py: python\n"), 0o644)).To(Succeed())
@@ -640,7 +639,7 @@ var _ = Describe("filter", func() {
 
 			out := captureStdout(func() error { return RunFilter([]string{"status"}) })
 
-			Expect(strings.TrimSpace(out)).To(Equal("ccp filter status\n\nproject trust: absent (.)\n\nNo filters found.\n\nNext: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters."))
+			Expect(strings.TrimSpace(out)).To(Equal("cmdshape filter status\n\nproject trust: absent (.)\n\nNo filters found.\n\nNext: run `cmdshape filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters."))
 		})
 	})
 
@@ -655,7 +654,7 @@ var _ = Describe("filter", func() {
 			tmp := GinkgoT().TempDir()
 			home := filepath.Join(tmp, "home")
 			project := filepath.Join(tmp, "repo")
-			filters := filepath.Join(project, ".ccp", "filters")
+			filters := filepath.Join(project, ".cmdshape", "filters")
 			Expect(os.MkdirAll(filters, 0o755)).To(Succeed())
 			Expect(os.MkdirAll(home, 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
@@ -668,7 +667,7 @@ var _ = Describe("filter", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			out := captureStdout(func() error { return RunFilter([]string{"trust"}) })
-			Expect(out).To(ContainSubstring("ccp filter trust: trusted " + canonicalProject))
+			Expect(out).To(ContainSubstring("cmdshape filter trust: trusted " + canonicalProject))
 			status := captureStdout(func() error { return RunFilter([]string{"status"}) })
 			Expect(status).To(ContainSubstring("project trust: trusted (.)"))
 			Expect(status).To(ContainSubstring("| git"))
@@ -680,7 +679,7 @@ var _ = Describe("filter", func() {
 			Expect(status).To(ContainSubstring("| changed"))
 
 			out = captureStdout(func() error { return RunFilter([]string{"untrust"}) })
-			Expect(out).To(ContainSubstring("ccp filter untrust: removed approval"))
+			Expect(out).To(ContainSubstring("cmdshape filter untrust: removed approval"))
 			status = captureStdout(func() error { return RunFilter([]string{"status"}) })
 			Expect(status).To(ContainSubstring("project trust: untrusted (.)"))
 		})
@@ -689,7 +688,7 @@ var _ = Describe("filter", func() {
 			tmp := GinkgoT().TempDir()
 			home := filepath.Join(tmp, "home")
 			project := filepath.Join(tmp, "repo")
-			filters := filepath.Join(project, ".ccp", "filters")
+			filters := filepath.Join(project, ".cmdshape", "filters")
 			Expect(os.MkdirAll(filters, 0o755)).To(Succeed())
 			Expect(os.MkdirAll(home, 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte(validStatusFilterYAML("git")), 0o644)).To(Succeed())
@@ -730,12 +729,12 @@ func appendFilterPerformanceMetrics(path string) {
 		KeptBytes:             20,
 		DurationMS:            25,
 		FilterSourceKind:      "project",
-		FilterPath:            "/repo/.ccp/filters/python.yaml",
+		FilterPath:            "/repo/.cmdshape/filters/python.yaml",
 		FilterHash:            "hash-a",
 		RegistryBuildRecorded: true,
 		RegistryBuildMS:       10,
 		RegistrySources: []metrics.RegistrySourceBuildMetric{
-			{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 8},
+			{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 2, DurationMS: 8},
 		},
 	})).To(Succeed())
 	Expect(metrics.Append(path, metrics.RunMetric{
@@ -748,7 +747,7 @@ func appendFilterPerformanceMetrics(path string) {
 		RegistryBuildRecorded: true,
 		RegistryBuildMS:       20,
 		RegistrySources: []metrics.RegistrySourceBuildMetric{
-			{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 12},
+			{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 2, DurationMS: 12},
 		},
 	})).To(Succeed())
 	Expect(metrics.Append(path, metrics.RunMetric{

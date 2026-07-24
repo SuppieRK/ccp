@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/recovery"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/recovery"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,13 +20,13 @@ var _ = Describe("recovery commands", func() {
 	})
 
 	It("validates actions and renders help", func() {
-		Expect(RunRecovery(nil)).To(MatchError("usage: ccp recovery enable|disable|list|purge"))
-		Expect(RunRecovery([]string{"enable", "extra"})).To(MatchError("ccp recovery enable does not accept arguments"))
+		Expect(RunRecovery(nil)).To(MatchError("usage: cmdshape recovery enable|disable|list|purge"))
+		Expect(RunRecovery([]string{"enable", "extra"})).To(MatchError("cmdshape recovery enable does not accept arguments"))
 		Expect(RunRecovery([]string{"unknown"})).To(MatchError(`unknown recovery action "unknown"`))
 
 		out, err := captureStdout(func() error { return RunRecovery([]string{"help"}) })
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(ContainSubstring("ccp recovery - manage opt-in bounded raw failure recovery"))
+		Expect(out).To(ContainSubstring("cmdshape recovery - manage opt-in bounded raw failure recovery"))
 		Expect(out).To(ContainSubstring("disabled by default"))
 	})
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/benchmark"
+	"github.com/SuppieRK/cmdshape/internal/benchmark"
 )
 
 var (
@@ -41,7 +41,7 @@ func run(args []string, stderr io.Writer) int {
 	report, err := runBenchmarks(benchmark.RunOptions{
 		FixturesRoot:   resolvedRoot,
 		ArtifactsDir:   cfg.artifactsDir,
-		ProxyBinary:    "ccp",
+		ProxyBinary:    "cmdshape",
 		Timeout:        2 * time.Minute,
 		PreviousReport: cfg.previousReport,
 	})
@@ -65,7 +65,7 @@ func parseConfig(args []string) (config, int, error) {
 	var artifactsDir string
 	var tool string
 	var previousReport string
-	flags := flag.NewFlagSet("ccp-ci", flag.ContinueOnError)
+	flags := flag.NewFlagSet("cmdshape-ci", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.StringVar(&fixturesRoot, "fixtures-root", filepath.Join("testdata", "benchmarks"), "fixture root")
 	flags.StringVar(&artifactsDir, "artifacts-dir", filepath.Join(".artifacts", "benchmark"), "artifact output dir")

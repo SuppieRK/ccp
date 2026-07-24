@@ -42,12 +42,12 @@ var _ = DescribeTable("Windows atomic replacement retry errors",
 var _ = Describe("Windows contained file helpers", func() {
 	It("removes a regular file relative to an opened parent", func() {
 		root := GinkgoT().TempDir()
-		parent, base, err := openWindowsContainedParent(root, filepath.Join(".ccp", "pending.json"))
+		parent, base, err := openWindowsContainedParent(root, filepath.Join(".cmdshape", "pending.json"))
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
 			_ = windows.CloseHandle(parent)
 		})
-		path := filepath.Join(root, ".ccp", base)
+		path := filepath.Join(root, ".cmdshape", base)
 		Expect(os.WriteFile(path, []byte("pending"), 0o600)).To(Succeed())
 
 		Expect(removeWindowsRelative(parent, base)).To(Succeed())
@@ -58,12 +58,12 @@ var _ = Describe("Windows contained file helpers", func() {
 	DescribeTable("opens files with native write dispositions",
 		func(flag int, initial, write, expected string) {
 			root := GinkgoT().TempDir()
-			parent, base, err := openWindowsContainedParent(root, filepath.Join(".ccp", "state.txt"))
+			parent, base, err := openWindowsContainedParent(root, filepath.Join(".cmdshape", "state.txt"))
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_ = windows.CloseHandle(parent)
 			})
-			path := filepath.Join(root, ".ccp", base)
+			path := filepath.Join(root, ".cmdshape", base)
 			if initial != "" {
 				Expect(os.WriteFile(path, []byte(initial), 0o600)).To(Succeed())
 			}

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: maven
 about: Trim Maven info-level boilerplate aggressively, keep build phases and warnings visible, preserve actionable compiler and test failure blocks, and leave terse reactor-selection failures close to native.

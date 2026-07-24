@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCCPCI(t *testing.T) {
+func TestCmdshape(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CCP CI Suite")
+	RunSpecs(t, "cmdshape Suite")
 }

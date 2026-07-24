@@ -14,12 +14,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	corefilters "go-command-compression-proxy/internal/filters"
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/metrics"
+	corefilters "github.com/SuppieRK/cmdshape/internal/filters"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 )
 
-var _ = Describe("nested and chained ccp execution", Ordered, func() {
+var _ = Describe("nested and chained cmdshape execution", Ordered, func() {
 	var (
 		binDir  string
 		binPath string
@@ -34,8 +34,8 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 		binDir = filepath.Join(tmp, "bin")
 		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
 
-		binPath = filepath.Join(binDir, "ccp")
-		build := exec.Command("go", "build", "-o", binPath, "./cmd/ccp")
+		binPath = filepath.Join(binDir, "cmdshape")
+		build := exec.Command("go", "build", "-o", binPath, "./cmd/cmdshape")
 		build.Dir = filteryaml.ProjectRootFromSource()
 		build.Env = append(os.Environ(), "GOCACHE="+filepath.Join(tmp, ".gocache"))
 		out, err := build.CombinedOutput()
@@ -52,7 +52,7 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 		return root
 	}
 
-	runCCP := func(workdir string, args ...string) (string, string, error) {
+	runCmdshape := func(workdir string, args ...string) (string, string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
@@ -72,15 +72,15 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 	}
 
 	expectSuccessfulRun := func(workdir string, args ...string) string {
-		stdout, stderr, err := runCCP(workdir, args...)
+		stdout, stderr, err := runCmdshape(workdir, args...)
 		debug := fmt.Sprintf("command: %s\nstdout:\n%s\nstderr:\n%s", strings.Join(args, " "), stdout, stderr)
 		Expect(err).NotTo(HaveOccurred(), debug)
 		Expect(stderr).To(BeEmpty(), debug)
 		return stdout
 	}
 
-	Context("when nested ccp invocations are composed through shell fanout", func() {
-		DescribeTable("handles nested ccp grep fanout without hanging",
+	Context("when nested cmdshape invocations are composed through shell fanout", func() {
+		DescribeTable("handles nested cmdshape grep fanout without hanging",
 			func(args []string, expectedSubstrings []string) {
 				workdir := newWorkspace()
 
@@ -92,15 +92,15 @@ var _ = Describe("nested and chained ccp execution", Ordered, func() {
 				Expect(stdout).NotTo(ContainSubstring("ignored.txt"))
 			},
 			Entry("via find -exec fanout",
-				[]string{"find", ".", "-type", "f", "-not", "-path", "*/.git/*", "-exec", "ccp", "grep", "-nH", "--", "v2", "{}", "+"},
+				[]string{"find", ".", "-type", "f", "-not", "-path", "*/.git/*", "-exec", "cmdshape", "grep", "-nH", "--", "v2", "{}", "+"},
 				[]string{"./src/alpha.txt:\n  1: alpha v2", "./src/beta.txt:\n  1: beta v2\n  2: beta v2 again"},
 			),
 			Entry("via find and xargs pipelines",
-				[]string{"bash", "-lc", `find . -type f -not -path '*/.git/*' -print0 | ccp xargs -0 -r ccp grep -nH -- 'v2'`},
+				[]string{"bash", "-lc", `find . -type f -not -path '*/.git/*' -print0 | cmdshape xargs -0 -r cmdshape grep -nH -- 'v2'`},
 				[]string{"./src/alpha.txt:\n  1: alpha v2", "./src/beta.txt:\n  1: beta v2\n  2: beta v2 again"},
 			),
 			Entry("via chained shell pipelines",
-				[]string{"bash", "-lc", `find . -type f -not -path '*/.git/*' -exec ccp grep -nH -- 'v2' {} + | tail -20`},
+				[]string{"bash", "-lc", `find . -type f -not -path '*/.git/*' -exec cmdshape grep -nH -- 'v2' {} + | tail -20`},
 				[]string{"./src/alpha.txt:", "./src/beta.txt:"},
 			),
 		)
@@ -126,7 +126,7 @@ printf 'internal/metrics/store.go:90:1: too many errors\n' >&2`
 
 			Expect(stdout).To(Equal("internal/runner.go:44:7: undefined: otherSymbol\ninternal/metrics/store.go:90:1: too many errors\n"))
 
-			history, err := metrics.QueryHistory(filepath.Join(workdir, ".ccp", "gain.db"), metrics.QueryOptions{})
+			history, err := metrics.QueryHistory(filepath.Join(workdir, ".cmdshape", "gain.db"), metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(HaveLen(1))
 			Expect(history[0].Tool).To(Equal("bash"))
@@ -194,7 +194,7 @@ var _ = Describe("runner execution edge cases", func() {
 		It("returns raw-mode start failures with shell-not-found exit semantics", func() {
 			runner := NewRunnerWithOptions(Options{Raw: true})
 
-			code, err := runner.Run([]string{"__ccp_missing_binary__"})
+			code, err := runner.Run([]string{"__cmdshape_missing_binary__"})
 
 			Expect(code).To(Equal(127))
 			Expect(err).To(HaveOccurred())
@@ -229,7 +229,7 @@ var _ = Describe("runner execution edge cases", func() {
 			},
 			Entry("for filtered stdout writes",
 				func() *Runner { return &Runner{sources: []corefilters.FilterSource{}} },
-				[]string{"sh", "-c", "printf 'hello from ccp\\n'; exit 7"},
+				[]string{"sh", "-c", "printf 'hello from cmdshape\\n'; exit 7"},
 				true,
 			),
 			Entry("for direct raw-mode descriptors where native execution owns write handling",

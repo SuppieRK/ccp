@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: terraform
 about: Compact terraform plan output by trimming generic legend, note, and no-change explanation lines while keeping the action block, summary, and parse failures reusable. Explicit JSON plan output stays native.

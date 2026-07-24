@@ -1,8 +1,8 @@
 package operations_test
 
 import (
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/filters/operations"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/filters/operations"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

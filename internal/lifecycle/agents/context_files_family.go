@@ -7,29 +7,31 @@ import (
 )
 
 const (
-	ccpManagedBlockStart = "<!-- BEGIN: CCP MANAGED BLOCK -->"
-	ccpManagedBlockEnd   = "<!-- END: CCP MANAGED BLOCK -->"
-	ccpRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
-	ccpFilterPromptHint  = "When asked to create or improve CCP YAML filters, run `ccp filter prompt` for the embedded self-service workflow."
+	cmdshapeManagedBlockStart = "<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"
+	cmdshapeManagedBlockEnd   = "<!-- END: CMDSHAPE MANAGED BLOCK -->"
+	legacyManagedBlockStart   = "<!-- BEGIN: CCP MANAGED BLOCK -->"
+	legacyManagedBlockEnd     = "<!-- END: CCP MANAGED BLOCK -->"
+	cmdshapeRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `cmdshape --raw` as an escape hatch."
+	cmdshapeFilterPromptHint  = "When asked to create or improve cmdshape YAML filters, run `cmdshape filter prompt` for the embedded self-service workflow."
 )
 
-func ccpManagedBlockTemplate() string {
-	return ccpManagedBlockStart + "\n" + ccpManagedGuidanceMarkdown() + ccpManagedBlockEnd + "\n"
+func cmdshapeManagedBlockTemplate() string {
+	return cmdshapeManagedBlockStart + "\n" + cmdshapeManagedGuidanceMarkdown() + cmdshapeManagedBlockEnd + "\n"
 }
 
-func ccpManagedGuidanceMarkdown() string {
-	return "## CCP Integration (Managed)\n\n" +
-		"Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.\n\n" +
+func cmdshapeManagedGuidanceMarkdown() string {
+	return "## cmdshape Integration (Managed)\n\n" +
+		"Use `cmdshape` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions.\n\n" +
 		"Examples:\n" +
-		"- `ccp ls -la`\n" +
-		"- `ccp git status --short`\n" +
-		"- `ccp go test -count=1 ./...`\n" +
-		"- `ccp echo chain-ok && ccp echo chain-done`\n" +
-		"- `ccp false || ccp echo chain-recovered`\n" +
-		"- `ccp nl -ba spec.md | ccp sed -n '1,260p'`\n\n" +
-		ccpRawEscapeHatch + "\n\n" +
-		ccpFilterPromptHint + "\n\n" +
-		"If `ccp` is unavailable, run the original command and note that CCP is not installed.\n"
+		"- `cmdshape ls -la`\n" +
+		"- `cmdshape git status --short`\n" +
+		"- `cmdshape go test -count=1 ./...`\n" +
+		"- `cmdshape echo chain-ok && cmdshape echo chain-done`\n" +
+		"- `cmdshape false || cmdshape echo chain-recovered`\n" +
+		"- `cmdshape nl -ba spec.md | cmdshape sed -n '1,260p'`\n\n" +
+		cmdshapeRawEscapeHatch + "\n\n" +
+		cmdshapeFilterPromptHint + "\n\n" +
+		"If `cmdshape` is unavailable, run the original command and note that cmdshape is not installed.\n"
 }
 
 func verifyManagedContextBlock(target, missingFmt, markersFmt string) error {
@@ -38,20 +40,20 @@ func verifyManagedContextBlock(target, missingFmt, markersFmt string) error {
 		return fmt.Errorf(missingFmt, target)
 	}
 	s := string(data)
-	if !strings.Contains(s, ccpManagedBlockStart) || !strings.Contains(s, ccpManagedBlockEnd) {
+	if !strings.Contains(s, cmdshapeManagedBlockStart) || !strings.Contains(s, cmdshapeManagedBlockEnd) {
 		return fmt.Errorf(markersFmt, target)
 	}
-	if !strings.Contains(s, ccpRawEscapeHatch) {
+	if !strings.Contains(s, cmdshapeRawEscapeHatch) {
 		return fmt.Errorf(markersFmt, target)
 	}
-	if !strings.Contains(s, ccpFilterPromptHint) {
+	if !strings.Contains(s, cmdshapeFilterPromptHint) {
 		return fmt.Errorf(markersFmt, target)
 	}
 	return nil
 }
 
 func upsertManagedContextBlock(path string) (string, error) {
-	block := ccpManagedBlockTemplate()
+	block := cmdshapeManagedBlockTemplate()
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -61,10 +63,8 @@ func upsertManagedContextBlock(path string) (string, error) {
 	}
 	existing := string(raw)
 
-	start := strings.Index(existing, ccpManagedBlockStart)
-	end := strings.Index(existing, ccpManagedBlockEnd)
-	if start >= 0 && end >= start {
-		end += len(ccpManagedBlockEnd)
+	start, end, found := managedBlockBounds(existing)
+	if found {
 		tailStart := skipSingleLF(existing, end)
 		updated := existing[:start] + strings.TrimRight(block, "\n") + "\n" + existing[tailStart:]
 		return normalizeManagedFile(updated), nil
@@ -86,18 +86,31 @@ func removeManagedContextBlock(path string) (updated string, changed bool, remov
 		return "", false, false, err
 	}
 	existing := string(raw)
-	start := strings.Index(existing, ccpManagedBlockStart)
-	end := strings.Index(existing, ccpManagedBlockEnd)
-	if start < 0 || end < start {
+	start, end, found := managedBlockBounds(existing)
+	if !found {
 		return "", false, false, nil
 	}
-	end += len(ccpManagedBlockEnd)
 	tailStart := skipSingleLF(existing, end)
 	merged := strings.TrimSpace(existing[:start] + existing[tailStart:])
 	if merged == "" {
 		return "", true, true, nil
 	}
 	return normalizeManagedFile(merged), true, false, nil
+}
+
+func managedBlockBounds(existing string) (int, int, bool) {
+	for _, markers := range [][2]string{
+		{cmdshapeManagedBlockStart, cmdshapeManagedBlockEnd},
+		{legacyManagedBlockStart, legacyManagedBlockEnd},
+	} {
+		start := strings.Index(existing, markers[0])
+		end := strings.Index(existing, markers[1])
+		if start < 0 || end < start {
+			continue
+		}
+		return start, end + len(markers[1]), true
+	}
+	return 0, 0, false
 }
 
 func normalizeManagedFile(in string) string {
@@ -173,7 +186,7 @@ func (a ManagedContextFileAdapter) Plan(ctx Context) []PlannedArtifact {
 	return []PlannedArtifact{{
 		Kind:    ArtifactSettings,
 		Path:    a.targetPath(ctx),
-		Content: ccpManagedBlockTemplate(),
+		Content: cmdshapeManagedBlockTemplate(),
 		Perm:    0o644,
 	}}
 }

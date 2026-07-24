@@ -1,35 +1,35 @@
-# Tutorial: Create Your Own CCP Filter
+# Tutorial: Create Your Own cmdshape Filter
 
-This guide shows how to create, edit, and test your own CCP filters.
+This guide shows how to create, edit, and test your own cmdshape filters.
 
 It is for user-authored filters, not built-in repository filters.
 
 By the end, you will know how to:
 
-- scaffold a new filter in `./.ccp/filters/`
-- inspect which filters are active, overridden, or broken with `ccp filter status`
+- scaffold a new filter in `./.cmdshape/filters/`
+- inspect which filters are active, overridden, or broken with `cmdshape filter status`
 - edit the YAML safely
 - test the filter live against a command
-- capture a real fixture with `ccp capture`
-- replay that fixture with `ccp verify`
+- capture a real fixture with `cmdshape capture`
+- replay that fixture with `cmdshape verify`
 
 ## The Quick Mental Model
 
-CCP has two user-facing filter locations:
+cmdshape has two user-facing filter locations:
 
-- `./.ccp/filters/` for project-local filters that travel with one repo
-- `~/.config/ccp/filters/` for home-scoped filters you want across repos
+- `./.cmdshape/filters/` for project-local filters that travel with one repo
+- `~/.config/cmdshape/filters/` for home-scoped filters you want across repos
 
-If you are just getting started, use `./.ccp/filters/`.
+If you are just getting started, use `./.cmdshape/filters/`.
 
-Project-local filters are intended to stay visible to Git so they can travel with a repository. CCP-generated repo-local state, such as `./.ccp/gain.db`, is ignored through a CCP-owned `./.ccp/.gitignore`; do not customize that nested ignore file because CCP rewrites it authoritatively.
+Project-local filters are intended to stay visible to Git so they can travel with a repository. cmdshape-generated repo-local state, such as `./.cmdshape/gain.db`, is ignored through a cmdshape-owned `./.cmdshape/.gitignore`; do not customize that nested ignore file because cmdshape rewrites it authoritatively.
 
 That is what this tutorial covers.
 
-When you are unsure which filter CCP will actually use, run:
+When you are unsure which filter cmdshape will actually use, run:
 
 ```bash
-ccp filter status
+cmdshape filter status
 ```
 
 It shows all discovered rows from the active filter scopes and helps answer:
@@ -53,7 +53,7 @@ useful-line-2
 Done in 0.01s.
 ```
 
-Our filter will keep the useful lines and remove the boilerplate so CCP prints:
+Our filter will keep the useful lines and remove the boilerplate so cmdshape prints:
 
 ```text
 useful-line-1
@@ -65,18 +65,18 @@ We will also keep JSON output untouched.
 ## Before You Start
 
 - examples in this guide assume Bash on macOS or Linux
-- make sure `ccp` is installed and on your `PATH`
+- make sure `cmdshape` is installed and on your `PATH`
 - work from the root of a project directory
-- make sure your `ccp` build includes `ccp verify`; if `ccp verify --help` says it is dev-only, upgrade first
+- make sure your `cmdshape` build includes `cmdshape verify`; if `cmdshape verify --help` says it is dev-only, upgrade first
 - the scaffold already points at the public schema URL, so you do not need a local schema file to follow this tutorial
 
 Useful commands in this tutorial:
 
 ```bash
-ccp filter new demo-tool
-ccp filter status
-ccp capture --dir fixture-run -- ./demo-tool run
-ccp verify --dir fixture-run
+cmdshape filter new demo-tool
+cmdshape filter status
+cmdshape capture --dir fixture-run -- ./demo-tool run
+cmdshape verify --dir fixture-run
 ```
 
 ## Step 1: Create A Tiny Command To Filter
@@ -135,13 +135,13 @@ Done in 0.01s.
 Run:
 
 ```bash
-ccp filter new demo-tool
+cmdshape filter new demo-tool
 ```
 
-CCP writes the scaffold file and ensures the `.mappings.yaml` file contains an identity mapping:
+cmdshape writes the scaffold file and ensures the `.mappings.yaml` file contains an identity mapping:
 
-- `./.ccp/filters/demo-tool.yaml`
-- `./.ccp/filters/.mappings.yaml`
+- `./.cmdshape/filters/demo-tool.yaml`
+- `./.cmdshape/filters/.mappings.yaml`
 
 The scaffold starts safe. It contains a passthrough case, so nothing breaks while you are still authoring the real
 behavior.
@@ -156,25 +156,25 @@ map:
 
 That means commands such as `./demo-tool run` still resolve to the `demo-tool` filter id.
 
-## Step 2.5: Check Which Filter CCP Will Use
+## Step 2.5: Check Which Filter cmdshape Will Use
 
-Before you start editing behavior, confirm that CCP can see your new project-local filter:
+Before you start editing behavior, confirm that cmdshape can see your new project-local filter:
 
 ```bash
-ccp filter status
+cmdshape filter status
 ```
 
 You should see a row for `demo-tool` coming from the project scope:
 
 ```text
-ccp filter status
+cmdshape filter status
 
 showing 1 rows
 
 +-----------+------------------------------+---------+--------+
 | TOOL      | FILTER                       | SOURCE  | STATUS |
 +-----------+------------------------------+---------+--------+
-| demo-tool | ./.ccp/filters/demo-tool.yaml | project | ok     |
+| demo-tool | ./.cmdshape/filters/demo-tool.yaml | project | ok     |
 +-----------+------------------------------+---------+--------+
 ```
 
@@ -184,15 +184,15 @@ As you add more filters over time, this command also shows:
 - broken filter files with parse or validation errors
 - broken `.mappings.yaml` rows and missing mapping targets
 
-Use `ccp filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether CCP
+Use `cmdshape filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether cmdshape
 is using the filter you think it is.
 
 ## Step 3: Start With A Minimal Real Filter
 
-Edit `./.ccp/filters/demo-tool.yaml` so it matches this:
+Edit `./.cmdshape/filters/demo-tool.yaml` so it matches this:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: demo-tool
 about: Compact demo-tool run boilerplate while preserving JSON output and any unmodeled commands.
@@ -229,10 +229,10 @@ Remember that case order matters. The first matching case wins.
 
 ## Step 4: Test The Filter Live
 
-Run the command through CCP:
+Run the command through cmdshape:
 
 ```bash
-ccp ./demo-tool run
+cmdshape ./demo-tool run
 ```
 
 You should now see:
@@ -245,7 +245,7 @@ useful-line-2
 Now test the structured mode:
 
 ```bash
-ccp ./demo-tool json
+cmdshape ./demo-tool json
 ```
 
 You should still get the original JSON unchanged:
@@ -257,7 +257,7 @@ You should still get the original JSON unchanged:
 And a failure path:
 
 ```bash
-ccp ./demo-tool fail
+cmdshape ./demo-tool fail
 ```
 
 Expected output:
@@ -276,10 +276,10 @@ This is the behavior you usually want while a filter is still growing.
 Once the filter behaves the way you want, capture a fixture from a real command run:
 
 ```bash
-ccp capture --dir fixture-run -- ./demo-tool run
+cmdshape capture --dir fixture-run -- ./demo-tool run
 ```
 
-CCP writes these files into `fixture-run/`:
+cmdshape writes these files into `fixture-run/`:
 
 - `command.yaml`
 - `stdout.txt`
@@ -312,14 +312,14 @@ useful-line-2
 Two important rules:
 
 - do not hand-edit the `00000|` sequence prefixes in `stdout.txt` or `stderr.txt`
-- if the capture is wrong, regenerate it with `ccp capture`
+- if the capture is wrong, regenerate it with `cmdshape capture`
 
-## Step 6: Replay The Fixture With `ccp verify`
+## Step 6: Replay The Fixture With `cmdshape verify`
 
 Now replay that fixture through the current filter:
 
 ```bash
-ccp verify --dir fixture-run
+cmdshape verify --dir fixture-run
 ```
 
 This writes two more files:
@@ -362,8 +362,8 @@ You should test the cases you want to preserve, not just the cases you want to c
 For the JSON path:
 
 ```bash
-ccp capture --dir fixture-json -- ./demo-tool json
-ccp verify --dir fixture-json
+cmdshape capture --dir fixture-json -- ./demo-tool json
+cmdshape verify --dir fixture-json
 ```
 
 The generated `verify-output.txt` should still be:
@@ -459,8 +459,8 @@ Rules to remember:
 Important matching rules:
 
 - matching happens against the command arguments after the executable name
-- for `ccp ./demo-tool run`, `first_is: run` matches because CCP matches `run`, not `./demo-tool`
-- if you specify multiple predicates in one `when_arguments` block, they are all required; CCP treats them as AND, not
+- for `cmdshape ./demo-tool run`, `first_is: run` matches because cmdshape matches `run`, not `./demo-tool`
+- if you specify multiple predicates in one `when_arguments` block, they are all required; cmdshape treats them as AND, not
   OR
 
 The most useful matchers are:
@@ -524,7 +524,7 @@ Good practice:
 
 ### `passthrough`: Preserve Output Exactly
 
-`passthrough: true` tells CCP not to apply `compress_output` rules for that case.
+`passthrough: true` tells cmdshape not to apply `compress_output` rules for that case.
 
 ```yaml
 - id: json-passthrough
@@ -677,7 +677,7 @@ compress_output:
 
 Here, `{{value}}` is the number of omitted lines.
 
-If you omit `print`, CCP still truncates at the requested count; you just do not get a summary line.
+If you omit `print`, cmdshape still truncates at the requested count; you just do not get a summary line.
 
 Use `max` when:
 
@@ -686,7 +686,7 @@ Use `max` when:
 
 ### `normalize_command`: Add Safe Defaults When Needed
 
-`normalize_command` lets CCP add arguments before execution.
+`normalize_command` lets cmdshape add arguments before execution.
 
 This is useful, but it is more advanced than simple filtering. Use it sparingly.
 
@@ -728,7 +728,7 @@ Some flags consume the next argv token. If you do not declare them, positional m
 What this field means:
 
 - it is a top-level list shared by the whole filter
-- each listed flag tells CCP: "the next token belongs to this flag"
+- each listed flag tells cmdshape: "the next token belongs to this flag"
 - this only matters for split-form arguments such as `--output report.txt`
 - do not list attached forms such as `--output=report.txt`; the value is already attached to the same token
 
@@ -742,7 +742,7 @@ flags_consuming_next_arg:
 
 Why this matters:
 
-- CCP needs to know which tokens are real positionals and which tokens are just flag values
+- cmdshape needs to know which tokens are real positionals and which tokens are just flag values
 - without this list, a flag value can be mistaken for a positional argument
 - that can break predicates like `no_positionals` and `positionals_lack_any`
 - it can also break `normalize_command.append_if_no_positionals`
@@ -753,7 +753,7 @@ Concrete example:
 my-tool --output report.txt
 ```
 
-If `--output` is not listed in `flags_consuming_next_arg`, CCP may incorrectly treat `report.txt` as a positional
+If `--output` is not listed in `flags_consuming_next_arg`, cmdshape may incorrectly treat `report.txt` as a positional
 argument.
 
 That means this case can fail to match when you expected it to match:
@@ -777,7 +777,7 @@ my-tool -C packages/app run test
 ```
 
 If `-C` consumes the next token, then `packages/app` is not a real positional argument. Without
-`flags_consuming_next_arg`, CCP can misread that command shape too.
+`flags_consuming_next_arg`, cmdshape can misread that command shape too.
 
 Example filter snippet:
 
@@ -912,7 +912,7 @@ lines:
 
 ## When To Edit `.mappings.yaml`
 
-Most first-time filters do not need extra mappings beyond the identity mapping that `ccp filter new` already adds.
+Most first-time filters do not need extra mappings beyond the identity mapping that `cmdshape filter new` already adds.
 
 Add more mappings only when multiple command spellings should share one filter.
 
@@ -946,7 +946,7 @@ Check these first:
 - the command shape in `command.yaml`
 - the order of your `cases`
 - whether an earlier case is catching the command first
-- `ccp filter status` to confirm the filter is active instead of overridden or broken
+- `cmdshape filter status` to confirm the filter is active instead of overridden or broken
 
 ### JSON got compacted when I wanted passthrough
 
@@ -954,7 +954,7 @@ Add an explicit passthrough case above the more general case.
 
 ### I changed the YAML, but the fixture still looks old
 
-Run `ccp verify --dir ...` again. `output.txt` is what capture wrote earlier; `verify-output.txt` is what the current
+Run `cmdshape verify --dir ...` again. `output.txt` is what capture wrote earlier; `verify-output.txt` is what the current
 filter produces now.
 
 ### The replay files have broken sequence numbers
@@ -965,17 +965,17 @@ Do not renumber them by hand. Recapture the fixture.
 
 Once you are comfortable with this tutorial, explore these next:
 
-- `schemas/ccp-filter.schema.json` for the full field structure
-- `./.ccp/filters/.mappings.yaml` for aliasing multiple command names to one filter
-- `~/.config/ccp/filters/` when you want the same custom filter across many repos
-- `ccp filter status` when you need to inspect active, overridden, or broken filter rows across scopes
+- `schemas/cmdshape-filter.schema.json` for the full field structure
+- `./.cmdshape/filters/.mappings.yaml` for aliasing multiple command names to one filter
+- `~/.config/cmdshape/filters/` when you want the same custom filter across many repos
+- `cmdshape filter status` when you need to inspect active, overridden, or broken filter rows across scopes
 
 The shortest useful loop to remember is:
 
 ```bash
-ccp filter new my-tool
-# edit ./.ccp/filters/my-tool.yaml
-ccp ./my-tool some-command
-ccp capture --dir fixture -- ./my-tool some-command
-ccp verify --dir fixture
+cmdshape filter new my-tool
+# edit ./.cmdshape/filters/my-tool.yaml
+cmdshape ./my-tool some-command
+cmdshape capture --dir fixture -- ./my-tool some-command
+cmdshape verify --dir fixture
 ```

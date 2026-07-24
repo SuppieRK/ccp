@@ -24,7 +24,7 @@ var _ = ginkgo.Describe("bash hook templates", func() {
 				Expect(script).NotTo(ContainSubstring(forbidden), name)
 			}
 		},
-		ginkgo.Entry("claude", "claude", bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")),
-		ginkgo.Entry("codebuddy", "codebuddy", bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")),
+		ginkgo.Entry("claude", "claude", bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log")),
+		ginkgo.Entry("codebuddy", "codebuddy", bashRewriteHookScriptContent("codebuddy", "cmdshape-codebuddy-hook.log")),
 	)
 })

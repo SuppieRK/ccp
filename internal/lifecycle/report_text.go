@@ -11,7 +11,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"go-command-compression-proxy/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 )
 
 const (
@@ -103,7 +103,7 @@ func gainHeadline(total metrics.SummaryTotal, filters filtersEnvelope, extraTags
 }
 
 func historyTitle(filters filtersEnvelope, extraTags ...string) string {
-	return "ccp history" + compactFilterSuffix(filters, extraTags...)
+	return "cmdshape history" + compactFilterSuffix(filters, extraTags...)
 }
 
 func formatPercentText(v float64) string {

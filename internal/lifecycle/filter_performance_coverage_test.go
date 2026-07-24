@@ -3,7 +3,7 @@ package lifecycle
 import (
 	"path/filepath"
 
-	"go-command-compression-proxy/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 )
 
 type reportFlags struct {
@@ -59,7 +59,7 @@ type periodEnvelope struct {
 const (
 	noResultsMsg     = "No results for selected filters."
 	savingsPctFormat = "~%.2f%%"
-	gainHeaderText   = "ccp gain (estimated tokens: 4B/token)"
+	gainHeaderText   = "cmdshape gain (estimated tokens: 4B/token)"
 )
 
 var gainNow = func() time.Time {
@@ -174,7 +174,7 @@ func parseHistoryPurgeRequest(args []string) (historyPurgeRequest, bool, error) 
 	setLifecycleUsage(
 		fs,
 		"remove recorded command history older than a duration",
-		[]string{"ccp history purge --before <duration> [--global] --yes"},
+		[]string{"cmdshape history purge --before <duration> [--global] --yes"},
 		"Records at the exact cutoff are retained.",
 		"--global applies the same cutoff to registered workspace databases.",
 	)
@@ -250,7 +250,7 @@ func containedMetricsProject(cwd, metricsPath string) string {
 		return ""
 	}
 	path, err := filepath.Abs(filepath.Clean(metricsPath))
-	if err != nil || path != filepath.Join(root, ".ccp", "gain.db") {
+	if err != nil || path != filepath.Join(root, ".cmdshape", "gain.db") {
 		return ""
 	}
 	return root
@@ -500,10 +500,10 @@ func dayStartUTC(value time.Time) time.Time {
 
 func setReportUsage(fs *flag.FlagSet, name string) {
 	summary := "show token savings history"
-	usage := []string{"ccp gain [--format text|json|csv] [--table] [--limit <n>] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
+	usage := []string{"cmdshape gain [--format text|json|csv] [--table] [--limit <n>] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
 	notes := []string{
-		"Use --period only with ccp gain.",
-		"Run ccp gain after install or init to verify savings on real work.",
+		"Use --period only with cmdshape gain.",
+		"Run cmdshape gain after install or init to verify savings on real work.",
 		"Use --global to aggregate across registered workspace metrics databases.",
 		"Default text output is a short shareable summary; use --table for detailed text tables.",
 		"--limit applies to text output only; detailed text views default to 15 rows.",
@@ -512,11 +512,11 @@ func setReportUsage(fs *flag.FlagSet, name string) {
 	}
 	if name == "history" {
 		summary = "show recorded command history"
-		usage = []string{"ccp history [--format text|json|csv] [--limit <n>] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
+		usage = []string{"cmdshape history [--format text|json|csv] [--limit <n>] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
 		notes = []string{
-			"ccp history does not support --period.",
+			"cmdshape history does not support --period.",
 			"Use --global to merge history from registered workspace metrics databases; global rows include a source field.",
-			"--limit applies to text output only; ccp history defaults to 15 rows.",
+			"--limit applies to text output only; cmdshape history defaults to 15 rows.",
 			"Use --limit 0 for unlimited text rows; negative values are invalid except -1 (default behavior).",
 			"Legacy --json remains available as an alias for --format json.",
 		}

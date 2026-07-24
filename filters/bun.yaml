@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: bun
 about: Compact default `bun install` and `bun test` output by dropping Bun's version banner and spacer lines while preserving package changes, failure loci, and summary lines. Explicit reporter modes stay native.

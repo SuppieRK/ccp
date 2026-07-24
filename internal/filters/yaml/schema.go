@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 
 	"gopkg.in/yaml.v3"
 )

@@ -30,8 +30,7 @@ go.work.sum
 .env.*
 
 # --- Local runtime state ---
-**/.ccp/
-**/ccp-capture-*.*
+**/.cmdshape/
 
 # --- Cargo benchmark/test project artifacts ---
 testdata/tool-fixtures/cargo*/**/Cargo.lock

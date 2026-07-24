@@ -20,10 +20,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	core "go-command-compression-proxy/internal"
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/replay"
+	core "github.com/SuppieRK/cmdshape/internal"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 type stubCaptureRunner struct {
@@ -64,7 +64,7 @@ var _ = Describe("capture", func() {
 		Entry("uses the provided directory when set", filepath.Join("testdata", "capture"), false),
 	)
 
-	It("writes command, sequenced streams, and CCP output artifacts", func() {
+	It("writes command, sequenced streams, and cmdshape output artifacts", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{
 			output: "proxy output\n",
@@ -191,7 +191,7 @@ var _ = Describe("capture", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(command.Redacted).To(BeTrue())
 		Expect(strings.Join(command.Argv, " ")).To(ContainSubstring("***"))
-		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).NotTo(ContainSubstring(secret))
 		Expect(string(auditData)).To(ContainSubstring(`"command":"sh -c printf ***"`))
@@ -251,7 +251,7 @@ var _ = Describe("capture", func() {
 		commandArgs, _, _ := captureStdoutOnlyCommand()
 		Expect(RunCapture(append([]string{"--dir", tmp, "--"}, commandArgs...))).To(Succeed())
 
-		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"capture_invocation_start"`))
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"capture_invocation_finish"`))
@@ -276,7 +276,7 @@ var _ = Describe("capture", func() {
 		)
 
 		Expect(err).To(MatchError("could not execute " + secret))
-		auditData, readErr := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, readErr := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(readErr).NotTo(HaveOccurred())
 		Expect(string(auditData)).NotTo(ContainSubstring(secret))
 		Expect(string(auditData)).To(ContainSubstring("***"))
@@ -301,7 +301,7 @@ var _ = Describe("capture", func() {
 	})
 
 	It("returns startup errors from native capture immediately", func() {
-		_, _, err := runNativeCaptureContext(context.Background(), []string{"ccp-command-that-does-not-exist"})
+		_, _, err := runNativeCaptureContext(context.Background(), []string{"cmdshape-command-that-does-not-exist"})
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -418,14 +418,14 @@ var _ = Describe("capture", func() {
 		startedPath := filepath.Join(GinkgoT().TempDir(), "started.txt")
 		childStartedPath := filepath.Join(GinkgoT().TempDir(), "child-started.txt")
 		markerPath := filepath.Join(GinkgoT().TempDir(), "orphan.txt")
-		originalHelper := os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER")
-		Expect(os.Setenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER", "1")).To(Succeed())
+		originalHelper := os.Getenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER")
+		Expect(os.Setenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER", "1")).To(Succeed())
 		DeferCleanup(func() {
 			if originalHelper == "" {
-				Expect(os.Unsetenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER")).To(Succeed())
+				Expect(os.Unsetenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER")).To(Succeed())
 				return
 			}
-			Expect(os.Setenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER", originalHelper)).To(Succeed())
+			Expect(os.Setenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER", originalHelper)).To(Succeed())
 		})
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -522,7 +522,7 @@ func normalizeCaptureLineEndings(v string) string {
 }
 
 func TestCaptureManagedDescendantHelper(t *testing.T) {
-	if os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER") != "1" {
+	if os.Getenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER") != "1" {
 		return
 	}
 
@@ -533,7 +533,7 @@ func TestCaptureManagedDescendantHelper(t *testing.T) {
 	startedPath := os.Args[sep+1]
 	childStartedPath := os.Args[sep+2]
 	markerPath := os.Args[sep+3]
-	if os.Getenv("CCP_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
+	if os.Getenv("CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
 		if err := os.WriteFile(childStartedPath, []byte("started"), 0o644); err != nil {
 			os.Exit(5)
 		}
@@ -547,7 +547,7 @@ func TestCaptureManagedDescendantHelper(t *testing.T) {
 		os.Exit(3)
 	}
 	child := exec.Command(os.Args[0], "-test.run=TestCaptureManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath)
-	child.Env = append(os.Environ(), "CCP_CAPTURE_MANAGED_DESCENDANT_HELPER=1", "CCP_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE=child")
+	child.Env = append(os.Environ(), "CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER=1", "CMDSHAPE_CAPTURE_MANAGED_DESCENDANT_HELPER_MODE=child")
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
 	child.Stdin = os.Stdin

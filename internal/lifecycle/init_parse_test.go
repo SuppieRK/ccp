@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
 )
 
 var _ = Describe("init argument parsing", func() {

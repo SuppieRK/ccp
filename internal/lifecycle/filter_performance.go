@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go-command-compression-proxy/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 )
 
 const (
@@ -121,12 +121,12 @@ func parseFilterPerformanceFlags(args []string) (filterPerformanceFlags, bool, e
 	setLifecycleUsage(
 		fs,
 		"show YAML filter and case performance",
-		[]string{"ccp filter performance [--format text|json|csv] [--limit <n>] [--since <duration>] [--tool <tool>] [--failed] [--global]"},
+		[]string{"cmdshape filter performance [--format text|json|csv] [--limit <n>] [--since <duration>] [--tool <tool>] [--failed] [--global]"},
 		"Rows are grouped by invoked tool, resolved filter, case, and recorded filter provenance.",
 		"Existing metrics recorded before provenance support show blank source/path/hash fields.",
 		"Use --tool <tool> for focused improvements; tool means the invoked command name.",
 		"Use --global to aggregate across registered workspace metrics databases.",
-		"Pair this report with 'ccp filter prompt <name>' before editing filters.",
+		"Pair this report with 'cmdshape filter prompt <name>' before editing filters.",
 		"--limit applies to text output only; text output defaults to 15 rows.",
 		"Legacy --json remains available as an alias for --format json.",
 	)
@@ -446,7 +446,7 @@ func countKind(suggestions []filterPerformanceSuggestion, kind string) int {
 }
 
 func printFilterPerformanceText(rows []metrics.PerformanceRow, buildSummary metrics.RegistryBuildSummary, buildRows []metrics.RegistrySourceBuildRow, suggestions []filterPerformanceSuggestion, filters filtersEnvelope, limit int, global bool) error {
-	title := "ccp filter performance"
+	title := "cmdshape filter performance"
 	if global {
 		title += compactFilterSuffix(filters, "global")
 	} else {
@@ -565,7 +565,7 @@ func printFilterPerformanceSuggestions(suggestions []filterPerformanceSuggestion
 		fmt.Printf("- %s: %s\n", suggestion.Kind, suggestionText(suggestion))
 	}
 	fmt.Println()
-	fmt.Println("Capture checklist: reproduce with `ccp capture --dir <fixture> -- <command>`, inspect native streams, then run `ccp filter prompt <name>`.")
+	fmt.Println("Capture checklist: reproduce with `cmdshape capture --dir <fixture> -- <command>`, inspect native streams, then run `cmdshape filter prompt <name>`.")
 }
 
 func suggestionText(suggestion filterPerformanceSuggestion) string {

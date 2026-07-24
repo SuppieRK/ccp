@@ -19,7 +19,7 @@ var _ = ginkgo.Describe("pi adapter", func() {
 		Expect(os.MkdirAll(ctx.HomeDir, 0o755)).To(Succeed())
 	})
 
-	ginkgo.It("installs CCP guidance into Pi-specific append system instructions instead of root AGENTS.md", func() {
+	ginkgo.It("installs cmdshape guidance into Pi-specific append system instructions instead of root AGENTS.md", func() {
 		adapter := PiAdapter{}
 
 		plan := adapter.Plan(ctx)
@@ -33,7 +33,7 @@ var _ = ginkgo.Describe("pi adapter", func() {
 
 		body, err := os.ReadFile(filepath.Join(ctx.ScopeRoot, ".pi", "APPEND_SYSTEM.md"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(body)).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
+		Expect(string(body)).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
 		_, err = os.Stat(filepath.Join(ctx.ScopeRoot, "AGENTS.md"))
 		Expect(err).To(MatchError(os.ErrNotExist))
 	})

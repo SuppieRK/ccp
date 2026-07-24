@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -944,7 +944,7 @@ var _ = Describe("YamlFilter", func() {
 								Print: "{{dir}}/",
 							},
 							Lines: &OutputLines{
-								Skip: []SkipOrKeepRule{{Regex: `^\./\.ccp(?:/|$)`}},
+								Skip: []SkipOrKeepRule{{Regex: `^\./\.cmdshape(?:/|$)`}},
 								Replace: []ReplaceRule{{
 									Regex: `^.*$`,
 									To:    stringPtr("  {{name}}"),

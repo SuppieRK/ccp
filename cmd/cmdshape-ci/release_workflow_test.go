@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,7 +35,7 @@ var _ = Describe("release distribution workflow", func() {
 	It("resolves one existing tag identity and checks out its exact source SHA", func() {
 		for _, snippet := range []string{
 			`^[0-9]+\.[0-9]+\.[0-9]+$`,
-			`refs/ccp-release-tags/${TAG}^{commit}`,
+			`refs/cmdshape-release-tags/${TAG}^{commit}`,
 			`source_sha=${SOURCE_SHA}`,
 			`tag_oid=${TAG_OID}`,
 			`ref: ${{ needs.preflight.outputs.source_sha }}`,
@@ -42,24 +43,41 @@ var _ = Describe("release distribution workflow", func() {
 		} {
 			Expect(workflow).To(ContainSubstring(snippet))
 		}
-		Expect(strings.Count(workflow, `test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"`)).To(BeNumerically(">=", 3))
+		Expect(strings.Count(workflow, `test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"`)).To(BeNumerically(">=", 3))
 	})
 
-	It("validates six canonical artifacts before draft smoke and publication", func() {
+	It("validates cmdshape-only artifacts before draft smoke and publication", func() {
 		for _, snippet := range []string{
 			`goos: [linux, darwin, windows]`,
 			`goarch: [amd64, arm64]`,
 			`CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH"`,
 			`go build -trimpath -ldflags "$ldflags"`,
-			`test "$(unzip -Z1 "$asset")" = "$bin_name"`,
+			`asset="cmdshape_${TAG}_${GOOS}_${GOARCH}.zip"`,
+			`test "$(unzip -Z1 "$asset")" = "$cmdshape_bin"`,
 			`source_sha:$source_sha`,
-			`test "$(find release -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 6`,
-			`sha256sum ./*.zip > ./ccp_checksums.txt`,
+			`name '*.zip' | wc -l)" -eq 6`,
+			`expected_binary="cmdshape"`,
+			`expected_binary="cmdshape.exe"`,
+			`test "$(jq -r .binary "$metadata_file")" = "$expected_binary"`,
+			`test "$(unzip -Z1 "release/${asset}")" = "$expected_binary"`,
+			`sha256sum ./cmdshape_*.zip > ./cmdshape_checksums.txt`,
+			`test "$(wc -l < ./cmdshape_checksums.txt)" -eq 6`,
+			`predicate-type: https://github.com/SuppieRK/cmdshape/attestations/binary-archive/v1`,
+			`--pattern cmdshape_checksums.txt`,
+			`./release/*_checksums.txt`,
 			`draft: true`,
 			`gh release download "$TAG"`,
 			`gh release edit "$TAG" --repo "$REPO" --draft=false --latest`,
 		} {
 			Expect(workflow).To(ContainSubstring(snippet))
+		}
+		for _, forbidden := range []string{
+			"ccp_checksums.txt",
+			"distributions+=(ccp)",
+			`$distributions += "ccp"`,
+			`legacy_bin="ccp"`,
+		} {
+			Expect(workflow).NotTo(ContainSubstring(forbidden))
 		}
 
 		draft := strings.Index(workflow, "  create-draft:")
@@ -68,6 +86,45 @@ var _ = Describe("release distribution workflow", func() {
 		Expect(draft).To(BeNumerically(">", 0))
 		Expect(smoke).To(BeNumerically(">", draft))
 		Expect(publish).To(BeNumerically(">", smoke))
+	})
+})
+
+var _ = Describe("hard cutover surfaces", func() {
+	It("keeps the active product and distribution free of the retired identity", func() {
+		repositoryRoot := filepath.Join("..", "..")
+		legacyIdentity := regexp.MustCompile(`(?i)(^|[^a-z0-9_])ccp([^a-z0-9_]|$)|CCP_`)
+		for _, name := range []string{
+			"README.md",
+			"AGENTS.md",
+			"ARCHITECTURE.md",
+			filepath.Join("docs", "agent-rules", "RELEASE.md"),
+			filepath.Join("scripts", "install.sh"),
+			filepath.Join(".github", "workflows", "release-distribution.yml"),
+			filepath.Join("internal", "product", "identity.go"),
+			filepath.Join("internal", "lifecycle", "upgrade.go"),
+			filepath.Join("internal", "filtertrust", "trust.go"),
+			filepath.Join("internal", "replay", "fixture.go"),
+			filepath.Join("schemas", "cmdshape-filter.schema.json"),
+		} {
+			raw, err := os.ReadFile(filepath.Join(repositoryRoot, name))
+			Expect(err).NotTo(HaveOccurred(), name)
+			Expect(string(raw)).NotTo(MatchRegexp(legacyIdentity.String()), name)
+		}
+
+		for _, name := range []string{
+			filepath.Join("cmd", "ccp"),
+			filepath.Join("cmd", "ccp-ci"),
+			filepath.Join("cmd", "ccp-docgen"),
+		} {
+			entries, err := os.ReadDir(filepath.Join(repositoryRoot, name))
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			Expect(err).NotTo(HaveOccurred(), name)
+			Expect(entries).To(BeEmpty(), name)
+		}
+		_, err := os.Stat(filepath.Join(repositoryRoot, "schemas", "ccp-filter.schema.json"))
+		Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
 	})
 })
 

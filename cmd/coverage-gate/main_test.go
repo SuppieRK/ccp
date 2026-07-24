@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/quality/coverage"
+	"github.com/SuppieRK/cmdshape/internal/quality/coverage"
 )
 
 const internalPrefix = "internal/"
@@ -55,13 +55,13 @@ var _ = Describe("Coverage gate", func() {
 			path := filepath.Join(GinkgoT().TempDir(), "coverage.out")
 			raw := strings.Join([]string{
 				"mode: atomic",
-				"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
-				"go-command-compression-proxy/internal/engine/engine.go:1.1,2.2 5 1",
-				"go-command-compression-proxy/cmd/ccp/main.go:1.1,2.2 4 1",
+				"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 1",
+				"github.com/SuppieRK/cmdshape/internal/engine/engine.go:1.1,2.2 5 1",
+				"github.com/SuppieRK/cmdshape/cmd/cmdshape/main.go:1.1,2.2 4 1",
 			}, "\n")
 			Expect(os.WriteFile(path, []byte(raw), 0o644)).To(Succeed())
 
-			report, err := loadCoverageReport(path, "go-command-compression-proxy", internalPrefix, 80)
+			report, err := loadCoverageReport(path, "github.com/SuppieRK/cmdshape", internalPrefix, 80)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(report.InternalPrefix).To(Equal(internalPrefix))
@@ -117,7 +117,7 @@ var _ = Describe("Coverage gate", func() {
 				{Package: "internal/engine", Covered: 3, Statements: 5, Percent: 60},
 			},
 			OtherPackages: []coverage.PackageStat{
-				{Package: "cmd/ccp", Covered: 2, Statements: 4, Percent: 50},
+				{Package: "cmd/cmdshape", Covered: 2, Statements: 4, Percent: 50},
 			},
 		}
 
@@ -180,8 +180,8 @@ var _ = Describe("Coverage gate", func() {
 			summaryPath := filepath.Join(tempDir, "summary.md")
 			raw := strings.Join([]string{
 				"mode: atomic",
-				"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
-				"go-command-compression-proxy/internal/engine/engine.go:1.1,2.2 5 1",
+				"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 1",
+				"github.com/SuppieRK/cmdshape/internal/engine/engine.go:1.1,2.2 5 1",
 			}, "\n")
 			Expect(os.WriteFile(coverProfile, []byte(raw), 0o644)).To(Succeed())
 
@@ -207,7 +207,7 @@ var _ = Describe("Coverage gate", func() {
 			coverProfile := filepath.Join(tempDir, "coverage.out")
 			raw := strings.Join([]string{
 				"mode: atomic",
-				"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+				"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
 			}, "\n")
 			Expect(os.WriteFile(coverProfile, []byte(raw), 0o644)).To(Succeed())
 

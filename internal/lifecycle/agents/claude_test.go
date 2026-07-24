@@ -37,7 +37,7 @@ var _ = ginkgo.Describe("ClaudeAdapter", func() {
 		guidePath := filepath.Join(home, ".claude", claudeGuideName)
 		guide, err := os.ReadFile(guidePath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(guide)).To(ContainSubstring("@CCP.md"))
+		Expect(string(guide)).To(ContainSubstring("@CMDSHAPE.md"))
 
 		res, err := adapter.(interface {
 			Uninstall(Context) (InstallResult, error)
@@ -60,8 +60,8 @@ var _ = ginkgo.Describe("ClaudeAdapter", func() {
 
 		content := string(guide)
 		Expect(content).To(ContainSubstring(original))
-		Expect(content).To(ContainSubstring("@CCP.md"))
-		Expect(strings.Count(content, ccpManagedBlockStart)).To(Equal(1))
+		Expect(content).To(ContainSubstring("@CMDSHAPE.md"))
+		Expect(strings.Count(content, cmdshapeManagedBlockStart)).To(Equal(1))
 	})
 
 	ginkgo.It("reports a second install as noop when artifacts are already current", func() {
@@ -120,7 +120,7 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 	ginkgo.It("upserts the managed guide block into a missing file", func() {
 		updated, err := upsertClaudeGuideBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(updated).To(ContainSubstring("@CCP.md"))
+		Expect(updated).To(ContainSubstring("@CMDSHAPE.md"))
 	})
 
 	ginkgo.It("preserves existing guide content when upserting", func() {
@@ -130,7 +130,7 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 		updated, err := upsertClaudeGuideBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(updated).To(ContainSubstring(existing))
-		Expect(strings.Count(updated, ccpManagedBlockStart)).To(Equal(1))
+		Expect(strings.Count(updated, cmdshapeManagedBlockStart)).To(Equal(1))
 	})
 
 	ginkgo.It("removes only the managed guide block when unrelated content exists", func() {
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 		Expect(removeAll).To(BeFalse())
-		Expect(out).NotTo(ContainSubstring("@CCP.md"))
+		Expect(out).NotTo(ContainSubstring("@CMDSHAPE.md"))
 		Expect(out).To(ContainSubstring("Be deliberate."))
 	})
 
@@ -160,20 +160,20 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 
 		updated, err := upsertClaudeGuideBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(strings.Count(updated, ccpManagedBlockStart)).To(Equal(1))
+		Expect(strings.Count(updated, cmdshapeManagedBlockStart)).To(Equal(1))
 		Expect(updated).To(ContainSubstring("# Team rules"))
 		Expect(updated).To(ContainSubstring("# Tail"))
-		Expect(updated).To(ContainSubstring("@CCP.md"))
+		Expect(updated).To(ContainSubstring("@CMDSHAPE.md"))
 	})
 
 	ginkgo.It("replaces an empty managed guide block in place", func() {
-		initial := "# Team rules\n\n" + ccpManagedBlockStart + "\n" + ccpManagedBlockEnd + "\n# Tail\n"
+		initial := "# Team rules\n\n" + cmdshapeManagedBlockStart + "\n" + cmdshapeManagedBlockEnd + "\n# Tail\n"
 		Expect(os.WriteFile(guide, []byte(initial), 0o644)).To(Succeed())
 
 		updated, err := upsertClaudeGuideBlock(guide)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(strings.Count(updated, ccpManagedBlockStart)).To(Equal(1))
-		Expect(updated).To(ContainSubstring("@CCP.md"))
+		Expect(strings.Count(updated, cmdshapeManagedBlockStart)).To(Equal(1))
+		Expect(updated).To(ContainSubstring("@CMDSHAPE.md"))
 		Expect(updated).To(ContainSubstring("# Team rules"))
 		Expect(updated).To(ContainSubstring("# Tail"))
 	})
@@ -191,13 +191,13 @@ var _ = ginkgo.Describe("Claude guide helpers", func() {
 		Expect(err.Error()).To(ContainSubstring("missing claude guide file"))
 	})
 
-	ginkgo.It("returns an error when the managed guide block has no CCP reference", func() {
-		content := ccpManagedBlockStart + "\n## CCP Integration (Managed)\n" + ccpManagedBlockEnd + "\n"
+	ginkgo.It("returns an error when the managed guide block has no cmdshape reference", func() {
+		content := cmdshapeManagedBlockStart + "\n## cmdshape Integration (Managed)\n" + cmdshapeManagedBlockEnd + "\n"
 		Expect(os.WriteFile(guide, []byte(content), 0o644)).To(Succeed())
 
 		err := verifyClaudeGuideBlock(guide)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("missing claude CCP guide reference"))
+		Expect(err.Error()).To(ContainSubstring("missing claude cmdshape guide reference"))
 	})
 })
 
@@ -212,7 +212,7 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 
 	ginkgo.It("removes the managed pre-tool-use hook and deletes empty settings files", func() {
 		settings := filepath.Join(tmpDir, "settings.json")
-		hook := filepath.Join(tmpDir, "ccp-rewrite.sh")
+		hook := filepath.Join(tmpDir, "cmdshape-rewrite.sh")
 		content := `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"` + strings.ReplaceAll(hook, "\\", "\\\\") + `"}]}]}}`
 		Expect(os.WriteFile(settings, []byte(content), 0o644)).To(Succeed())
 
@@ -226,7 +226,7 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 
 	ginkgo.It("does nothing when the settings file is missing", func() {
 		settings := filepath.Join(tmpDir, "settings.json")
-		hook := filepath.Join(tmpDir, "ccp-rewrite.sh")
+		hook := filepath.Join(tmpDir, "cmdshape-rewrite.sh")
 
 		changed, err := removePreToolUseCommandHook(settings, hook)
 		Expect(err).NotTo(HaveOccurred())
@@ -235,7 +235,7 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 
 	ginkgo.It("preserves invalid user settings files and returns an actionable error", func() {
 		settings := filepath.Join(tmpDir, "settings.json")
-		hook := filepath.Join(tmpDir, "ccp-rewrite.sh")
+		hook := filepath.Join(tmpDir, "cmdshape-rewrite.sh")
 		original := []byte("{invalid")
 		Expect(os.WriteFile(settings, original, 0o644)).To(Succeed())
 
@@ -341,14 +341,14 @@ var _ = ginkgo.Describe("Claude hook removal helpers", func() {
 
 var _ = ginkgo.Describe("Claude hook script content", func() {
 	ginkgo.It("contains the expected runtime guards and payload flow", func() {
-		script := bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")
+		script := bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log")
 		Expect(script).NotTo(ContainSubstring("command -v jq"))
-		Expect(script).To(ContainSubstring(`command -v ccp`))
-		Expect(script).To(ContainSubstring(`LOG_FILE="${TMPDIR:-/tmp}/ccp-claude-hook.log"`))
+		Expect(script).To(ContainSubstring(`command -v cmdshape`))
+		Expect(script).To(ContainSubstring(`LOG_FILE="${TMPDIR:-/tmp}/cmdshape-claude-hook.log"`))
 		Expect(script).NotTo(ContainSubstring(`skip-complex-shape`))
 
 		for _, reason := range []string{
-			"skip-no-ccp",
+			"skip-no-cmdshape",
 			"skip-empty-input",
 			"skip-no-command",
 			"skip-empty-rewrite",
@@ -367,7 +367,7 @@ var _ = ginkgo.Describe("Claude hook script execution", func() {
 	type hookCase struct {
 		name         string
 		input        string
-		withCCP      bool
+		withCmdshape bool
 		wantLog      string
 		wantCommand  string
 		wantNoOutput bool
@@ -375,7 +375,7 @@ var _ = ginkgo.Describe("Claude hook script execution", func() {
 
 	ginkgo.DescribeTable("executing the rewrite hook",
 		func(tc hookCase) {
-			stdout, logOutput := runClaudeHookScriptSpec(tc.input, tc.withCCP)
+			stdout, logOutput := runClaudeHookScriptSpec(tc.input, tc.withCmdshape)
 
 			if tc.wantLog != "" {
 				Expect(logOutput).To(ContainSubstring(tc.wantLog))
@@ -389,21 +389,21 @@ var _ = ginkgo.Describe("Claude hook script execution", func() {
 			got := decodeClaudeHookOutput(ginkgo.GinkgoT(), stdout)
 			Expect(got).To(Equal(tc.wantCommand))
 		},
-		ginkgo.Entry("missing ccp dependency", hookCase{name: "missing ccp dependency", input: `{"tool_input":{"command":"pwd && ls"}}`, wantLog: "skip-no-ccp", wantNoOutput: true}),
-		ginkgo.Entry("empty input", hookCase{name: "empty input", input: "", withCCP: true, wantLog: "skip-empty-input", wantNoOutput: true}),
-		ginkgo.Entry("missing command field", hookCase{name: "missing command field", input: `{"tool_input":{}}`, withCCP: true, wantLog: "skip-no-command", wantNoOutput: true}),
-		ginkgo.Entry("whitespace command remains untouched", hookCase{name: "whitespace command remains untouched", input: `{"tool_input":{"command":"   "}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("already prefixed command", hookCase{name: "already prefixed command", input: `{"tool_input":{"command":"ccp pwd"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("malformed chain remains untouched", hookCase{name: "malformed chain remains untouched", input: `{"tool_input":{"command":"git status &&"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("simple chained rewrite", hookCase{name: "simple chained rewrite", input: `{"tool_input":{"command":"git status && ls"}}`, withCCP: true, wantCommand: "ccp git status && ccp ls"}),
-		ginkgo.Entry("double quoted rewrite", hookCase{name: "double quoted rewrite", input: `{"tool_input":{"command":"git commit -m \"test\""}}`, withCCP: true, wantCommand: `ccp git commit -m "test"`}),
-		ginkgo.Entry("single quoted rewrite", hookCase{name: "single quoted rewrite", input: `{"tool_input":{"command":"git commit -m 'test'"}}`, withCCP: true, wantCommand: `ccp git commit -m 'test'`}),
-		ginkgo.Entry("backslash command rewrite", hookCase{name: "backslash command rewrite", input: `{"tool_input":{"command":"ls foo\\ bar"}}`, withCCP: true, wantCommand: `ccp ls foo\ bar`}),
-		ginkgo.Entry("command substitution remains untouched", hookCase{name: "command substitution remains untouched", input: `{"tool_input":{"command":"git add $(pwd)"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("parameter expansion remains untouched", hookCase{name: "parameter expansion remains untouched", input: `{"tool_input":{"command":"git add ${HOME}"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("heredoc remains untouched", hookCase{name: "heredoc remains untouched", input: `{"tool_input":{"command":"cat <<EOF"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
-		ginkgo.Entry("quoted chained rewrite", hookCase{name: "quoted chained rewrite", input: `{"tool_input":{"command":"git commit -m \"msg\" && git status"}}`, withCCP: true, wantCommand: `ccp git commit -m "msg" && ccp git status`}),
-		ginkgo.Entry("pipeline remains entirely untouched", hookCase{name: "pipeline remains entirely untouched", input: `{"tool_input":{"command":"ccp git status && ls | head"}}`, withCCP: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("missing cmdshape dependency", hookCase{name: "missing cmdshape dependency", input: `{"tool_input":{"command":"pwd && ls"}}`, wantLog: "skip-no-cmdshape", wantNoOutput: true}),
+		ginkgo.Entry("empty input", hookCase{name: "empty input", input: "", withCmdshape: true, wantLog: "skip-empty-input", wantNoOutput: true}),
+		ginkgo.Entry("missing command field", hookCase{name: "missing command field", input: `{"tool_input":{}}`, withCmdshape: true, wantLog: "skip-no-command", wantNoOutput: true}),
+		ginkgo.Entry("whitespace command remains untouched", hookCase{name: "whitespace command remains untouched", input: `{"tool_input":{"command":"   "}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("already prefixed command", hookCase{name: "already prefixed command", input: `{"tool_input":{"command":"cmdshape pwd"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("malformed chain remains untouched", hookCase{name: "malformed chain remains untouched", input: `{"tool_input":{"command":"git status &&"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("simple chained rewrite", hookCase{name: "simple chained rewrite", input: `{"tool_input":{"command":"git status && ls"}}`, withCmdshape: true, wantCommand: "cmdshape git status && cmdshape ls"}),
+		ginkgo.Entry("double quoted rewrite", hookCase{name: "double quoted rewrite", input: `{"tool_input":{"command":"git commit -m \"test\""}}`, withCmdshape: true, wantCommand: `cmdshape git commit -m "test"`}),
+		ginkgo.Entry("single quoted rewrite", hookCase{name: "single quoted rewrite", input: `{"tool_input":{"command":"git commit -m 'test'"}}`, withCmdshape: true, wantCommand: `cmdshape git commit -m 'test'`}),
+		ginkgo.Entry("backslash command rewrite", hookCase{name: "backslash command rewrite", input: `{"tool_input":{"command":"ls foo\\ bar"}}`, withCmdshape: true, wantCommand: `cmdshape ls foo\ bar`}),
+		ginkgo.Entry("command substitution remains untouched", hookCase{name: "command substitution remains untouched", input: `{"tool_input":{"command":"git add $(pwd)"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("parameter expansion remains untouched", hookCase{name: "parameter expansion remains untouched", input: `{"tool_input":{"command":"git add ${HOME}"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("heredoc remains untouched", hookCase{name: "heredoc remains untouched", input: `{"tool_input":{"command":"cat <<EOF"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("quoted chained rewrite", hookCase{name: "quoted chained rewrite", input: `{"tool_input":{"command":"git commit -m \"msg\" && git status"}}`, withCmdshape: true, wantCommand: `cmdshape git commit -m "msg" && cmdshape git status`}),
+		ginkgo.Entry("pipeline remains entirely untouched", hookCase{name: "pipeline remains entirely untouched", input: `{"tool_input":{"command":"cmdshape git status && ls | head"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
 	)
 })
 
@@ -460,8 +460,8 @@ var _ = ginkgo.Describe("Claude artifact installation helpers", func() {
 	})
 })
 
-func runClaudeHookScriptSpec(input string, withCCP bool) (string, string) {
-	result := runHookScript(ginkgo.GinkgoT(), "ccp-rewrite.sh", "ccp-claude-hook.log", bashRewriteHookScriptContent("claude", "ccp-claude-hook.log"), input, withCCP)
+func runClaudeHookScriptSpec(input string, withCmdshape bool) (string, string) {
+	result := runHookScript(ginkgo.GinkgoT(), "cmdshape-rewrite.sh", "cmdshape-claude-hook.log", bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log"), input, withCmdshape)
 	Expect(result.exitCode).To(Equal(0), result.stderr)
 	return result.stdout, result.log
 }

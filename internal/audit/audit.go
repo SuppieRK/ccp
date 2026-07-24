@@ -36,13 +36,13 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "ccp", "audit", "audit.log"), nil
+	return filepath.Join(home, ".config", "cmdshape", "audit", "audit.log"), nil
 }
 
 func ConfigureDefault() error {
 	path, err := DefaultPath()
 	if err != nil {
-		// Audit logging is best-effort only. CCP must preserve command execution even when
+		// Audit logging is best-effort only. cmdshape must preserve command execution even when
 		// the audit home cannot be resolved on a particular machine or runner.
 		disableLockedState()
 		return nil

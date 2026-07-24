@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 func newInitSpecWorkspace() lifecycleWorkspace {
@@ -39,12 +39,12 @@ var _ = Describe("init basic behavior", func() {
 		})
 
 		It("does not rewrite the managed home filter directory", func() {
-			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters"))
+			_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters"))
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
 		It("does not persist an init manifest", func() {
-			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
+			_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", initConfigFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
@@ -99,7 +99,7 @@ var _ = Describe("init basic behavior", func() {
 		})
 
 		It("leaves no init manifest behind", func() {
-			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
+			_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", initConfigFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
@@ -126,7 +126,7 @@ var _ = Describe("init basic behavior", func() {
 			return RunInit(args)
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stderr).To(ContainSubstring("ccp init: warning: could not update workspace registry"))
+		Expect(stderr).To(ContainSubstring("cmdshape init: warning: could not update workspace registry"))
 		Expect(filepath.Join(ws.home, ".config", "opencode", "plugins", initOpenCodeRewriteJS)).To(BeAnExistingFile())
 	})
 
@@ -188,7 +188,7 @@ var _ = Describe("init basic behavior", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			content := string(body)
-			Expect(content).To(ContainSubstring(`if (command === "ccp") return segment;`))
+			Expect(content).To(ContainSubstring(`if (command === "cmdshape") return segment;`))
 		})
 
 		It("keeps conservative fallback handling for complex commands", func() {

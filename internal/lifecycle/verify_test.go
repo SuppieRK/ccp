@@ -11,10 +11,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	core "go-command-compression-proxy/internal"
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/replay"
+	core "github.com/SuppieRK/cmdshape/internal"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 type stubVerifyRunner struct {
@@ -81,7 +81,7 @@ var _ = Describe("verify", func() {
 	It("renders help output", func() {
 		out := captureStderr(func() error { return RunVerify([]string{"--help"}) })
 		for _, part := range []string{
-			"ccp verify - replay captured fixtures through the current filter",
+			"cmdshape verify - replay captured fixtures through the current filter",
 			"Usage:",
 			"Flags:",
 			"Notes:",
@@ -157,7 +157,7 @@ var _ = Describe("verify", func() {
 		err := RunVerify([]string{"--dir", tmp})
 
 		Expect(err).NotTo(HaveOccurred())
-		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"verify_invocation_start"`))
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"verify_invocation_finish"`))
@@ -203,7 +203,7 @@ var _ = Describe("verify", func() {
 		err := RunVerify([]string{"--dir", tmp})
 
 		Expect(err).To(HaveOccurred())
-		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"verify_invocation_finish"`))
 		Expect(string(auditData)).To(ContainSubstring(`"success":false`))

@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/replay"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 
 	"gopkg.in/yaml.v3"
 )

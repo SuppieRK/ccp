@@ -43,9 +43,10 @@ esac
 			writeExecutable(filepath.Join(binDir, "unzip"), "#!/bin/sh\nexit 99\n")
 
 			result := runInstallScript(scriptPath, workspace, map[string]string{
-				"VERSION": version,
-				"HOME":    filepath.Join(workspace, "home"),
-				"PATH":    testPATH(binDir, os.Getenv("PATH")),
+				"VERSION":              version,
+				"CMDSHAPE_INSTALL_DIR": "",
+				"HOME":                 filepath.Join(workspace, "home"),
+				"PATH":                 testPATH(binDir, os.Getenv("PATH")),
 			})
 
 			Expect(result.exitCode).NotTo(BeZero())
@@ -57,7 +58,7 @@ esac
 		Entry("prerelease suffix", "1.2.3-beta.1"),
 	)
 
-	It("downloads a release archive and invokes install on the resolved asset", func() {
+	It("downloads a cmdshape release archive and installs the renamed binary", func() {
 		workspace := GinkgoT().TempDir()
 		binDir := filepath.Join(workspace, "bin")
 		assetPath, checksumPath := makeInstallFixtures(workspace, "1.2.3")
@@ -79,25 +80,70 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 case "$url" in
-  *ccp_checksums.txt) cp %s "$out" ;;
+  *cmdshape_checksums.txt) cp %s "$out" ;;
   *) cp %s "$out" ;;
 esac
 `, shellQuoteArg(checksumPath), shellQuoteArg(assetPath)))
 		home := filepath.Join(workspace, "home")
 		result := runInstallScript(scriptPath, workspace, map[string]string{
-			"VERSION":         "1.2.3",
-			"CCP_INSTALL_DIR": filepath.Join(home, ".local", "bin"),
-			"HOME":            home,
-			"PATH":            testPATH(binDir, os.Getenv("PATH")),
+			"VERSION":              "1.2.3",
+			"CMDSHAPE_INSTALL_DIR": filepath.Join(home, ".local", "bin"),
+			"HOME":                 home,
+			"PATH":                 testPATH(binDir, os.Getenv("PATH")),
 		})
 
 		Expect(result.exitCode).To(BeZero(), result.stderr)
-		Expect(result.stdout).To(ContainSubstring("Downloading https://github.com/SuppieRK/ccp/releases/download/1.2.3/ccp_1.2.3_linux_amd64.zip"))
-		Expect(result.stdout).To(ContainSubstring("Installed binary ccp 1.2.3 to "))
+		Expect(result.stdout).To(ContainSubstring("Downloading https://github.com/SuppieRK/cmdshape/releases/download/1.2.3/cmdshape_1.2.3_linux_amd64.zip"))
+		Expect(result.stdout).To(ContainSubstring("Installed binary cmdshape 1.2.3 to "))
 
-		body, err := os.ReadFile(filepath.Join(home, ".local", "bin", "ccp"))
+		body, err := os.ReadFile(filepath.Join(home, ".local", "bin", "cmdshape"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(body)).To(ContainSubstring("printf '1.2.3"))
+	})
+
+	It("keeps the installation usable and warns when cleanup needs a retry", func() {
+		workspace := GinkgoT().TempDir()
+		binDir := filepath.Join(workspace, "bin")
+		installDir := filepath.Join(workspace, "install")
+		homeDir := filepath.Join(workspace, "home")
+		migrationLog := filepath.Join(workspace, "migration.log")
+		assetPath, checksumPath := makeInstallFixtures(workspace, "0.9.0")
+		Expect(os.MkdirAll(binDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(installDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
+
+		writeExecutable(filepath.Join(binDir, "uname"), `#!/bin/sh
+case "$1" in
+  -m) printf 'x86_64\n' ;;
+  *) printf 'Linux\n' ;;
+esac
+`)
+		writeExecutable(filepath.Join(binDir, "curl"), fmt.Sprintf(`#!/bin/sh
+out=""
+url=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o) out="$2"; shift 2 ;;
+    *) url="$1"; shift ;;
+  esac
+done
+case "$url" in
+  *cmdshape_checksums.txt) cp %s "$out" ;;
+  *) cp %s "$out" ;;
+esac
+`, shellQuoteArg(checksumPath), shellQuoteArg(assetPath)))
+		result := runInstallScript(scriptPath, workspace, map[string]string{
+			"VERSION":                              "0.9.0",
+			"CMDSHAPE_INSTALL_DIR":                 installDir,
+			"CMDSHAPE_INSTALL_TEST_LOG":            migrationLog,
+			"CMDSHAPE_INSTALL_TEST_FAIL_MIGRATION": "1",
+			"HOME":                                 homeDir,
+			"PATH":                                 testPATH(binDir, os.Getenv("PATH")),
+		})
+
+		Expect(result.exitCode).To(BeZero(), result.stderr)
+		Expect(os.ReadFile(migrationLog)).To(Equal([]byte("migrate retry\n")))
+		Expect(result.stderr).To(ContainSubstring("Previous installation cleanup needs attention"))
 	})
 
 	Describe("sourced helper behavior", func() {
@@ -107,6 +153,17 @@ esac
 			body, err := os.ReadFile(scriptPath)
 			Expect(err).NotTo(HaveOccurred())
 			functionPrefix = installScriptFunctionPrefix(string(body))
+		})
+
+		It("uses the cmdshape install directory variable", func() {
+			result := runInstallScriptSnippet(
+				functionPrefix,
+				"printf 'requested=%s\\n' \"$REQUESTED_INSTALL_DIR\"\n",
+				map[string]string{"CMDSHAPE_INSTALL_DIR": "/tmp/cmdshape-bin"},
+			)
+
+			Expect(result.exitCode).To(BeZero(), result.stderr)
+			Expect(result.stdout).To(ContainSubstring("requested=/tmp/cmdshape-bin"))
 		})
 
 		DescribeTable("validating release versions",
@@ -139,11 +196,11 @@ esac
 			workspace := GinkgoT().TempDir()
 			profilePath := filepath.Join(workspace, ".profile")
 
-			result := runInstallScriptSnippet(functionPrefix, fmt.Sprintf("append_path_export_once %s %s\nappend_path_export_once %s %s\ncat %s\n", shellQuoteArg(profilePath), shellQuoteArg("/tmp/ccp-bin"), shellQuoteArg(profilePath), shellQuoteArg("/tmp/ccp-bin"), shellQuoteArg(profilePath)), nil)
+			result := runInstallScriptSnippet(functionPrefix, fmt.Sprintf("append_path_export_once %s %s\nappend_path_export_once %s %s\ncat %s\n", shellQuoteArg(profilePath), shellQuoteArg("/tmp/cmdshape-bin"), shellQuoteArg(profilePath), shellQuoteArg("/tmp/cmdshape-bin"), shellQuoteArg(profilePath)), nil)
 
 			Expect(result.exitCode).To(BeZero(), result.stderr)
-			Expect(strings.Count(result.stdout, "# added by ccp installer")).To(Equal(1))
-			Expect(strings.Count(result.stdout, `export PATH="$PATH:/tmp/ccp-bin"`)).To(Equal(1))
+			Expect(strings.Count(result.stdout, "# added by cmdshape installer")).To(Equal(1))
+			Expect(strings.Count(result.stdout, `export PATH="$PATH:/tmp/cmdshape-bin"`)).To(Equal(1))
 		})
 	})
 })
@@ -189,19 +246,24 @@ func installScriptFunctionPrefix(body string) string {
 }
 
 func makeInstallFixtures(root, version string) (string, string) {
-	assetName := fmt.Sprintf("ccp_%s_linux_amd64.zip", version)
+	assetName := fmt.Sprintf("cmdshape_%s_linux_amd64.zip", version)
 	assetPath := filepath.Join(root, assetName)
 	file, err := os.Create(assetPath)
 	Expect(err).NotTo(HaveOccurred())
 	zipWriter := zip.NewWriter(file)
-	entry, err := zipWriter.Create("ccp")
+	entry, err := zipWriter.Create("cmdshape")
 	Expect(err).NotTo(HaveOccurred())
-	_, err = entry.Write([]byte("#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf '" + version + "\\n'; fi\n"))
+	_, err = entry.Write([]byte(
+		"#!/bin/sh\n" +
+			"if [ \"$1\" = \"--version\" ]; then printf '" + version + "\\n'; exit 0; fi\n" +
+			"if [ -n \"${CMDSHAPE_INSTALL_TEST_LOG:-}\" ]; then printf '%s\\n' \"$*\" >> \"$CMDSHAPE_INSTALL_TEST_LOG\"; fi\n" +
+			"if [ \"$1\" = \"migrate\" ] && [ \"${CMDSHAPE_INSTALL_TEST_FAIL_MIGRATION:-}\" = \"1\" ]; then exit 42; fi\n",
+	))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(zipWriter.Close()).To(Succeed())
 	Expect(file.Close()).To(Succeed())
 
-	checksumPath := filepath.Join(root, "ccp_checksums.txt")
+	checksumPath := filepath.Join(root, "cmdshape_checksums.txt")
 	sum := sha256.Sum256(mustReadFile(assetPath))
 	Expect(os.WriteFile(checksumPath, fmt.Appendf(nil, "%x  ./%s\n", sum, assetName), 0o644)).To(Succeed())
 	return assetPath, checksumPath

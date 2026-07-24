@@ -48,8 +48,8 @@ var _ = Describe("init managed content and integrations", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			text := string(body)
-			Expect(text).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
-			Expect(text).To(ContainSubstring("<!-- END: CCP MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- END: CMDSHAPE MANAGED BLOCK -->"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
 		})
 
@@ -98,8 +98,8 @@ var _ = Describe("init managed content and integrations", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			text := string(body)
-			Expect(text).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
-			Expect(text).To(ContainSubstring("<!-- END: CCP MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- END: CMDSHAPE MANAGED BLOCK -->"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
 		})
 
@@ -189,7 +189,7 @@ var _ = Describe("init managed content and integrations", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			text := string(body)
-			Expect(text).To(ContainSubstring("## CCP Integration (Managed)"))
+			Expect(text).To(ContainSubstring("## cmdshape Integration (Managed)"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
 			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
 		},
@@ -257,7 +257,7 @@ var _ = Describe("init managed content and integrations", func() {
 			ws = newInitManagedWorkspace()
 			hookPath = filepath.Join(ws.home, initClaudeDir, "hooks", initRewriteScriptName)
 			settingsPath = filepath.Join(ws.home, initClaudeDir, initSettingsFileName)
-			awareness = filepath.Join(ws.home, initClaudeDir, "CCP.md")
+			awareness = filepath.Join(ws.home, initClaudeDir, "CMDSHAPE.md")
 			guide = filepath.Join(ws.home, initClaudeDir, "CLAUDE.md")
 		})
 
@@ -291,7 +291,7 @@ var _ = Describe("init managed content and integrations", func() {
 
 			guideBody, err := os.ReadFile(guide)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(guideBody)).To(ContainSubstring("@CCP.md"))
+			Expect(string(guideBody)).To(ContainSubstring("@CMDSHAPE.md"))
 		})
 
 		It("preserves unrelated Claude settings", func() {

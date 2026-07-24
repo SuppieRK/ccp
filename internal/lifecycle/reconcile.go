@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	shippedfilters "go-command-compression-proxy/filters"
-	"go-command-compression-proxy/internal/workspaces"
+	shippedfilters "github.com/SuppieRK/cmdshape/filters"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 const (
@@ -44,7 +44,7 @@ func startupMaintenanceLockPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, configDirName, "ccp", startupMaintenanceLockName), nil
+	return filepath.Join(homeDir, configDirName, "cmdshape", startupMaintenanceLockName), nil
 }
 
 func acquireStartupMaintenanceLock(lockPath string) (func(), error) {
@@ -121,7 +121,7 @@ func reconcileManagedHomeLayout() error {
 }
 
 func cleanupManagedConfigDir(homeDir string) error {
-	configDir := filepath.Join(homeDir, configDirName, "ccp")
+	configDir := filepath.Join(homeDir, configDirName, "cmdshape")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
 	if err := removeAllChildrenExcept(
 		configDir,
@@ -134,15 +134,15 @@ func cleanupManagedConfigDir(homeDir string) error {
 		return err
 	}
 
-	ccpDir := filepath.Join(homeDir, ".ccp")
-	if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
+	legacyDir := filepath.Join(homeDir, ".ccp")
+	if err := os.RemoveAll(legacyDir); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
 }
 
 func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
-	configDir := filepath.Join(homeDir, configDirName, "ccp")
+	configDir := filepath.Join(homeDir, configDirName, "cmdshape")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
 	if err := removeAllChildrenExcept(
 		configDir,
@@ -156,8 +156,8 @@ func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
 		return err
 	}
 
-	ccpDir := filepath.Join(homeDir, ".ccp")
-	if err := os.RemoveAll(ccpDir); err != nil && !os.IsNotExist(err) {
+	legacyDir := filepath.Join(homeDir, ".ccp")
+	if err := os.RemoveAll(legacyDir); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
@@ -190,7 +190,7 @@ func removeAllChildrenExcept(dir string, keep ...string) error {
 }
 
 func syncPackagedFilters(homeDir string) error {
-	dstDir := filepath.Join(homeDir, configDirName, "ccp", "filters")
+	dstDir := filepath.Join(homeDir, configDirName, "cmdshape", "filters")
 	if err := os.RemoveAll(dstDir); err != nil && !os.IsNotExist(err) {
 		return err
 	}

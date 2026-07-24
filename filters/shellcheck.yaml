@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: shellcheck
 about: Compact default ShellCheck output conservatively by trimming blank lines and wiki-link footers while preserving the diagnostic block, source line, carets, and suggested fix text; leave explicit alternate formats native.

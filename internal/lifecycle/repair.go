@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"go-command-compression-proxy/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/audit"
 )
 
 var (
@@ -26,17 +26,17 @@ const (
 
 func RunRepair(args []string) error {
 	fs := newLifecycleFlagSet("repair")
-	yes := fs.Bool("yes", false, "rewrite managed CCP home state without prompting")
+	yes := fs.Bool("yes", false, "rewrite managed cmdshape home state without prompting")
 	fs.BoolVar(yes, "y", false, "shorthand for --yes")
 	no := fs.Bool("no", false, "preserve existing home filters and add only missing shipped content")
 	setLifecycleUsage(
 		fs,
-		"rewrite managed CCP home state to canonical shipped content",
-		[]string{"ccp repair [--yes|--no]"},
-		"Repair rewrites managed ~/.config/ccp state and restores ~/.config/ccp/filters from shipped content embedded in the binary.",
-		"Project filter approvals in ~/.config/ccp/filter-trust.json are preserved.",
-		"Repair also removes obsolete managed ~/.ccp remnants.",
-		"Rewrite repair also runs guarded current-repository CCP migrations, including repo-local .ccp ignore migration.",
+		"rewrite managed cmdshape home state to canonical shipped content",
+		[]string{"cmdshape repair [--yes|--no]"},
+		"Repair rewrites managed ~/.config/cmdshape state and restores ~/.config/cmdshape/filters from shipped content embedded in the binary.",
+		"Project filter approvals in ~/.config/cmdshape/filter-trust.json are preserved.",
+		"Repair also removes obsolete managed ~/.cmdshape remnants.",
+		"Rewrite repair also runs guarded current-repository cmdshape migrations, including repo-local .cmdshape ignore migration.",
 		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings without mutating repository files.",
 		"Use --yes for destructive rewrite automation; use --no for additive preserve-existing automation.",
 	)
@@ -117,7 +117,7 @@ func addMissingPackagedFilters() error {
 	if err := syncMissingPackagedFilters(homeDir); err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(repairStdout, "ccp repair: added missing shipped filters and mappings")
+	_, err = fmt.Fprintln(repairStdout, "cmdshape repair: added missing shipped filters and mappings")
 	return err
 }
 
@@ -133,7 +133,7 @@ func rewriteManagedRepairStateLocked() error {
 		return err
 	}
 
-	_, err := fmt.Fprintln(repairStdout, "ccp repair: rewrote managed CCP home state")
+	_, err := fmt.Fprintln(repairStdout, "cmdshape repair: rewrote managed cmdshape home state")
 	return err
 }
 
@@ -151,7 +151,7 @@ func withLifecycleLock(fn func() error) error {
 }
 
 func confirmRepair() (bool, error) {
-	_, err := fmt.Fprintln(repairStdout, "ccp repair will rewrite the fully managed ~/.config/ccp state and remove obsolete managed ~/.ccp files.")
+	_, err := fmt.Fprintln(repairStdout, "cmdshape repair will rewrite the fully managed ~/.config/cmdshape state and remove obsolete managed ~/.cmdshape files.")
 	if err != nil {
 		return false, err
 	}

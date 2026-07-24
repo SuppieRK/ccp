@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/cli"
+	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
-var _ = Describe("ccp main", func() {
+var _ = Describe("cmdshape main", func() {
 	Describe("buildRuntime", func() {
 		It("builds the YAML-backed runtime by default", func() {
 			r, err := buildRuntime(cli.Options{CommandArgs: []string{"ls"}})
@@ -30,7 +30,7 @@ var _ = Describe("ccp main", func() {
 			got := usageText()
 
 			Expect(got).NotTo(BeEmpty())
-			Expect(got).To(ContainSubstring("ccp - command compression proxy for coding-agent workflows"))
+			Expect(got).To(ContainSubstring("cmdshape — Shape command output. Preserve command truth."))
 			Expect(got).To(ContainSubstring("Usage:"))
 			Expect(got).To(ContainSubstring("Execution flags:"))
 			Expect(got).To(ContainSubstring("Lifecycle commands:"))
@@ -42,8 +42,8 @@ var _ = Describe("ccp main", func() {
 			Expect(got).To(ContainSubstring("verify                Replay one fixture directory through the current filter"))
 			Expect(got).To(ContainSubstring("gain                  Show token savings summary and recent proof output (--global supported)"))
 			Expect(got).To(ContainSubstring("history               Show recorded command history (--global supported)"))
-			Expect(got).To(ContainSubstring("uninstall             Remove selected integrations or fully uninstall ccp"))
-			Expect(got).To(ContainSubstring("Run ccp gain after install or init to verify savings on real work."))
+			Expect(got).To(ContainSubstring("uninstall             Remove selected integrations or fully uninstall cmdshape"))
+			Expect(got).To(ContainSubstring("Run cmdshape gain after install or init to verify savings on real work."))
 			Expect(got).To(ContainSubstring("--raw preserves native output unless --confidential is also used."))
 		})
 	})
@@ -83,7 +83,7 @@ var _ = Describe("ccp main", func() {
 
 		Context("when wrapped execution fails before process exit", func() {
 			It("returns the runner exit code and error", func() {
-				handled, exitCode, err := runInvocation(cli.Options{CommandArgs: []string{"__ccp_missing_binary__"}})
+				handled, exitCode, err := runInvocation(cli.Options{CommandArgs: []string{"__cmdshape_missing_binary__"}})
 
 				Expect(err).To(HaveOccurred())
 				Expect(handled).To(BeTrue())
@@ -166,7 +166,7 @@ var _ = Describe("ccp main", func() {
 
 		Context("when wrapped execution fails", func() {
 			It("returns the runner exit code and writes the error to stderr", func() {
-				code := run([]string{"__ccp_missing_binary__"}, &stdout, &stderr)
+				code := run([]string{"__cmdshape_missing_binary__"}, &stdout, &stderr)
 
 				Expect(code).To(Equal(127))
 				Expect(stdout.String()).To(BeEmpty())
@@ -190,8 +190,8 @@ var _ = Describe("ccp main", func() {
 
 		Context("when invoked without an execution command", func() {
 			It("prints usage and exits non-zero", func() {
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper")
-				cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER=1")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper")
+				cmd.Env = append(os.Environ(), "CMDSHAPE_MAIN_TEST_HELPER=1")
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
@@ -206,8 +206,8 @@ var _ = Describe("ccp main", func() {
 
 		Context("when invoked with --help", func() {
 			It("prints usage to stdout and exits successfully", func() {
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-help")
-				cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER_HELP=1")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper-help")
+				cmd.Env = append(os.Environ(), "CMDSHAPE_MAIN_TEST_HELPER_HELP=1")
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
 
@@ -220,10 +220,10 @@ var _ = Describe("ccp main", func() {
 
 		Context("when invoked with --version", func() {
 			It("prints the current version to stdout and exits successfully", func() {
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-version")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper-version")
 				cmd.Env = append(os.Environ(),
-					"CCP_MAIN_TEST_HELPER_VERSION=1",
-					"CCP_MAIN_TEST_HELPER_VERSION_VALUE=9.8.7",
+					"CMDSHAPE_MAIN_TEST_HELPER_VERSION=1",
+					"CMDSHAPE_MAIN_TEST_HELPER_VERSION_VALUE=9.8.7",
 				)
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
@@ -248,9 +248,9 @@ var _ = Describe("ccp main", func() {
 				home := GinkgoT().TempDir()
 				Expect(os.WriteFile(home+string(os.PathSeparator)+".config", []byte("block"), 0o644)).To(Succeed())
 
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-smoke")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper-smoke")
 				cmd.Env = append(os.Environ(),
-					"CCP_MAIN_TEST_HELPER_SMOKE=1",
+					"CMDSHAPE_MAIN_TEST_HELPER_SMOKE=1",
 					"HOME="+home,
 					"USERPROFILE="+home,
 				)
@@ -265,8 +265,8 @@ var _ = Describe("ccp main", func() {
 
 		Context("when exit helpers terminate the process", func() {
 			It("prints error text for exitWithErr", func() {
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-exit-err")
-				cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER_EXIT_WITH_ERR=1")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper-exit-err")
+				cmd.Env = append(os.Environ(), "CMDSHAPE_MAIN_TEST_HELPER_EXIT_WITH_ERR=1")
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
@@ -277,8 +277,8 @@ var _ = Describe("ccp main", func() {
 			})
 
 			It("exits quietly for exitWithErr with nil", func() {
-				cmd = exec.Command(os.Args[0], "-test.run=TestCCP", "--", "helper-exit-nil")
-				cmd.Env = append(os.Environ(), "CCP_MAIN_TEST_HELPER_EXIT_WITH_NIL_ERR=1")
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "helper-exit-nil")
+				cmd.Env = append(os.Environ(), "CMDSHAPE_MAIN_TEST_HELPER_EXIT_WITH_NIL_ERR=1")
 				cmd.Stderr = &stderr
 
 				err := cmd.Run()
@@ -331,51 +331,51 @@ func init() {
 }
 
 func runMainUsageHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER") != "1" {
 		return
 	}
 
-	os.Args = []string{"ccp"}
+	os.Args = []string{"cmdshape"}
 	main()
 }
 
 func runMainSmokeHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER_SMOKE") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_SMOKE") != "1" {
 		return
 	}
 
 	if runtime.GOOS == "windows" {
-		os.Args = []string{"ccp", "cmd", "/c", "echo", "smoke-ok"}
+		os.Args = []string{"cmdshape", "cmd", "/c", "echo", "smoke-ok"}
 	} else {
-		os.Args = []string{"ccp", "sh", "-c", "printf 'smoke-ok\n'"}
+		os.Args = []string{"cmdshape", "sh", "-c", "printf 'smoke-ok\n'"}
 	}
 	main()
 	os.Exit(0)
 }
 
 func runMainHelpHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER_HELP") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_HELP") != "1" {
 		return
 	}
 
-	os.Args = []string{"ccp", "--help"}
+	os.Args = []string{"cmdshape", "--help"}
 	main()
 	os.Exit(0)
 }
 
 func runMainVersionHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER_VERSION") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_VERSION") != "1" {
 		return
 	}
 
-	version.Version = fmt.Sprint(os.Getenv("CCP_MAIN_TEST_HELPER_VERSION_VALUE"))
-	os.Args = []string{"ccp", "--version"}
+	version.Version = fmt.Sprint(os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_VERSION_VALUE"))
+	os.Args = []string{"cmdshape", "--version"}
 	main()
 	os.Exit(0)
 }
 
 func runExitWithErrHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER_EXIT_WITH_ERR") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_EXIT_WITH_ERR") != "1" {
 		return
 	}
 
@@ -383,7 +383,7 @@ func runExitWithErrHelperIfRequested() {
 }
 
 func runExitWithNilErrHelperIfRequested() {
-	if os.Getenv("CCP_MAIN_TEST_HELPER_EXIT_WITH_NIL_ERR") != "1" {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_EXIT_WITH_NIL_ERR") != "1" {
 		return
 	}
 

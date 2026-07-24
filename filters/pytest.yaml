@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: pytest
 about: Compact quiet pytest summaries, preserve reusable failure and error loci, and trim assertion, setup, collection, and mixed-status noise without forcing traceback-mode rewrites.

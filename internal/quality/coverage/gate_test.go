@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	modulePathTest        = "go-command-compression-proxy"
+	modulePathTest        = "github.com/SuppieRK/cmdshape"
 	internalPrefixTest    = "internal/"
 	parseCoverProfileText = "parse coverprofile"
-	repeatedCoverLine     = "go-command-compression-proxy/internal/runner/run.go:3.1,4.2 2 0"
+	repeatedCoverLine     = "github.com/SuppieRK/cmdshape/internal/runner/run.go:3.1,4.2 2 0"
 )
 
 var _ = ginkgo.Describe("ParseProfile", func() {
@@ -27,10 +27,10 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 	ginkgo.It("builds internal and other package stats", func() {
 		raw := strings.Join([]string{
 			"mode: atomic",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 1",
 			repeatedCoverLine,
-			"go-command-compression-proxy/internal/engine/engine.go:1.1,2.2 5 1",
-			"go-command-compression-proxy/cmd/ccp/main.go:1.1,2.2 4 1",
+			"github.com/SuppieRK/cmdshape/internal/engine/engine.go:1.1,2.2 5 1",
+			"github.com/SuppieRK/cmdshape/cmd/cmdshape/main.go:1.1,2.2 4 1",
 		}, "\n")
 
 		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
@@ -49,12 +49,12 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 			Expect(err.Error()).To(ContainSubstring(parseCoverProfileText))
 		},
 		ginkgo.Entry("malformed line", "mode: set\nbad-line\n"),
-		ginkgo.Entry("invalid statement count", "mode: set\ngo-command-compression-proxy/internal/runner/run.go:1.1,2.2 nope 1\n"),
-		ginkgo.Entry("invalid execution count", "mode: set\ngo-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 nope\n"),
+		ginkgo.Entry("invalid statement count", "mode: set\ngithub.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 nope 1\n"),
+		ginkgo.Entry("invalid execution count", "mode: set\ngithub.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 nope\n"),
 	)
 
 	ginkgo.It("keeps the required scope empty when no internal packages are present", func() {
-		raw := "mode: set\ngo-command-compression-proxy/cmd/ccp/main.go:1.1,2.2 4 1\n"
+		raw := "mode: set\ngithub.com/SuppieRK/cmdshape/cmd/cmdshape/main.go:1.1,2.2 4 1\n"
 
 		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
 		Expect(err).NotTo(HaveOccurred())
@@ -68,8 +68,8 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 	ginkgo.It("deduplicates repeated blocks from coverpkg", func() {
 		raw := strings.Join([]string{
 			"mode: atomic",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 1",
 			repeatedCoverLine,
 			repeatedCoverLine,
 		}, "\n")
@@ -87,8 +87,8 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 	ginkgo.It("keeps repeated uncovered blocks uncovered", func() {
 		raw := strings.Join([]string{
 			"mode: atomic",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
 		}, "\n")
 
 		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
@@ -102,9 +102,9 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 	ginkgo.It("keeps repeated covered blocks covered even when uncovered duplicates follow", func() {
 		raw := strings.Join([]string{
 			"mode: atomic",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 1",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
-			"go-command-compression-proxy/internal/runner/run.go:1.1,2.2 3 0",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 1",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
+			"github.com/SuppieRK/cmdshape/internal/runner/run.go:1.1,2.2 3 0",
 		}, "\n")
 
 		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("ParseProfile", func() {
 	ginkgo.It("handles Windows-style paths", func() {
 		raw := strings.Join([]string{
 			"mode: set",
-			"go-command-compression-proxy\\internal\\runner\\run.go:1.1,2.2 2 1",
+			"github.com/SuppieRK/cmdshape\\internal\\runner\\run.go:1.1,2.2 2 1",
 		}, "\n")
 
 		report, err := ParseProfile(strings.NewReader(raw), modulePathTest, internalPrefixTest, 80)
@@ -174,9 +174,9 @@ var _ = ginkgo.Describe("packageForFile", func() {
 		func(filePath string, expected string) {
 			Expect(packageForFile(filePath, modulePathTest)).To(Equal(expected))
 		},
-		ginkgo.Entry("drops module-root files", "go-command-compression-proxy/main.go", ""),
-		ginkgo.Entry("normalizes windows separators", `go-command-compression-proxy\internal\runner\run.go`, "internal/runner"),
-		ginkgo.Entry("cleans nested relative segments", " go-command-compression-proxy/internal/runner/../engine/run.go ", "internal/engine"),
+		ginkgo.Entry("drops module-root files", "github.com/SuppieRK/cmdshape/main.go", ""),
+		ginkgo.Entry("normalizes windows separators", `github.com/SuppieRK/cmdshape\internal\runner\run.go`, "internal/runner"),
+		ginkgo.Entry("cleans nested relative segments", " github.com/SuppieRK/cmdshape/internal/runner/../engine/run.go ", "internal/engine"),
 	)
 })
 

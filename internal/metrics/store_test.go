@@ -101,7 +101,7 @@ var _ = Describe("metrics storage", func() {
 		It("writes and reads a normal project database", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 
 			Expect(AppendProject(project, path, RunMetric{
 				Tool:      "go",
@@ -117,10 +117,10 @@ var _ = Describe("metrics storage", func() {
 
 		It("rejects a dangling database symlink without creating its target", func() {
 			project := filepath.Join(tempDir, "project")
-			ccpDir := filepath.Join(project, ".ccp")
-			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			cmdshapeDir := filepath.Join(project, ".cmdshape")
+			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
 			outside := filepath.Join(tempDir, "outside.db")
-			path := filepath.Join(ccpDir, gainDBFileName)
+			path := filepath.Join(cmdshapeDir, gainDBFileName)
 			if err := os.Symlink(outside, path); err != nil {
 				Skip("symlink creation unavailable: " + err.Error())
 			}
@@ -136,11 +136,11 @@ var _ = Describe("metrics storage", func() {
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
 			outside := filepath.Join(tempDir, "outside")
 			Expect(os.Mkdir(outside, 0o755)).To(Succeed())
-			if err := os.Symlink(outside, filepath.Join(project, ".ccp")); err != nil {
+			if err := os.Symlink(outside, filepath.Join(project, ".cmdshape")); err != nil {
 				Skip("symlink creation unavailable: " + err.Error())
 			}
 
-			err := AppendProject(project, filepath.Join(project, ".ccp", gainDBFileName), RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
+			err := AppendProject(project, filepath.Join(project, ".cmdshape", gainDBFileName), RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})
 
 			Expect(err).To(HaveOccurred())
 			Expect(filepath.Join(outside, gainDBFileName)).NotTo(BeAnExistingFile())
@@ -160,7 +160,7 @@ var _ = Describe("metrics storage", func() {
 		It("consolidates 100 concurrent durable spool events without loss", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 
 			var wg sync.WaitGroup
 			errs := make(chan error, 100)
@@ -195,7 +195,7 @@ var _ = Describe("metrics storage", func() {
 		It("leaves a pending event while Bolt is locked and commits it later", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 			Expect(AppendProject(project, path, RunMetric{Tool: "seed", RawBytes: 1, KeptBytes: 1})).To(Succeed())
 
 			db, err := openDBAt(project, path, false)
@@ -214,7 +214,7 @@ var _ = Describe("metrics storage", func() {
 		It("consolidates pending events before purging the requested cutoff", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 			cutoff := time.Now().UTC().Truncate(time.Second)
 			Expect(AppendProject(project, path, RunMetric{
 				Timestamp: cutoff.Add(time.Second),
@@ -248,7 +248,7 @@ var _ = Describe("metrics storage", func() {
 		It("commits duplicate spool event IDs exactly once", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 			Expect(ensureSchema(project, path)).To(Succeed())
 			db, err := openDBAt(project, path, false)
 			Expect(err).NotTo(HaveOccurred())
@@ -268,7 +268,7 @@ var _ = Describe("metrics storage", func() {
 		It("bounds exactly-once markers with the same retention policy", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 			Expect(ensureSchema(project, path)).To(Succeed())
 			db, err := openDBAt(project, path, false)
 			Expect(err).NotTo(HaveOccurred())
@@ -297,18 +297,18 @@ var _ = Describe("metrics storage", func() {
 		It("uses private modes for automatic metrics state", func() {
 			project := filepath.Join(tempDir, "project")
 			Expect(os.Mkdir(project, 0o755)).To(Succeed())
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 
 			Expect(AppendProject(project, path, RunMetric{Tool: "go", RawBytes: 1, KeptBytes: 1})).To(Succeed())
 
-			ccpInfo, err := os.Stat(filepath.Join(project, ".ccp"))
+			cmdshapeInfo, err := os.Stat(filepath.Join(project, ".cmdshape"))
 			Expect(err).NotTo(HaveOccurred())
-			spoolInfo, err := os.Stat(filepath.Join(project, ".ccp", spoolDirectoryName))
+			spoolInfo, err := os.Stat(filepath.Join(project, ".cmdshape", spoolDirectoryName))
 			Expect(err).NotTo(HaveOccurred())
 			dbInfo, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
 			if runtime.GOOS != "windows" {
-				Expect(ccpInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
+				Expect(cmdshapeInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
 				Expect(spoolInfo.Mode().Perm()).To(Equal(os.FileMode(0o700)))
 				Expect(dbInfo.Mode().Perm()).To(Equal(os.FileMode(0o600)))
 			}
@@ -435,7 +435,7 @@ var _ = Describe("metrics storage", func() {
 			RawBytes:         18,
 			KeptBytes:        6,
 			FilterSourceKind: "project",
-			FilterPath:       "/repo/.ccp/filters/python.yaml",
+			FilterPath:       "/repo/.cmdshape/filters/python.yaml",
 			FilterHash:       "abc123",
 		})).To(Succeed())
 
@@ -446,7 +446,7 @@ var _ = Describe("metrics storage", func() {
 		Expect(history[0].Filter).To(Equal("python"))
 		Expect(history[0].Case).To(Equal("pytest"))
 		Expect(history[0].FilterSourceKind).To(Equal("project"))
-		Expect(history[0].FilterPath).To(Equal("/repo/.ccp/filters/python.yaml"))
+		Expect(history[0].FilterPath).To(Equal("/repo/.cmdshape/filters/python.yaml"))
 		Expect(history[0].FilterHash).To(Equal("abc123"))
 	})
 
@@ -489,33 +489,33 @@ var _ = Describe("metrics storage", func() {
 	})
 
 	Describe("updating local project gitignore for metrics db", func() {
-		It("ensures nested CCP gitignore and leaves the parent gitignore unchanged", func() {
-			project := initGitProjectForMetrics(tempDir, "node_modules/\n.ccp\n")
+		It("ensures the nested cmdshape gitignore and leaves the parent gitignore unchanged", func() {
+			project := initGitProjectForMetrics(tempDir, "node_modules/\n.cmdshape\n")
 			withMetricsWorkingDir(project)
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 
 			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(project, ".ccp", gitignoreFileName), []byte("user-edit\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(project, ".cmdshape", gitignoreFileName), []byte("user-edit\n"), 0o644)).To(Succeed())
 			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
 			parent, err := os.ReadFile(filepath.Join(project, gitignoreFileName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(parent)).To(Equal("node_modules/\n.ccp\n"))
-			nested, err := os.ReadFile(filepath.Join(project, ".ccp", gitignoreFileName))
+			Expect(string(parent)).To(Equal("node_modules/\n.cmdshape\n"))
+			nested, err := os.ReadFile(filepath.Join(project, ".cmdshape", gitignoreFileName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(nested)).To(Equal("gain.db\n.gitignore\n"))
 		})
 
-		It("overwrites stale nested CCP gitignore contents", func() {
+		It("overwrites stale nested cmdshape gitignore contents", func() {
 			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
 			withMetricsWorkingDir(project)
-			ccpDir := filepath.Join(project, ".ccp")
-			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(ccpDir, gitignoreFileName), []byte("custom\n"), 0o644)).To(Succeed())
+			cmdshapeDir := filepath.Join(project, ".cmdshape")
+			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(cmdshapeDir, gitignoreFileName), []byte("custom\n"), 0o644)).To(Succeed())
 
-			Expect(Append(filepath.Join(ccpDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+			Expect(Append(filepath.Join(cmdshapeDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			nested, err := os.ReadFile(filepath.Join(ccpDir, gitignoreFileName))
+			nested, err := os.ReadFile(filepath.Join(cmdshapeDir, gitignoreFileName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(nested)).To(Equal("gain.db\n.gitignore\n"))
 		})
@@ -525,11 +525,11 @@ var _ = Describe("metrics storage", func() {
 			subdir := filepath.Join(project, "subdir")
 			Expect(os.MkdirAll(subdir, 0o755)).To(Succeed())
 			withMetricsWorkingDir(subdir)
-			path := filepath.Join(subdir, ".ccp", gainDBFileName)
+			path := filepath.Join(subdir, ".cmdshape", gainDBFileName)
 
 			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			_, err := os.Stat(filepath.Join(subdir, ".ccp", gitignoreFileName))
+			_, err := os.Stat(filepath.Join(subdir, ".cmdshape", gitignoreFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
 			parent, err := os.ReadFile(filepath.Join(project, gitignoreFileName))
 			Expect(err).NotTo(HaveOccurred())
@@ -539,21 +539,21 @@ var _ = Describe("metrics storage", func() {
 		It("skips nested ignore management outside git repositories", func() {
 			project := tempDir
 			withMetricsWorkingDir(project)
-			path := filepath.Join(project, ".ccp", gainDBFileName)
+			path := filepath.Join(project, ".cmdshape", gainDBFileName)
 
 			Expect(Append(path, RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			_, err := os.Stat(filepath.Join(project, ".ccp", gitignoreFileName))
+			_, err := os.Stat(filepath.Join(project, ".cmdshape", gitignoreFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
-		It("skips non-CCP metrics paths", func() {
+		It("skips non-cmdshape metrics paths", func() {
 			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
 			withMetricsWorkingDir(project)
 
 			Expect(Append(filepath.Join(project, "metrics", gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			_, err := os.Stat(filepath.Join(project, ".ccp", gitignoreFileName))
+			_, err := os.Stat(filepath.Join(project, ".cmdshape", gitignoreFileName))
 			Expect(err).To(MatchError(os.ErrNotExist))
 		})
 
@@ -567,30 +567,30 @@ var _ = Describe("metrics storage", func() {
 			out, err := cmd.CombinedOutput()
 			Expect(err).NotTo(HaveOccurred(), string(out))
 			withMetricsWorkingDir(project)
-			filtersDir := filepath.Join(project, ".ccp", "filters")
+			filtersDir := filepath.Join(project, ".cmdshape", "filters")
 			Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(filtersDir, "local.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
 
-			Expect(Append(filepath.Join(project, ".ccp", gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
+			Expect(Append(filepath.Join(project, ".cmdshape", gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})).To(Succeed())
 
-			ignored := metricsGitCheckIgnore(project, ".ccp/gain.db", ".ccp/.gitignore")
-			Expect(ignored).To(ContainElement(".ccp/gain.db"))
-			Expect(ignored).To(ContainElement(".ccp/.gitignore"))
-			Expect(metricsGitCheckIgnore(project, ".ccp/filters/local.yaml")).To(BeEmpty())
+			ignored := metricsGitCheckIgnore(project, ".cmdshape/gain.db", ".cmdshape/.gitignore")
+			Expect(ignored).To(ContainElement(".cmdshape/gain.db"))
+			Expect(ignored).To(ContainElement(".cmdshape/.gitignore"))
+			Expect(metricsGitCheckIgnore(project, ".cmdshape/filters/local.yaml")).To(BeEmpty())
 		})
 
 		It("propagates nested ignore symlink errors", func() {
 			project := initGitProjectForMetrics(tempDir, "node_modules/\n")
 			withMetricsWorkingDir(project)
 			outside := filepath.Join(GinkgoT().TempDir(), "outside-gitignore")
-			ccpDir := filepath.Join(project, ".ccp")
-			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			cmdshapeDir := filepath.Join(project, ".cmdshape")
+			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
 			Expect(os.WriteFile(outside, []byte("keep\n"), 0o644)).To(Succeed())
-			if err := os.Symlink(outside, filepath.Join(ccpDir, gitignoreFileName)); err != nil {
+			if err := os.Symlink(outside, filepath.Join(cmdshapeDir, gitignoreFileName)); err != nil {
 				Skip("symlink creation unavailable: " + err.Error())
 			}
 
-			err := Append(filepath.Join(ccpDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})
+			err := Append(filepath.Join(cmdshapeDir, gainDBFileName), RunMetric{Tool: "go", Command: metricsGoTestCommand, RawBytes: 16, KeptBytes: 8})
 
 			Expect(err).To(HaveOccurred())
 			body, readErr := os.ReadFile(outside)
@@ -863,7 +863,7 @@ var _ = Describe("metrics storage", func() {
 					KeptBytes:        4,
 					DurationMS:       20,
 					FilterSourceKind: "project",
-					FilterPath:       "/repo/.ccp/filters/python.yaml",
+					FilterPath:       "/repo/.cmdshape/filters/python.yaml",
 					FilterHash:       "hash-a",
 				},
 				RunMetric{
@@ -877,7 +877,7 @@ var _ = Describe("metrics storage", func() {
 					DurationMS:       40,
 					Passthrough:      true,
 					FilterSourceKind: "project",
-					FilterPath:       "/repo/.ccp/filters/python.yaml",
+					FilterPath:       "/repo/.cmdshape/filters/python.yaml",
 					FilterHash:       "hash-a",
 				},
 				RunMetric{
@@ -888,7 +888,7 @@ var _ = Describe("metrics storage", func() {
 					RawBytes:         12,
 					KeptBytes:        6,
 					FilterSourceKind: "home",
-					FilterPath:       "/home/user/.config/ccp/filters/python.yaml",
+					FilterPath:       "/home/user/.config/cmdshape/filters/python.yaml",
 					FilterHash:       "hash-b",
 				},
 			)
@@ -902,7 +902,7 @@ var _ = Describe("metrics storage", func() {
 			Expect(rows[0].Case).To(Equal("pytest"))
 			Expect(rows[0].DispatchKey).To(Equal("python|pytest"))
 			Expect(rows[0].FilterSourceKind).To(Equal("project"))
-			Expect(rows[0].FilterPath).To(Equal("/repo/.ccp/filters/python.yaml"))
+			Expect(rows[0].FilterPath).To(Equal("/repo/.cmdshape/filters/python.yaml"))
 			Expect(rows[0].FilterHash).To(Equal("hash-a"))
 			Expect(rows[0].Commands).To(Equal(int64(2)))
 			Expect(rows[0].PassthroughCommands).To(Equal(int64(1)))
@@ -932,8 +932,8 @@ var _ = Describe("metrics storage", func() {
 					RegistryBuildRecorded: true,
 					RegistryBuildMS:       10,
 					RegistrySources: []RegistrySourceBuildMetric{
-						{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 2, DurationMS: 7},
-						{SourceKind: "home", SourceDir: "/home/user/.config/ccp/filters", Definitions: 1, Compiled: 1, DurationMS: 3},
+						{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 2, DurationMS: 7},
+						{SourceKind: "home", SourceDir: "/home/user/.config/cmdshape/filters", Definitions: 1, Compiled: 1, DurationMS: 3},
 					},
 				},
 				RunMetric{
@@ -945,7 +945,7 @@ var _ = Describe("metrics storage", func() {
 					RegistryBuildRecorded: true,
 					RegistryBuildMS:       30,
 					RegistrySources: []RegistrySourceBuildMetric{
-						{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 3, Compiled: 2, DurationMS: 25, Error: "boom"},
+						{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 3, Compiled: 2, DurationMS: 25, Error: "boom"},
 					},
 				},
 				RunMetric{
@@ -967,7 +967,7 @@ var _ = Describe("metrics storage", func() {
 			Expect(summary.MaxDurationMS).To(Equal(int64(30)))
 			Expect(rows).To(HaveLen(2))
 			Expect(rows[0].SourceKind).To(Equal("project"))
-			Expect(rows[0].SourceDir).To(Equal("/repo/.ccp/filters"))
+			Expect(rows[0].SourceDir).To(Equal("/repo/.cmdshape/filters"))
 			Expect(rows[0].Builds).To(Equal(int64(2)))
 			Expect(rows[0].Errors).To(Equal(int64(1)))
 			Expect(rows[0].Definitions).To(Equal(int64(5)))
@@ -1384,12 +1384,12 @@ var _ = Describe("metrics storage", func() {
 				DurationMS:            17,
 				Passthrough:           true,
 				FilterSourceKind:      "project",
-				FilterPath:            "/repo/.ccp/filters/go.yaml",
+				FilterPath:            "/repo/.cmdshape/filters/go.yaml",
 				FilterHash:            "abc123",
 				RegistryBuildRecorded: true,
 				RegistryBuildMS:       42,
 				RegistrySources: []RegistrySourceBuildMetric{
-					{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
+					{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
 				},
 			}
 
@@ -1404,12 +1404,12 @@ var _ = Describe("metrics storage", func() {
 			Expect(got.DurationMS).To(Equal(rec.DurationMS))
 			Expect(got.Passthrough).To(BeTrue())
 			Expect(got.FilterSourceKind).To(Equal("project"))
-			Expect(got.FilterPath).To(Equal("/repo/.ccp/filters/go.yaml"))
+			Expect(got.FilterPath).To(Equal("/repo/.cmdshape/filters/go.yaml"))
 			Expect(got.FilterHash).To(Equal("abc123"))
 			Expect(got.RegistryBuildRecorded).To(BeTrue())
 			Expect(got.RegistryBuildMS).To(Equal(int64(42)))
 			Expect(got.RegistrySources).To(Equal([]RegistrySourceBuildMetric{
-				{SourceKind: "project", SourceDir: "/repo/.ccp/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
+				{SourceKind: "project", SourceDir: "/repo/.cmdshape/filters", Definitions: 2, Compiled: 1, DurationMS: 12},
 			}))
 		})
 

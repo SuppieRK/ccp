@@ -2,7 +2,7 @@ package agents
 
 import (
 	"fmt"
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,9 +11,9 @@ import (
 type ClaudeAdapter struct{}
 
 const (
-	claudeHookScriptName = "ccp-rewrite.sh"
+	claudeHookScriptName = "cmdshape-rewrite.sh"
 	claudeSettingsName   = "settings.json"
-	claudeAwarenessName  = "CCP.md"
+	claudeAwarenessName  = "CMDSHAPE.md"
 	claudeGuideName      = "CLAUDE.md"
 	claudeSettingsErrFmt = "invalid claude settings file: %s"
 )
@@ -29,7 +29,7 @@ func (a ClaudeAdapter) Plan(ctx Context) []PlannedArtifact {
 	root := claudeRoot(ctx)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
 	guidePath := filepath.Join(root, claudeGuideName)
-	plan := bashHookAndSettingsArtifacts(root, claudeHookScriptName, claudeSettingsName, bashRewriteHookScriptContent("claude", "ccp-claude-hook.log"))
+	plan := bashHookAndSettingsArtifacts(root, claudeHookScriptName, claudeSettingsName, bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log"))
 	plan = append(plan,
 		PlannedArtifact{
 			Kind:    ArtifactAwareness,
@@ -53,7 +53,7 @@ func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, er
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 
-	hookChanged, err := write(hookPath, []byte(bashRewriteHookScriptContent("claude", "ccp-claude-hook.log")), 0o755)
+	hookChanged, err := write(hookPath, []byte(bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log")), 0o755)
 	if err != nil {
 		return res, err
 	}
@@ -124,8 +124,10 @@ func claudeRoot(ctx Context) string {
 func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	root := claudeRoot(ctx)
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
+	legacyHookPath := filepath.Join(root, "hooks", "ccp-rewrite.sh")
 	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
+	legacyAwarenessPath := filepath.Join(root, "CCP.md")
 	guidePath := filepath.Join(root, claudeGuideName)
 
 	var res InstallResult
@@ -134,6 +136,20 @@ func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	}
 	if err := uninstallClaudeSettings(&res, settingsPath, hookPath); err != nil {
 		return res, err
+	}
+	if err := uninstallClaudeSettings(&res, settingsPath, legacyHookPath); err != nil {
+		return res, err
+	}
+	for _, legacy := range []struct {
+		path      string
+		signature string
+	}{
+		{path: legacyHookPath, signature: legacyHookSignature},
+		{path: legacyAwarenessPath, signature: legacyAwarenessSignature},
+	} {
+		if err := removeOwnedLegacyFile(legacy.path, legacy.signature); err != nil {
+			return res, err
+		}
 	}
 	if err := uninstallClaudeGuide(&res, guidePath); err != nil {
 		return res, err
@@ -225,10 +241,10 @@ func verifyClaudeSettings(settingsPath, hookPath string) error {
 }
 
 func claudeManagedGuideBlock() string {
-	return ccpManagedBlockStart + "\n" +
-		"## CCP Integration (Managed)\n\n" +
-		"@CCP.md\n" +
-		ccpManagedBlockEnd + "\n"
+	return cmdshapeManagedBlockStart + "\n" +
+		"## cmdshape Integration (Managed)\n\n" +
+		"@CMDSHAPE.md\n" +
+		cmdshapeManagedBlockEnd + "\n"
 }
 
 func verifyClaudeGuideBlock(path string) error {
@@ -237,11 +253,11 @@ func verifyClaudeGuideBlock(path string) error {
 		return fmt.Errorf("missing claude guide file: %s", path)
 	}
 	content := string(data)
-	if !strings.Contains(content, ccpManagedBlockStart) || !strings.Contains(content, ccpManagedBlockEnd) {
+	if !strings.Contains(content, cmdshapeManagedBlockStart) || !strings.Contains(content, cmdshapeManagedBlockEnd) {
 		return fmt.Errorf("missing claude managed guide block markers in %s", path)
 	}
-	if !strings.Contains(content, "@CCP.md") {
-		return fmt.Errorf("missing claude CCP guide reference in %s", path)
+	if !strings.Contains(content, "@CMDSHAPE.md") {
+		return fmt.Errorf("missing claude cmdshape guide reference in %s", path)
 	}
 	return nil
 }
@@ -256,10 +272,8 @@ func upsertClaudeGuideBlock(path string) (string, error) {
 		return "", err
 	}
 	existing := string(raw)
-	start := strings.Index(existing, ccpManagedBlockStart)
-	end := strings.Index(existing, ccpManagedBlockEnd)
-	if start >= 0 && end >= start {
-		end += len(ccpManagedBlockEnd)
+	start, end, found := managedBlockBounds(existing)
+	if found {
 		tailStart := skipSingleLF(existing, end)
 		updated := existing[:start] + strings.TrimRight(block, "\n") + "\n" + existing[tailStart:]
 		return normalizeManagedFile(updated), nil
@@ -284,5 +298,5 @@ func removeFileIfExists(path string) (bool, error) {
 	return true, nil
 }
 func awarenessContent(toolID string) string {
-	return fmt.Sprintf("# CCP Proxy Integration\n\nTool: %s\n\nCommands are routed through `ccp` via hook wiring installed by `ccp init`.\n", toolID)
+	return fmt.Sprintf("# cmdshape Integration\n\nTool: %s\n\nCommands are routed through `cmdshape` via hook wiring installed by `cmdshape init`.\n", toolID)
 }

@@ -1,6 +1,6 @@
-# Generated CCP CLI facts
+# Generated cmdshape CLI facts
 
-This file is generated from runtime command and integration metadata. Run `go run ./cmd/ccp-docgen` after changing either inventory.
+This file is generated from runtime command and integration metadata. Run `go run ./cmd/cmdshape-docgen` after changing either inventory.
 
 ## Execution flags
 
@@ -17,6 +17,7 @@ This file is generated from runtime command and integration metadata. Run `go ru
 - `gain`
 - `history`
 - `init`
+- `migrate`
 - `recovery`
 - `repair`
 - `uninstall`

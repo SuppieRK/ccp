@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://suppierk.github.io/ccp/sitemap.xml
+Sitemap: https://suppierk.github.io/cmdshape/sitemap.xml

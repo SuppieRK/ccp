@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,7 +33,7 @@ var _ = Describe("recovery storage", func() {
 		enabled, err = Enabled()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(enabled).To(BeTrue())
-		info, err := os.Stat(filepath.Join(root, "ccp", "recovery.json"))
+		info, err := os.Stat(filepath.Join(root, "cmdshape", "recovery.json"))
 		Expect(err).NotTo(HaveOccurred())
 		if runtime.GOOS != "windows" {
 			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
@@ -129,7 +129,7 @@ var _ = Describe("recovery storage", func() {
 	It("rejects a symlinked recovery root", func() {
 		outside := filepath.Join(root, "outside")
 		Expect(os.Mkdir(outside, 0o700)).To(Succeed())
-		recoveryRoot := filepath.Join(root, "ccp", "recovery")
+		recoveryRoot := filepath.Join(root, "cmdshape", "recovery")
 		Expect(os.MkdirAll(filepath.Dir(recoveryRoot), 0o700)).To(Succeed())
 		if err := os.Symlink(outside, recoveryRoot); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())

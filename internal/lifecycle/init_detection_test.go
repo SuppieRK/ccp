@@ -152,7 +152,7 @@ var _ = Describe("init auto-detection", func() {
 
 		rulesBytes, err := os.ReadFile(filepath.Join(ws.home, ".aider.rules.md"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(rulesBytes)).To(ContainSubstring("Use `ccp` as the command prefix for every executable in shell commands"))
+		Expect(string(rulesBytes)).To(ContainSubstring("Use `cmdshape` as the command prefix for every executable in shell commands"))
 
 		repoBytes, err := os.ReadFile(filepath.Join(ws.root, initAiderConfigName))
 		Expect(err).NotTo(HaveOccurred())

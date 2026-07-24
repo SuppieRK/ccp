@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -205,8 +205,8 @@ var _ = Describe("Adapter application", func() {
 			Status: "noop",
 			Reason: "applied=0 noop=1",
 		}}))
-		Expect(stdout).To(ContainSubstring("ccp init: planned 1 changes for alpha"))
-		Expect(stdout).To(ContainSubstring("ccp init: [alpha] status=noop (applied=0 noop=1)"))
+		Expect(stdout).To(ContainSubstring("cmdshape init: planned 1 changes for alpha"))
+		Expect(stdout).To(ContainSubstring("cmdshape init: [alpha] status=noop (applied=0 noop=1)"))
 	})
 
 	It("keeps zero-result installs in the applied state without a planned line", func() {
@@ -226,7 +226,7 @@ var _ = Describe("Adapter application", func() {
 			Reason: "applied=0 noop=0",
 		}}))
 		Expect(stdout).NotTo(ContainSubstring("planned"))
-		Expect(stdout).To(ContainSubstring("ccp init: [alpha] status=applied (applied=0 noop=0)"))
+		Expect(stdout).To(ContainSubstring("cmdshape init: [alpha] status=applied (applied=0 noop=0)"))
 	})
 
 	It("returns failed state for install errors", func() {
@@ -270,7 +270,7 @@ var _ = Describe("Startup maintenance", func() {
 		It("replaces stale home files with the materialized filter set", func() {
 			Expect(RunStartupMaintenance()).To(Succeed())
 
-			_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+			_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			_, err = os.Stat(filepath.Join(ws.home, ".ccp", "stale.txt"))
 			Expect(err).To(MatchError(os.ErrNotExist))
@@ -287,7 +287,7 @@ var _ = Describe("Startup maintenance", func() {
 			It("skips the refresh", func() {
 				Expect(RunStartupMaintenance()).To(Succeed())
 
-				_, err := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+				_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
 				Expect(err).To(MatchError(os.ErrNotExist))
 			})
 		})
@@ -311,7 +311,7 @@ var _ = Describe("Startup maintenance", func() {
 
 				_, err = os.Stat(lockPath)
 				Expect(err).To(MatchError(os.ErrNotExist))
-				_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "fake.yaml"))
+				_, err = os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -323,7 +323,7 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("treats locks at the max age boundary as stale", func() {
-			lockPath := filepath.Join(ws.home, ".config", "ccp", startupMaintenanceLockName)
+			lockPath := filepath.Join(ws.home, ".config", "cmdshape", startupMaintenanceLockName)
 			Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
 
@@ -342,12 +342,12 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("leaves legacy project init state to repair migrations", func() {
-			ccpDir := filepath.Join(ws.work, ".ccp")
-			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			cmdshapeDir := filepath.Join(ws.work, ".cmdshape")
+			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
 
-			stale := filepath.Join(ccpDir, initConfigFileName)
+			stale := filepath.Join(cmdshapeDir, initConfigFileName)
 			backup := stale + ".bak.123"
-			gainDB := filepath.Join(ccpDir, "gain.db")
+			gainDB := filepath.Join(cmdshapeDir, "gain.db")
 			for _, file := range []string{stale, backup, gainDB} {
 				Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
 			}
@@ -361,7 +361,7 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("replaces managed config contents and refreshes home filters", func() {
-			configDir := filepath.Join(ws.home, ".config", "ccp")
+			configDir := filepath.Join(ws.home, ".config", "cmdshape")
 			customFilter := filepath.Join(configDir, "filters", "custom.yaml")
 			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 
@@ -394,8 +394,8 @@ var _ = Describe("Startup maintenance", func() {
 			}
 
 			for _, copied := range []string{
-				filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml"),
-				filepath.Join(ws.home, ".config", "ccp", "filters", "npm.yaml"),
+				filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml"),
+				filepath.Join(ws.home, ".config", "cmdshape", "filters", "npm.yaml"),
 				customFilter,
 			} {
 				_, err := os.Stat(copied)
@@ -404,10 +404,10 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("preserves the global workspace registry during sync", func() {
-			configDir := filepath.Join(ws.home, ".config", "ccp")
+			configDir := filepath.Join(ws.home, ".config", "cmdshape")
 			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 			registryPath := workspaces.PathForHome(ws.home)
-			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".ccp", "gain.db"))).To(Succeed())
+			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 
 			stubMaterializeHomeFiltersForSpec(map[string]string{
 				".mappings.yaml": "version: 1\nmap:\n  npm: npm\n",
@@ -422,7 +422,7 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("keeps only documented managed-home entries during cleanup variants", func() {
-			configDir := filepath.Join(ws.home, ".config", "ccp")
+			configDir := filepath.Join(ws.home, ".config", "cmdshape")
 			registryPath := workspaces.PathForHome(ws.home)
 			lockPath := filepath.Join(configDir, startupMaintenanceLockName)
 			filtersDir := filepath.Join(configDir, "filters")
@@ -433,7 +433,7 @@ var _ = Describe("Startup maintenance", func() {
 			Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(recoveryConfig, []byte(`{"enabled":true}`), 0o600)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(recoveryDir, "failure.yaml"), []byte("retained"), 0o600)).To(Succeed())
-			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".ccp", "gain.db"))).To(Succeed())
+			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(configDir, "state.json"), []byte("stale"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(filtersDir, "custom.yaml"), []byte("custom"), 0o644)).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
@@ -463,7 +463,7 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("preserves only the named children when cleaning a managed config directory", func() {
-			configDir := filepath.Join(ws.home, ".config", "ccp")
+			configDir := filepath.Join(ws.home, ".config", "cmdshape")
 			Expect(os.MkdirAll(filepath.Join(configDir, "keep-dir"), 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(configDir, "keep-file"), []byte("keep"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(configDir, "drop-file"), []byte("drop"), 0o644)).To(Succeed())
@@ -480,12 +480,12 @@ var _ = Describe("Startup maintenance", func() {
 		})
 
 		It("treats missing managed config directories as already clean", func() {
-			Expect(removeAllChildrenExcept(filepath.Join(ws.home, ".config", "ccp"))).To(Succeed())
+			Expect(removeAllChildrenExcept(filepath.Join(ws.home, ".config", "cmdshape"))).To(Succeed())
 		})
 
 		DescribeTable("surfaces config directory read failures during managed-home cleanup",
 			func(cleanup func(string) error) {
-				configDir := filepath.Join(ws.home, ".config", "ccp")
+				configDir := filepath.Join(ws.home, ".config", "cmdshape")
 				Expect(os.MkdirAll(filepath.Dir(configDir), 0o755)).To(Succeed())
 				Expect(os.WriteFile(configDir, []byte("not a directory"), 0o644)).To(Succeed())
 
@@ -504,7 +504,7 @@ var _ = Describe("Startup maintenance", func() {
 
 	It("rewrites managed state with embedded shipped filters on repair", func() {
 		ws := newLifecycleWorkspaceSpec()
-		configDir := filepath.Join(ws.home, ".config", "ccp")
+		configDir := filepath.Join(ws.home, ".config", "cmdshape")
 		customFilter := filepath.Join(configDir, "filters", "custom.yaml")
 		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
@@ -515,12 +515,12 @@ var _ = Describe("Startup maintenance", func() {
 
 		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
 		Expect(err).To(MatchError(os.ErrNotExist))
-		_, err = os.Stat(filepath.Join(ws.home, ".config", "ccp", initConfigFileName))
+		_, err = os.Stat(filepath.Join(ws.home, ".config", "cmdshape", initConfigFileName))
 		Expect(err).To(MatchError(os.ErrNotExist))
 		for _, path := range []string{
-			filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml"),
-			filepath.Join(ws.home, ".config", "ccp", "filters", "git.yaml"),
-			filepath.Join(ws.home, ".config", "ccp", "filters", "npm.yaml"),
+			filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml"),
+			filepath.Join(ws.home, ".config", "cmdshape", "filters", "git.yaml"),
+			filepath.Join(ws.home, ".config", "cmdshape", "filters", "npm.yaml"),
 		} {
 			_, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred(), path)
@@ -538,7 +538,7 @@ var _ = Describe("repair", func() {
 	})
 
 	It("rewrites managed home state with --yes", func() {
-		configDir := filepath.Join(ws.home, ".config", "ccp")
+		configDir := filepath.Join(ws.home, ".config", "cmdshape")
 		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
 		stubMaterializeHomeFiltersForSpec(map[string]string{
@@ -556,7 +556,7 @@ var _ = Describe("repair", func() {
 
 	It("preserves the global workspace registry when rewriting state", func() {
 		registryPath := workspaces.PathForHome(ws.home)
-		Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".ccp", "gain.db"))).To(Succeed())
+		Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".cmdshape", "gain.db"))).To(Succeed())
 		stubMaterializeHomeFiltersForSpec(map[string]string{
 			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
 			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
@@ -570,11 +570,11 @@ var _ = Describe("repair", func() {
 	})
 
 	It("runs the built-in legacy project init cleanup migration during rewrite repair", func() {
-		ccpDir := filepath.Join(ws.work, ".ccp")
-		Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
-		stale := filepath.Join(ccpDir, initConfigFileName)
+		cmdshapeDir := filepath.Join(ws.work, ".cmdshape")
+		Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
+		stale := filepath.Join(cmdshapeDir, initConfigFileName)
 		backup := stale + ".bak.123"
-		gainDB := filepath.Join(ccpDir, "gain.db")
+		gainDB := filepath.Join(cmdshapeDir, "gain.db")
 		for _, file := range []string{stale, backup, gainDB} {
 			Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
 		}
@@ -685,7 +685,7 @@ var _ = Describe("repair", func() {
 
 		Expect(err).To(MatchError(ContainSubstring("migration broken: boom")))
 		Expect(materializeCalled).To(BeFalse())
-		Expect(out.String()).NotTo(ContainSubstring("ccp repair:"))
+		Expect(out.String()).NotTo(ContainSubstring("cmdshape repair:"))
 	})
 
 	DescribeTable("uses the lifecycle lock for repair modes",
@@ -703,7 +703,7 @@ var _ = Describe("repair", func() {
 			err = RunRepair(args)
 
 			Expect(err).To(HaveOccurred())
-			_, statErr := os.Stat(filepath.Join(ws.home, ".config", "ccp", "filters", "git.yaml"))
+			_, statErr := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "git.yaml"))
 			Expect(statErr).To(MatchError(os.ErrNotExist))
 		},
 		Entry("--yes", []string{"--yes"}),
@@ -720,7 +720,7 @@ var _ = Describe("repair", func() {
 			repairStdout = prevOut
 		})
 
-		configDir := filepath.Join(ws.home, ".config", "ccp")
+		configDir := filepath.Join(ws.home, ".config", "cmdshape")
 		filtersDir := filepath.Join(configDir, "filters")
 		customFilter := filepath.Join(filtersDir, "custom.yaml")
 		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
@@ -757,7 +757,7 @@ var _ = Describe("repair", func() {
 			repairStdout = prevOut
 		})
 
-		filtersDir := filepath.Join(ws.home, ".config", "ccp", "filters")
+		filtersDir := filepath.Join(ws.home, ".config", "cmdshape", "filters")
 		customFilter := filepath.Join(filtersDir, "custom.yaml")
 		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
@@ -776,7 +776,7 @@ var _ = Describe("repair", func() {
 	})
 
 	It("syncs missing shipped filters without overwriting existing user files", func() {
-		filtersDir := filepath.Join(ws.home, ".config", "ccp", "filters")
+		filtersDir := filepath.Join(ws.home, ".config", "cmdshape", "filters")
 		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filtersDir, "git.yaml"), []byte("user override\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filtersDir, ".mappings.yaml"), []byte("version: 1\nmap:\n  custom: custom\n"), 0o644)).To(Succeed())
@@ -817,7 +817,7 @@ var _ = Describe("repair", func() {
 	It("normalizes zero-version destination mappings before merging missing aliases", func() {
 		srcDir := GinkgoT().TempDir()
 		srcPath := filepath.Join(srcDir, ".mappings.yaml")
-		dstPath := filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml")
+		dstPath := filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml")
 		Expect(os.MkdirAll(filepath.Dir(dstPath), 0o755)).To(Succeed())
 		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(dstPath, []byte("map:\n  custom: custom\n"), 0o644)).To(Succeed())
@@ -834,7 +834,7 @@ var _ = Describe("repair", func() {
 	It("preserves invalid user mappings when add-missing mode encounters parse errors", func() {
 		srcDir := GinkgoT().TempDir()
 		srcPath := filepath.Join(srcDir, ".mappings.yaml")
-		dstPath := filepath.Join(ws.home, ".config", "ccp", "filters", ".mappings.yaml")
+		dstPath := filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml")
 		Expect(os.MkdirAll(filepath.Dir(dstPath), 0o755)).To(Succeed())
 		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
 		original := []byte("not: [valid")

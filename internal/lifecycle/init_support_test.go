@@ -1,7 +1,7 @@
 package lifecycle
 
 import (
-	"go-command-compression-proxy/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
 	"path/filepath"
 )
 
@@ -13,12 +13,12 @@ const (
 	initCopilotDir        = ".copilot"
 	initCopilotFileName   = "copilot-instructions.md"
 	initClineDir          = ".clinerules"
-	initClineRuleName     = "ccp.md"
-	initRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `ccp --raw` as an escape hatch."
+	initClineRuleName     = "cmdshape.md"
+	initRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `cmdshape --raw` as an escape hatch."
 	initCursorDir         = ".cursor"
-	initCursorRuleName    = "ccp.mdc"
+	initCursorRuleName    = "cmdshape.mdc"
 	initAmazonQDir        = ".amazonq"
-	initAmazonQRuleName   = "ccp.md"
+	initAmazonQRuleName   = "cmdshape.md"
 	initAiderConfigName   = ".aider.conf.yml"
 	initAuggieDir         = ".augment"
 	initAntigravityDir    = ".agent"
@@ -32,17 +32,17 @@ const (
 	initKilocodeDir       = ".kilocode"
 	initQoderDir          = ".qoder"
 	initRooCodeDir        = ".roo"
-	initRooCodeRuleName   = "ccp.md"
+	initRooCodeRuleName   = "cmdshape.md"
 	initTraeDir           = ".trae"
-	initTraeRuleName      = "ccp.md"
+	initTraeRuleName      = "cmdshape.md"
 	initWindsurfDir       = ".windsurf"
-	initWindsurfRuleName  = "ccp.md"
+	initWindsurfRuleName  = "cmdshape.md"
 	initGeminiDir         = ".gemini"
 	initGeminiFileName    = "GEMINI.md"
-	initOpenCodeRewriteJS = "ccp-rewrite.js"
+	initOpenCodeRewriteJS = "cmdshape-rewrite.js"
 	initAgentsFileName    = "AGENTS.md"
 	initQwenDir           = ".qwen"
-	initRewriteScriptName = "ccp-rewrite.sh"
+	initRewriteScriptName = "cmdshape-rewrite.sh"
 	initClaudeDir         = ".claude"
 	initSettingsFileName  = "settings.json"
 )

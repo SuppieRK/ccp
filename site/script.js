@@ -16,7 +16,7 @@
   async function copyText(button) {
     const targetId = button.dataset.copyTarget;
     const target = document.getElementById(targetId);
-    const card = button.closest(".quick-start-card");
+    const card = button.closest("[data-copy-card]");
     const status = card ? card.querySelector("[data-copy-status]") : null;
 
     if (!target) {
@@ -26,13 +26,30 @@
     const text = target.textContent.trim();
 
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = text;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand("copy");
+        input.remove();
+        if (!copied) {
+          throw new Error("Clipboard API is unavailable");
+        }
+      }
       button.classList.add("is-copied");
+      button.setAttribute("aria-label", "Install command copied");
       if (status) {
         status.textContent = "Install command copied.";
       }
       globalThis.setTimeout(function () {
         button.classList.remove("is-copied");
+        button.setAttribute("aria-label", "Copy install command");
         if (status) {
           status.textContent = "";
         }
@@ -70,6 +87,7 @@
         }
       });
     });
+    filterDemo.classList.add("is-enhanced");
 
     if (globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       if (filterDemo) {
@@ -140,6 +158,11 @@
       }
       globalThis.clearInterval(timer);
       timer = null;
+    }
+
+    if (!("IntersectionObserver" in globalThis)) {
+      renderFilterStep(steps.length - 1, false);
+      return;
     }
 
     const observer = new IntersectionObserver(function (entries) {

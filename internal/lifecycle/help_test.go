@@ -86,7 +86,7 @@ var _ = Describe("lifecycle help", func() {
 		Entry("capture", helpCase{
 			command: "capture",
 			parts: []string{
-				"ccp capture - capture native stdout/stderr and replay CCP output for local filter iteration",
+				"cmdshape capture - capture native stdout/stderr and replay cmdshape output for local filter iteration",
 				"Usage:",
 				"Flags:",
 				"Notes:",
@@ -99,31 +99,31 @@ var _ = Describe("lifecycle help", func() {
 		Entry("init", helpCase{
 			command: "init",
 			parts: []string{
-				"ccp init - install or update supported agent integrations",
+				"cmdshape init - install or update supported agent integrations",
 				"Usage:",
 				"Flags:",
 				"Notes:",
 				"--tools",
-				"~/.config/ccp/filters",
+				"~/.config/cmdshape/filters",
 			},
 		}),
 		Entry("gain", helpCase{
 			command: "gain",
 			parts: []string{
-				"ccp gain - show token savings history",
+				"cmdshape gain - show token savings history",
 				"Usage:",
 				"Flags:",
 				"Notes:",
 				"--period",
 				"--format",
 				"--table",
-				"Run ccp gain after install or init to verify savings on real work.",
+				"Run cmdshape gain after install or init to verify savings on real work.",
 			},
 		}),
 		Entry("history", helpCase{
 			command: "history",
 			parts: []string{
-				"ccp history - show recorded command history",
+				"cmdshape history - show recorded command history",
 				"Usage:",
 				"Flags:",
 				"Notes:",
@@ -134,42 +134,42 @@ var _ = Describe("lifecycle help", func() {
 		Entry("filter root", helpCase{
 			command: "filter-root",
 			parts: []string{
-				"ccp filter - YAML filter authoring and inspection helpers",
+				"cmdshape filter - YAML filter authoring and inspection helpers",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"ccp filter <subcommand> [args...]",
+				"cmdshape filter <subcommand> [args...]",
 				"subcommands: new, performance, prompt, status",
-				"agents creating or improving filters should start with 'ccp filter prompt [name]'",
+				"agents creating or improving filters should start with 'cmdshape filter prompt [name]'",
 			},
 		}),
 		Entry("filter new", helpCase{
 			command: "filter",
 			parts: []string{
-				"ccp filter new - generate a commented YAML scaffold for a new filter",
+				"cmdshape filter new - generate a commented YAML scaffold for a new filter",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"agents should prefer 'ccp filter prompt <name>' first",
-				"./.ccp/filters/<name>.yaml",
+				"agents should prefer 'cmdshape filter prompt <name>' first",
+				"./.cmdshape/filters/<name>.yaml",
 				".mappings.yaml",
 			},
 		}),
 		Entry("filter prompt", helpCase{
 			command: "filter-prompt",
 			parts: []string{
-				"ccp filter prompt - print an embedded agent prompt for creating or improving filters",
+				"cmdshape filter prompt - print an embedded agent prompt for creating or improving filters",
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"ccp filter prompt [name]",
-				"embedded in the ccp binary",
+				"cmdshape filter prompt [name]",
+				"embedded in the cmdshape binary",
 			},
 		}),
 		Entry("filter status", helpCase{
 			command: "filter-status",
 			parts: []string{
-				"ccp filter status - show active, overridden, and broken filter registrations",
+				"cmdshape filter status - show active, overridden, and broken filter registrations",
 				"Usage:",
 				"Flags:",
 				"Notes:",
@@ -179,7 +179,7 @@ var _ = Describe("lifecycle help", func() {
 		Entry("upgrade", helpCase{
 			command: "upgrade",
 			parts: []string{
-				"ccp upgrade - upgrade ccp from GitHub Releases",
+				"cmdshape upgrade - upgrade cmdshape from GitHub Releases",
 				"Usage:",
 				"Flags:",
 				"Notes:",
@@ -191,21 +191,21 @@ var _ = Describe("lifecycle help", func() {
 		Entry("repair", helpCase{
 			command: "repair",
 			parts: []string{
-				"ccp repair - rewrite managed CCP home state to canonical shipped content",
+				"cmdshape repair - rewrite managed cmdshape home state to canonical shipped content",
 				"Usage:",
 				"Flags:",
 				"Notes:",
 				"--yes",
 				"--no",
-				"~/.config/ccp",
-				"current-repository CCP migrations",
+				"~/.config/cmdshape",
+				"current-repository cmdshape migrations",
 				"without mutating repository files",
 			},
 		}),
 		Entry("uninstall", helpCase{
 			command: "uninstall",
 			parts: []string{
-				"ccp uninstall - remove ccp integrations or fully uninstall ccp",
+				"cmdshape uninstall - remove cmdshape integrations or fully uninstall cmdshape",
 				"Usage:",
 				"Flags:",
 				"Notes:",

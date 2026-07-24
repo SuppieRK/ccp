@@ -7,25 +7,25 @@ import (
 	"strings"
 )
 
-const nestedCCPGitignoreContents = "gain.db\n.gitignore\n"
+const nestedCmdshapeGitignoreContents = "gain.db\n.gitignore\n"
 
-func EnsureNestedCCPGitignore(projectRoot string) error {
+func EnsureNestedCmdshapeGitignore(projectRoot string) error {
 	projectRoot = strings.TrimSpace(projectRoot)
 	if projectRoot == "" {
 		return nil
 	}
 
-	gitignorePath := filepath.Join(projectRoot, ".ccp", ".gitignore")
+	gitignorePath := filepath.Join(projectRoot, ".cmdshape", ".gitignore")
 	if err := RejectSymlinkPath(gitignorePath); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(gitignorePath), 0o755); err != nil {
 		return err
 	}
-	return AtomicWriteFileBeneath(projectRoot, gitignorePath, []byte(nestedCCPGitignoreContents), 0o644)
+	return AtomicWriteFileBeneath(projectRoot, gitignorePath, []byte(nestedCmdshapeGitignoreContents), 0o644)
 }
 
-func RemoveLegacyRootCCPGitignoreEntries(projectRoot string) error {
+func RemoveProductRootGitignoreEntries(projectRoot string) error {
 	projectRoot = strings.TrimSpace(projectRoot)
 	if projectRoot == "" {
 		return nil
@@ -46,14 +46,14 @@ func RemoveLegacyRootCCPGitignoreEntries(projectRoot string) error {
 		return err
 	}
 
-	updated, changed := removeLegacyCCPIgnoreLines(content)
+	updated, changed := removeProductIgnoreLines(content)
 	if !changed {
 		return nil
 	}
 	return AtomicWriteFileBeneath(projectRoot, gitignorePath, updated, 0o644)
 }
 
-func removeLegacyCCPIgnoreLines(content []byte) ([]byte, bool) {
+func removeProductIgnoreLines(content []byte) ([]byte, bool) {
 	var out bytes.Buffer
 	changed := false
 	for len(content) > 0 {
@@ -67,7 +67,8 @@ func removeLegacyCCPIgnoreLines(content []byte) ([]byte, bool) {
 		trimTarget := bytes.TrimSuffix(line, []byte("\n"))
 		trimTarget = bytes.TrimSuffix(trimTarget, []byte("\r"))
 		trimmed := strings.TrimSpace(string(trimTarget))
-		if trimmed == ".ccp" || trimmed == ".ccp/" {
+		if trimmed == ".cmdshape" || trimmed == ".cmdshape/" ||
+			trimmed == ".ccp" || trimmed == ".ccp/" {
 			changed = true
 			continue
 		}

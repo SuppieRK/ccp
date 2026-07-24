@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("ManagedContextFileAdapter", func() {
 	})
 
 	ginkgo.It("preserves user content when uninstalling the managed block", func() {
-		Expect(os.WriteFile(target, []byte("user header\n\n"+ccpManagedBlockTemplate()), 0o644)).To(Succeed())
+		Expect(os.WriteFile(target, []byte("user header\n\n"+cmdshapeManagedBlockTemplate()), 0o644)).To(Succeed())
 
 		res, err := adapter.Uninstall(ctx)
 		Expect(err).NotTo(HaveOccurred())
@@ -70,10 +70,10 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 	ginkgo.It("upserts the canonical block into a missing file", func() {
 		updated, err := upsertManagedContextBlock(filepath.Join(tmpDir, "missing", agentsFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(updated).To(ContainSubstring(ccpManagedBlockStart))
-		Expect(updated).To(ContainSubstring("Use `ccp` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions."))
-		Expect(updated).To(ContainSubstring("`ccp echo chain-ok && ccp echo chain-done`"))
-		Expect(updated).To(ContainSubstring(ccpFilterPromptHint))
+		Expect(updated).To(ContainSubstring(cmdshapeManagedBlockStart))
+		Expect(updated).To(ContainSubstring("Use `cmdshape` as the command prefix for every executable in shell commands, including chained (`&&`, `||`) and piped (`|`) expressions."))
+		Expect(updated).To(ContainSubstring("`cmdshape echo chain-ok && cmdshape echo chain-done`"))
+		Expect(updated).To(ContainSubstring(cmdshapeFilterPromptHint))
 	})
 
 	ginkgo.It("normalizes managed file content", func() {
@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 	})
 
 	ginkgo.It("requires the raw escape hatch when verifying managed files", func() {
-		content := ccpManagedBlockStart + "\nmanaged guidance without raw retry\n" + ccpManagedBlockEnd + "\n"
+		content := cmdshapeManagedBlockStart + "\nmanaged guidance without raw retry\n" + cmdshapeManagedBlockEnd + "\n"
 		Expect(os.WriteFile(path, []byte(content), 0o644)).To(Succeed())
 
 		err := verifyManagedContextBlock(path, "missing file: %s", "missing markers in %s")
@@ -90,7 +90,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 	})
 
 	ginkgo.It("requires the filter prompt hint when verifying managed files", func() {
-		content := ccpManagedBlockStart + "\n" + strings.ReplaceAll(ccpManagedGuidanceMarkdown(), ccpFilterPromptHint+"\n\n", "") + ccpManagedBlockEnd + "\n"
+		content := cmdshapeManagedBlockStart + "\n" + strings.ReplaceAll(cmdshapeManagedGuidanceMarkdown(), cmdshapeFilterPromptHint+"\n\n", "") + cmdshapeManagedBlockEnd + "\n"
 		Expect(os.WriteFile(path, []byte(content), 0o644)).To(Succeed())
 
 		err := verifyManagedContextBlock(path, "missing file: %s", "missing markers in %s")
@@ -99,13 +99,13 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 	})
 
 	ginkgo.It("removes the managed block while preserving surrounding content", func() {
-		Expect(os.WriteFile(path, []byte("start\n"+ccpManagedBlockTemplate()+"tail\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(path, []byte("start\n"+cmdshapeManagedBlockTemplate()+"tail\n"), 0o644)).To(Succeed())
 
 		out, changed, removeAll, err := removeManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(changed).To(BeTrue())
 		Expect(removeAll).To(BeFalse())
-		Expect(out).NotTo(ContainSubstring(ccpManagedBlockStart))
+		Expect(out).NotTo(ContainSubstring(cmdshapeManagedBlockStart))
 	})
 
 	ginkgo.It("appends the managed block when the file has no block yet", func() {
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 
 		out, err := upsertManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(ContainSubstring(ccpManagedBlockStart))
+		Expect(out).To(ContainSubstring(cmdshapeManagedBlockStart))
 		Expect(out).To(ContainSubstring("prefix"))
 	})
 
@@ -122,51 +122,51 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 
 		out, err := upsertManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(Equal(ccpManagedBlockTemplate()))
+		Expect(out).To(Equal(cmdshapeManagedBlockTemplate()))
 	})
 
 	ginkgo.It("replaces an existing managed block without duplicating it", func() {
-		withBlock := "before\n" + ccpManagedBlockTemplate() + "\nafter\n"
+		withBlock := "before\n" + cmdshapeManagedBlockTemplate() + "\nafter\n"
 		Expect(os.WriteFile(path, []byte(withBlock), 0o644)).To(Succeed())
 
 		out, err := upsertManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(strings.Count(out, ccpManagedBlockStart)).To(Equal(1))
+		Expect(strings.Count(out, cmdshapeManagedBlockStart)).To(Equal(1))
 	})
 
 	ginkgo.It("replaces an empty managed block without duplicating it", func() {
-		withBlock := "before\n" + ccpManagedBlockStart + "\n" + ccpManagedBlockEnd + "\nafter\n"
+		withBlock := "before\n" + cmdshapeManagedBlockStart + "\n" + cmdshapeManagedBlockEnd + "\nafter\n"
 		Expect(os.WriteFile(path, []byte(withBlock), 0o644)).To(Succeed())
 
 		out, err := upsertManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(strings.Count(out, ccpManagedBlockStart)).To(Equal(1))
-		Expect(out).To(ContainSubstring(ccpRawEscapeHatch))
-		Expect(out).To(ContainSubstring(ccpFilterPromptHint))
+		Expect(strings.Count(out, cmdshapeManagedBlockStart)).To(Equal(1))
+		Expect(out).To(ContainSubstring(cmdshapeRawEscapeHatch))
+		Expect(out).To(ContainSubstring(cmdshapeFilterPromptHint))
 		Expect(out).To(ContainSubstring("before"))
 		Expect(out).To(ContainSubstring("after"))
 	})
 
 	ginkgo.It("treats malformed marker ordering as missing during upsert", func() {
-		withBlock := "before\n" + ccpManagedBlockEnd + "\n" + ccpManagedBlockStart + "\nafter\n"
+		withBlock := "before\n" + cmdshapeManagedBlockEnd + "\n" + cmdshapeManagedBlockStart + "\nafter\n"
 		Expect(os.WriteFile(path, []byte(withBlock), 0o644)).To(Succeed())
 
 		out, err := upsertManagedContextBlock(path)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(strings.Count(out, ccpManagedBlockStart)).To(Equal(2))
-		Expect(strings.Count(out, ccpManagedBlockEnd)).To(Equal(2))
-		Expect(strings.TrimSuffix(out, "\n")).To(HaveSuffix(strings.TrimSuffix(ccpManagedBlockTemplate(), "\n")))
+		Expect(strings.Count(out, cmdshapeManagedBlockStart)).To(Equal(2))
+		Expect(strings.Count(out, cmdshapeManagedBlockEnd)).To(Equal(2))
+		Expect(strings.TrimSuffix(out, "\n")).To(HaveSuffix(strings.TrimSuffix(cmdshapeManagedBlockTemplate(), "\n")))
 	})
 
 	ginkgo.It("uses the canonical template when the file is missing", func() {
 		out, err := upsertManagedContextBlock(filepath.Join(tmpDir, "missing", agentsFileName))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(Equal(ccpManagedBlockTemplate()))
+		Expect(out).To(Equal(cmdshapeManagedBlockTemplate()))
 	})
 
 	ginkgo.It("removes a file that contains only an empty managed block", func() {
-		Expect(os.WriteFile(path, []byte(ccpManagedBlockStart+"\n"+ccpManagedBlockEnd+"\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(path, []byte(cmdshapeManagedBlockStart+"\n"+cmdshapeManagedBlockEnd+"\n"), 0o644)).To(Succeed())
 
 		out, changed, removeAll, err := removeManagedContextBlock(path)
 		Expect(err).NotTo(HaveOccurred())
@@ -176,7 +176,7 @@ var _ = ginkgo.Describe("managed instruction block helpers", func() {
 	})
 
 	ginkgo.It("ignores malformed marker ordering during removal", func() {
-		withBlock := "before\n" + ccpManagedBlockEnd + "\n" + ccpManagedBlockStart + "\nafter\n"
+		withBlock := "before\n" + cmdshapeManagedBlockEnd + "\n" + cmdshapeManagedBlockStart + "\nafter\n"
 		Expect(os.WriteFile(path, []byte(withBlock), 0o644)).To(Succeed())
 
 		out, changed, removeAll, err := removeManagedContextBlock(path)

@@ -20,7 +20,7 @@ var _ = Describe("project filter trust", func() {
 	BeforeEach(func() {
 		home = GinkgoT().TempDir()
 		project = GinkgoT().TempDir()
-		filters = filepath.Join(project, ".ccp", "filters")
+		filters = filepath.Join(project, ".cmdshape", "filters")
 		Expect(os.MkdirAll(filters, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filters, "git.yaml"), []byte("version: 1\nfilter: git\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(filters, ".mappings.yaml"), []byte("version: 1\nmap:\n  gs: git\n"), 0o644)).To(Succeed())
@@ -73,7 +73,7 @@ var _ = Describe("project filter trust", func() {
 
 	It("does not transfer trust between canonical projects with identical bytes", func() {
 		other := GinkgoT().TempDir()
-		otherFilters := filepath.Join(other, ".ccp", "filters")
+		otherFilters := filepath.Join(other, ".cmdshape", "filters")
 		Expect(os.MkdirAll(otherFilters, 0o755)).To(Succeed())
 		for _, name := range []string{"git.yaml", ".mappings.yaml"} {
 			raw, err := os.ReadFile(filepath.Join(filters, name))

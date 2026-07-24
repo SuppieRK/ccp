@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -32,7 +32,7 @@ type StorageStatus struct {
 }
 
 func spoolProjectMetric(projectRoot, databasePath string, rec runRecord) error {
-	if err := ensureLocalCCPGitignore(projectRoot, databasePath); err != nil {
+	if err := ensureLocalCmdshapeGitignore(projectRoot, databasePath); err != nil {
 		return err
 	}
 	id, err := newEventID()

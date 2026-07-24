@@ -104,8 +104,8 @@ EOF
   echo "[validate] go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./..."
   go test -count=1 -covermode=atomic -coverpkg=./internal/... -coverprofile=.artifacts/coverage/internal.cover ./...
 
-  echo "[validate] go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80 -summary-out ${summary_out}"
-  go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module go-command-compression-proxy -internal-prefix internal/ -threshold 80 -summary-out "$summary_out"
+  echo "[validate] go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module github.com/SuppieRK/cmdshape -internal-prefix internal/ -threshold 80 -summary-out ${summary_out}"
+  go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module github.com/SuppieRK/cmdshape -internal-prefix internal/ -threshold 80 -summary-out "$summary_out"
   return 0
 }
 

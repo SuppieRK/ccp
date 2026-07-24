@@ -16,13 +16,21 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/product"
+	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
 const (
-	defaultUpgradeRepo    = "SuppieRK/ccp"
-	releaseChecksumsAsset = "ccp_checksums.txt"
+	defaultUpgradeRepo    = "SuppieRK/cmdshape"
+	releaseChecksumsAsset = "cmdshape_checksums.txt"
 )
+
+type upgradeAssets struct {
+	archiveName string
+	binaryName  string
+	archiveURL  string
+	checksumURL string
+}
 
 var (
 	upgradeExecutablePath = os.Executable
@@ -53,12 +61,12 @@ func RunUpgrade(args []string) error {
 	versionFlag := fs.String("version", "", "specific release tag (for example 1.2.3)")
 	setLifecycleUsage(
 		fs,
-		"upgrade ccp from GitHub Releases",
-		[]string{"ccp upgrade [--version <tag>]"},
+		"upgrade cmdshape from GitHub Releases",
+		[]string{"cmdshape upgrade [--version <tag>]"},
 		"When --version is omitted, the latest release is selected.",
 		"Upgrade always resolves releases from the canonical repository.",
 		"After replacement, the old binary immediately executes the new binary's rewrite repair path.",
-		"Forward upgrades may run guarded current-repository CCP migrations; downgrades are rejected and require reinstalling the older version explicitly.",
+		"Forward upgrades may run guarded current-repository cmdshape migrations; downgrades are rejected and require reinstalling the older version explicitly.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -70,41 +78,23 @@ func RunUpgrade(args []string) error {
 	repoName := defaultUpgradeRepo
 	manualURL := fmt.Sprintf("https://github.com/%s/releases", repoName)
 
-	tag := strings.TrimSpace(*versionFlag)
-	if tag == "" {
-		tag, err = latestReleaseTag(repoName)
-		if err != nil {
-			return fmt.Errorf("resolve latest release: %w; manual download: %s", err, manualURL)
-		}
-	}
-	releaseVersion, ok := version.Parse(tag)
-	if !ok {
-		return fmt.Errorf("invalid release version %q: must be X.Y.Z; manual download: %s", tag, manualURL)
-	}
-	tag = releaseVersion.String()
-	if err := rejectDowngrade(version.Version, releaseVersion); err != nil {
-		return err
-	}
-
-	assetName, binaryName, err := releaseAssetName(tag, upgradeRuntimeOS(), upgradeRuntimeArch())
+	tag, _, err := resolveUpgradeVersion(repoName, *versionFlag, manualURL)
 	if err != nil {
 		return err
 	}
 
-	rel, err := fetchRelease(fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repoName, url.PathEscape(tag)))
+	assets, err := resolveUpgradeAssets(repoName, tag, manualURL)
 	if err != nil {
-		return fmt.Errorf("resolve release %s: %w; manual download: %s", tag, err, manualURL)
-	}
-	assetURL, err := selectAssetURL(rel, assetName)
-	if err != nil {
-		return fmt.Errorf("resolve asset %s: %w; manual download: %s", assetName, err, manualURL)
-	}
-	checksumURL, err := selectAssetURL(rel, releaseChecksumsAsset)
-	if err != nil {
-		return fmt.Errorf("resolve checksum asset %s: %w; manual download: %s", releaseChecksumsAsset, err, manualURL)
+		return err
 	}
 
-	srcPath, cleanup, err := downloadAndExtractUpgradeBinary(assetURL, checksumURL, assetName, binaryName)
+	srcPath, cleanup, err := downloadAndExtractUpgradeBinary(
+		assets.archiveURL,
+		assets.checksumURL,
+		releaseChecksumsAsset,
+		assets.archiveName,
+		assets.binaryName,
+	)
 	if cleanup != nil {
 		defer cleanup()
 	}
@@ -114,8 +104,52 @@ func RunUpgrade(args []string) error {
 	if err := upgradeValidateStaged(srcPath, tag); err != nil {
 		return fmt.Errorf("validate staged upgrade binary: %w", err)
 	}
+	return installUpgradeBinary(srcPath, assets.archiveName, tag)
+}
 
-	return installUpgradeBinary(srcPath, assetName, tag)
+func resolveUpgradeVersion(repoName, requested, manualURL string) (string, version.Semantic, error) {
+	tag := strings.TrimSpace(requested)
+	if tag == "" {
+		latest, err := latestReleaseTag(repoName)
+		if err != nil {
+			return "", version.Semantic{}, fmt.Errorf("resolve latest release: %w; manual download: %s", err, manualURL)
+		}
+		tag = latest
+	}
+	releaseVersion, ok := version.Parse(tag)
+	if !ok {
+		return "", version.Semantic{}, fmt.Errorf("invalid release version %q: must be X.Y.Z; manual download: %s", tag, manualURL)
+	}
+	if err := rejectDowngrade(version.Version, releaseVersion); err != nil {
+		return "", version.Semantic{}, err
+	}
+	return releaseVersion.String(), releaseVersion, nil
+}
+
+func resolveUpgradeAssets(repoName, tag, manualURL string) (upgradeAssets, error) {
+	archiveName, binaryName, err := releaseAssetName(tag, upgradeRuntimeOS(), upgradeRuntimeArch())
+	if err != nil {
+		return upgradeAssets{}, err
+	}
+
+	rel, err := fetchRelease(fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repoName, url.PathEscape(tag)))
+	if err != nil {
+		return upgradeAssets{}, fmt.Errorf("resolve release %s: %w; manual download: %s", tag, err, manualURL)
+	}
+	archiveURL, err := selectAssetURL(rel, archiveName)
+	if err != nil {
+		return upgradeAssets{}, fmt.Errorf("resolve asset %s: %w; manual download: %s", archiveName, err, manualURL)
+	}
+	checksumURL, err := selectAssetURL(rel, releaseChecksumsAsset)
+	if err != nil {
+		return upgradeAssets{}, fmt.Errorf("resolve checksum asset %s: %w; manual download: %s", releaseChecksumsAsset, err, manualURL)
+	}
+	return upgradeAssets{
+		archiveName: archiveName,
+		binaryName:  binaryName,
+		archiveURL:  archiveURL,
+		checksumURL: checksumURL,
+	}, nil
 }
 
 func installUpgradeBinary(srcPath, assetName, tag string) error {
@@ -140,7 +174,7 @@ func installUpgradeBinary(srcPath, assetName, tag string) error {
 	}
 	if repairErr != nil {
 		return errors.Join(
-			fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `ccp repair %s` after fixing the environment", repairErr, repairMode.flag()),
+			fmt.Errorf("post-upgrade repair failed after installing the new binary: %w; the new binary remains installed; rerun `cmdshape repair %s` after fixing the environment", repairErr, repairMode.flag()),
 			cleanupErr,
 		)
 	}
@@ -197,7 +231,7 @@ func ensureUpgradeExecutablePermissions(exePath string) error {
 }
 
 func printUpgradeSuccess(exePath, assetName, tag string) error {
-	_, err := upgradePrintf("ccp upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag)
+	_, err := upgradePrintf("cmdshape upgrade: replaced %s with %s (%s)\n", exePath, assetName, tag)
 	return err
 }
 
@@ -207,7 +241,7 @@ func rejectDowngrade(currentVersion string, target version.Semantic) error {
 		return nil
 	}
 	if target.Less(current) {
-		return fmt.Errorf("ccp upgrade: refusing downgrade from %s to %s; forward migrations are not reversible. To install an older version, uninstall CCP and install that version explicitly", current.String(), target.String())
+		return fmt.Errorf("cmdshape upgrade: refusing downgrade from %s to %s; forward migrations are not reversible. To install an older version, uninstall cmdshape and install that version explicitly", current.String(), target.String())
 	}
 	return nil
 }
@@ -258,11 +292,11 @@ func releaseAssetName(tag, goos, goarch string) (asset string, binary string, er
 		return "", "", fmt.Errorf("unsupported arch: %s", goarch)
 	}
 
-	binary = "ccp"
+	binary = product.Name
 	if goos == "windows" {
-		binary = "ccp.exe"
+		binary += ".exe"
 	}
-	return fmt.Sprintf("ccp_%s_%s_%s.zip", tag, goos, goarch), binary, nil
+	return fmt.Sprintf("%s_%s_%s_%s.zip", product.Name, tag, goos, goarch), binary, nil
 }
 
 func selectAssetURL(rel githubRelease, assetName string) (string, error) {
@@ -274,8 +308,8 @@ func selectAssetURL(rel githubRelease, assetName string) (string, error) {
 	return "", fmt.Errorf("asset %q not found", assetName)
 }
 
-func downloadAndExtractUpgradeBinary(assetURL, checksumURL, assetName, binaryName string) (srcPath string, cleanup func(), err error) {
-	tmpDir, err := os.MkdirTemp("", "ccp-upgrade-*")
+func downloadAndExtractUpgradeBinary(assetURL, checksumURL, checksumsAsset, assetName, binaryName string) (srcPath string, cleanup func(), err error) {
+	tmpDir, err := os.MkdirTemp("", "cmdshape-upgrade-*")
 	if err != nil {
 		return "", nil, err
 	}
@@ -285,7 +319,7 @@ func downloadAndExtractUpgradeBinary(assetURL, checksumURL, assetName, binaryNam
 	if err := downloadFile(assetURL, zipPath); err != nil {
 		return "", cleanup, err
 	}
-	checksumsPath := filepath.Join(tmpDir, releaseChecksumsAsset)
+	checksumsPath := filepath.Join(tmpDir, checksumsAsset)
 	if err := downloadFile(checksumURL, checksumsPath); err != nil {
 		return "", cleanup, err
 	}

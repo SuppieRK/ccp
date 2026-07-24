@@ -7,13 +7,19 @@ When modifying release logic, preserve:
 - Tag resolution rules from `release-distribution.yml`: tags must already
   exist, use exact `X.Y.Z` syntax without `v`, and resolve to one immutable
   commit and tag object throughout every job.
-- Artifact naming: `ccp_<tag>_<os>_<arch>.zip`
+- Artifact naming: `cmdshape_<tag>_<os>_<arch>.zip`
 - Build matrix targets: `linux`, `darwin`, `windows` x `amd64`, `arm64`
 - Build flags: `CGO_ENABLED=0`, `-trimpath`, and version injection via
-  `-X go-command-compression-proxy/internal/version.Version=<tag>`
+  `-X github.com/SuppieRK/cmdshape/internal/version.Version=<tag>`
 - Architecture mapping used by release and install flows: `x86_64` -> `amd64`, `aarch64` -> `arm64`
-- Release publication shape: archive uploads plus `ccp_checksums.txt`
-- Smoke-install coverage for Unix and Windows draft assets before publication
+- Release publication shape: six archives plus `cmdshape_checksums.txt`
+- Smoke-install coverage for cmdshape on Unix and Windows draft assets before
+  publication
+- Custom attestation predicate URI:
+  `https://github.com/SuppieRK/cmdshape/attestations/binary-archive/v1`
+
+Every release is cmdshape-only. Do not publish a legacy executable, checksum
+manifest, alias, shim, or handoff release.
 
 ## Draft repair and public yank
 
@@ -33,4 +39,5 @@ release.
   reproduce the same validated source identity; stale or mismatched assets
   must not be promoted.
 
-Installer mechanics MUST remain aligned with the release contract and published artifact names.
+Installer and self-upgrade mechanics MUST remain aligned with the cmdshape-only
+release contract and published artifact names.

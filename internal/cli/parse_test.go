@@ -39,6 +39,7 @@ var _ = Describe("Parse", func() {
 		Entry("raw for init", "--raw", "init"),
 		Entry("raw for gain", "--raw", "gain"),
 		Entry("raw for history", "--raw", "history"),
+		Entry("raw for migrate", "--raw", "migrate"),
 		Entry("raw for upgrade", "--raw", "upgrade"),
 		Entry("raw for uninstall", "--raw", "uninstall"),
 		Entry("raw for capture", "--raw", "capture"),
@@ -55,6 +56,7 @@ var _ = Describe("Parse", func() {
 		Entry("capture", "capture"),
 		Entry("gain", "gain"),
 		Entry("history", "history"),
+		Entry("migrate", "migrate"),
 		Entry("upgrade", "upgrade"),
 		Entry("uninstall", "uninstall"),
 		Entry("verify", "verify"),
@@ -78,7 +80,7 @@ var _ = Describe("Parse", func() {
 		Entry("confidential", []string{"--confidential", "secret", "ls"}),
 	)
 
-	It("treats bare double-dash as the end of CCP option parsing", func() {
+	It("treats bare double-dash as the end of cmdshape option parsing", func() {
 		opts := mustParse([]string{"--", "echo", "-n"})
 
 		Expect(opts.CommandArgs).To(Equal([]string{"echo", "-n"}))
@@ -120,7 +122,7 @@ var _ = Describe("Parse", func() {
 		Entry("duplicates and blanks", " secret, secret , ,token ", []string{"secret", "token"}),
 	)
 
-	Describe("CCP command classification", func() {
+	Describe("cmdshape command classification", func() {
 		DescribeTable("managed top-level commands",
 			func(token string) {
 				Expect(IsManagedCommand(token)).To(BeTrue())
@@ -129,6 +131,7 @@ var _ = Describe("Parse", func() {
 			Entry("init", "init"),
 			Entry("gain", "gain"),
 			Entry("history", "history"),
+			Entry("migrate", "migrate"),
 			Entry("verify", "verify"),
 			Entry("upgrade", "upgrade"),
 			Entry("uninstall", "uninstall"),
@@ -156,17 +159,17 @@ var _ = Describe("Parse", func() {
 			Entry("wrapped command", []string{"grep", "-n"}, false),
 		)
 
-		DescribeTable("skipping metrics only for managed wrapped ccp commands",
+		DescribeTable("skipping metrics only for managed wrapped cmdshape commands",
 			func(tool string, args []string, expected bool) {
 				Expect(ShouldSkipMetrics(tool, args)).To(Equal(expected))
 			},
-			Entry("history command", "ccp", []string{"ccp", "history"}, true),
-			Entry("repair command", "ccp", []string{"ccp", "repair"}, true),
-			Entry("filter command", "ccp", []string{"ccp", "filter", "new", "demo"}, true),
-			Entry("capture command", "ccp", []string{"ccp", "capture", "--", "echo", "hi"}, true),
-			Entry("non-ccp tool", "grep", []string{"grep", "-n", "foo"}, false),
-			Entry("ccp without subcommand", "ccp", []string{"ccp"}, false),
-			Entry("ccp wrapped execution", "ccp", []string{"ccp", "echo", "hi"}, false),
+			Entry("history command", "cmdshape", []string{"cmdshape", "history"}, true),
+			Entry("repair command", "cmdshape", []string{"cmdshape", "repair"}, true),
+			Entry("filter command", "cmdshape", []string{"cmdshape", "filter", "new", "demo"}, true),
+			Entry("capture command", "cmdshape", []string{"cmdshape", "capture", "--", "echo", "hi"}, true),
+			Entry("non-cmdshape tool", "grep", []string{"grep", "-n", "foo"}, false),
+			Entry("cmdshape without subcommand", "cmdshape", []string{"cmdshape"}, false),
+			Entry("cmdshape wrapped execution", "cmdshape", []string{"cmdshape", "echo", "hi"}, false),
 		)
 
 		DescribeTable("describing execution shape",
@@ -175,20 +178,20 @@ var _ = Describe("Parse", func() {
 			},
 			Entry("empty args", nil, ExecutionShape{}),
 			Entry("simple command", []string{"echo", "hi"}, ExecutionShape{}),
-			Entry("find exec nested ccp", []string{"find", ".", "-type", "f", "-exec", "ccp", "grep", "-nH", "--", "v2", "{}", "+"}, ExecutionShape{
-				HasFindExec: true,
-				NestedCCP:   true,
+			Entry("find exec nested cmdshape", []string{"find", ".", "-type", "f", "-exec", "cmdshape", "grep", "-nH", "--", "v2", "{}", "+"}, ExecutionShape{
+				HasFindExec:    true,
+				NestedCmdshape: true,
 			}),
-			Entry("shell pipeline with xargs and nested ccp", []string{"bash", "-lc", "find . -print0 | ccp xargs -0 -r ccp grep -nH -- v2"}, ExecutionShape{
-				UsesShell:   true,
-				HasPipeline: true,
-				HasXargs:    true,
-				NestedCCP:   true,
+			Entry("shell pipeline with xargs and nested cmdshape", []string{"bash", "-lc", "find . -print0 | cmdshape xargs -0 -r cmdshape grep -nH -- v2"}, ExecutionShape{
+				UsesShell:      true,
+				HasPipeline:    true,
+				HasXargs:       true,
+				NestedCmdshape: true,
 			}),
-			Entry("shell chain", []string{"sh", "-c", "ccp echo hi && ccp echo bye"}, ExecutionShape{
-				UsesShell: true,
-				HasChain:  true,
-				NestedCCP: true,
+			Entry("shell chain", []string{"sh", "-c", "cmdshape echo hi && cmdshape echo bye"}, ExecutionShape{
+				UsesShell:      true,
+				HasChain:       true,
+				NestedCmdshape: true,
 			}),
 			Entry("bare shell control flag", []string{"bash", "-c"}, ExecutionShape{
 				UsesShell: true,

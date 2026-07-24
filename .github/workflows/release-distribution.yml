@@ -48,9 +48,9 @@ jobs:
             echo "release tag must match X.Y.Z exactly: ${TAG}" >&2
             exit 1
           fi
-          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
-          TAG_OID="$(git rev-parse "refs/ccp-release-tags/${TAG}")"
-          SOURCE_SHA="$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
+          TAG_OID="$(git rev-parse "refs/cmdshape-release-tags/${TAG}")"
+          SOURCE_SHA="$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")"
           git cat-file -e "${SOURCE_SHA}^{commit}"
           {
             echo "tag=${TAG}"
@@ -106,9 +106,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -125,36 +125,38 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          bin_name="ccp"
+          cmdshape_bin="cmdshape"
           if [[ "$GOOS" == "windows" ]]; then
-            bin_name="ccp.exe"
+            cmdshape_bin="cmdshape.exe"
           fi
-          out_bin="dist/${bin_name}"
-          ldflags="-s -w -X go-command-compression-proxy/internal/version.Version=${TAG}"
+          out_bin="dist/${cmdshape_bin}"
+          ldflags="-s -w -X github.com/SuppieRK/cmdshape/internal/version.Version=${TAG}"
           CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
-            go build -trimpath -ldflags "$ldflags" -o "$out_bin" ./cmd/ccp
+            go build -trimpath -ldflags "$ldflags" -o "$out_bin" ./cmd/cmdshape
           grep -aFq "${TAG}" "$out_bin"
 
-          host_probe="dist/ccp-version-probe"
-          CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$host_probe" ./cmd/ccp
+          host_probe="dist/cmdshape-version-probe"
+          CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$host_probe" ./cmd/cmdshape
           test "$("$host_probe" --version)" = "${TAG}"
           rm -f "$host_probe"
 
-          asset="ccp_${TAG}_${GOOS}_${GOARCH}.zip"
+          asset="cmdshape_${TAG}_${GOOS}_${GOARCH}.zip"
           (
             cd dist
-            zip -q "$asset" "$bin_name"
-            test "$(unzip -Z1 "$asset")" = "$bin_name"
-            rm -f "$bin_name"
+            zip -q "$asset" "$cmdshape_bin"
+            test "$(unzip -Z1 "$asset")" = "$cmdshape_bin"
+            rm -f "$cmdshape_bin"
           )
           jq -n \
             --arg tag "$TAG" \
             --arg source_sha "$SOURCE_SHA" \
             --arg goos "$GOOS" \
             --arg goarch "$GOARCH" \
+            --arg distribution "cmdshape" \
+            --arg binary "$cmdshape_bin" \
             --arg asset "$asset" \
             --arg go_version "$(go version)" \
-            '{tag:$tag,source_sha:$source_sha,goos:$goos,goarch:$goarch,asset:$asset,go_version:$go_version,archive_entries:1}' \
+            '{tag:$tag,source_sha:$source_sha,goos:$goos,goarch:$goarch,distribution:$distribution,binary:$binary,asset:$asset,go_version:$go_version,archive_entries:1}' \
             > "dist/${asset}.metadata.json"
 
       - name: Upload matrix asset and source metadata
@@ -194,9 +196,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
 
           mkdir -p release metadata
           find dist -type f -name '*.zip' -exec cp {} release/ \;
@@ -205,30 +207,32 @@ jobs:
           test "$(find metadata -maxdepth 1 -type f -name '*.metadata.json' | wc -l)" -eq 6
           for goos in linux darwin windows; do
             for goarch in amd64 arm64; do
-              asset="ccp_${TAG}_${goos}_${goarch}.zip"
+              asset="cmdshape_${TAG}_${goos}_${goarch}.zip"
               test -f "release/${asset}"
               metadata_file="metadata/${asset}.metadata.json"
               test -f "$metadata_file"
               test "$(jq -r .tag "$metadata_file")" = "$TAG"
               test "$(jq -r .source_sha "$metadata_file")" = "$EXPECTED_SHA"
+              test "$(jq -r .distribution "$metadata_file")" = "cmdshape"
               test "$(jq -r .asset "$metadata_file")" = "$asset"
               test "$(jq -r .archive_entries "$metadata_file")" -eq 1
-              expected_binary="ccp"
-              [[ "$goos" == "windows" ]] && expected_binary="ccp.exe"
+              expected_binary="cmdshape"
+              [[ "$goos" == "windows" ]] && expected_binary="cmdshape.exe"
+              test "$(jq -r .binary "$metadata_file")" = "$expected_binary"
               test "$(unzip -Z1 "release/${asset}")" = "$expected_binary"
             done
           done
           (
             cd release
-            sha256sum ./*.zip > ./ccp_checksums.txt
-            test "$(wc -l < ./ccp_checksums.txt)" -eq 6
+            sha256sum ./cmdshape_*.zip > ./cmdshape_checksums.txt
+            test "$(wc -l < ./cmdshape_checksums.txt)" -eq 6
           )
 
       - name: Generate binary archive attestations
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
         with:
           subject-path: ./release/*.zip
-          predicate-type: https://schemas.go-command-compression-proxy.dev/release/binary-archive-attestation/v1
+          predicate-type: https://github.com/SuppieRK/cmdshape/attestations/binary-archive/v1
           predicate: |
             {
               "repository": "${{ github.repository }}",
@@ -249,7 +253,7 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             ./release/*.zip
-            ./release/ccp_checksums.txt
+            ./release/*_checksums.txt
 
   smoke-draft:
     needs: [preflight, create-draft]
@@ -270,10 +274,16 @@ jobs:
         run: |
           set -euo pipefail
           case "${{ runner.os }}" in
-            Windows) asset="ccp_${TAG}_windows_amd64.zip" ;;
-            *) asset="ccp_${TAG}_linux_amd64.zip" ;;
+            Windows)
+              cmdshape_asset="cmdshape_${TAG}_windows_amd64.zip"
+              ;;
+            *)
+              cmdshape_asset="cmdshape_${TAG}_linux_amd64.zip"
+              ;;
           esac
-          gh release download "$TAG" --repo "$REPO" --pattern "$asset" --pattern ccp_checksums.txt
+          gh release download "$TAG" --repo "$REPO" \
+            --pattern "$cmdshape_asset" \
+            --pattern cmdshape_checksums.txt
 
       - name: Smoke install draft asset on Unix
         if: runner.os != 'Windows'
@@ -282,13 +292,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          asset="ccp_${TAG}_linux_amd64.zip"
-          grep " ./${asset}$" ccp_checksums.txt | sha256sum --check -
           mkdir -p test-bin
-          test "$(unzip -Z1 "$asset")" = "ccp"
+          asset="cmdshape_${TAG}_linux_amd64.zip"
+          grep " ./${asset}$" cmdshape_checksums.txt | sha256sum --check -
+          test "$(unzip -Z1 "$asset")" = "cmdshape"
           unzip -q "$asset" -d test-bin
-          chmod 0755 test-bin/ccp
-          test "$(test-bin/ccp --version)" = "$TAG"
+          chmod 0755 test-bin/cmdshape
+          test "$(test-bin/cmdshape --version)" = "$TAG"
 
       - name: Smoke install draft asset on Windows
         if: runner.os == 'Windows'
@@ -297,20 +307,23 @@ jobs:
           TAG: ${{ needs.preflight.outputs.tag }}
         run: |
           $ErrorActionPreference = "Stop"
-          $asset = "ccp_${env:TAG}_windows_amd64.zip"
-          $checksumLine = Get-Content ccp_checksums.txt | Where-Object { $_ -match [regex]::Escape("./$asset") }
+          $asset = "cmdshape_${env:TAG}_windows_amd64.zip"
+          $checksumLine = Get-Content cmdshape_checksums.txt | Where-Object { $_ -match [regex]::Escape("./$asset") }
           if (-not $checksumLine) { throw "missing checksum for $asset" }
           $expected = ($checksumLine -split '\s+')[0].ToLowerInvariant()
           $actual = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw "checksum mismatch for $asset" }
-          $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $asset)).Entries
-          if ($entries.Count -ne 1 -or $entries[0].FullName -ne "ccp.exe") {
-            throw "unexpected archive shape"
+          $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $asset))
+          try {
+            if ($archive.Entries.Count -ne 1 -or $archive.Entries[0].FullName -ne "cmdshape.exe") {
+              throw "unexpected archive shape for $asset"
+            }
+          } finally {
+            $archive.Dispose()
           }
-          $outDir = Join-Path $PWD "test-bin"
-          Expand-Archive -Path $asset -DestinationPath $outDir
-          $version = & (Join-Path $outDir "ccp.exe") --version
-          if ($version -ne $env:TAG) { throw "unexpected binary version: $version" }
+          Expand-Archive -Path $asset -DestinationPath test-bin
+          $version = & (Join-Path test-bin "cmdshape.exe") --version
+          if ($version -ne $env:TAG) { throw "unexpected binary version for cmdshape: $version" }
 
   publish:
     needs: [preflight, smoke-draft]
@@ -335,8 +348,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-          git fetch --no-tags origin "+refs/tags/${TAG}:refs/ccp-release-tags/${TAG}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
-          test "$(git rev-parse "refs/ccp-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
           test "$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq .isDraft)" = "true"
           gh release edit "$TAG" --repo "$REPO" --draft=false --latest

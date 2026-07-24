@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 )
 
 var errNoCommandProvided = errors.New("no command provided")

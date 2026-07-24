@@ -15,17 +15,17 @@ import (
 	"sync"
 	"time"
 
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/engine"
-	corefilters "go-command-compression-proxy/internal/filters"
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/projectfiles"
-	"go-command-compression-proxy/internal/recovery"
-	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/cli"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/engine"
+	corefilters "github.com/SuppieRK/cmdshape/internal/filters"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/recovery"
+	"github.com/SuppieRK/cmdshape/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 type Options struct {
@@ -101,15 +101,15 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	shape := cli.DescribeExecutionShape(args)
 	auditCommand := r.auditCommand(command.RawInput)
 	if err := audit.Append("execution_start", map[string]any{
-		"command":       auditCommand,
-		"tool":          command.Tool,
-		"raw":           false,
-		"uses_shell":    shape.UsesShell,
-		"has_pipeline":  shape.HasPipeline,
-		"has_chain":     shape.HasChain,
-		"has_find_exec": shape.HasFindExec,
-		"has_xargs":     shape.HasXargs,
-		"nested_ccp":    shape.NestedCCP,
+		"command":         auditCommand,
+		"tool":            command.Tool,
+		"raw":             false,
+		"uses_shell":      shape.UsesShell,
+		"has_pipeline":    shape.HasPipeline,
+		"has_chain":       shape.HasChain,
+		"has_find_exec":   shape.HasFindExec,
+		"has_xargs":       shape.HasXargs,
+		"nested_cmdshape": shape.NestedCmdshape,
 	}); err != nil {
 		return 1, err
 	}
@@ -270,15 +270,15 @@ func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []s
 	shape := cli.DescribeExecutionShape(args)
 	auditCommand := r.auditCommand(command.RawInput)
 	if err := audit.Append("execution_start", map[string]any{
-		"command":       auditCommand,
-		"tool":          command.Tool,
-		"raw":           true,
-		"uses_shell":    shape.UsesShell,
-		"has_pipeline":  shape.HasPipeline,
-		"has_chain":     shape.HasChain,
-		"has_find_exec": shape.HasFindExec,
-		"has_xargs":     shape.HasXargs,
-		"nested_ccp":    shape.NestedCCP,
+		"command":         auditCommand,
+		"tool":            command.Tool,
+		"raw":             true,
+		"uses_shell":      shape.UsesShell,
+		"has_pipeline":    shape.HasPipeline,
+		"has_chain":       shape.HasChain,
+		"has_find_exec":   shape.HasFindExec,
+		"has_xargs":       shape.HasXargs,
+		"nested_cmdshape": shape.NestedCmdshape,
 	}); err != nil {
 		return 1, err
 	}
@@ -466,7 +466,7 @@ func defaultMetricsPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(cwd, ".ccp", "gain.db")
+	return filepath.Join(cwd, ".cmdshape", "gain.db")
 }
 
 type streamStats struct {
@@ -721,7 +721,7 @@ func defaultProjectMetricsRoot(workingDir, metricsPath string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	return root, path == filepath.Join(root, ".ccp", "gain.db")
+	return root, path == filepath.Join(root, ".cmdshape", "gain.db")
 }
 
 func metricRegistrySources(sources []contracts.FilterSourceBuildTiming) []metrics.RegistrySourceBuildMetric {

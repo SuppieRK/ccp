@@ -39,10 +39,10 @@ var _ = Describe("audit logging", func() {
 	})
 
 	Context("when resolving the default log path", func() {
-		It("uses ~/.config/ccp/audit/audit.log", func() {
+		It("uses ~/.config/cmdshape/audit/audit.log", func() {
 			path, err := DefaultPath()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(path).To(Equal(filepath.Join(home, ".config", "ccp", "audit", "audit.log")))
+			Expect(path).To(Equal(filepath.Join(home, ".config", "cmdshape", "audit", "audit.log")))
 		})
 
 		It("returns the home directory error", func() {
@@ -97,7 +97,7 @@ var _ = Describe("audit logging", func() {
 			}
 			Reset()
 
-			active := filepath.Join(home, ".config", "ccp", "audit", "audit.log")
+			active := filepath.Join(home, ".config", "cmdshape", "audit", "audit.log")
 			entries, err := os.ReadDir(filepath.Dir(active))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(2))
@@ -124,7 +124,7 @@ var _ = Describe("audit logging", func() {
 				}
 				Reset()
 
-				auditDir := filepath.Join(home, ".config", "ccp", "audit")
+				auditDir := filepath.Join(home, ".config", "cmdshape", "audit")
 				entries, err := os.ReadDir(auditDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(entries)).To(BeNumerically("<=", 4))
@@ -156,7 +156,7 @@ var _ = Describe("audit logging", func() {
 			Expect(ConfigureDefault()).To(Succeed())
 			Expect(Append("blocked", map[string]any{"ok": true})).To(Succeed())
 
-			_, err := os.Stat(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
+			_, err := os.Stat(filepath.Join(home, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -169,7 +169,7 @@ var _ = Describe("audit logging", func() {
 				MustAppend("must", map[string]any{"value": 1})
 			}).NotTo(Panic())
 
-			body, err := os.ReadFile(filepath.Join(home, ".config", "ccp", "audit", "audit.log"))
+			body, err := os.ReadFile(filepath.Join(home, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).To(ContainSubstring(`"msg":"must"`))
 		})

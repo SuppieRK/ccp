@@ -16,9 +16,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/engine"
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/engine"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 const (
@@ -257,7 +257,7 @@ var _ = Describe("RunGain", func() {
 			})
 
 			corruptRepo := filepath.Join(tmpDir, "corrupt-repo")
-			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
+			corruptMetricsPath := filepath.Join(corruptRepo, ".cmdshape", "gain.db")
 			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
 			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), corruptRepo, corruptMetricsPath)).To(Succeed())
@@ -274,7 +274,7 @@ var _ = Describe("RunGain", func() {
 
 			Expect(stdout).To(ContainSubstring(`"dataset": "summary"`))
 			Expect(stdout).To(ContainSubstring(`"go test ./..."`))
-			Expect(stderr).To(ContainSubstring("ccp gain --global: warning: skipped workspace"))
+			Expect(stderr).To(ContainSubstring("cmdshape gain --global: warning: skipped workspace"))
 			Expect(stderr).To(ContainSubstring(corruptRepo))
 			Expect(stderr).To(ContainSubstring(corruptMetricsPath))
 			Expect(stderr).To(ContainSubstring("results exclude 1 workspace(s)"))
@@ -287,7 +287,7 @@ var _ = Describe("RunGain", func() {
 
 			repoRoot := filepath.Join(tmpDir, "legacy-repo")
 			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
-			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			repoMetricsPath := filepath.Join(repoRoot, ".cmdshape", "gain.db")
 			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
@@ -316,7 +316,7 @@ var _ = Describe("RunGain", func() {
 
 			repoRoot := filepath.Join(tmpDir, "current-repo")
 			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
-			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			repoMetricsPath := filepath.Join(repoRoot, ".cmdshape", "gain.db")
 			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
@@ -348,7 +348,7 @@ var _ = Describe("RunGain", func() {
 
 			repoRoot := filepath.Join(tmpDir, "broken-registry-repo")
 			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
-			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			repoMetricsPath := filepath.Join(repoRoot, ".cmdshape", "gain.db")
 			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
@@ -497,7 +497,7 @@ var _ = Describe("RunGain", func() {
 			Expect(plainPeriodText).To(ContainSubstring("Trend :"))
 
 			periodTable := runGain(flagPeriod, "day", flagTable)
-			Expect(periodTable).To(ContainSubstring("ccp gain (estimated tokens: 4B/token)"))
+			Expect(periodTable).To(ContainSubstring("cmdshape gain (estimated tokens: 4B/token)"))
 			Expect(periodTable).To(ContainSubstring("BUCKET"))
 			Expect(periodTable).To(ContainSubstring("period=day"))
 
@@ -656,7 +656,7 @@ var _ = Describe("RunHistory", func() {
 
 		It("omits the tool column in history text", func() {
 			out := runHistory(flagFormat, "text")
-			Expect(out).To(ContainSubstring("ccp history"))
+			Expect(out).To(ContainSubstring("cmdshape history"))
 			Expect(out).To(ContainSubstring("showing 2 of 2 rows"))
 			Expect(out).To(ContainSubstring("TIMESTAMP"))
 			Expect(out).To(ContainSubstring("STATUS"))
@@ -684,7 +684,7 @@ var _ = Describe("RunHistory", func() {
 			})
 
 			textOut := runHistory(flagGlobal, flagFormat, "text")
-			Expect(textOut).To(ContainSubstring("ccp history [global]"))
+			Expect(textOut).To(ContainSubstring("cmdshape history [global]"))
 			Expect(textOut).To(ContainSubstring("SOURCE"))
 			Expect(textOut).To(ContainSubstring("repo-one"))
 			Expect(textOut).To(ContainSubstring("repo-two"))
@@ -703,7 +703,7 @@ var _ = Describe("RunHistory", func() {
 
 			repoRoot := filepath.Join(tmpDir, "legacy-repo")
 			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
-			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			repoMetricsPath := filepath.Join(repoRoot, ".cmdshape", "gain.db")
 			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
@@ -733,7 +733,7 @@ var _ = Describe("RunHistory", func() {
 
 			repoRoot := filepath.Join(tmpDir, "broken-history-registry-repo")
 			Expect(os.MkdirAll(repoRoot, 0o755)).To(Succeed())
-			repoMetricsPath := filepath.Join(repoRoot, ".ccp", "gain.db")
+			repoMetricsPath := filepath.Join(repoRoot, ".cmdshape", "gain.db")
 			appendGainMetrics(repoMetricsPath, []metrics.RunMetric{
 				{Timestamp: time.Now().UTC().Add(-time.Hour), Tool: "go", Command: "go test ./...", RawBytes: 1200, KeptBytes: 400},
 			})
@@ -762,7 +762,7 @@ var _ = Describe("RunHistory", func() {
 			})
 
 			corruptRepo := filepath.Join(tmpDir, "corrupt-history-repo")
-			corruptMetricsPath := filepath.Join(corruptRepo, ".ccp", "gain.db")
+			corruptMetricsPath := filepath.Join(corruptRepo, ".cmdshape", "gain.db")
 			Expect(os.MkdirAll(filepath.Dir(corruptMetricsPath), 0o755)).To(Succeed())
 			Expect(os.WriteFile(corruptMetricsPath, []byte("not-a-bolt-db"), 0o644)).To(Succeed())
 			Expect(workspaces.UpsertPath(workspaces.PathForHome(home), corruptRepo, corruptMetricsPath)).To(Succeed())
@@ -780,7 +780,7 @@ var _ = Describe("RunHistory", func() {
 			Expect(stdout).To(ContainSubstring(`"dataset": "history"`))
 			Expect(stdout).To(ContainSubstring(`"source"`))
 			Expect(stdout).To(ContainSubstring(`"go test ./..."`))
-			Expect(stderr).To(ContainSubstring("ccp history --global: warning: skipped workspace"))
+			Expect(stderr).To(ContainSubstring("cmdshape history --global: warning: skipped workspace"))
 			Expect(stderr).To(ContainSubstring(corruptRepo))
 			Expect(stderr).To(ContainSubstring(corruptMetricsPath))
 			Expect(stderr).To(ContainSubstring("results exclude 1 workspace(s)"))
@@ -827,7 +827,7 @@ var _ = Describe("RunHistory", func() {
 
 			globalOut := runHistory(flagGlobal, flagLimit, "5")
 			Expect(globalOut).To(ContainSubstring("showing 5 of 20 rows, use --limit N to see more"))
-			Expect(globalOut).To(ContainSubstring("ccp history [global]"))
+			Expect(globalOut).To(ContainSubstring("cmdshape history [global]"))
 			Expect(globalOut).To(ContainSubstring("go test ./pkg/00"))
 			Expect(globalOut).NotTo(ContainSubstring("go test ./pkg/19"))
 
@@ -949,7 +949,7 @@ var _ = Describe("RunHistory", func() {
 
 		It("includes filters and no-results markers in text output", func() {
 			out := runHistory(flagFormat, "text")
-			Expect(out).To(ContainSubstring("ccp history"))
+			Expect(out).To(ContainSubstring("cmdshape history"))
 			Expect(out).NotTo(ContainSubstring("filters:"))
 			Expect(out).To(ContainSubstring(noResultsMsg))
 		})
@@ -1512,13 +1512,13 @@ var _ = Describe("gain formatting helpers", func() {
 		Entry("prints the history table no-results branch", func() error {
 			return printHistoryTable(nil, filtersEnvelope{Failed: true}, 5)
 		}, []string{
-			"ccp history [failed-only]",
+			"cmdshape history [failed-only]",
 			noResultsMsg,
 		}),
 		Entry("prints the global history table no-results branch", func() error {
 			return printGlobalHistoryTable(nil, filtersEnvelope{Tool: "go"}, 5)
 		}, []string{
-			"ccp history [tool=go global]",
+			"cmdshape history [tool=go global]",
 			noResultsMsg,
 		}),
 	)
@@ -1746,8 +1746,8 @@ var _ = Describe("gain formatting helpers", func() {
 			func(failure globalQueryFailure, expected string) {
 				Expect(globalQuerySourceLabel(failure)).To(Equal(expected))
 			},
-			Entry("prefers the workspace cwd", globalQueryFailure{CWD: "/repo", MetricsPath: "/repo/.ccp/gain.db"}, "/repo"),
-			Entry("falls back to the metrics path", globalQueryFailure{MetricsPath: "/repo/.ccp/gain.db"}, "/repo/.ccp/gain.db"),
+			Entry("prefers the workspace cwd", globalQueryFailure{CWD: "/repo", MetricsPath: "/repo/.cmdshape/gain.db"}, "/repo"),
+			Entry("falls back to the metrics path", globalQueryFailure{MetricsPath: "/repo/.cmdshape/gain.db"}, "/repo/.cmdshape/gain.db"),
 			Entry("uses an explicit unknown placeholder when no source exists", globalQueryFailure{}, "<unknown>"),
 		)
 
@@ -1756,7 +1756,7 @@ var _ = Describe("gain formatting helpers", func() {
 
 			session.recordFailure(globalMetricsSource{CWD: "/repo-a"}, errors.New("first"))
 			session.recordFailure(globalMetricsSource{CWD: "/repo-a"}, errors.New("second"))
-			session.recordFailure(globalMetricsSource{CWD: "/repo-b", MetricsPath: "/repo-b/.ccp/gain.db"}, nil)
+			session.recordFailure(globalMetricsSource{CWD: "/repo-b", MetricsPath: "/repo-b/.cmdshape/gain.db"}, nil)
 
 			Expect(session.failures).To(HaveLen(1))
 			Expect(session.failures).To(HaveKey("/repo-a"))
@@ -1773,9 +1773,9 @@ var _ = Describe("gain formatting helpers", func() {
 			duplicateRepo := filepath.Join(baseDir, "duplicate-repo")
 			missingRepo := filepath.Join(baseDir, "missing-repo")
 			currentRepo := filepath.Join(baseDir, "current-repo")
-			registeredPath := filepath.Join(registeredRepo, ".ccp", "gain.db")
-			missingPath := filepath.Join(missingRepo, ".ccp", "gain.db")
-			currentPath := filepath.Join(currentRepo, ".ccp", "gain.db")
+			registeredPath := filepath.Join(registeredRepo, ".cmdshape", "gain.db")
+			missingPath := filepath.Join(missingRepo, ".cmdshape", "gain.db")
+			currentPath := filepath.Join(currentRepo, ".cmdshape", "gain.db")
 
 			appendGainMetrics(registeredPath, []metrics.RunMetric{
 				{Timestamp: time.Date(2026, 3, 26, 8, 0, 0, 0, time.UTC), Tool: "go", Command: "go test ./...", RawBytes: 8, KeptBytes: 4},
@@ -1792,7 +1792,7 @@ var _ = Describe("gain formatting helpers", func() {
 			var sources []globalMetricsSource
 			Expect(runInDir(currentRepo, func() error {
 				var err error
-				sources, err = globalMetricsSources(filepath.Join(currentRepo, ".ccp", ".", "gain.db"))
+				sources, err = globalMetricsSources(filepath.Join(currentRepo, ".cmdshape", ".", "gain.db"))
 				return err
 			})).To(Succeed())
 
@@ -1845,15 +1845,15 @@ var _ = Describe("gain formatting helpers", func() {
 				Expect(source.MetricsPath).To(Equal(expectedMetricsPath))
 			},
 			Entry("returns nil for an empty metrics path", " \t ", true),
-			Entry("normalizes a relative metrics path using the current working directory", filepath.Join(".", ".ccp", "gain.db"), false),
+			Entry("normalizes a relative metrics path using the current working directory", filepath.Join(".", ".cmdshape", "gain.db"), false),
 		)
 
 		It("writes global warnings in cwd-then-metrics-path order", func() {
 			session := &globalQuerySession{
 				failures: map[string]globalQueryFailure{
-					"b": {CWD: "/repo-b", MetricsPath: "/repo-b/.ccp/gain.db", Err: errors.New("broken b")},
-					"z": {CWD: "/repo-a", MetricsPath: "/repo-a/.ccp/z.db", Err: errors.New("broken z")},
-					"a": {CWD: "/repo-a", MetricsPath: "/repo-a/.ccp/a.db", Err: errors.New("broken a")},
+					"b": {CWD: "/repo-b", MetricsPath: "/repo-b/.cmdshape/gain.db", Err: errors.New("broken b")},
+					"z": {CWD: "/repo-a", MetricsPath: "/repo-a/.cmdshape/z.db", Err: errors.New("broken z")},
+					"a": {CWD: "/repo-a", MetricsPath: "/repo-a/.cmdshape/a.db", Err: errors.New("broken a")},
 				},
 			}
 
@@ -1863,9 +1863,9 @@ var _ = Describe("gain formatting helpers", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			first := strings.Index(stderr, "/repo-a (/repo-a/.ccp/a.db): broken a")
-			second := strings.Index(stderr, "/repo-a (/repo-a/.ccp/z.db): broken z")
-			third := strings.Index(stderr, "/repo-b (/repo-b/.ccp/gain.db): broken b")
+			first := strings.Index(stderr, "/repo-a (/repo-a/.cmdshape/a.db): broken a")
+			second := strings.Index(stderr, "/repo-a (/repo-a/.cmdshape/z.db): broken z")
+			third := strings.Index(stderr, "/repo-b (/repo-b/.cmdshape/gain.db): broken b")
 			Expect(first).To(BeNumerically(">=", 0))
 			Expect(second).To(BeNumerically(">", first))
 			Expect(third).To(BeNumerically(">", second))
@@ -2252,7 +2252,7 @@ func appendGainMetrics(path string, seed []metrics.RunMetric) {
 }
 
 func appendGlobalWorkspaceMetrics(home, cwd string, seed []metrics.RunMetric) {
-	path := filepath.Join(cwd, ".ccp", "gain.db")
+	path := filepath.Join(cwd, ".cmdshape", "gain.db")
 	appendGainMetrics(path, seed)
 	Expect(workspaces.UpsertPath(workspaces.PathForHome(home), cwd, path)).To(Succeed())
 }

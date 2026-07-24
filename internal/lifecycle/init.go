@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/projectfiles"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,9 +25,9 @@ func RunInit(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"install or update supported agent integrations",
-		[]string{"ccp init [--tools <tool,tool,...>]"},
-		"When --tools is omitted, ccp auto-detects supported tools from the current repository.",
-		"ccp refreshes the fully managed ~/.config/ccp directory, including ~/.config/ccp/filters, from shipped resources embedded in the binary.",
+		[]string{"cmdshape init [--tools <tool,tool,...>]"},
+		"When --tools is omitted, cmdshape auto-detects supported tools from the current repository.",
+		"cmdshape refreshes the fully managed ~/.config/cmdshape directory, including ~/.config/cmdshape/filters, from shipped resources embedded in the binary.",
 		"Repository markers drive detection only; each integration manages its own canonical install target.",
 		"Agent adapters may install into home-scoped locations when that is the supported integration surface.",
 	)
@@ -71,13 +71,13 @@ func RunInit(args []string) error {
 		err = workspaces.UpsertPath(registryPath, scopeRoot, "")
 	}
 	if err != nil {
-		writeLifecycleWarning("ccp init: warning: could not update workspace registry: %v\n", err)
+		writeLifecycleWarning("cmdshape init: warning: could not update workspace registry: %v\n", err)
 	}
 	if allToolStatesNoop(states) {
-		fmt.Printf("ccp init: already configured\n")
+		fmt.Printf("cmdshape init: already configured\n")
 		return nil
 	}
-	fmt.Printf("ccp init: configured integrations\n")
+	fmt.Printf("cmdshape init: configured integrations\n")
 	return nil
 }
 
@@ -94,7 +94,7 @@ func resolveInitTools(toolsArg string, adapters map[string]agents.Adapter) ([]st
 	if len(tools) == 0 {
 		return nil, fmt.Errorf("no tools detected; specify --tools (%s)", strings.Join(agents.SupportedTools(adapters), ", "))
 	}
-	fmt.Printf("ccp init: detected tools: %s\n", strings.Join(tools, ", "))
+	fmt.Printf("cmdshape init: detected tools: %s\n", strings.Join(tools, ", "))
 	return tools, nil
 }
 
@@ -120,7 +120,7 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 		adapter := adapters[tool]
 		plan := adapter.Plan(scope)
 		if len(plan) > 0 {
-			fmt.Printf("ccp init: planned %d changes for %s\n", len(plan), tool)
+			fmt.Printf("cmdshape init: planned %d changes for %s\n", len(plan), tool)
 		}
 		res, err := adapter.Install(scope, writeManagedBytes)
 		if err != nil {
@@ -140,7 +140,7 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 			status = "noop"
 		}
 		states = append(states, toolState{Tool: tool, Status: status, Reason: reason})
-		fmt.Printf("ccp init: [%s] status=%s (%s)\n", tool, status, reason)
+		fmt.Printf("cmdshape init: [%s] status=%s (%s)\n", tool, status, reason)
 	}
 	return states, nil
 }

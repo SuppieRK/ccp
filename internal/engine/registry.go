@@ -3,9 +3,9 @@ package engine
 import (
 	"strings"
 
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	v2filters "go-command-compression-proxy/internal/filters"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	v2filters "github.com/SuppieRK/cmdshape/internal/filters"
 )
 
 type Registry struct {
