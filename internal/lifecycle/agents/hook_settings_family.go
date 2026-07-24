@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const privateHookMode os.FileMode = 0o700
+
 func preToolUseCommandSettingsContent(hookPath string) string {
 	escapedHookPath := strings.ReplaceAll(hookPath, "\\", "\\\\")
 	return fmt.Sprintf("{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"%s\"\n          }\n        ]\n      }\n    ]\n  }\n}\n", escapedHookPath)
@@ -22,7 +24,7 @@ func bashHookAndSettingsArtifacts(root, hookScriptName, settingsName, hookConten
 			Kind:    ArtifactHook,
 			Path:    hookPath,
 			Content: hookContent,
-			Perm:    0o755,
+			Perm:    privateHookMode,
 		},
 		{
 			Kind:    ArtifactSettings,
@@ -48,7 +50,7 @@ func verifyArtifactFiles(checks ...artifactCheck) error {
 }
 
 func ensureHookArtifactExecutable(path string) error {
-	return os.Chmod(path, 0o755)
+	return os.Chmod(path, privateHookMode)
 }
 
 func verifyHookArtifactExecutable(path string) error {

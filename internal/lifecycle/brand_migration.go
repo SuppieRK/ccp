@@ -168,41 +168,10 @@ func executeBrandMigration() (brandMigrationJournal, error) {
 	locations := make([]brandMigrationLocation, 0, len(workspaceRoots)+6)
 	locations = append(locations, registryLocations...)
 	locations = append(locations, migrateLegacyExecutables(home, currentDir)...)
-	migratedProjectRoots := make([]string, 0, len(workspaceRoots))
-	for _, root := range workspaceRoots {
-		location, moved := migrateProjectState(root)
-		locations = append(locations, location)
-		if moved {
-			migratedProjectRoots = append(migratedProjectRoots, root)
-		}
-	}
-	homeLocations, homeMoved := migrateHomeDirectory(
-		"home",
-		legacyHomeConfigPath(home),
-		product.HomeConfigPath(home),
-	)
-	locations = append(locations, homeLocations...)
-	locations = append(locations, purgeLegacyLocation("obsolete-home", filepath.Join(home, legacyProjectDir)))
-
-	migratedConfigRoots := make([]string, 0, 2)
-	if homeMoved {
-		migratedConfigRoots = append(migratedConfigRoots, product.HomeConfigPath(home))
-	}
-	if platformConfig, configErr := brandMigrationConfigDir(); configErr == nil {
-		legacyPlatformConfig := filepath.Join(platformConfig, legacyConfigDir)
-		newPlatformConfig := filepath.Join(platformConfig, product.ConfigDir)
-		if !sameCleanPath(legacyPlatformConfig, legacyHomeConfigPath(home)) {
-			platformLocations, platformMoved := migrateHomeDirectory(
-				"platform-home",
-				legacyPlatformConfig,
-				newPlatformConfig,
-			)
-			locations = append(locations, platformLocations...)
-			if platformMoved {
-				migratedConfigRoots = append(migratedConfigRoots, newPlatformConfig)
-			}
-		}
-	}
+	projectLocations, migratedProjectRoots := migrateRegisteredProjectStates(workspaceRoots)
+	locations = append(locations, projectLocations...)
+	configLocations, migratedConfigRoots, homeMoved := migrateConfigState(home)
+	locations = append(locations, configLocations...)
 
 	if err := workspaces.RewriteProjectStateDir(newRegistry, legacyProjectDir, product.ProjectDir); err != nil {
 		locations = append(locations, brandMigrationLocation{
@@ -236,6 +205,49 @@ func executeBrandMigration() (brandMigrationJournal, error) {
 		return brandMigrationJournal{}, err
 	}
 	return journal, nil
+}
+
+func migrateRegisteredProjectStates(workspaceRoots []string) ([]brandMigrationLocation, []string) {
+	locations := make([]brandMigrationLocation, 0, len(workspaceRoots))
+	migratedRoots := make([]string, 0, len(workspaceRoots))
+	for _, root := range workspaceRoots {
+		location, moved := migrateProjectState(root)
+		locations = append(locations, location)
+		if moved {
+			migratedRoots = append(migratedRoots, root)
+		}
+	}
+	return locations, migratedRoots
+}
+
+func migrateConfigState(home string) ([]brandMigrationLocation, []string, bool) {
+	currentHome := product.HomeConfigPath(home)
+	locations, homeMoved := migrateHomeDirectory("home", legacyHomeConfigPath(home), currentHome)
+	locations = append(locations, purgeLegacyLocation("obsolete-home", filepath.Join(home, legacyProjectDir)))
+
+	migratedRoots := make([]string, 0, 2)
+	if homeMoved {
+		migratedRoots = append(migratedRoots, currentHome)
+	}
+	platformConfig, err := brandMigrationConfigDir()
+	if err != nil {
+		return locations, migratedRoots, homeMoved
+	}
+	legacyPlatformConfig := filepath.Join(platformConfig, legacyConfigDir)
+	if sameCleanPath(legacyPlatformConfig, legacyHomeConfigPath(home)) {
+		return locations, migratedRoots, homeMoved
+	}
+	currentPlatformConfig := filepath.Join(platformConfig, product.ConfigDir)
+	platformLocations, platformMoved := migrateHomeDirectory(
+		"platform-home",
+		legacyPlatformConfig,
+		currentPlatformConfig,
+	)
+	locations = append(locations, platformLocations...)
+	if platformMoved {
+		migratedRoots = append(migratedRoots, currentPlatformConfig)
+	}
+	return locations, migratedRoots, homeMoved
 }
 
 func migrateRetiredAgentIntegrations(root, home string) brandMigrationLocation {
@@ -383,63 +395,69 @@ func migratePath(kind, source, target string) brandMigrationLocation {
 	location := brandMigrationLocation{Kind: kind, Source: source, Target: target}
 	sourceInfo, err := os.Lstat(source)
 	if errors.Is(err, os.ErrNotExist) {
-		location.State = brandMigrationCompleted
-		return location
+		return completedBrandMigration(location)
 	}
 	if err != nil {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
+		return skippedBrandMigration(location, err)
 	}
-	if _, err := os.Lstat(target); err == nil {
-		if err := removeLegacyPath(source); err != nil {
-			location.State = brandMigrationSkipped
-			location.Reason = fmt.Sprintf("remove superseded source: %v", err)
-			return location
-		}
-		location.State = brandMigrationCompleted
-		return location
-	} else if !errors.Is(err, os.ErrNotExist) {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
+	_, targetErr := os.Lstat(target)
+	if targetErr == nil {
+		return removeSupersededMigrationSource(location, source)
+	}
+	if !errors.Is(targetErr, os.ErrNotExist) {
+		return skippedBrandMigration(location, targetErr)
 	}
 	if sourceInfo.Mode()&os.ModeSymlink != 0 {
-		if err := os.Remove(source); err != nil {
-			location.State = brandMigrationSkipped
-			location.Reason = fmt.Sprintf("remove symbolic link: %v", err)
-			return location
-		}
-		location.State = brandMigrationCompleted
-		return location
+		return removeMigrationSymlink(location, source)
 	}
 	if sourceInfo.IsDir() {
 		if err := rejectSymlinksInTree(source); err != nil {
-			if removeErr := removeLegacyPath(source); removeErr != nil {
-				location.State = brandMigrationSkipped
-				location.Reason = errors.Join(err, removeErr).Error()
-				return location
-			}
-			location.State = brandMigrationCompleted
-			return location
+			return discardUnsafeMigrationSource(location, source, err)
 		}
 	}
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
+		return skippedBrandMigration(location, err)
 	}
 	if err := os.Rename(source, target); err != nil {
-		if removeErr := removeLegacyPath(source); removeErr != nil {
-			location.State = brandMigrationSkipped
-			location.Reason = errors.Join(err, removeErr).Error()
-			return location
-		}
-		location.State = brandMigrationCompleted
-		return location
+		return discardUnsafeMigrationSource(location, source, err)
 	}
+	return completedBrandMigration(location)
+}
+
+func completedBrandMigration(location brandMigrationLocation) brandMigrationLocation {
 	location.State = brandMigrationCompleted
 	return location
+}
+
+func skippedBrandMigration(location brandMigrationLocation, err error) brandMigrationLocation {
+	location.State = brandMigrationSkipped
+	location.Reason = err.Error()
+	return location
+}
+
+func removeSupersededMigrationSource(location brandMigrationLocation, source string) brandMigrationLocation {
+	if err := removeLegacyPath(source); err != nil {
+		return skippedBrandMigration(location, fmt.Errorf("remove superseded source: %w", err))
+	}
+	return completedBrandMigration(location)
+}
+
+func removeMigrationSymlink(location brandMigrationLocation, source string) brandMigrationLocation {
+	if err := os.Remove(source); err != nil {
+		return skippedBrandMigration(location, fmt.Errorf("remove symbolic link: %w", err))
+	}
+	return completedBrandMigration(location)
+}
+
+func discardUnsafeMigrationSource(
+	location brandMigrationLocation,
+	source string,
+	cause error,
+) brandMigrationLocation {
+	if err := removeLegacyPath(source); err != nil {
+		return skippedBrandMigration(location, errors.Join(cause, err))
+	}
+	return completedBrandMigration(location)
 }
 
 func removeLegacyPath(path string) error {
@@ -568,6 +586,17 @@ func legacyProjectStatePath(root string) string {
 }
 
 func migrateLegacyFilterHeaders(home string, workspaceRoots []string, homeMoved bool) brandMigrationLocation {
+	roots := legacyFilterRoots(home, workspaceRoots, homeMoved)
+	location := brandMigrationLocation{Kind: "filter-schema", Source: strings.Join(roots, ","), Target: currentSchemaURL}
+	for _, root := range uniqueCleanPaths(roots) {
+		if err := rewriteLegacyFilterRoot(root); err != nil {
+			return skippedBrandMigration(location, err)
+		}
+	}
+	return completedBrandMigration(location)
+}
+
+func legacyFilterRoots(home string, workspaceRoots []string, homeMoved bool) []string {
 	roots := make([]string, 0, len(workspaceRoots)+1)
 	if homeMoved {
 		roots = append(roots, filepath.Join(product.HomeConfigPath(home), "filters"))
@@ -575,44 +604,46 @@ func migrateLegacyFilterHeaders(home string, workspaceRoots []string, homeMoved 
 	for _, root := range workspaceRoots {
 		roots = append(roots, filepath.Join(product.ProjectStatePath(root), "filters"))
 	}
-	location := brandMigrationLocation{Kind: "filter-schema", Source: strings.Join(roots, ","), Target: currentSchemaURL}
-	for _, root := range uniqueCleanPaths(roots) {
-		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-			if errors.Is(walkErr, os.ErrNotExist) {
-				return nil
-			}
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-				return nil
-			}
-			ext := strings.ToLower(filepath.Ext(entry.Name()))
-			if ext != ".yaml" && ext != ".yml" {
-				return nil
-			}
-			raw, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			updated := rewriteLegacyFilterScaffold(raw)
-			if bytes.Equal(raw, updated) {
-				return nil
-			}
-			info, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			return projectfiles.AtomicWriteFile(path, updated, info.Mode().Perm())
-		})
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			location.State = brandMigrationSkipped
-			location.Reason = err.Error()
-			return location
-		}
+	return roots
+}
+
+func rewriteLegacyFilterRoot(root string) error {
+	err := filepath.WalkDir(root, rewriteLegacyFilterEntry)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
 	}
-	location.State = brandMigrationCompleted
-	return location
+	return err
+}
+
+func rewriteLegacyFilterEntry(path string, entry os.DirEntry, walkErr error) error {
+	regular, err := regularMigrationFile(entry, walkErr)
+	if err != nil {
+		return err
+	}
+	if !regular {
+		return nil
+	}
+	ext := strings.ToLower(filepath.Ext(entry.Name()))
+	if ext != ".yaml" && ext != ".yml" {
+		return nil
+	}
+	return rewriteLegacyFilterFile(path, entry)
+}
+
+func rewriteLegacyFilterFile(path string, entry os.DirEntry) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	updated := rewriteLegacyFilterScaffold(raw)
+	if bytes.Equal(raw, updated) {
+		return nil
+	}
+	info, err := entry.Info()
+	if err != nil {
+		return err
+	}
+	return projectfiles.AtomicWriteFile(path, updated, info.Mode().Perm())
 }
 
 func rewriteLegacyFilterScaffold(raw []byte) []byte {
@@ -639,72 +670,87 @@ func migrateLegacyTrustApprovals(home string, homeMoved bool) brandMigrationLoca
 	path := filepath.Join(product.HomeConfigPath(home), "filter-trust.json")
 	location := brandMigrationLocation{Kind: "filter-trust", Source: path, Target: path}
 	if !homeMoved {
-		location.State = brandMigrationCompleted
-		return location
+		return completedBrandMigration(location)
 	}
+	store, present, err := readMigrationTrustStore(path)
+	if err != nil {
+		return skippedBrandMigration(location, err)
+	}
+	if !present {
+		return completedBrandMigration(location)
+	}
+
+	projects, changed := migrateTrustApprovals(store.Projects)
+	if !changed {
+		return completedBrandMigration(location)
+	}
+	store.Projects = projects
+	if err := writeMigrationTrustStore(path, store); err != nil {
+		return skippedBrandMigration(location, err)
+	}
+	return completedBrandMigration(location)
+}
+
+func readMigrationTrustStore(path string) (migrationTrustStore, bool, error) {
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		location.State = brandMigrationCompleted
-		return location
+		return migrationTrustStore{}, false, nil
 	}
 	if err != nil {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
+		return migrationTrustStore{}, false, err
 	}
 	var store migrationTrustStore
-	if err := json.Unmarshal(raw, &store); err != nil {
+	if json.Unmarshal(raw, &store) != nil {
 		// An invalid cmdshape-side store contains no actionable legacy path or
 		// identifier. Leave it for the trust command to report rather than
 		// guessing whether it predated the rename.
-		location.State = brandMigrationCompleted
-		return location
+		return migrationTrustStore{}, false, nil
 	}
-	projects := make([]migrationTrustApproval, 0, len(store.Projects))
+	return store, true, nil
+}
+
+func migrateTrustApprovals(approvals []migrationTrustApproval) ([]migrationTrustApproval, bool) {
+	projects := make([]migrationTrustApproval, 0, len(approvals))
 	changed := false
-	for _, approval := range store.Projects {
-		currentRoot, currentDigest, present, currentErr := filtertrust.ProjectDigest(approval.Root)
-		if currentErr != nil || !present {
-			changed = true
+	for _, approval := range approvals {
+		migrated, keep, approvalChanged := migrateTrustApproval(approval)
+		changed = changed || approvalChanged
+		if !keep {
 			continue
 		}
-		if approval.Digest == currentDigest {
-			approval.Root = currentRoot
-			projects = append(projects, approval)
-			continue
-		}
-		_, legacyDigest, legacyPresent, legacyErr := filtertrust.ProjectDigestForDomain(
-			approval.Root,
-			legacyTrustDomain,
-		)
-		if legacyErr != nil || !legacyPresent || approval.Digest != legacyDigest {
-			changed = true
-			continue
-		}
+		projects = append(projects, migrated)
+	}
+	return projects, changed
+}
+
+func migrateTrustApproval(approval migrationTrustApproval) (migrationTrustApproval, bool, bool) {
+	currentRoot, currentDigest, present, err := filtertrust.ProjectDigest(approval.Root)
+	if err != nil || !present {
+		return migrationTrustApproval{}, false, true
+	}
+	if approval.Digest == currentDigest {
 		approval.Root = currentRoot
-		approval.Digest = currentDigest
-		projects = append(projects, approval)
-		changed = true
+		return approval, true, false
 	}
-	if !changed {
-		location.State = brandMigrationCompleted
-		return location
+	_, legacyDigest, legacyPresent, err := filtertrust.ProjectDigestForDomain(
+		approval.Root,
+		legacyTrustDomain,
+	)
+	if err != nil || !legacyPresent || approval.Digest != legacyDigest {
+		return migrationTrustApproval{}, false, true
 	}
-	store.Projects = projects
+	approval.Root = currentRoot
+	approval.Digest = currentDigest
+	return approval, true, true
+}
+
+func writeMigrationTrustStore(path string, store migrationTrustStore) error {
 	updated, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
+		return err
 	}
 	updated = append(updated, '\n')
-	if err := projectfiles.AtomicWriteFile(path, updated, 0o600); err != nil {
-		location.State = brandMigrationSkipped
-		location.Reason = err.Error()
-		return location
-	}
-	location.State = brandMigrationCompleted
-	return location
+	return projectfiles.AtomicWriteFile(path, updated, 0o600)
 }
 
 func migrateLegacyRecoveryPayloads(configRoots []string) brandMigrationLocation {
@@ -730,33 +776,47 @@ func migrateLegacyRecoveryPayloads(configRoots []string) brandMigrationLocation 
 }
 
 func rewriteLegacyRecoveryPayloads(root string) error {
-	return filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-		if errors.Is(walkErr, os.ErrNotExist) {
-			return nil
-		}
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-			return nil
-		}
-		if entry.Name() != "stdout.txt" && entry.Name() != "stderr.txt" {
-			return nil
-		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		updated := bytes.ReplaceAll(raw, []byte(legacyReplayPrefix), []byte(currentReplayPrefix))
-		if bytes.Equal(raw, updated) {
-			return nil
-		}
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
-		return projectfiles.AtomicWriteFile(path, updated, info.Mode().Perm())
-	})
+	return filepath.WalkDir(root, rewriteLegacyRecoveryEntry)
+}
+
+func rewriteLegacyRecoveryEntry(path string, entry os.DirEntry, walkErr error) error {
+	regular, err := regularMigrationFile(entry, walkErr)
+	if err != nil {
+		return err
+	}
+	if !regular {
+		return nil
+	}
+	if entry.Name() != "stdout.txt" && entry.Name() != "stderr.txt" {
+		return nil
+	}
+	return rewriteLegacyRecoveryFile(path, entry)
+}
+
+func rewriteLegacyRecoveryFile(path string, entry os.DirEntry) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	updated := bytes.ReplaceAll(raw, []byte(legacyReplayPrefix), []byte(currentReplayPrefix))
+	if bytes.Equal(raw, updated) {
+		return nil
+	}
+	info, err := entry.Info()
+	if err != nil {
+		return err
+	}
+	return projectfiles.AtomicWriteFile(path, updated, info.Mode().Perm())
+}
+
+func regularMigrationFile(entry os.DirEntry, walkErr error) (bool, error) {
+	if errors.Is(walkErr, os.ErrNotExist) {
+		return false, nil
+	}
+	if walkErr != nil {
+		return false, walkErr
+	}
+	return !entry.IsDir() && entry.Type()&os.ModeSymlink == 0, nil
 }
 
 func brandMigrationIsComplete(locations []brandMigrationLocation) bool {

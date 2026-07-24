@@ -141,7 +141,7 @@ func (a ManagedHookSettingsAdapter) Plan(ctx Context) []PlannedArtifact {
 			Kind:    ArtifactHook,
 			Path:    hookPath,
 			Content: a.spec.HookContent(),
-			Perm:    0o755,
+			Perm:    privateHookMode,
 		},
 		{
 			Kind:    ArtifactSettings,
@@ -155,7 +155,7 @@ func (a ManagedHookSettingsAdapter) Plan(ctx Context) []PlannedArtifact {
 func (a ManagedHookSettingsAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
 	var res InstallResult
 	hookPath := a.hookPath(ctx)
-	hookChanged, err := write(hookPath, []byte(a.spec.HookContent()), 0o755)
+	hookChanged, err := write(hookPath, []byte(a.spec.HookContent()), privateHookMode)
 	if err != nil {
 		return InstallResult{}, err
 	}

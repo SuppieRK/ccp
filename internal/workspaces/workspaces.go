@@ -207,28 +207,36 @@ func RewriteProjectStateDir(path, oldDir, newDir string) (err error) {
 	if err != nil || !needsRewrite {
 		return err
 	}
+	return rewriteProjectStateDir(db, oldDir, newDir)
+}
+
+func rewriteProjectStateDir(db *bolt.DB, oldDir, newDir string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(workspacesBucket)
 		if bucket == nil {
 			return nil
 		}
 		return bucket.ForEach(func(key, raw []byte) error {
-			var entry Workspace
-			if err := json.Unmarshal(raw, &entry); err != nil {
-				return err
-			}
-			updatedPath := replacePathElement(entry.MetricsPath, oldDir, newDir)
-			if updatedPath == entry.MetricsPath {
-				return nil
-			}
-			entry.MetricsPath = updatedPath
-			payload, err := json.Marshal(entry)
-			if err != nil {
-				return err
-			}
-			return bucket.Put(key, payload)
+			return rewriteWorkspaceProjectStateDir(bucket, key, raw, oldDir, newDir)
 		})
 	})
+}
+
+func rewriteWorkspaceProjectStateDir(bucket *bolt.Bucket, key, raw []byte, oldDir, newDir string) error {
+	var entry Workspace
+	if err := json.Unmarshal(raw, &entry); err != nil {
+		return err
+	}
+	updatedPath := replacePathElement(entry.MetricsPath, oldDir, newDir)
+	if updatedPath == entry.MetricsPath {
+		return nil
+	}
+	entry.MetricsPath = updatedPath
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	return bucket.Put(key, payload)
 }
 
 func projectStateDirRewriteNeeded(db *bolt.DB, oldDir, newDir string) (bool, error) {

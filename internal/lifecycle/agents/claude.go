@@ -53,7 +53,7 @@ func (a ClaudeAdapter) Install(ctx Context, write WriterFunc) (InstallResult, er
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 
-	hookChanged, err := write(hookPath, []byte(bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log")), 0o755)
+	hookChanged, err := write(hookPath, []byte(bashRewriteHookScriptContent("claude", "cmdshape-claude-hook.log")), privateHookMode)
 	if err != nil {
 		return res, err
 	}
@@ -124,7 +124,7 @@ func claudeRoot(ctx Context) string {
 func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	root := claudeRoot(ctx)
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
-	legacyHookPath := filepath.Join(root, "hooks", "ccp-rewrite.sh")
+	legacyHookPath := filepath.Join(root, "hooks", legacyHookName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
 	legacyAwarenessPath := filepath.Join(root, "CCP.md")
@@ -167,7 +167,7 @@ func installClaudeArtifact(item PlannedArtifact, write WriterFunc) (bool, error)
 		return false, err
 	}
 	if item.Kind == ArtifactHook {
-		if err := os.Chmod(item.Path, 0o755); err != nil {
+		if err := os.Chmod(item.Path, privateHookMode); err != nil {
 			return false, err
 		}
 	}

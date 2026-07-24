@@ -235,7 +235,7 @@ var _ = ginkgo.Describe("context link families", func() {
 
 			info, err := os.Stat(hookPath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(info.Mode().Perm() & 0o111).NotTo(BeZero())
+			Expect(info.Mode().Perm()).To(Equal(privateHookMode))
 		})
 
 		ginkgo.It("fails verify when the managed hook script is not executable", func() {
