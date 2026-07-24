@@ -61,9 +61,13 @@ var _ = ginkgo.Describe("legacy integration migration", func() {
 
 		raw, err := os.ReadFile(settingsPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(raw)).NotTo(ContainSubstring(legacyHook))
-		Expect(string(raw)).To(ContainSubstring(currentHook))
 		Expect(strings.TrimSpace(string(raw))).NotTo(BeEmpty())
+		usesLegacyHook, err := codebuddySettingsUseHook(settingsPath, legacyHook)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(usesLegacyHook).To(BeFalse())
+		usesCurrentHook, err := codebuddySettingsUseHook(settingsPath, currentHook)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(usesCurrentHook).To(BeTrue())
 		Expect(legacyHook).NotTo(BeAnExistingFile())
 	})
 
