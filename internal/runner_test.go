@@ -14,21 +14,21 @@ import (
 	"testing"
 	"time"
 
-	"go-command-compression-proxy/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/audit"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/engine"
-	corefilters "go-command-compression-proxy/internal/filters"
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/filtertrust"
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/recovery"
-	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/version"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/engine"
+	corefilters "github.com/SuppieRK/cmdshape/internal/filters"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/recovery"
+	"github.com/SuppieRK/cmdshape/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 var _ = Describe("recoveryEvents", func() {
@@ -125,7 +125,7 @@ var _ = Describe("Runner", func() {
 
 			Expect(sources).To(HaveLen(1))
 			Expect(sources[0].Kind).To(Equal(corefilters.SourceHome))
-			Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".config", "ccp", "filters")))
+			Expect(sources[0].Directory).To(HaveSuffix(filepath.Join(".config", "cmdshape", "filters")))
 		})
 
 		It("leaves default filter sources and metrics path unset when os.Getwd fails", func() {
@@ -163,7 +163,7 @@ var _ = Describe("Runner", func() {
 		It("returns command start errors with shell-not-found exit semantics", Label("live-smoke"), func() {
 			runner := &Runner{sources: []corefilters.FilterSource{}}
 
-			code, err := runner.Run([]string{"__ccp_missing_binary__"})
+			code, err := runner.Run([]string{"__cmdshape_missing_binary__"})
 
 			Expect(code).To(Equal(127))
 			Expect(err).To(HaveOccurred())
@@ -234,10 +234,10 @@ var _ = Describe("Runner", func() {
 					func(repoRoot string) *Runner {
 						return &Runner{
 							sources:     []corefilters.FilterSource{},
-							metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+							metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 						}
 					},
-					[]string{"sh", "-c", "printf 'hello from ccp\\n'"},
+					[]string{"sh", "-c", "printf 'hello from cmdshape\\n'"},
 				),
 				Entry("for raw-mode flushes",
 					func(string) *Runner {
@@ -277,7 +277,7 @@ var _ = Describe("Runner", func() {
 					Expect(normalizeNL(closeAndRead(stdoutReader, stdoutWriter))).To(Equal("registry-fallback\n"))
 					Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 
-					auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+					auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "cmdshape", "audit", "audit.log"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_registry_error"`))
 					Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_fallback"`))
@@ -418,7 +418,7 @@ var _ = Describe("Runner", func() {
 			secret := "metrics-super-secret"
 			runner := &Runner{
 				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+				metricsPath: filepath.Join(tmpDir, ".cmdshape", "gain.db"),
 				workingDir:  tmpDir,
 				opts:        Options{Confidential: []string{secret}},
 			}
@@ -445,7 +445,7 @@ var _ = Describe("Runner", func() {
 
 			runner := &Runner{
 				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+				metricsPath: filepath.Join(tmpDir, ".cmdshape", "gain.db"),
 			}
 
 			args, expectedTool := metricsCommand()
@@ -499,7 +499,7 @@ var _ = Describe("Runner", func() {
 				sources: []corefilters.FilterSource{
 					corefilters.RepositorySource(filteryaml.ProjectRootFromSource()),
 				},
-				metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+				metricsPath: filepath.Join(tmpDir, ".cmdshape", "gain.db"),
 			}
 
 			code, err := runner.Run([]string{"grep", "-v", "filtered"})
@@ -525,9 +525,9 @@ var _ = Describe("Runner", func() {
 			Expect(buildRows[0].SourceKind).To(Equal(string(corefilters.SourceRepository)))
 		})
 
-		DescribeTable("does not record wrapped ccp lifecycle metrics",
+		DescribeTable("does not record wrapped cmdshape lifecycle metrics",
 			func(rawInput string, args []string) {
-				tmpDir, err := os.MkdirTemp("", "core-runner-ccp-metrics-*")
+				tmpDir, err := os.MkdirTemp("", "core-runner-cmdshape-metrics-*")
 				Expect(err).NotTo(HaveOccurred())
 				DeferCleanup(func() {
 					Expect(os.RemoveAll(tmpDir)).To(Succeed())
@@ -535,14 +535,14 @@ var _ = Describe("Runner", func() {
 
 				runner := &Runner{
 					sources:     []corefilters.FilterSource{},
-					metricsPath: filepath.Join(tmpDir, ".ccp", "gain.db"),
+					metricsPath: filepath.Join(tmpDir, ".cmdshape", "gain.db"),
 				}
 
 				command := contracts.Command{
 					RawInput: rawInput,
 					Args:     args,
-					Tool:     "ccp",
-					Dispatch: "ccp",
+					Tool:     "cmdshape",
+					Dispatch: "cmdshape",
 				}
 
 				runner.appendMetrics(command, contracts.FilterProvenance{}, contracts.FilterRegistryBuildTiming{}, executionMetricStats{
@@ -556,8 +556,8 @@ var _ = Describe("Runner", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(history).To(BeEmpty())
 			},
-			Entry("for history", "ccp history", []string{"ccp", "history"}),
-			Entry("for capture", "ccp capture -- echo hi", []string{"ccp", "capture", "--", "echo", "hi"}),
+			Entry("for history", "cmdshape history", []string{"cmdshape", "history"}),
+			Entry("for capture", "cmdshape capture -- echo hi", []string{"cmdshape", "capture", "--", "echo", "hi"}),
 		)
 
 		It("registers the current working directory after writing normal gain metrics", func() {
@@ -575,7 +575,7 @@ var _ = Describe("Runner", func() {
 
 			runner := &Runner{
 				sources:     []corefilters.FilterSource{},
-				metricsPath: filepath.Join(repo, ".ccp", "gain.db"),
+				metricsPath: filepath.Join(repo, ".cmdshape", "gain.db"),
 				workingDir:  repo,
 			}
 
@@ -598,7 +598,7 @@ var _ = Describe("Runner", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
 			Expect(entries[0].CWD).To(Equal(canonicalRepo))
-			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(canonicalRepo, ".ccp", "gain.db")))
+			Expect(entries[0].MetricsPath).To(Equal(filepath.Join(canonicalRepo, ".cmdshape", "gain.db")))
 		})
 
 		It("skips redirected automatic metrics without registering the unsafe path", func() {
@@ -609,10 +609,10 @@ var _ = Describe("Runner", func() {
 			DeferCleanup(restoreAudit)
 			DeferCleanup(audit.Reset)
 			project := filepath.Join(tmpDir, "repo")
-			ccpDir := filepath.Join(project, ".ccp")
-			Expect(os.MkdirAll(ccpDir, 0o755)).To(Succeed())
+			cmdshapeDir := filepath.Join(project, ".cmdshape")
+			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
 			outside := filepath.Join(tmpDir, "outside.db")
-			metricsPath := filepath.Join(ccpDir, "gain.db")
+			metricsPath := filepath.Join(cmdshapeDir, "gain.db")
 			if err := os.Symlink(filepath.Join("..", "..", filepath.Base(outside)), metricsPath); err != nil {
 				Skip("symlink creation unavailable: " + err.Error())
 			}
@@ -636,7 +636,7 @@ var _ = Describe("Runner", func() {
 			entries, err := workspaces.ListPath(registryPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(BeEmpty())
-			auditBytes, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+			auditBytes, err := os.ReadFile(filepath.Join(tmpDir, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(auditBytes)).To(ContainSubstring(`"msg":"metrics_storage_error"`))
 			Expect(string(auditBytes)).To(ContainSubstring(`"tool":"go"`))
@@ -715,7 +715,7 @@ var _ = Describe("Runner", func() {
 			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(ContainSubstring("audit-ok"))
 			Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 
-			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_start"`))
 			Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_fallback"`))
@@ -740,7 +740,7 @@ var _ = Describe("Runner", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(code).To(Equal(0))
-			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(auditData)).To(ContainSubstring(`***`))
 			Expect(string(auditData)).NotTo(ContainSubstring(secret))
@@ -780,21 +780,21 @@ var _ = Describe("Runner", func() {
 
 			runner := &Runner{sources: []corefilters.FilterSource{}}
 
-			code, err := runner.Run([]string{"bash", "-lc", "printf audit-shape | ccp xargs -0 -r ccp echo hi || true"})
+			code, err := runner.Run([]string{"bash", "-lc", "printf audit-shape | cmdshape xargs -0 -r cmdshape echo hi || true"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(code).To(Equal(0))
 			_ = closeAndRead(stdoutReader, stdoutWriter)
 			_ = closeAndRead(stderrReader, stderrWriter)
 
-			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "ccp", "audit", "audit.log"))
+			auditData, err := os.ReadFile(filepath.Join(tmpDir, ".config", "cmdshape", "audit", "audit.log"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_start"`))
 			Expect(string(auditData)).To(ContainSubstring(`"uses_shell":true`))
 			Expect(string(auditData)).To(ContainSubstring(`"has_pipeline":true`))
 			Expect(string(auditData)).To(ContainSubstring(`"has_chain":true`))
 			Expect(string(auditData)).To(ContainSubstring(`"has_xargs":true`))
-			Expect(string(auditData)).To(ContainSubstring(`"nested_ccp":true`))
+			Expect(string(auditData)).To(ContainSubstring(`"nested_cmdshape":true`))
 		})
 	})
 
@@ -830,7 +830,7 @@ var _ = Describe("Runner", func() {
 			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, name, args)
 
 			Expect(err).NotTo(HaveOccurred())
-			cmd.Env = append(os.Environ(), "CCP_MANAGED_SUBPROCESS_HELPER=1")
+			cmd.Env = append(os.Environ(), "CMDSHAPE_MANAGED_SUBPROCESS_HELPER=1")
 			Expect(cmd.Start()).To(Succeed())
 			DeferCleanup(func() { closePipes(stdout, stderr) })
 
@@ -865,7 +865,7 @@ var _ = Describe("Runner", func() {
 			cmd, stdout, stderr, err := CommandWithPipesContext(ctx, name, args)
 
 			Expect(err).NotTo(HaveOccurred())
-			cmd.Env = append(os.Environ(), "CCP_MANAGED_DESCENDANT_HELPER=1")
+			cmd.Env = append(os.Environ(), "CMDSHAPE_MANAGED_DESCENDANT_HELPER=1")
 			Expect(cmd.Start()).To(Succeed())
 			DeferCleanup(func() { closePipes(stdout, stderr) })
 
@@ -1302,8 +1302,8 @@ cases:
 
 					projectRoot := filepath.Join(root, "project")
 					homeRoot := filepath.Join(root, "home")
-					projectDir := filepath.Join(projectRoot, ".ccp", "filters")
-					homeDir := filepath.Join(homeRoot, ".ccp", "filters")
+					projectDir := filepath.Join(projectRoot, ".cmdshape", "filters")
+					homeDir := filepath.Join(homeRoot, ".cmdshape", "filters")
 					Expect(os.MkdirAll(projectDir, 0o755)).To(Succeed())
 					Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
 
@@ -1401,7 +1401,7 @@ cases:
 					sources: []corefilters.FilterSource{
 						corefilters.RepositorySource(repoRoot),
 					},
-					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+					metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 				}
 				code, err := runner.Run([]string{"printf", "native"})
 
@@ -1410,7 +1410,7 @@ cases:
 				Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal("native"))
 				Expect(closeAndRead(stderrReader, stderrWriter)).To(BeEmpty())
 
-				auditData, err := os.ReadFile(filepath.Join(repoRoot, ".config", "ccp", "audit", "audit.log"))
+				auditData, err := os.ReadFile(filepath.Join(repoRoot, ".config", "cmdshape", "audit", "audit.log"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(auditData)).To(ContainSubstring(`"msg":"execution_terminal_fallback"`))
 			})
@@ -1479,7 +1479,7 @@ cases:
 							sources: []corefilters.FilterSource{
 								corefilters.RepositorySource(repoRoot),
 							},
-							metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+							metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 						}
 					},
 					[]string{"printf"},
@@ -1524,7 +1524,7 @@ about: Placeholder cat filter scaffold for YAML migration.
 							sources: []corefilters.FilterSource{
 								corefilters.RepositorySource(repoRoot),
 							},
-							metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+							metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 						}
 					},
 					[]string{"cat"},
@@ -1571,7 +1571,7 @@ cases:
 					sources: []corefilters.FilterSource{
 						corefilters.RepositorySource(repoRoot),
 					},
-					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+					metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 				}
 
 				code, err := runner.Run([]string{"sh", "-c", "printf 'TS2367 [ERROR]: boom\\nerror: fail\\n' >&2; exit 1"})
@@ -1613,7 +1613,7 @@ cases:
 					sources: []corefilters.FilterSource{
 						corefilters.RepositorySource(repoRoot),
 					},
-					metricsPath: filepath.Join(repoRoot, ".ccp", "gain.db"),
+					metricsPath: filepath.Join(repoRoot, ".cmdshape", "gain.db"),
 				}
 
 				code, err := runner.Run([]string{"sh", "-c", "printf 'x\\n'"})
@@ -1727,7 +1727,7 @@ func descendantCommand(startedPath, childStartedPath, markerPath string) (string
 }
 
 func TestManagedSubprocessHelper(t *testing.T) {
-	if os.Getenv("CCP_MANAGED_SUBPROCESS_HELPER") != "1" {
+	if os.Getenv("CMDSHAPE_MANAGED_SUBPROCESS_HELPER") != "1" {
 		return
 	}
 
@@ -1748,7 +1748,7 @@ func TestManagedSubprocessHelper(t *testing.T) {
 }
 
 func TestManagedDescendantHelper(t *testing.T) {
-	if os.Getenv("CCP_MANAGED_DESCENDANT_HELPER") != "1" {
+	if os.Getenv("CMDSHAPE_MANAGED_DESCENDANT_HELPER") != "1" {
 		return
 	}
 
@@ -1759,7 +1759,7 @@ func TestManagedDescendantHelper(t *testing.T) {
 	startedPath := os.Args[sep+1]
 	childStartedPath := os.Args[sep+2]
 	markerPath := os.Args[sep+3]
-	if os.Getenv("CCP_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
+	if os.Getenv("CMDSHAPE_MANAGED_DESCENDANT_HELPER_MODE") == "child" {
 		if err := os.WriteFile(childStartedPath, []byte("started"), 0o644); err != nil {
 			os.Exit(5)
 		}
@@ -1773,7 +1773,7 @@ func TestManagedDescendantHelper(t *testing.T) {
 		os.Exit(3)
 	}
 	child := exec.Command(os.Args[0], "-test.run=TestManagedDescendantHelper", "--", startedPath, childStartedPath, markerPath)
-	child.Env = append(os.Environ(), "CCP_MANAGED_DESCENDANT_HELPER=1", "CCP_MANAGED_DESCENDANT_HELPER_MODE=child")
+	child.Env = append(os.Environ(), "CMDSHAPE_MANAGED_DESCENDANT_HELPER=1", "CMDSHAPE_MANAGED_DESCENDANT_HELPER_MODE=child")
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
 	child.Stdin = os.Stdin

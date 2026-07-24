@@ -247,7 +247,7 @@ func upsertPreToolUseCommandSettings(settingsPath, hookPath, invalidFmt string) 
 }
 
 const (
-	codebuddyHookScriptName = "ccp-rewrite.sh"
+	codebuddyHookScriptName = "cmdshape-rewrite.sh"
 	codebuddySettingsName   = "settings.json"
 )
 

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"sync"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 )
 
 const CandidateBufferLimit = 8 * 1024 * 1024

@@ -28,7 +28,7 @@ func (a PiAdapter) Plan(ctx Context) []PlannedArtifact {
 	return []PlannedArtifact{{
 		Kind:    ArtifactSettings,
 		Path:    a.appendSystemPath(ctx),
-		Content: ccpManagedBlockTemplate(),
+		Content: cmdshapeManagedBlockTemplate(),
 		Perm:    0o644,
 	}}
 }

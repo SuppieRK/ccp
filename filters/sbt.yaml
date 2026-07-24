@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: sbt
 about: Trim sbt startup and loading boilerplate for direct `compile` and `test` runs while preserving warnings, errors, and framework-owned test output. Precision and debug modes stay native.

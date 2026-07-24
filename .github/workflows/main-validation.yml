@@ -110,17 +110,17 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Build and install ccp into runner PATH
+      - name: Build and install cmdshape into runner PATH
         shell: bash
         run: |
           set -euo pipefail
-          install_dir="${RUNNER_TEMP}/ccp-smoke-bin"
+          install_dir="${RUNNER_TEMP}/cmdshape-smoke-bin"
           mkdir -p "$install_dir"
-          bin_path="$install_dir/ccp"
+          bin_path="$install_dir/cmdshape"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            bin_path="$install_dir/ccp.exe"
+            bin_path="$install_dir/cmdshape.exe"
           fi
-          go build -o "$bin_path" ./cmd/ccp
+          go build -o "$bin_path" ./cmd/cmdshape
           echo "$install_dir" >> "$GITHUB_PATH"
 
       - name: Run installed binary smoke script
@@ -151,11 +151,11 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - name: Build ccp binary
+      - name: Build cmdshape binary
         shell: bash
         run: |
           mkdir -p .bin
-          go build -o .bin/ccp ./cmd/ccp
+          go build -o .bin/cmdshape ./cmd/cmdshape
           echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
 
       - name: Restore benchmark history cache
@@ -182,7 +182,7 @@ jobs:
           prev_report="${history_dir}/report.json"
           mkdir -p "$out_dir" "$history_dir"
 
-          go run ./cmd/ccp-ci \
+          go run ./cmd/cmdshape-ci \
             -artifacts-dir "$out_dir" \
             -previous-report "$prev_report" \
             -tool "$tool"

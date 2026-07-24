@@ -36,7 +36,7 @@ func DefaultPath() (string, error) {
 }
 
 func PathForHome(home string) string {
-	return filepath.Join(home, ".config", "ccp", "workspaces.db")
+	return filepath.Join(home, ".config", "cmdshape", "workspaces.db")
 }
 
 func UpsertPath(path, cwd, metricsPath string) (err error) {
@@ -185,6 +185,88 @@ func DeletePath(path, cwd string) (err error) {
 		}
 		return b.Delete([]byte(normalizedCWD))
 	})
+}
+
+func RewriteProjectStateDir(path, oldDir, newDir string) (err error) {
+	if strings.TrimSpace(path) == "" || oldDir == "" || oldDir == newDir {
+		return nil
+	}
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	db, err := openDB(path, false)
+	if err != nil {
+		return err
+	}
+	defer closeBoltDBWithErr(db, &err)
+
+	needsRewrite, err := projectStateDirRewriteNeeded(db, oldDir, newDir)
+	if err != nil || !needsRewrite {
+		return err
+	}
+	return db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(workspacesBucket)
+		if bucket == nil {
+			return nil
+		}
+		return bucket.ForEach(func(key, raw []byte) error {
+			var entry Workspace
+			if err := json.Unmarshal(raw, &entry); err != nil {
+				return err
+			}
+			updatedPath := replacePathElement(entry.MetricsPath, oldDir, newDir)
+			if updatedPath == entry.MetricsPath {
+				return nil
+			}
+			entry.MetricsPath = updatedPath
+			payload, err := json.Marshal(entry)
+			if err != nil {
+				return err
+			}
+			return bucket.Put(key, payload)
+		})
+	})
+}
+
+func projectStateDirRewriteNeeded(db *bolt.DB, oldDir, newDir string) (bool, error) {
+	needsRewrite := false
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(workspacesBucket)
+		if bucket == nil {
+			return nil
+		}
+		return bucket.ForEach(func(_, raw []byte) error {
+			var entry Workspace
+			if err := json.Unmarshal(raw, &entry); err != nil {
+				return err
+			}
+			if replacePathElement(entry.MetricsPath, oldDir, newDir) != entry.MetricsPath {
+				needsRewrite = true
+			}
+			return nil
+		})
+	})
+	return needsRewrite, err
+}
+
+func replacePathElement(path, oldDir, newDir string) string {
+	if path == "" {
+		return ""
+	}
+	clean := filepath.Clean(path)
+	separator := string(filepath.Separator)
+	needle := separator + oldDir + separator
+	replacement := separator + newDir + separator
+	if strings.Contains(clean, needle) {
+		return strings.Replace(clean, needle, replacement, 1)
+	}
+	if strings.HasSuffix(clean, separator+oldDir) {
+		return strings.TrimSuffix(clean, separator+oldDir) + separator + newDir
+	}
+	return clean
 }
 
 func normalizePath(path string) (string, error) {

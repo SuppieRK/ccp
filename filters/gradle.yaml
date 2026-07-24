@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: gradle
 about: Trim Gradle and Gradle Wrapper boilerplate aggressively, keep task and failure loci visible, and drop low-value configuration, internal stack, and INFO chatter when it does not help follow-up shell work.

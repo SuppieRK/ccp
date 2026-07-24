@@ -1,6 +1,6 @@
 package filters
 
-import "go-command-compression-proxy/internal/contracts"
+import "github.com/SuppieRK/cmdshape/internal/contracts"
 
 type Passthrough struct{}
 

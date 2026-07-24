@@ -1,7 +1,0 @@
-version: 2
-
-project_name: ccp
-
-checksum:
-  name_template: ccp_checksums.txt
-  algorithm: sha256

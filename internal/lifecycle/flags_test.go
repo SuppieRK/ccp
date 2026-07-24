@@ -85,14 +85,14 @@ var _ = Describe("lifecycle flag helpers", func() {
 			fs.SetOutput(&output)
 			fs.Bool("json", false, "render json output")
 
-			setLifecycleUsage(fs, "show token savings history", []string{"ccp gain [flags]"}, "note one", "note two")
+			setLifecycleUsage(fs, "show token savings history", []string{"cmdshape gain [flags]"}, "note one", "note two")
 
 			fs.Usage()
 
 			text := output.String()
-			Expect(text).To(ContainSubstring("ccp gain - show token savings history"))
+			Expect(text).To(ContainSubstring("cmdshape gain - show token savings history"))
 			Expect(text).To(ContainSubstring("Usage:"))
-			Expect(text).To(ContainSubstring("  ccp gain [flags]"))
+			Expect(text).To(ContainSubstring("  cmdshape gain [flags]"))
 			Expect(text).To(ContainSubstring("Flags:"))
 			Expect(text).To(ContainSubstring("-json"))
 			Expect(text).To(ContainSubstring("render json output"))
@@ -107,12 +107,12 @@ var _ = Describe("lifecycle flag helpers", func() {
 			fs.SetOutput(&output)
 			fs.String("format", "text", "output format")
 
-			setLifecycleUsage(fs, "show recorded command history", []string{"ccp history [flags]"})
+			setLifecycleUsage(fs, "show recorded command history", []string{"cmdshape history [flags]"})
 
 			fs.Usage()
 
 			text := output.String()
-			Expect(text).To(ContainSubstring("ccp history - show recorded command history"))
+			Expect(text).To(ContainSubstring("cmdshape history - show recorded command history"))
 			Expect(text).To(ContainSubstring("Usage:"))
 			Expect(text).To(ContainSubstring("Flags:"))
 			Expect(text).NotTo(ContainSubstring("Notes:"))

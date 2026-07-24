@@ -1,24 +1,24 @@
 # Agent Rule – Filters
 
-CCP filters are ordinary YAML files. You can inspect shipped filters, override them locally, and iterate on new filters
-without rebuilding CCP.
+cmdshape filters are ordinary YAML files. You can inspect shipped filters, override them locally, and iterate on new filters
+without rebuilding cmdshape.
 
 ## Authoring Model
 
 - Built-in filters belong in `filters/<tool>.yaml`.
 - Wrapper or alias spellings belong in `filters/.mappings.yaml`.
-- Local iteration happens in `./.ccp/filters`.
-- Project-local filters are committable; generated repo-local CCP state is ignored through CCP-owned `./.ccp/.gitignore`.
-- Managed home-scoped filters live in `~/.config/ccp/filters`.
-- Release builds load an explicitly trusted `./.ccp/filters` first and
-  `~/.config/ccp/filters` second.
-- `ccp filter trust` approves the exact current project source. Any path,
+- Local iteration happens in `./.cmdshape/filters`.
+- Project-local filters are committable; generated repo-local cmdshape state is ignored through cmdshape-owned `./.cmdshape/.gitignore`.
+- Managed home-scoped filters live in `~/.config/cmdshape/filters`.
+- Release builds load an explicitly trusted `./.cmdshape/filters` first and
+  `~/.config/cmdshape/filters` second.
+- `cmdshape filter trust` approves the exact current project source. Any path,
   mapping, addition, removal, rename, or content change requires approval
-  again; `ccp filter untrust` removes approval.
+  again; `cmdshape filter untrust` removes approval.
 - Project-local filter definitions override home-scoped definitions with the same canonical filter id.
 - Project-local `.mappings.yaml` aliases override home-scoped aliases with the same key.
-- Shipped filters are embedded from `filters/` and materialized into `~/.config/ccp/filters` by `ccp repair` and startup
-  maintenance. `ccp init` installs integrations; it does not own home filter materialization.
+- Shipped filters are embedded from `filters/` and materialized into `~/.config/cmdshape/filters` by `cmdshape repair` and startup
+  maintenance. `cmdshape init` installs integrations; it does not own home filter materialization.
 
 Use the existing YAML DSL as-is whenever possible.
 
@@ -42,13 +42,13 @@ Family-level guidance:
 Create a project-local scaffold with:
 
 ```bash
-ccp filter new my-tool
+cmdshape filter new my-tool
 ```
 
 That writes:
 
-- `./.ccp/filters/my-tool.yaml`
-- `./.ccp/filters/.mappings.yaml`
+- `./.cmdshape/filters/my-tool.yaml`
+- `./.cmdshape/filters/.mappings.yaml`
 
 The scaffold includes:
 
@@ -62,21 +62,21 @@ only when the behavior belongs in the shipped built-in set.
 When creating or improving an existing filter, first check the active sources with:
 
 ```bash
-ccp filter status
+cmdshape filter status
 ```
 
-If a matching home-scoped or shipped/global filter exists, copy it into `./.ccp/filters` and edit the project-local
-copy. Agents MUST NOT edit `~/.config/ccp/filters` or shipped `filters/` directly unless the user explicitly asks for a
+If a matching home-scoped or shipped/global filter exists, copy it into `./.cmdshape/filters` and edit the project-local
+copy. Agents MUST NOT edit `~/.config/cmdshape/filters` or shipped `filters/` directly unless the user explicitly asks for a
 global or built-in filter change.
 
-Agents can ask CCP for the embedded self-service workflow with:
+Agents can ask cmdshape for the embedded self-service workflow with:
 
 ```bash
-ccp filter prompt
-ccp filter prompt <filter-id>
+cmdshape filter prompt
+cmdshape filter prompt <filter-id>
 ```
 
-The current schema lives at [schemas/ccp-filter.schema.json](../../schemas/ccp-filter.schema.json).
+The current schema lives at [schemas/cmdshape-filter.schema.json](../../schemas/cmdshape-filter.schema.json).
 
 Schema notes:
 
@@ -87,8 +87,8 @@ Schema notes:
 
 Mappings live in:
 
-- `./.ccp/filters/.mappings.yaml`
-- `~/.config/ccp/filters/.mappings.yaml`
+- `./.cmdshape/filters/.mappings.yaml`
+- `~/.config/cmdshape/filters/.mappings.yaml`
 
 Typical use:
 
@@ -101,8 +101,8 @@ Mapping rules:
 
 - keep mappings small and explicit
 - use them when one filter should serve multiple command spellings
-- a project-local alias can only bind to a filter that compiled successfully in `./.ccp/filters`
-- a home-scoped alias can only bind to a filter that compiled successfully in `~/.config/ccp/filters`
+- a project-local alias can only bind to a filter that compiled successfully in `./.cmdshape/filters`
+- a home-scoped alias can only bind to a filter that compiled successfully in `~/.config/cmdshape/filters`
 - lower-priority aliases do not replace aliases that were already registered from a higher-priority source
 - broken mappings fall back safely to passthrough and are recorded in the audit log
 
@@ -110,30 +110,30 @@ Mapping rules:
 
 Recommended iteration loop:
 
-1. `ccp filter prompt <filter-id>`
-2. `ccp filter status`
-3. copy any matching global/home filter into `./.ccp/filters` before editing, or run `ccp filter new <filter-id>`
-4. `ccp capture -- <tool> ...`
-5. edit `./.ccp/filters/<filter-id>.yaml`
-6. `ccp verify`
+1. `cmdshape filter prompt <filter-id>`
+2. `cmdshape filter status`
+3. copy any matching global/home filter into `./.cmdshape/filters` before editing, or run `cmdshape filter new <filter-id>`
+4. `cmdshape capture -- <tool> ...`
+5. edit `./.cmdshape/filters/<filter-id>.yaml`
+6. `cmdshape verify`
 7. compare `output.txt` with `verify-output.txt` and the stream-specific
    `output.stdout.txt` / `output.stderr.txt` expectations with
    `verify-stdout.txt` / `verify-stderr.txt`
 8. inspect `verify-decisions.txt` when behavior is unclear
-9. run `ccp filter trust` only after reviewing the complete project filter
+9. run `cmdshape filter trust` only after reviewing the complete project filter
    source that should become active
 
 For brand-new filters with no existing source, the short loop is:
 
-1. `ccp filter prompt <filter-id>`
-2. `ccp filter new <filter-id>`
-3. `ccp capture -- <tool> ...`
-4. edit `./.ccp/filters/<filter-id>.yaml`
-5. `ccp verify`
+1. `cmdshape filter prompt <filter-id>`
+2. `cmdshape filter new <filter-id>`
+3. `cmdshape capture -- <tool> ...`
+4. edit `./.cmdshape/filters/<filter-id>.yaml`
+5. `cmdshape verify`
 6. compare merged and stream-specific output expectations with the matching
    `verify-*` artifacts
 7. inspect `verify-decisions.txt` when behavior is unclear
-8. run `ccp filter trust` only after reviewing the complete project filter
+8. run `cmdshape filter trust` only after reviewing the complete project filter
    source that should become active
 
 If a matching home-scoped filter already exists, copy or refresh a project-local version first so the project-local
@@ -144,9 +144,9 @@ filter acts as the active override.
 Use performance metrics to prioritize improvements before authoring broad changes:
 
 ```bash
-ccp filter performance --limit 30
-ccp filter performance --tool <tool> --limit 30
-ccp filter performance --global --tool <tool> --limit 30
+cmdshape filter performance --limit 30
+cmdshape filter performance --tool <tool> --limit 30
+cmdshape filter performance --global --tool <tool> --limit 30
 ```
 
 `--tool` filters by the invoked command name. Treat `review-case`, `failure-heavy`, and `passthrough-opportunity` hints
@@ -157,12 +157,12 @@ as starting points for inspection, then capture representative output and verify
 Capture a real command with:
 
 ```bash
-ccp capture -- my-tool --flag value
+cmdshape capture -- my-tool --flag value
 ```
 
 Capture creates a private directory (`0700`) and private files (`0600`).
 Because native output may include secrets, use
-`ccp capture --confidential value1,value2 -- my-tool --flag value` for known
+`cmdshape capture --confidential value1,value2 -- my-tool --flag value` for known
 literal values and review the fixture before committing it. Redacted captures
 set `redacted: true` in `command.yaml`.
 
@@ -179,9 +179,9 @@ Capture rules:
 
 - `stdout.txt` and `stderr.txt` use `00000|` sequence prefixes to preserve cross-stream ordering
 - records that cannot be represented as one newline-terminated fixture line
-  use the runtime's `@ccp/base64:` payload encoding; do not decode or rewrite
+  use the runtime's `@cmdshape/base64:` payload encoding; do not decode or rewrite
   them by hand
-- capture runs the command natively once, then replays the captured streams through the current CCP runtime to bootstrap
+- capture runs the command natively once, then replays the captured streams through the current cmdshape runtime to bootstrap
   merged and stream-specific output expectations
 - `command.yaml` records `exit_code` even when it is zero
 - non-zero exits still write artifacts so failures can be iterated locally
@@ -191,13 +191,13 @@ Capture rules:
 Replay a captured fixture with:
 
 ```bash
-ccp verify
+cmdshape verify
 ```
 
 or:
 
 ```bash
-ccp verify --dir path/to/fixture
+cmdshape verify --dir path/to/fixture
 ```
 
 Verify reads:
@@ -234,20 +234,20 @@ Verification rules:
 Restore the managed home-level filter state with:
 
 ```bash
-ccp repair
+cmdshape repair
 ```
 
 or:
 
 ```bash
-ccp repair --yes
+cmdshape repair --yes
 ```
 
-`ccp repair` rewrites the managed `~/.config/ccp` state, including shipped filters and the home-level `.mappings.yaml`.
-It does not touch project-local `./.ccp/filters`. Rewrite repair may refresh CCP-owned repo-local ignore state in
-`./.ccp/.gitignore` so generated metrics remain ignored without hiding project-local filters.
+`cmdshape repair` rewrites the managed `~/.config/cmdshape` state, including shipped filters and the home-level `.mappings.yaml`.
+It does not touch project-local `./.cmdshape/filters`. Rewrite repair may refresh cmdshape-owned repo-local ignore state in
+`./.cmdshape/.gitignore` so generated metrics remain ignored without hiding project-local filters.
 
-When the interactive prompt is declined, `ccp repair` falls back to additive sync: it adds only missing shipped filters
+When the interactive prompt is declined, `cmdshape repair` falls back to additive sync: it adds only missing shipped filters
 and missing shipped `.mappings.yaml` entries without mutating repository files.
 
 ## Authoring Guardrails
@@ -255,7 +255,7 @@ and missing shipped `.mappings.yaml` entries without mutating repository files.
 - Start with corpus expansion before filter redesign when the current benchmark set is toy-sized, stale, or obviously
   unrepresentative.
 - Prefer one hypothesis at a time.
-- Use real command output whenever possible, ideally from `ccp capture` or an existing research corpus that reflects
+- Use real command output whenever possible, ideally from `cmdshape capture` or an existing research corpus that reflects
   native output.
 - Treat warning-bearing success paths as first-class behavior. Clean success fixtures alone are often misleading.
 - Treat machine-oriented, structured, or precision modes as explicit passthrough boundaries unless the current filter
@@ -269,7 +269,7 @@ and missing shipped `.mappings.yaml` entries without mutating repository files.
   are not.
 - Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably
   not worth it.
-- Prefer promoting verified output from `verify-output.txt` or fresh `ccp capture` output instead of hand-editing
+- Prefer promoting verified output from `verify-output.txt` or fresh `cmdshape capture` output instead of hand-editing
   expectations by guesswork.
 
 ## Benchmark And Test Alignment
@@ -281,5 +281,5 @@ and missing shipped `.mappings.yaml` entries without mutating repository files.
 - Family filters should keep sibling replay fixture directories under the family benchmark root, each with
   `command.yaml` and any required replay artifacts.
 - Benchmark verification is exercised through the benchmark-related Ginkgo/Gomega suites rather than a separate manual
-  `ccp-ci` workflow.
+  `cmdshape-ci` workflow.
 - New runtime/filter features MUST add command-specific or runtime-specific coverage in the narrowest relevant package.

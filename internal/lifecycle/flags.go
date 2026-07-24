@@ -27,7 +27,7 @@ func parseLifecycleFlags(fs *flag.FlagSet, args []string) (bool, error) {
 func setLifecycleUsage(fs *flag.FlagSet, summary string, usageLines []string, notes ...string) {
 	fs.Usage = func() {
 		out := fs.Output()
-		_, _ = fmt.Fprintf(out, "ccp %s - %s\n\n", fs.Name(), summary)
+		_, _ = fmt.Fprintf(out, "cmdshape %s - %s\n\n", fs.Name(), summary)
 		_, _ = fmt.Fprintln(out, "Usage:")
 		for _, line := range usageLines {
 			_, _ = fmt.Fprintf(out, "  %s\n", line)

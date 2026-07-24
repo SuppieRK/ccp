@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"slices"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 )
 
 type BufferEntry struct {

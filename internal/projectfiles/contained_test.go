@@ -11,7 +11,7 @@ import (
 var _ = Describe("contained project files", func() {
 	It("creates and opens a regular file beneath the root", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", "gain.db")
+		path := filepath.Join(root, ".cmdshape", "gain.db")
 
 		file, err := OpenFileBeneath(root, path, os.O_RDWR|os.O_CREATE, 0o600)
 		Expect(err).NotTo(HaveOccurred())
@@ -26,13 +26,13 @@ var _ = Describe("contained project files", func() {
 		if err := os.Symlink(realRoot, aliasRoot); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
-		path := filepath.Join(aliasRoot, ".ccp", "gain.db")
+		path := filepath.Join(aliasRoot, ".cmdshape", "gain.db")
 
 		file, err := OpenFileBeneath(aliasRoot, path, os.O_RDWR|os.O_CREATE, 0o600)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(file.Close()).To(Succeed())
-		Expect(filepath.Join(realRoot, ".ccp", "gain.db")).To(BeAnExistingFile())
+		Expect(filepath.Join(realRoot, ".cmdshape", "gain.db")).To(BeAnExistingFile())
 	})
 
 	It("rejects paths outside the root", func() {
@@ -56,7 +56,7 @@ var _ = Describe("contained project files", func() {
 
 	It("reports a missing regular file during validation", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", "missing.db")
+		path := filepath.Join(root, ".cmdshape", "missing.db")
 
 		err := ValidateRegularFileBeneath(root, path)
 
@@ -65,7 +65,7 @@ var _ = Describe("contained project files", func() {
 
 	It("canonicalizes and validates an existing regular file beneath the root", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", "gain.db")
+		path := filepath.Join(root, ".cmdshape", "gain.db")
 		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
 		Expect(os.WriteFile(path, []byte("metrics"), 0o600)).To(Succeed())
 
@@ -80,7 +80,7 @@ var _ = Describe("contained project files", func() {
 
 	It("rejects a missing contained root", func() {
 		root := filepath.Join(GinkgoT().TempDir(), "missing")
-		path := filepath.Join(root, ".ccp", "gain.db")
+		path := filepath.Join(root, ".cmdshape", "gain.db")
 
 		_, err := CanonicalPathBeneath(root, path)
 
@@ -90,7 +90,7 @@ var _ = Describe("contained project files", func() {
 	It("rejects symlinked parent directories", func() {
 		root := GinkgoT().TempDir()
 		outside := GinkgoT().TempDir()
-		link := filepath.Join(root, ".ccp")
+		link := filepath.Join(root, ".cmdshape")
 		if err := os.Symlink(outside, link); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
@@ -103,11 +103,11 @@ var _ = Describe("contained project files", func() {
 
 	It("rejects symlinked final components", func() {
 		root := GinkgoT().TempDir()
-		ccpDir := filepath.Join(root, ".ccp")
-		Expect(os.Mkdir(ccpDir, 0o755)).To(Succeed())
+		cmdshapeDir := filepath.Join(root, ".cmdshape")
+		Expect(os.Mkdir(cmdshapeDir, 0o755)).To(Succeed())
 		outside := filepath.Join(GinkgoT().TempDir(), "outside.db")
 		Expect(os.WriteFile(outside, []byte("keep"), 0o600)).To(Succeed())
-		link := filepath.Join(ccpDir, "gain.db")
+		link := filepath.Join(cmdshapeDir, "gain.db")
 		if err := os.Symlink(outside, link); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
@@ -122,11 +122,11 @@ var _ = Describe("contained project files", func() {
 
 	It("rejects hard-linked final components", func() {
 		root := GinkgoT().TempDir()
-		ccpDir := filepath.Join(root, ".ccp")
-		Expect(os.Mkdir(ccpDir, 0o755)).To(Succeed())
+		cmdshapeDir := filepath.Join(root, ".cmdshape")
+		Expect(os.Mkdir(cmdshapeDir, 0o755)).To(Succeed())
 		outside := filepath.Join(GinkgoT().TempDir(), "outside.db")
 		Expect(os.WriteFile(outside, []byte("keep"), 0o600)).To(Succeed())
-		link := filepath.Join(ccpDir, "gain.db")
+		link := filepath.Join(cmdshapeDir, "gain.db")
 		Expect(os.Link(outside, link)).To(Succeed())
 
 		_, err := OpenFileBeneath(root, link, os.O_RDWR, 0o600)
@@ -136,14 +136,14 @@ var _ = Describe("contained project files", func() {
 
 	It("stays on the opened parent when its pathname is swapped before final open", func() {
 		root := GinkgoT().TempDir()
-		ccpDir := filepath.Join(root, ".ccp")
-		heldDir := filepath.Join(root, ".ccp-held")
-		Expect(os.Mkdir(ccpDir, 0o755)).To(Succeed())
+		cmdshapeDir := filepath.Join(root, ".cmdshape")
+		heldDir := filepath.Join(root, ".cmdshape-held")
+		Expect(os.Mkdir(cmdshapeDir, 0o755)).To(Succeed())
 		outside := GinkgoT().TempDir()
 		beforeContainedFinalOpen = func() {
 			beforeContainedFinalOpen = func() {}
-			Expect(os.Rename(ccpDir, heldDir)).To(Succeed())
-			if err := os.Symlink(outside, ccpDir); err != nil {
+			Expect(os.Rename(cmdshapeDir, heldDir)).To(Succeed())
+			if err := os.Symlink(outside, cmdshapeDir); err != nil {
 				Skip("symlink creation unavailable: " + err.Error())
 			}
 		}
@@ -151,7 +151,7 @@ var _ = Describe("contained project files", func() {
 			beforeContainedFinalOpen = func() {}
 		})
 
-		file, err := OpenFileBeneath(root, filepath.Join(ccpDir, "gain.db"), os.O_RDWR|os.O_CREATE, 0o600)
+		file, err := OpenFileBeneath(root, filepath.Join(cmdshapeDir, "gain.db"), os.O_RDWR|os.O_CREATE, 0o600)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(file.Close()).To(Succeed())
@@ -161,7 +161,7 @@ var _ = Describe("contained project files", func() {
 
 	It("rejects non-regular final targets", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", "gain.db")
+		path := filepath.Join(root, ".cmdshape", "gain.db")
 		Expect(os.MkdirAll(path, 0o755)).To(Succeed())
 
 		_, err := OpenFileBeneath(root, path, os.O_RDONLY, 0)
@@ -171,7 +171,7 @@ var _ = Describe("contained project files", func() {
 
 	It("atomically writes beneath the root without following links", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", ".gitignore")
+		path := filepath.Join(root, ".cmdshape", ".gitignore")
 
 		Expect(AtomicWriteFileBeneath(root, path, []byte("gain.db\n"), 0o644)).To(Succeed())
 		Expect(AtomicWriteFileBeneath(root, path, []byte("gain.db\n.gitignore\n"), 0o600)).To(Succeed())

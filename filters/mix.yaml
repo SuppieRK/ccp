@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: mix
 about: Compact `mix compile` and `mix format --check-formatted` output by dropping repetitive compile churn and formatting boilerplate while preserving warnings, parse failures, and shell-usable file paths.

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	v2filters "go-command-compression-proxy/internal/filters"
-	"go-command-compression-proxy/internal/filtertrust"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	v2filters "github.com/SuppieRK/cmdshape/internal/filters"
+	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -25,21 +25,21 @@ var _ = Describe("FilterSource", func() {
 		}))
 	})
 
-	It("resolves the project source under .ccp/filters", func() {
+	It("resolves the project source under .cmdshape/filters", func() {
 		source := v2filters.ProjectSource("/workspace/project")
 
 		Expect(source).To(Equal(v2filters.FilterSource{
 			Kind:      v2filters.SourceProject,
-			Directory: filepath.Join("/workspace/project", ".ccp", "filters"),
+			Directory: filepath.Join("/workspace/project", ".cmdshape", "filters"),
 		}))
 	})
 
-	It("resolves the home source under .config/ccp/filters", func() {
+	It("resolves the home source under .config/cmdshape/filters", func() {
 		source := v2filters.HomeSource("/home/suppie")
 
 		Expect(source).To(Equal(v2filters.FilterSource{
 			Kind:      v2filters.SourceHome,
-			Directory: filepath.Join("/home/suppie", ".config", "ccp", "filters"),
+			Directory: filepath.Join("/home/suppie", ".config", "cmdshape", "filters"),
 		}))
 	})
 })
@@ -244,7 +244,7 @@ filter: broken
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "ccp", "audit", "audit.log"))
+		auditData, err := os.ReadFile(filepath.Join(auditHome, ".config", "cmdshape", "audit", "audit.log"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).To(ContainSubstring(`"msg":"filter_definition_invalid"`))
 		Expect(string(auditData)).To(ContainSubstring(`broken.yaml`))
@@ -365,8 +365,8 @@ var _ = Describe("DefaultSources", func() {
 		DeferCleanup(func() { version.Version = prevVersion })
 		project := GinkgoT().TempDir()
 		home := GinkgoT().TempDir()
-		Expect(os.MkdirAll(filepath.Join(project, ".ccp", "filters"), 0o755)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(project, ".ccp", "filters", "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(project, ".cmdshape", "filters"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(project, ".cmdshape", "filters", "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
 		previousCWD, err := os.Getwd()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chdir(project)).To(Succeed())
@@ -393,8 +393,8 @@ var _ = Describe("DefaultSources", func() {
 		DeferCleanup(func() { version.Version = prevVersion })
 		project := GinkgoT().TempDir()
 		home := GinkgoT().TempDir()
-		projectFilters := filepath.Join(project, ".ccp", "filters")
-		homeFilters := filepath.Join(home, ".config", "ccp", "filters")
+		projectFilters := filepath.Join(project, ".cmdshape", "filters")
+		homeFilters := filepath.Join(home, ".config", "cmdshape", "filters")
 		Expect(os.MkdirAll(projectFilters, 0o755)).To(Succeed())
 		Expect(os.MkdirAll(homeFilters, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(projectFilters, "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
@@ -433,8 +433,8 @@ var _ = Describe("LoadRegistryStatusFromSources", func() {
 		root := GinkgoT().TempDir()
 		projectRoot := filepath.Join(root, "project")
 		home := filepath.Join(root, "home")
-		projectDir := filepath.Join(projectRoot, ".ccp", "filters")
-		homeDir := filepath.Join(home, ".config", "ccp", "filters")
+		projectDir := filepath.Join(projectRoot, ".cmdshape", "filters")
+		homeDir := filepath.Join(home, ".config", "cmdshape", "filters")
 		Expect(os.MkdirAll(projectDir, 0o755)).To(Succeed())
 		Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
 
@@ -502,8 +502,8 @@ var _ = Describe("LoadRegistryStatusFromSources", func() {
 		root := GinkgoT().TempDir()
 		projectRoot := filepath.Join(root, "project")
 		home := filepath.Join(root, "home")
-		projectDir := filepath.Join(projectRoot, ".ccp", "filters")
-		homeDir := filepath.Join(home, ".config", "ccp", "filters")
+		projectDir := filepath.Join(projectRoot, ".cmdshape", "filters")
+		homeDir := filepath.Join(home, ".config", "cmdshape", "filters")
 		Expect(os.MkdirAll(projectDir, 0o755)).To(Succeed())
 		Expect(os.MkdirAll(homeDir, 0o755)).To(Succeed())
 
@@ -949,7 +949,7 @@ var _ = Describe("ProjectRootFromSource", func() {
 
 func cleanupAuditHome(home string) error {
 	audit.Reset()
-	auditDir := filepath.Join(home, ".config", "ccp", "audit")
+	auditDir := filepath.Join(home, ".config", "cmdshape", "audit")
 	var lastErr error
 	for range 10 {
 		if err := os.RemoveAll(auditDir); err == nil || os.IsNotExist(err) {

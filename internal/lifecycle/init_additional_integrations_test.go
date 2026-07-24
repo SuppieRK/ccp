@@ -91,8 +91,8 @@ var _ = Describe("init additional integration coverage", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			text := string(body)
-			Expect(text).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
-			Expect(text).To(ContainSubstring("<!-- END: CCP MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
+			Expect(text).To(ContainSubstring("<!-- END: CMDSHAPE MANAGED BLOCK -->"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
 		},
 		Entry("qoder", additionalManagedFileCase{
@@ -189,8 +189,8 @@ var _ = Describe("init additional integration coverage", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		text := string(body)
-		Expect(text).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
-		Expect(text).To(ContainSubstring("<!-- END: CCP MANAGED BLOCK -->"))
+		Expect(text).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
+		Expect(text).To(ContainSubstring("<!-- END: CMDSHAPE MANAGED BLOCK -->"))
 		Expect(text).To(ContainSubstring(initRawEscapeHatch))
 
 		before := text
@@ -199,8 +199,8 @@ var _ = Describe("init additional integration coverage", func() {
 		after, err := os.ReadFile(path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(after)).To(Equal(before))
-		Expect(strings.Count(string(after), "<!-- BEGIN: CCP MANAGED BLOCK -->")).To(Equal(1))
-		Expect(strings.Count(string(after), "<!-- END: CCP MANAGED BLOCK -->")).To(Equal(1))
+		Expect(strings.Count(string(after), "<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->")).To(Equal(1))
+		Expect(strings.Count(string(after), "<!-- END: CMDSHAPE MANAGED BLOCK -->")).To(Equal(1))
 	})
 
 	It("writes the kilocode plugin and keeps reruns idempotent", func() {
@@ -249,8 +249,8 @@ var _ = Describe("init additional integration coverage", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		agentsText := string(agentsBody)
-		Expect(agentsText).To(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
-		Expect(agentsText).To(ContainSubstring("<!-- END: CCP MANAGED BLOCK -->"))
+		Expect(agentsText).To(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
+		Expect(agentsText).To(ContainSubstring("<!-- END: CMDSHAPE MANAGED BLOCK -->"))
 		Expect(agentsText).To(ContainSubstring(initRawEscapeHatch))
 
 		settingsBody, err := os.ReadFile(settingsPath)
@@ -264,8 +264,8 @@ var _ = Describe("init additional integration coverage", func() {
 		after, err := os.ReadFile(agentsPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(after)).To(Equal(before))
-		Expect(strings.Count(string(after), "<!-- BEGIN: CCP MANAGED BLOCK -->")).To(Equal(1))
-		Expect(strings.Count(string(after), "<!-- END: CCP MANAGED BLOCK -->")).To(Equal(1))
+		Expect(strings.Count(string(after), "<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->")).To(Equal(1))
+		Expect(strings.Count(string(after), "<!-- END: CMDSHAPE MANAGED BLOCK -->")).To(Equal(1))
 	})
 
 	It("replaces only the managed region for qwen agents", func() {

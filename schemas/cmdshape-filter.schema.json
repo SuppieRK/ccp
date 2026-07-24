@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://go-command-compression-proxy.dev/schemas/ccp-filter.schema.json",
-  "title": "CCP YAML Filter",
-  "description": "Structural authoring schema for CCP YAML filters. Runtime validation in Go remains authoritative for semantic constraints such as regex named captures, template variable references, and some mode-specific rules.",
+  "$id": "https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json",
+  "title": "cmdshape YAML Filter",
+  "description": "Structural authoring schema for cmdshape YAML filters. Runtime validation in Go remains authoritative for semantic constraints such as regex named captures, template variable references, and some mode-specific rules.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "filter", "cases"],
@@ -29,7 +29,7 @@
         "pattern": "^-",
         "description": "One flag token that consumes the next argv token when written in split form."
       },
-      "description": "Tool-level flag tokens that consume the next argv token when CCP decides whether later tokens are real positional arguments. List split-form flags such as '-run' for '-run value'; attached forms such as '--format=json' are already self-contained and do not need listing. Each entry must begin with '-'."
+      "description": "Tool-level flag tokens that consume the next argv token when cmdshape decides whether later tokens are real positional arguments. List split-form flags such as '-run' for '-run value'; attached forms such as '--format=json' are already self-contained and do not need listing. Each entry must begin with '-'."
     },
     "cases": {
       "type": "array",
@@ -69,7 +69,7 @@
         },
         "passthrough": {
           "type": "boolean",
-          "description": "When true, CCP keeps the command output unchanged for this case. Invariant: passthrough cases must not also define compress_output."
+          "description": "When true, cmdshape keeps the command output unchanged for this case. Invariant: passthrough cases must not also define compress_output."
         },
         "compress_output": {
           "$ref": "#/$defs/output_shape",
@@ -301,7 +301,7 @@
         "count": {
           "type": "integer",
           "minimum": 1,
-          "description": "Maximum number of lines to emit before CCP starts summarizing. Must be positive."
+          "description": "Maximum number of lines to emit before cmdshape starts summarizing. Must be positive."
         },
         "print": {
           "type": "string",

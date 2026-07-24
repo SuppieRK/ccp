@@ -24,7 +24,7 @@ type ManagedJSPluginAdapter struct {
 	spec ManagedJSPluginAdapterSpec
 }
 
-const managedJSPluginFileName = "ccp-rewrite.js"
+const managedJSPluginFileName = "cmdshape-rewrite.js"
 
 var openCodeJSPluginSpec = ManagedJSPluginAdapterSpec{
 	ID:             AgentOpenCode,
@@ -244,7 +244,7 @@ function rewriteSegment(segment) {
   }
   if (index >= tokens.length) return null;
   const command = tokens[index];
-  if (command === "ccp") return segment;
+  if (command === "cmdshape") return segment;
   if (shellBuiltinsAndKeywords.has(command) || command === "xargs") return null;
   const tail = tokens.slice(index + 1);
   if (["sh", "bash", "dash", "zsh", "ksh"].includes(command) &&
@@ -252,7 +252,7 @@ function rewriteSegment(segment) {
   if (command === "find" &&
       tail.some((token) => ["-exec", "-execdir", "-ok", "-okdir"].includes(token))) return null;
   const start = starts[index];
-  return segment.slice(0, start) + "ccp " + segment.slice(start);
+  return segment.slice(0, start) + "cmdshape " + segment.slice(start);
 }
 
 function rewriteCommand(input) {
@@ -325,7 +325,7 @@ function rewriteCommand(input) {
   return output + (output ? " " : "") + rewritten;
 }
 
-export default async function ccpRewritePlugin() {
+export default async function cmdshapeRewritePlugin() {
   return {
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "bash") {

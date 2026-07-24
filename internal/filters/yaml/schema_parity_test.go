@@ -18,7 +18,7 @@ var _ = Describe("JSON schema parity", func() {
 	var schemaDoc map[string]any
 
 	BeforeEach(func() {
-		path := filepath.Join("..", "..", "..", "schemas", "ccp-filter.schema.json")
+		path := filepath.Join("..", "..", "..", "schemas", "cmdshape-filter.schema.json")
 		raw, err := os.ReadFile(path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(json.Unmarshal(raw, &schemaDoc)).To(Succeed())

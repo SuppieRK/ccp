@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
 filter: npx
 about: Compact routed npx subcommands conservatively, keep unsupported and package-injection forms native, and preserve wrapper behavior instead of turning npx into a semantic rewrite layer.

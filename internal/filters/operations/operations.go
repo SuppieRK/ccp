@@ -3,7 +3,7 @@ package operations
 import (
 	"slices"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 )
 
 func MatchesFirstIs(args []string, first string) bool {

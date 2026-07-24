@@ -1,27 +1,28 @@
 #!/usr/bin/env sh
 set -eu
 
-# Installs ccp from GitHub Releases.
+# Installs cmdshape from GitHub Releases.
 #
 # Usage:
-#   curl --proto "=https" --tlsv1.2 -sSfL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
+#   curl --proto "=https" --tlsv1.2 -sSfL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh
 #   curl --proto "=https" --tlsv1.2 -sSfL ... | VERSION=0.1.0 sh
 #
 # Env:
-#   VERSION           Release tag in X.Y.Z form (default: latest)
-#   CCP_INSTALL_DIR   Explicit destination directory (default: automatic selection)
+#   VERSION               Release tag in X.Y.Z form (default: latest)
+#   CMDSHAPE_INSTALL_DIR  Explicit destination directory (default: automatic selection)
 # Installer behavior:
-#   - Repository is fixed to SuppieRK/ccp.
+#   - Repository is fixed to SuppieRK/cmdshape.
 #   - Install directory is selected automatically:
 #       1) /usr/local/bin (if writable)
 #       2) $HOME/.local/bin
 #       3) ./bin
 
-REPO="SuppieRK/ccp"
+REPO="SuppieRK/cmdshape"
 VERSION="${VERSION:-latest}"
-REQUESTED_INSTALL_DIR="${CCP_INSTALL_DIR:-}"
-BIN_NAME="ccp"
-PROFILE_NOTE="# added by ccp installer"
+CMDSHAPE_REQUESTED_INSTALL_DIR="${CMDSHAPE_INSTALL_DIR:-}"
+REQUESTED_INSTALL_DIR="$CMDSHAPE_REQUESTED_INSTALL_DIR"
+BIN_NAME="cmdshape"
+PROFILE_NOTE="# added by cmdshape installer"
 REPAIR_CUTOFF_VERSION="0.5.1"
 curl_secure() {
   curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-all-errors -sSfL "$@"
@@ -150,9 +151,9 @@ validate_release_version() {
   return 0
 }
 
-version_lt_cutoff() {
+version_lt() {
   ver="$(validate_release_version "$1")" || return 1
-  cutoff="$(validate_release_version "$REPAIR_CUTOFF_VERSION")" || return 1
+  cutoff="$(validate_release_version "$2")" || return 1
 
   old_ifs="$IFS"
   IFS=.
@@ -185,6 +186,10 @@ version_lt_cutoff() {
     return 0
   fi
   return 1
+}
+
+version_lt_cutoff() {
+  version_lt "$1" "$REPAIR_CUTOFF_VERSION"
 }
 
 probe_installed_version() {
@@ -333,7 +338,7 @@ trap 'if [ -n "$STAGED_DST" ]; then rm -f "$STAGED_DST"; fi; rm -rf "$TMP_DIR"' 
 
 ASSET="${BIN_NAME}_${VERSION}_${OS}_${ARCH}.zip"
 URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET"
-CHECKSUMS_ASSET="ccp_checksums.txt"
+CHECKSUMS_ASSET="cmdshape_checksums.txt"
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/$VERSION/$CHECKSUMS_ASSET"
 
 echo "Downloading $URL"
@@ -388,13 +393,20 @@ STAGED_DST=""
 update_path_if_needed "$INSTALL_DIR"
 echo "Installed binary $BIN_NAME $VERSION to $DST"
 
+if MIGRATION_OUTPUT="$("$DST" migrate retry 2>&1)"; then
+  printf '%s\n' "$MIGRATION_OUTPUT"
+else
+  printf '%s\n' "$MIGRATION_OUTPUT" >&2
+  echo "Previous installation cleanup needs attention; installation succeeded. Run: $DST migrate retry" >&2
+fi
+
 if version_lt_cutoff "$PREVIOUS_VERSION"; then
   if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
     printf '%s\n' "$REPAIR_OUTPUT"
   else
     case "$REPAIR_OUTPUT" in
       *"executable file not found"*|*"not found"*|*"Usage:"*)
-        echo "Installed binary does not support 'ccp repair'; skipping managed state rewrite"
+        echo "Installed binary does not support 'cmdshape repair'; skipping managed state rewrite"
         ;;
       *)
         printf '%s\n' "$REPAIR_OUTPUT" >&2

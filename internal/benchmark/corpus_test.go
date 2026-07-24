@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 var _ = Describe("benchmark fixture corpus", func() {

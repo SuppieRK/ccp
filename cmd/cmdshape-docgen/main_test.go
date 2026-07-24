@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/cli"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("generated CLI facts", func() {
 	It("uses the runtime command and integration inventories", func() {
-		Expect(cli.LifecycleCommands()).To(ContainElements("capture", "filter", "history", "recovery", "upgrade", "verify"))
+		Expect(cli.LifecycleCommands()).To(ContainElements("capture", "filter", "history", "migrate", "recovery", "upgrade", "verify"))
 		adapters, err := agents.NewBuiltInAdapters()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(agents.SupportedTools(adapters)).NotTo(BeEmpty())
@@ -26,7 +26,7 @@ var _ = Describe("generated CLI facts", func() {
 		Expect(err).NotTo(HaveOccurred())
 		rendered, err := renderGeneratedFacts()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(checkedIn).To(Equal(rendered), "run `go run ./cmd/ccp-docgen`")
+		Expect(checkedIn).To(Equal(rendered), "run `go run ./cmd/cmdshape-docgen`")
 	})
 
 	It("keeps the generated inventory linked from the README", func() {
@@ -38,5 +38,5 @@ var _ = Describe("generated CLI facts", func() {
 
 func TestDocgen(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CCP Docgen Suite")
+	RunSpecs(t, "cmdshape Docgen Suite")
 }

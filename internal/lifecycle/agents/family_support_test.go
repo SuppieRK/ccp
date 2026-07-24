@@ -46,7 +46,7 @@ var _ = ginkgo.Describe("managed family support helpers", func() {
 		tmpDir := ginkgo.GinkgoT().TempDir()
 		outsideDir := filepath.Join(tmpDir, "outside")
 		Expect(os.MkdirAll(outsideDir, 0o755)).To(Succeed())
-		outsideFile := filepath.Join(outsideDir, "ccp.md")
+		outsideFile := filepath.Join(outsideDir, "cmdshape.md")
 		Expect(os.WriteFile(outsideFile, []byte("keep me\n"), 0o644)).To(Succeed())
 
 		linkDir := filepath.Join(tmpDir, ".rules")
@@ -54,7 +54,7 @@ var _ = ginkgo.Describe("managed family support helpers", func() {
 			ginkgo.Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		removed, err := removeFileIfExists(filepath.Join(linkDir, "ccp.md"))
+		removed, err := removeFileIfExists(filepath.Join(linkDir, "cmdshape.md"))
 		Expect(err).To(HaveOccurred())
 		Expect(removed).To(BeFalse())
 

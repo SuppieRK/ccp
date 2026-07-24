@@ -72,7 +72,7 @@ type hookTestTB interface {
 	Skip(args ...any)
 }
 
-func runHookScript(t hookTestTB, scriptName, logName, script, input string, withCCP bool) hookRunResult {
+func runHookScript(t hookTestTB, scriptName, logName, script, input string, withCmdshape bool) hookRunResult {
 	t.Helper()
 	if runtime.GOOS == "windows" {
 		t.Skip("hook runtime tests are skipped on Windows")
@@ -89,14 +89,14 @@ func runHookScript(t hookTestTB, scriptName, logName, script, input string, with
 	}
 
 	pathParts := []string{filepath.Dir(bashPath)}
-	if withCCP {
+	if withCmdshape {
 		binDir := filepath.Join(tmp, "bin")
 		if err := os.MkdirAll(binDir, 0o755); err != nil {
 			t.Fatalf("mkdir fake bin: %v", err)
 		}
-		fakeCCP := filepath.Join(binDir, "ccp")
-		if err := os.WriteFile(fakeCCP, []byte("#!/bin/bash\nexit 0\n"), 0o755); err != nil {
-			t.Fatalf("write fake ccp: %v", err)
+		fakeCmdshape := filepath.Join(binDir, "cmdshape")
+		if err := os.WriteFile(fakeCmdshape, []byte("#!/bin/bash\nexit 0\n"), 0o755); err != nil {
+			t.Fatalf("write fake cmdshape: %v", err)
 		}
 		pathParts = append(pathParts, binDir)
 	}

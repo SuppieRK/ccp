@@ -13,10 +13,10 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/replay"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 var _ = Describe("benchmark replay runner", func() {
@@ -96,7 +96,7 @@ var _ = Describe("benchmark replay runner", func() {
 		Entry("fills all defaults", RunOptions{}, RunOptions{
 			FixturesRoot: filepath.Join("testdata", "benchmarks"),
 			ArtifactsDir: filepath.Join(".artifacts", "benchmark"),
-			ProxyBinary:  "ccp",
+			ProxyBinary:  "cmdshape",
 			Timeout:      2 * time.Minute,
 		}),
 		Entry("preserves provided values", RunOptions{
@@ -117,7 +117,7 @@ var _ = Describe("benchmark replay runner", func() {
 		}, RunOptions{
 			FixturesRoot: filepath.Join("testdata", "benchmarks"),
 			ArtifactsDir: filepath.Join(".artifacts", "benchmark"),
-			ProxyBinary:  "ccp",
+			ProxyBinary:  "cmdshape",
 			Timeout:      2 * time.Minute,
 		}),
 	)
@@ -141,7 +141,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -156,7 +156,7 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(report.Results[0].ProxyTokens).To(BeNumerically(">", 0))
 			Expect(filepath.Join(artifacts, "grep", "recursive-match", "command.yaml")).To(BeAnExistingFile())
 			Expect(filepath.Join(artifacts, "grep", "recursive-match", "verify-output.txt")).To(BeAnExistingFile())
-			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".ccp", "gain.db")).To(BeAnExistingFile())
+			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".cmdshape", "gain.db")).To(BeAnExistingFile())
 		})
 
 		It("keeps benchmark metrics local to the artifact gain database", func() {
@@ -180,12 +180,12 @@ var _ = Describe("benchmark replay runner", func() {
 			_, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".ccp", "gain.db")).To(BeAnExistingFile())
+			Expect(filepath.Join(artifacts, "grep", "recursive-match", ".cmdshape", "gain.db")).To(BeAnExistingFile())
 			registryPath, pathErr := workspaces.DefaultPath()
 			Expect(pathErr).NotTo(HaveOccurred())
 			_, statErr := os.Stat(registryPath)
@@ -208,12 +208,12 @@ var _ = Describe("benchmark replay runner", func() {
 
 			artifactCaseDir := filepath.Join(artifacts, "grep", "recursive-match")
 			Expect(os.MkdirAll(artifactCaseDir, 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(artifactCaseDir, ".ccp"), []byte("block"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(artifactCaseDir, ".cmdshape"), []byte("block"), 0o644)).To(Succeed())
 
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -241,7 +241,7 @@ var _ = Describe("benchmark replay runner", func() {
 				report, err := Run(RunOptions{
 					FixturesRoot: root,
 					ArtifactsDir: artifacts,
-					ProxyBinary:  "ccp",
+					ProxyBinary:  "cmdshape",
 					Timeout:      time.Second,
 				})
 
@@ -280,7 +280,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -392,7 +392,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -422,7 +422,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -462,7 +462,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot: root,
 				ArtifactsDir: artifacts,
-				ProxyBinary:  "ccp",
+				ProxyBinary:  "cmdshape",
 				Timeout:      time.Second,
 			})
 
@@ -501,7 +501,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot:   root,
 				ArtifactsDir:   artifacts,
-				ProxyBinary:    "ccp",
+				ProxyBinary:    "cmdshape",
 				Timeout:        time.Second,
 				PreviousReport: previousReportPath,
 			})
@@ -539,7 +539,7 @@ var _ = Describe("benchmark replay runner", func() {
 			report, err := Run(RunOptions{
 				FixturesRoot:   root,
 				ArtifactsDir:   artifacts,
-				ProxyBinary:    "ccp",
+				ProxyBinary:    "cmdshape",
 				Timeout:        time.Second,
 				PreviousReport: previousReportPath,
 			})
@@ -850,7 +850,7 @@ var _ = Describe("benchmark replay runner", func() {
 
 			Expect(appendCaseMetrics(artifactDir, []string{"grep", "-r", "needle", "."}, 7, 3)).To(Succeed())
 
-			history, err := metrics.QueryHistory(filepath.Join(artifactDir, ".ccp", "gain.db"), metrics.QueryOptions{})
+			history, err := metrics.QueryHistory(filepath.Join(artifactDir, ".cmdshape", "gain.db"), metrics.QueryOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(history).To(HaveLen(1))
 			Expect(history[0].Command).To(Equal("grep -r needle ."))

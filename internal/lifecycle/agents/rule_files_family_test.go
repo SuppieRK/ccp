@@ -31,11 +31,11 @@ var _ = ginkgo.Describe("rule files family", func() {
 			adapter = NewManagedHomeRuleFileAdapter(
 				"alpha",
 				".alpha",
-				filepath.Join(".alpha", "rules", "ccp.md"),
+				filepath.Join(".alpha", "rules", "cmdshape.md"),
 				"missing alpha rule file: %s",
 				"missing alpha managed guidance in %s",
-				func() string { return "ccp-managed\n" },
-				[]string{"ccp-managed"},
+				func() string { return "cmdshape-managed\n" },
+				[]string{"cmdshape-managed"},
 			)
 		})
 
@@ -73,19 +73,19 @@ var _ = ginkgo.Describe("rule files family", func() {
 			adapter = NewManagedRepoRuleFileAdapter(
 				"alpha",
 				".alpha",
-				filepath.Join(".alpha", "rules", "ccp.md"),
+				filepath.Join(".alpha", "rules", "cmdshape.md"),
 				"missing alpha rule file: %s",
 				"missing alpha managed guidance in %s",
-				func() string { return "ccp-managed\n" },
-				[]string{"ccp-managed"},
+				func() string { return "cmdshape-managed\n" },
+				[]string{"cmdshape-managed"},
 			)
-			target = filepath.Join(repo, ".alpha", "rules", "ccp.md")
+			target = filepath.Join(repo, ".alpha", "rules", "cmdshape.md")
 			sibling = filepath.Join(repo, ".alpha", "rules", "user.md")
 		})
 
 		ginkgo.It("removes only the managed rule file and preserves sibling files", func() {
 			Expect(os.MkdirAll(filepath.Dir(target), 0o755)).To(Succeed())
-			Expect(os.WriteFile(target, []byte("ccp-managed\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(target, []byte("cmdshape-managed\n"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(sibling, []byte("keep-me\n"), 0o644)).To(Succeed())
 
 			res, err := adapter.Uninstall(ctx)

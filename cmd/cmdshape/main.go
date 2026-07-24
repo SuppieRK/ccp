@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	core "go-command-compression-proxy/internal"
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/cli"
-	"go-command-compression-proxy/internal/lifecycle"
-	"go-command-compression-proxy/internal/version"
+	core "github.com/SuppieRK/cmdshape/internal"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/cli"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle"
+	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
 var lifecycleDispatch = runLifecycleCommand
@@ -20,6 +20,9 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	if err := lifecycle.RunBrandMigrationAuto(); err != nil {
+		return writeErr(stderr, 1, err)
+	}
 	// Audit is intentionally best-effort: startup must never fail before argument parsing
 	// or command execution just because the audit log path is blocked or unwritable.
 	_ = audit.ConfigureDefault()
@@ -90,6 +93,8 @@ func runLifecycleCommand(args []string) (bool, error) {
 		return true, lifecycle.RunUninstall(tail)
 	case "repair":
 		return true, lifecycle.RunRepair(tail)
+	case "migrate":
+		return true, lifecycle.RunBrandMigration(tail)
 	case "filter":
 		return true, lifecycle.RunFilterWithMetrics(tail, defaultMetricsPath())
 	default:
@@ -128,15 +133,15 @@ func defaultMetricsPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(cwd, ".ccp", "gain.db")
+	return filepath.Join(cwd, ".cmdshape", "gain.db")
 }
 
 func usageText() string {
-	return `ccp - command compression proxy for coding-agent workflows
+	return `cmdshape — Shape command output. Preserve command truth.
 
 Usage:
-  ccp [execution flags] <command> [args...]
-  ccp <lifecycle-command> [args...]
+  cmdshape [execution flags] <command> [args...]
+  cmdshape <lifecycle-command> [args...]
 
 Execution flags:
   --raw                 Bypass semantic compaction and pass through native output
@@ -151,13 +156,14 @@ Lifecycle commands:
   filter                YAML filter authoring helpers
   history               Show recorded command history (--global supported)
   recovery              Manage opt-in bounded raw failure recovery
-  repair                Rewrite managed CCP home state to canonical shipped content
+  migrate               Inspect or retry previous-installation cleanup
+  repair                Rewrite managed cmdshape home state to canonical shipped content
   verify                Replay one fixture directory through the current filter
-  upgrade               Upgrade ccp
-  uninstall             Remove selected integrations or fully uninstall ccp
+  upgrade               Upgrade cmdshape
+  uninstall             Remove selected integrations or fully uninstall cmdshape
 
 Notes:
-  - Run ccp gain after install or init to verify savings on real work.
+  - Run cmdshape gain after install or init to verify savings on real work.
   - Structured or precision-sensitive output may pass through unchanged.
   - --raw preserves native output unless --confidential is also used.`
 }

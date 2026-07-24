@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"go-command-compression-proxy/internal/recovery"
+	"github.com/SuppieRK/cmdshape/internal/recovery"
 )
 
 func RunRecovery(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: ccp recovery enable|disable|list|purge")
+		return fmt.Errorf("usage: cmdshape recovery enable|disable|list|purge")
 	}
 	action := strings.TrimSpace(args[0])
 	if action == "--help" || action == "-h" || action == "help" {
@@ -17,16 +17,16 @@ func RunRecovery(args []string) error {
 		return nil
 	}
 	if len(args) != 1 {
-		return fmt.Errorf("ccp recovery %s does not accept arguments", action)
+		return fmt.Errorf("cmdshape recovery %s does not accept arguments", action)
 	}
 	return runRecoveryAction(action)
 }
 
 func printRecoveryHelp() {
-	fmt.Println("ccp recovery - manage opt-in bounded raw failure recovery")
+	fmt.Println("cmdshape recovery - manage opt-in bounded raw failure recovery")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  ccp recovery enable|disable|list|purge")
+	fmt.Println("  cmdshape recovery enable|disable|list|purge")
 	fmt.Println()
 	fmt.Println("Recovery is disabled by default and never records raw, passthrough, structured, confidential, terminal-fallback, or zero-byte commands.")
 }

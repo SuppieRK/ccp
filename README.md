@@ -1,24 +1,26 @@
 <p align="center">
-  <a href="https://github.com/SuppieRK/ccp">
+  <a href="https://github.com/SuppieRK/cmdshape">
     <picture>
-      <source srcset="assets/readme-banner.png">
-      <img src="assets/readme-banner.png" alt="CCP banner">
+      <source srcset="assets/readme-banner.svg">
+      <img src="assets/readme-banner.svg" alt="cmdshape — Shape command output. Preserve command truth.">
     </picture>
   </a>
 </p>
 
 <p align="center">
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" /></a>
-  <a href="https://github.com/SuppieRK/ccp/releases"><img alt="Release" src="https://img.shields.io/github/v/release/SuppieRK/ccp?style=flat-square" /></a>
-  <a href="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml"><img alt="CI" src="https://github.com/SuppieRK/ccp/actions/workflows/main-validation.yml/badge.svg" /></a>
-  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_ccp"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_ccp&metric=sqale_rating" /></a>
+  <a href="https://github.com/SuppieRK/cmdshape/releases"><img alt="Release" src="https://img.shields.io/github/v/release/SuppieRK/cmdshape?style=flat-square" /></a>
+  <a href="https://github.com/SuppieRK/cmdshape/actions/workflows/main-validation.yml"><img alt="CI" src="https://github.com/SuppieRK/cmdshape/actions/workflows/main-validation.yml/badge.svg" /></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=SuppieRK_cmdshape"><img alt="Maintainability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=SuppieRK_cmdshape&metric=sqale_rating" /></a>
 </p>
 
-## Command Compression Proxy for coding agents.
+## cmdshape for coding agents.
 
-Keep command truth intact while shaping noisy output to fit your workflow. Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
+Shape command output. Preserve command truth.
 
-Use it directly as `ccp <command>`, or install integrations and keep your usual command shape.
+Own deterministic YAML filters, verify them against real output, and keep passthrough when exactness matters.
+
+Use it directly as `cmdshape <command>`, or install integrations and keep your usual command shape.
 
 Validated on every build across the shipped filter inventory and replay
 corpus. The generated runtime inventory is available in
@@ -47,7 +49,7 @@ Untracked files:
         internal/lifecycle/report_text.go</code></pre>
     </td>
     <td valign="top">
-      <strong><code>ccp git status</code></strong>
+      <strong><code>cmdshape git status</code></strong>
       <pre lang="text"><code>## main...origin/main
  M README.md
  M internal/lifecycle/gain.go
@@ -62,7 +64,7 @@ Same command. Same result. Less ceremony.
 
 ## Output Contract
 
-If output gets compacted too aggressively, the model ends up reconstructing missing context from hints. That is where confusion, extra follow-up commands, and wasted tokens tend to come from. CCP is designed to avoid that failure mode.
+If output gets compacted too aggressively, the model ends up reconstructing missing context from hints. That is where confusion, extra follow-up commands, and wasted tokens tend to come from. cmdshape is designed to avoid that failure mode.
 
 - Preserve exit codes and critical diagnostics.
 - Compact output into a shorter view that still looks like the command it came from.
@@ -74,44 +76,48 @@ The goal is not maximum compression. The goal is a smaller output you can still 
 
 ## Quick Start
 
-Install CCP:
+Install cmdshape:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SuppieRK/ccp/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh
 ```
+
+The installer is also the supported migration path from prior installations.
+It converts known state, replaces managed integrations, and removes obsolete
+executables only when their project ownership can be verified.
 
 Try it on a normal command:
 
 ```bash
-ccp git status
+cmdshape git status
 ```
 
 Want it wired into supported tools too?
 
 ```bash
-ccp init --tools claude,codex,opencode
-# or: ccp init
+cmdshape init --tools claude,codex,opencode
+# or: cmdshape init
 ```
 
-`ccp init` installs or refreshes integrations in their normal locations. You do not need to run it in every repo. Use `--tools` when you want an explicit one-time setup; omit it when you want CCP to auto-detect supported tools from the current repository.
+`cmdshape init` installs or refreshes integrations in their normal locations. You do not need to run it in every repo. Use `--tools` when you want an explicit one-time setup; omit it when you want cmdshape to auto-detect supported tools from the current repository.
 
-After `ccp init`, supported tools can keep the normal command shape for you.
+After `cmdshape init`, supported tools can keep the normal command shape for you.
 
 Want a quick check after using it for a bit?
 
 ```bash
-ccp gain
+cmdshape gain
 ```
 
 Need exact native output for a comparison or edge case?
 
 ```bash
-ccp --raw git status
+cmdshape --raw git status
 ```
 
 ## Reporting And Real-World Proof
 
-Two real `ccp gain` snapshots from day-to-day work:
+Two real `cmdshape gain` snapshots from day-to-day work:
 
 - Refactoring tests in a Java project with Gradle (Claude Code):
 
@@ -125,7 +131,7 @@ Drag  : cd (23 cmds) · jar (21 cmds) · grep (4 cmds)
 Trend : ↑ +12.4 pts week over week (85.9% → 98.3%) · on a roll
 ```
 
-- Current repository snapshot from `ccp gain` (Codex):
+- Current repository snapshot from `cmdshape gain` (Codex):
 
 > Here Codex heavily uses `sed` to read files and runs `grep`/`go`/`git` - reading files is passthrough by default, only some outputs were safe to reduce
 
@@ -140,35 +146,35 @@ Trend : ↓ -2.1 pts week over week (14.4% → 12.3%) · slipping
 Detailed views stay bounded by default, so they do not take over the terminal:
 
 ```bash
-ccp gain --table
-ccp history
+cmdshape gain --table
+cmdshape history
 ```
 
 Use `--limit 0` when you want the full-text table. JSON and CSV exports ignore `--limit`.
 
-That mix is the point. CCP can save a lot, and it also knows when not to fake it.
+That mix is the point. cmdshape can save a lot, and it also knows when not to fake it.
 
 Useful commands:
 
 ```bash
-ccp gain --global
-ccp history --global
-ccp history purge --before 90d --yes
-ccp recovery enable
-ccp recovery list
-ccp repair
-ccp uninstall --tools codex
-ccp uninstall
+cmdshape gain --global
+cmdshape history --global
+cmdshape history purge --before 90d --yes
+cmdshape recovery enable
+cmdshape recovery list
+cmdshape repair
+cmdshape uninstall --tools codex
+cmdshape uninstall
 ```
 
-Successful pre-1.0 upgrades run rewrite repair through the newly installed binary, including guarded current-repository CCP migrations. Downgrades are rejected by `ccp upgrade`; uninstall and reinstall explicitly if you need an older version.
+Successful pre-1.0 upgrades run rewrite repair through the newly installed binary, including guarded current-repository cmdshape migrations. Downgrades are rejected by `cmdshape upgrade`; uninstall and reinstall explicitly if you need an older version.
 
 Project metrics are private, crash-safe, and retained for 90 days. A
 project-local spool preserves concurrent writes while the database is busy;
 pending events are consolidated on later commands. Raw failure recovery is
 disabled by default. When explicitly enabled, it stores only bounded,
 failed-and-compacted command output and excludes raw, passthrough,
-confidential, zero-byte, and oversized runs. Use `ccp recovery purge` to
+confidential, zero-byte, and oversized runs. Use `cmdshape recovery purge` to
 remove those artifacts.
 
 ## Own The Compression Rules
@@ -177,26 +183,26 @@ Own your compression logic: author filters in YAML, ship overridden behavior wit
 
 Two filter scopes are built in:
 
-- project-local filters in `./.ccp/filters`
-- home-scoped filters in `~/.config/ccp/filters`
+- project-local filters in `./.cmdshape/filters`
+- home-scoped filters in `~/.config/cmdshape/filters`
 
-Project-local filters are meant to be committed when they describe repo behavior. CCP-generated repo-local state, such as `./.ccp/gain.db`, is ignored by a CCP-owned `./.ccp/.gitignore`; CCP does not need to append broad `.ccp` rules to your repository root `.gitignore` for metrics.
+Project-local filters are meant to be committed when they describe repo behavior. cmdshape-generated repo-local state, such as `./.cmdshape/gain.db`, is ignored by a cmdshape-owned `./.cmdshape/.gitignore`; cmdshape does not need to append broad `.cmdshape` rules to your repository root `.gitignore` for metrics.
 
-Use `ccp filter prompt` to print an embedded, agent-ready workflow for creating or improving filters. The workflow starts by copying any matching global/home filter into `./.ccp/filters` before editing; global filters are not edited unless you explicitly ask for a global change.
+Use `cmdshape filter prompt` to print an embedded, agent-ready workflow for creating or improving filters. The workflow starts by copying any matching global/home filter into `./.cmdshape/filters` before editing; global filters are not edited unless you explicitly ask for a global change.
 
-`ccp capture` writes private (`0700` directory, `0600` files) native and
+`cmdshape capture` writes private (`0700` directory, `0600` files) native and
 replayed stream fixtures. Captures may contain source, paths, credentials, or
 other sensitive output. Use
-`ccp capture --confidential value1,value2 -- <command>` to replace known
+`cmdshape capture --confidential value1,value2 -- <command>` to replace known
 literal values before they are persisted; review every capture before
 committing it.
 
 Release builds ignore project-local filters until you approve their exact
-current bytes with `ccp filter trust`. Approval is scoped to the canonical
+current bytes with `cmdshape filter trust`. Approval is scoped to the canonical
 project directory and covers every YAML file plus `.mappings.yaml`; additions,
 removals, renames, mapping edits, or content edits change the status to
-`changed` and require approval again. Use `ccp filter status` to inspect the
-decision and `ccp filter untrust` to remove approval. Home filters remain
+`changed` and require approval again. Use `cmdshape filter status` to inspect the
+decision and `cmdshape filter untrust` to remove approval. Home filters remain
 available while project filters are absent, untrusted, changed, or unsafe.
 
 Once trusted, project scope overrides home scope. That gives you a clean model:
@@ -233,7 +239,7 @@ administrative commands such as filter status and repair.
 
 Structured, precision, and already-compact modes are intentionally left native when compression would reduce trust.
 
-CCP also integrates with `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `cline`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf`, plus `costrict` as an alias for `roocode`.
+cmdshape also integrates with `aider`, `amazon-q`, `antigravity`, `auggie`, `claude`, `cline`, `codebuddy`, `codex`, `crush`, `cursor`, `factory`, `gemini`, `github-copilot`, `kiro`, `kilocode`, `opencode`, `pi`, `qoder`, `qwen`, `roocode`, `trae`, `windsurf`, plus `costrict` as an alias for `roocode`.
 
 ## License
 

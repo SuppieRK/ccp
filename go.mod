@@ -1,4 +1,4 @@
-module go-command-compression-proxy
+module github.com/SuppieRK/cmdshape
 
 go 1.26.0
 

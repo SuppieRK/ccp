@@ -1,8 +1,8 @@
-# Command Compression Proxy Architecture
+# cmdshape Architecture
 
 ## Purpose
 
-`ccp` is a command compression proxy for coding agents:
+`cmdshape` is a command compression proxy for coding agents:
 
 - runs native commands
 - compacts output to reduce bytes/tokens sent to coding agents
@@ -13,7 +13,7 @@ and YAML-authored filter definitions loaded at runtime.
 
 ## High-Level Components
 
-- `cmd/ccp`: CLI entrypoint and runtime wiring
+- `cmd/cmdshape`: CLI entrypoint and runtime wiring
 - `cmd/coverage-gate`: coverage gate CLI for enforcing internal package thresholds
 - `internal/`: canonical runtime packages
 - `internal/contracts`: stable runtime command/filter contracts
@@ -24,14 +24,14 @@ and YAML-authored filter definitions loaded at runtime.
 - `internal/lifecycle`: lifecycle subcommands and coding-agent integration entrypoints
 - `internal/lifecycle/agents`: coding-agent specific adapters
 - `filters/`: shipped YAML filter definitions and `.mappings.yaml`, embedded into release builds
-- `cmd/ccp-ci` + `internal/benchmark`: replay benchmark runner for fixture-driven verification and reporting
+- `cmd/cmdshape-ci` + `internal/benchmark`: replay benchmark runner for fixture-driven verification and reporting
 - `testdata/benchmarks`: benchmark scenarios, replay fixtures, and optional copied projects
 
 ## End-to-End Runtime Flow
 
 ```mermaid
 flowchart LR
-    U[User command] --> C[ccp]
+    U[User command] --> C[cmdshape]
     IN[Parent stdin] --> C
     C --> O[Parse CLI options]
     O -->|lifecycle command| L[internal/lifecycle]
@@ -56,7 +56,7 @@ flowchart LR
 
 The canonical runtime path is:
 
-1. `cmd/ccp` parses CLI flags through `internal/cli`.
+1. `cmd/cmdshape` parses CLI flags through `internal/cli`.
 2. Execution commands build `internal/contracts.Command` through `internal/parser.go`.
 3. `internal/runner.go` resolves the active filter sources and loads YAML filters plus mappings.
 4. `internal/engine` creates command state and streams stdout/stderr through the resolved filter.
@@ -72,7 +72,7 @@ filter catalog.
 The runtime source order is explicit in `internal/runner.go`:
 
 - dev builds load only the repository `filters/` directory
-- non-dev builds load project-local `./.ccp/filters` first, then home-scoped `~/.config/ccp/filters`
+- non-dev builds load project-local `./.cmdshape/filters` first, then home-scoped `~/.config/cmdshape/filters`
 
 That order matters because registration is first-wins:
 
@@ -83,13 +83,13 @@ That order matters because registration is first-wins:
 
 The current YAML override order in release builds is therefore source-based:
 
-1. load project-local filter definitions from `./.ccp/filters/*.yaml`
-2. apply project-local aliases from `./.ccp/filters/.mappings.yaml`
-3. fill remaining gaps from home-scoped filter definitions in `~/.config/ccp/filters/*.yaml`
-4. fill remaining alias gaps from `~/.config/ccp/filters/.mappings.yaml`
+1. load project-local filter definitions from `./.cmdshape/filters/*.yaml`
+2. apply project-local aliases from `./.cmdshape/filters/.mappings.yaml`
+3. fill remaining gaps from home-scoped filter definitions in `~/.config/cmdshape/filters/*.yaml`
+4. fill remaining alias gaps from `~/.config/cmdshape/filters/.mappings.yaml`
 
 The shipped `filters/` directory is not part of release-build runtime discovery.
-Instead, release builds materialize shipped filters into `~/.config/ccp/filters`
+Instead, release builds materialize shipped filters into `~/.config/cmdshape/filters`
 through lifecycle maintenance.
 
 Safety rules in the loader:
@@ -126,32 +126,37 @@ The ordered buffer:
 Supported execution flags:
 
 - `--raw`: bypass semantic compaction and pass through native output
-- `--capture-raw`: write timestamped raw stdout/stderr capture files while preserving execution semantics
-- `--capture-raw-dir`: choose the capture directory
 - `--confidential`: redact configured substrings from emitted output and capture artifacts
 
-Lifecycle commands such as `init`, `repair`, `gain`, `history`, `verify`,
-`upgrade`, and `uninstall` are handled by `internal/lifecycle`.
+Lifecycle commands such as `capture`, `filter`, `gain`, `history`, `init`,
+`migrate`, `recovery`, `repair`, `uninstall`, `upgrade`, and `verify` are
+handled by `internal/lifecycle`.
 
 Current lifecycle split:
 
+- `capture` records native sequenced streams and replay output without changing
+  command semantics
 - `init` installs or updates supported coding-agent integrations
-- `repair` rewrites the fully managed home-scoped CCP state under `~/.config/ccp`
-- startup maintenance removes legacy project init files and refreshes the managed home layout
-- `upgrade` may trigger `repair --yes` only for older installed versions, based on the current repair cutoff policy
+- `migrate` reports or retries previous-installation state and integration
+  cleanup
+- `repair` rewrites the fully managed home-scoped cmdshape state under `~/.config/cmdshape`
+- maintenance helpers remove obsolete previous-installation state and refresh
+  the managed home layout without deleting `~/.cmdshape`
+- `upgrade` validates the downloaded archive and then runs rewrite repair
+  through the installed binary
 - `uninstall` removes managed integration artifacts from each adapter's canonical target
 
 `init` does not own home filter materialization. Canonical shipped filters are
 owned by `repair` and startup maintenance.
 
-## Benchmark Architecture (`cmd/ccp-ci` + `internal/benchmark`)
+## Benchmark Architecture (`cmd/cmdshape-ci` + `internal/benchmark`)
 
 The benchmark harness is a separate module and binary path:
 
-- entrypoint: `cmd/ccp-ci`
+- entrypoint: `cmd/cmdshape-ci`
 - replay fixtures loaded from `testdata/benchmarks/<tool>/<case>-<invariant>/command.yaml`
 
-For each replay fixture, the harness runs `ccp verify`, compares authored
+For each replay fixture, the harness runs `cmdshape verify`, compares authored
 expectations when present, records token counts, and writes per-fixture
 artifacts. The harness exercises the live runtime rather than a separate filter
 implementation.

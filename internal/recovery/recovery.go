@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/projectfiles"
-	"go-command-compression-proxy/internal/replay"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 const (
@@ -53,7 +53,7 @@ func ConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, "ccp", "recovery.json"), nil
+	return filepath.Join(root, "cmdshape", "recovery.json"), nil
 }
 
 func RootPath() (string, error) {
@@ -61,7 +61,7 @@ func RootPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, "ccp", "recovery"), nil
+	return filepath.Join(root, "cmdshape", "recovery"), nil
 }
 
 func Enabled() (bool, error) {

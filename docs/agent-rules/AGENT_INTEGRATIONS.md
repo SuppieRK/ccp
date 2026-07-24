@@ -1,6 +1,6 @@
 # Agent Rule – Agent Integrations
 
-CCP agent integrations are lifecycle-managed adapters under `internal/lifecycle/agents`.
+cmdshape agent integrations are lifecycle-managed adapters under `internal/lifecycle/agents`.
 
 Use this guide when changing supported integrations, adapter registration, managed files, plugin outputs, or
 install/verify/uninstall behavior.
@@ -30,7 +30,7 @@ install/verify/uninstall behavior.
 - Adapters must be installed into their canonical managed targets only.
 - `init` installs or updates supported integrations.
 - `uninstall` removes managed artifacts from the same canonical targets.
-- `repair` owns the managed CCP home state under `~/.config/ccp`; adapter-specific managed files remain adapter-owned.
+- `repair` owns the managed cmdshape home state under `~/.config/cmdshape`; adapter-specific managed files remain adapter-owned.
 
 ## Safety And Product Boundaries
 
@@ -38,7 +38,7 @@ install/verify/uninstall behavior.
 - Do not treat hook-based command rewriting as a freestanding security feature.
 - If an integration surface cannot preserve the right trust boundary, prefer a simpler or more conservative integration
   model.
-- Keep agent integrations as convenience layers. The product should still make sense with explicit `ccp <command>`
+- Keep agent integrations as convenience layers. The product should still make sense with explicit `cmdshape <command>`
   usage.
 
 ## Testing Expectations

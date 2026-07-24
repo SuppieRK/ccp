@@ -1,7 +1,7 @@
 package agents
 
 import (
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"os"
 )
 

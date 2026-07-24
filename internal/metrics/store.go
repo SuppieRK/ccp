@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -286,7 +286,7 @@ func appendMetric(projectRoot, path string, metric RunMetric) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	if err := ensureLocalCCPGitignore(projectRoot, path); err != nil {
+	if err := ensureLocalCmdshapeGitignore(projectRoot, path); err != nil {
 		return err
 	}
 	if !fileExists(path) {
@@ -1498,7 +1498,7 @@ func ensureSchema(projectRoot, path string) (err error) {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	if err := ensureLocalCCPGitignore(projectRoot, path); err != nil {
+	if err := ensureLocalCmdshapeGitignore(projectRoot, path); err != nil {
 		return err
 	}
 	if strings.TrimSpace(projectRoot) == "" {
@@ -1526,7 +1526,7 @@ func closeBoltDBWithErr(db *bolt.DB, retErr *error) {
 	}
 }
 
-func ensureLocalCCPGitignore(projectRoot, path string) error {
+func ensureLocalCmdshapeGitignore(projectRoot, path string) error {
 	cleanPath, pathProjectRoot, ok := localProjectMetricsPath(path)
 	if !ok {
 		return nil
@@ -1541,7 +1541,7 @@ func ensureLocalCCPGitignore(projectRoot, path string) error {
 		return nil
 	}
 
-	return projectfiles.EnsureNestedCCPGitignore(projectRoot)
+	return projectfiles.EnsureNestedCmdshapeGitignore(projectRoot)
 }
 
 func localProjectMetricsPath(path string) (string, string, bool) {
@@ -1549,11 +1549,11 @@ func localProjectMetricsPath(path string) (string, string, bool) {
 	if err != nil || filepath.Base(cleanPath) != projectMetricsFile {
 		return "", "", false
 	}
-	ccpDir := filepath.Dir(cleanPath)
-	if filepath.Base(ccpDir) != ".ccp" {
+	cmdshapeDir := filepath.Dir(cleanPath)
+	if filepath.Base(cmdshapeDir) != ".cmdshape" {
 		return "", "", false
 	}
-	return cleanPath, filepath.Dir(ccpDir), true
+	return cleanPath, filepath.Dir(cmdshapeDir), true
 }
 
 func resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, originalPath string) (string, string, bool, error) {
@@ -1566,11 +1566,11 @@ func resolveMetricsProjectRoot(projectRoot, pathProjectRoot, cleanPath, original
 	}
 	canonicalProjectRoot, err := canonicalExistingPath(projectRoot)
 	if err != nil {
-		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .cmdshape database", originalPath)
 	}
-	expectedPath := filepath.Join(canonicalProjectRoot, ".ccp", projectMetricsFile)
+	expectedPath := filepath.Join(canonicalProjectRoot, ".cmdshape", projectMetricsFile)
 	if filepath.Clean(canonicalPath) != filepath.Clean(expectedPath) {
-		return "", "", false, fmt.Errorf("metrics path %q is not the project .ccp database", originalPath)
+		return "", "", false, fmt.Errorf("metrics path %q is not the project .cmdshape database", originalPath)
 	}
 	return canonicalProjectRoot, canonicalProjectRoot, true, nil
 }

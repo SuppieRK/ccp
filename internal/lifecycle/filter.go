@@ -8,12 +8,12 @@ import (
 	"slices"
 	"strings"
 
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/engine"
-	filteryaml "go-command-compression-proxy/internal/filters/yaml"
-	"go-command-compression-proxy/internal/filtertrust"
-	"go-command-compression-proxy/internal/projectfiles"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/engine"
+	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/version"
 
 	"gopkg.in/yaml.v3"
 )
@@ -38,10 +38,10 @@ func RunFilterWithMetrics(args []string, metricsPath string) error {
 		setLifecycleUsage(
 			fs,
 			"YAML filter authoring and inspection helpers",
-			[]string{"ccp filter <subcommand> [args...]"},
+			[]string{"cmdshape filter <subcommand> [args...]"},
 			"subcommands: new, performance, prompt, status, trust, untrust",
-			"agents creating or improving filters should start with 'ccp filter prompt [name]' for the embedded workflow.",
-			"use 'ccp filter new --help', 'ccp filter performance --help', 'ccp filter prompt --help', or 'ccp filter status --help' for subcommand details.",
+			"agents creating or improving filters should start with 'cmdshape filter prompt [name]' for the embedded workflow.",
+			"use 'cmdshape filter new --help', 'cmdshape filter performance --help', 'cmdshape filter prompt --help', or 'cmdshape filter status --help' for subcommand details.",
 		)
 		handled, err := parseLifecycleFlags(fs, args)
 		if err != nil {
@@ -74,10 +74,10 @@ func RunFilterPrompt(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"print an embedded agent prompt for creating or improving filters",
-		[]string{"ccp filter prompt [name]"},
+		[]string{"cmdshape filter prompt [name]"},
 		"name is optional and must be a lowercase filter id using letters, digits, and hyphens only.",
-		"the prompt is embedded in the ccp binary and does not depend on repository-local docs.",
-		"the prompt instructs agents to copy global filters into ./.ccp/filters before editing.",
+		"the prompt is embedded in the cmdshape binary and does not depend on repository-local docs.",
+		"the prompt instructs agents to copy global filters into ./.cmdshape/filters before editing.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -107,11 +107,11 @@ func RunFilterStatus(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"show active, overridden, and broken filter registrations",
-		[]string{"ccp filter status"},
+		[]string{"cmdshape filter status"},
 		"status shows all discovered rows from the current filter sources.",
 		"project-local filters override home-scoped filters when both define the same tool or alias.",
 		"filter paths are compacted for readability; mappings show their target with '->'.",
-		"agents creating or improving filters should run 'ccp filter prompt [name]' before editing.",
+		"agents creating or improving filters should run 'cmdshape filter prompt [name]' before editing.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -138,7 +138,7 @@ func RunFilterStatus(args []string) error {
 	registry := engine.NewRegistry()
 	registry.RegisterAll(filters)
 
-	fmt.Println("ccp filter status")
+	fmt.Println("cmdshape filter status")
 	fmt.Println()
 	if version.Version != "dev" {
 		fmt.Printf("project trust: %s", trustDecision.State)
@@ -185,7 +185,7 @@ func RunFilterTrust(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"approve the exact current project filter source",
-		[]string{"ccp filter trust"},
+		[]string{"cmdshape filter trust"},
 		"the current canonical working directory is the only implicit project target.",
 		"approval covers every project YAML filter and .mappings.yaml by path and exact bytes.",
 		"any addition, removal, rename, mapping change, or content change requires approval again.",
@@ -208,7 +208,7 @@ func RunFilterTrust(args []string) error {
 		"project_root": decision.Root,
 		"digest":       decision.Digest,
 	})
-	fmt.Printf("ccp filter trust: trusted %s\n", decision.Root)
+	fmt.Printf("cmdshape filter trust: trusted %s\n", decision.Root)
 	fmt.Printf("digest: %s\n", decision.Digest)
 	return nil
 }
@@ -218,7 +218,7 @@ func RunFilterUntrust(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"remove approval for the current project filter source",
-		[]string{"ccp filter untrust"},
+		[]string{"cmdshape filter untrust"},
 		"the current canonical working directory is the only implicit project target.",
 		"project filters remain on disk but are ignored until explicitly trusted again.",
 	)
@@ -240,12 +240,12 @@ func RunFilterUntrust(args []string) error {
 		"project_root": decision.Root,
 		"state":        decision.State,
 	})
-	fmt.Printf("ccp filter untrust: removed approval for %s\n", decision.Root)
+	fmt.Printf("cmdshape filter untrust: removed approval for %s\n", decision.Root)
 	return nil
 }
 
 func printFilterPromptHint() {
-	fmt.Println("Next: run `ccp filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters.")
+	fmt.Println("Next: run `cmdshape filter prompt <filter-id>` for the embedded agent workflow before editing or creating filters.")
 }
 
 func RunFilterNew(args []string) error {
@@ -253,11 +253,11 @@ func RunFilterNew(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"generate a commented YAML scaffold for a new filter",
-		[]string{"ccp filter new <name>"},
+		[]string{"cmdshape filter new <name>"},
 		"name must be a lowercase filter id using letters, digits, and hyphens only.",
-		"agents should prefer 'ccp filter prompt <name>' first when creating or improving filters.",
-		"ccp writes the scaffold to ./.ccp/filters/<name>.yaml relative to the current working directory.",
-		"ccp also ensures ./.ccp/filters/.mappings.yaml contains an identity mapping for the new filter id.",
+		"agents should prefer 'cmdshape filter prompt <name>' first when creating or improving filters.",
+		"cmdshape writes the scaffold to ./.cmdshape/filters/<name>.yaml relative to the current working directory.",
+		"cmdshape also ensures ./.cmdshape/filters/.mappings.yaml contains an identity mapping for the new filter id.",
 		"the generated scaffold is valid YAML and starts in safe passthrough mode until you author real behavior.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -280,7 +280,7 @@ func RunFilterNew(args []string) error {
 	if err != nil {
 		return err
 	}
-	filtersDir := filepath.Join(root, ".ccp", "filters")
+	filtersDir := filepath.Join(root, ".cmdshape", "filters")
 	if err := os.MkdirAll(filtersDir, 0o755); err != nil {
 		return fmt.Errorf("create filters directory: %w", err)
 	}
@@ -300,8 +300,8 @@ func RunFilterNew(args []string) error {
 		return err
 	}
 
-	fmt.Printf("ccp filter new: wrote %s\n", filterPath)
-	fmt.Printf("ccp filter new: ensured %s maps %s -> %s\n", mappingsPath, filterID, filterID)
+	fmt.Printf("cmdshape filter new: wrote %s\n", filterPath)
+	fmt.Printf("cmdshape filter new: ensured %s maps %s -> %s\n", mappingsPath, filterID, filterID)
 	return nil
 }
 
@@ -359,11 +359,11 @@ func ensureIdentityFilterMapping(path, filterID string) error {
 }
 
 func newFilterScaffold(filterID string) string {
-	return fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/ccp/refs/heads/main/schemas/ccp-filter.schema.json
+	return fmt.Sprintf(`# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
 version: 1
-filter: %s # canonical id used by .ccp/filters/.mappings.yaml, benchmark fixtures, and current filename.
+filter: %s # canonical id used by .cmdshape/filters/.mappings.yaml, benchmark fixtures, and current filename.
 about: TODO describe what this filter should compress
-# flags_consuming_next_arg lists tool flags that consume the next argv token when CCP
+# flags_consuming_next_arg lists tool flags that consume the next argv token when cmdshape
 # decides whether a token is a real positional argument. List split-form flags like
 # "-run" for '-run value'; attached forms like '--format=json' are already self-contained.
 # flags_consuming_next_arg: ["-run"]
@@ -377,7 +377,7 @@ cases:
 # Uncomment and adapt the example below when you are ready to author behavior.
 # 1. when_arguments decides when the case should apply
 # 2. normalize_command adjusts command arguments only when the filter contract needs it
-# 3. compress_output rewrites stdout/stderr/combined output through the fixed CCP DSL
+# 3. compress_output rewrites stdout/stderr/combined output through the fixed cmdshape DSL
 #
 # cases:
 #   - id: status-summary

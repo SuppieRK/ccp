@@ -22,35 +22,35 @@ var _ = ginkgo.Describe("context link families", func() {
 					Expect(content).NotTo(ContainSubstring(needle))
 				}
 			},
-			ginkgo.Entry("amazon-q", ccpManagedGuidanceMarkdown, []string{
-				"## CCP Integration (Managed)",
-				ccpRawEscapeHatch,
-				ccpFilterPromptHint,
-			}, []string{"alwaysApply: true", "description:", ccpManagedBlockStart}),
-			ginkgo.Entry("cline", ccpManagedGuidanceMarkdown, []string{
-				"## CCP Integration (Managed)",
-				ccpRawEscapeHatch,
-				ccpFilterPromptHint,
-			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
+			ginkgo.Entry("amazon-q", cmdshapeManagedGuidanceMarkdown, []string{
+				"## cmdshape Integration (Managed)",
+				cmdshapeRawEscapeHatch,
+				cmdshapeFilterPromptHint,
+			}, []string{"alwaysApply: true", "description:", cmdshapeManagedBlockStart}),
+			ginkgo.Entry("cline", cmdshapeManagedGuidanceMarkdown, []string{
+				"## cmdshape Integration (Managed)",
+				cmdshapeRawEscapeHatch,
+				cmdshapeFilterPromptHint,
+			}, []string{"alwaysApply: true", "description:", "trigger: always_on", cmdshapeManagedBlockStart}),
 			ginkgo.Entry("cursor", cursorRuleContent, []string{
 				"alwaysApply: true",
-				"description: Route shell commands through ccp",
-				ccpFilterPromptHint,
-			}, []string{ccpManagedBlockStart}),
-			ginkgo.Entry("roocode", ccpManagedGuidanceMarkdown, []string{
-				"## CCP Integration (Managed)",
-				ccpFilterPromptHint,
-			}, []string{ccpManagedBlockStart}),
-			ginkgo.Entry("trae", ccpManagedGuidanceMarkdown, []string{
-				"## CCP Integration (Managed)",
-				ccpRawEscapeHatch,
-				ccpFilterPromptHint,
-			}, []string{"alwaysApply: true", "trigger: always_on", ccpManagedBlockStart}),
-			ginkgo.Entry("windsurf", ccpManagedGuidanceMarkdown, []string{
-				"## CCP Integration (Managed)",
-				ccpRawEscapeHatch,
-				ccpFilterPromptHint,
-			}, []string{"alwaysApply: true", "description:", "trigger: always_on", ccpManagedBlockStart}),
+				"description: Route shell commands through cmdshape",
+				cmdshapeFilterPromptHint,
+			}, []string{cmdshapeManagedBlockStart}),
+			ginkgo.Entry("roocode", cmdshapeManagedGuidanceMarkdown, []string{
+				"## cmdshape Integration (Managed)",
+				cmdshapeFilterPromptHint,
+			}, []string{cmdshapeManagedBlockStart}),
+			ginkgo.Entry("trae", cmdshapeManagedGuidanceMarkdown, []string{
+				"## cmdshape Integration (Managed)",
+				cmdshapeRawEscapeHatch,
+				cmdshapeFilterPromptHint,
+			}, []string{"alwaysApply: true", "trigger: always_on", cmdshapeManagedBlockStart}),
+			ginkgo.Entry("windsurf", cmdshapeManagedGuidanceMarkdown, []string{
+				"## cmdshape Integration (Managed)",
+				cmdshapeRawEscapeHatch,
+				cmdshapeFilterPromptHint,
+			}, []string{"alwaysApply: true", "description:", "trigger: always_on", cmdshapeManagedBlockStart}),
 		)
 	})
 

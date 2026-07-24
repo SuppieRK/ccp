@@ -8,9 +8,9 @@ export GOCACHE="${GOCACHE:-$ROOT_DIR/.gocache}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$ROOT_DIR/.cache}"
 mkdir -p "$GOCACHE" "$XDG_CACHE_HOME" "$ROOT_DIR/.bin"
 
-build_ccp() {
-  echo "[benchmark-local] go build -o .bin/ccp ./cmd/ccp"
-  go build -o .bin/ccp ./cmd/ccp
+build_cmdshape() {
+  echo "[benchmark-local] go build -o .bin/cmdshape ./cmd/cmdshape"
+  go build -o .bin/cmdshape ./cmd/cmdshape
   return 0
 }
 
@@ -56,7 +56,7 @@ run_tool_benchmark() {
   mkdir -p "$out_dir" "$history_dir"
 
   echo "[benchmark-local] running ${tool}"
-  go run ./cmd/ccp-ci \
+  go run ./cmd/cmdshape-ci \
     -artifacts-dir "$out_dir" \
     -previous-report "$prev_report" \
     -tool "$tool"
@@ -67,7 +67,7 @@ run_tool_benchmark() {
   return 0
 }
 
-build_ccp
+build_cmdshape
 export PATH="$ROOT_DIR/.bin:$PATH"
 
 mapfile -t TOOLS < <(resolve_tools "$@")

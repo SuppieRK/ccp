@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/metrics"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 type globalHistoryRow struct {
@@ -211,9 +211,9 @@ func (s *globalQuerySession) writeWarnings(command string) {
 		return failures[i].MetricsPath < failures[j].MetricsPath
 	})
 	for _, failure := range failures {
-		writeLifecycleWarning("ccp %s --global: warning: skipped workspace %s (%s): %v\n", command, globalQuerySourceLabel(failure), failure.MetricsPath, failure.Err)
+		writeLifecycleWarning("cmdshape %s --global: warning: skipped workspace %s (%s): %v\n", command, globalQuerySourceLabel(failure), failure.MetricsPath, failure.Err)
 	}
-	writeLifecycleWarning("ccp %s --global: warning: results exclude %d workspace(s) with unreadable or corrupt metrics\n", command, len(failures))
+	writeLifecycleWarning("cmdshape %s --global: warning: results exclude %d workspace(s) with unreadable or corrupt metrics\n", command, len(failures))
 }
 
 func globalQuerySourceLabel(failure globalQueryFailure) string {

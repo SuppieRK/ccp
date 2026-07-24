@@ -29,6 +29,7 @@ var lifecycleCommands = map[string]struct{}{
 	"init":      {},
 	"gain":      {},
 	"history":   {},
+	"migrate":   {},
 	"recovery":  {},
 	"verify":    {},
 	"upgrade":   {},
@@ -176,7 +177,7 @@ func IsManagedArgs(args []string) bool {
 }
 
 func ShouldSkipMetrics(tool string, args []string) bool {
-	if strings.TrimSpace(tool) != "ccp" {
+	if strings.TrimSpace(tool) != "cmdshape" {
 		return false
 	}
 	if len(args) < 2 {
@@ -186,12 +187,12 @@ func ShouldSkipMetrics(tool string, args []string) bool {
 }
 
 type ExecutionShape struct {
-	UsesShell   bool
-	HasPipeline bool
-	HasChain    bool
-	HasFindExec bool
-	HasXargs    bool
-	NestedCCP   bool
+	UsesShell      bool
+	HasPipeline    bool
+	HasChain       bool
+	HasFindExec    bool
+	HasXargs       bool
+	NestedCmdshape bool
 }
 
 func DescribeExecutionShape(args []string) ExecutionShape {
@@ -207,7 +208,7 @@ func DescribeExecutionShape(args []string) ExecutionShape {
 		shape.HasChain = strings.Contains(script, "&&") || strings.Contains(script, "||") || strings.Contains(script, ";")
 		shape.HasFindExec = strings.Contains(script, "find ") && strings.Contains(script, "-exec")
 		shape.HasXargs = strings.Contains(script, "xargs")
-		shape.NestedCCP = strings.Contains(script, "ccp ")
+		shape.NestedCmdshape = strings.Contains(script, "cmdshape ")
 		return shape
 	}
 
@@ -221,8 +222,8 @@ func DescribeExecutionShape(args []string) ExecutionShape {
 			shape.HasFindExec = true
 		case "xargs":
 			shape.HasXargs = true
-		case "ccp":
-			shape.NestedCCP = true
+		case "cmdshape":
+			shape.NestedCmdshape = true
 		}
 		if args[idx] == "find" && arg == "-exec" {
 			shape.HasFindExec = true

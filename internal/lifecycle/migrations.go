@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"go-command-compression-proxy/internal/projectfiles"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
 type migrationSurface string
@@ -37,10 +37,10 @@ var builtInMigrations = []migration{
 		run:     cleanupLegacyProjectInitStateMigration,
 	},
 	{
-		id:      "migrate-repo-local-ccp-gitignore",
+		id:      "migrate-repo-local-cmdshape-gitignore",
 		surface: migrationSurfaceRepo,
 		version: "0.7.0",
-		run:     migrateRepoLocalCCPGitignore,
+		run:     migrateRepoLocalCmdshapeGitignore,
 	},
 }
 
@@ -75,9 +75,9 @@ func runMigrations(surface migrationSurface, sinceVersion string, ctx migrationC
 }
 
 func cleanupLegacyProjectInitStateMigration(ctx migrationContext) error {
-	ccpDir := filepath.Join(ctx.cwd, ".ccp")
-	targets := []string{filepath.Join(ccpDir, "init.json")}
-	matches, err := filepath.Glob(filepath.Join(ccpDir, "init.json.bak.*"))
+	cmdshapeDir := filepath.Join(ctx.cwd, ".cmdshape")
+	targets := []string{filepath.Join(cmdshapeDir, "init.json")}
+	matches, err := filepath.Glob(filepath.Join(cmdshapeDir, "init.json.bak.*"))
 	if err != nil {
 		return err
 	}
@@ -90,12 +90,12 @@ func cleanupLegacyProjectInitStateMigration(ctx migrationContext) error {
 	return nil
 }
 
-func migrateRepoLocalCCPGitignore(ctx migrationContext) error {
+func migrateRepoLocalCmdshapeGitignore(ctx migrationContext) error {
 	if !isGitRoot(ctx.cwd) {
 		return nil
 	}
-	ccpDir := filepath.Join(ctx.cwd, ".ccp")
-	info, err := os.Stat(ccpDir)
+	cmdshapeDir := filepath.Join(ctx.cwd, ".cmdshape")
+	info, err := os.Stat(cmdshapeDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -105,10 +105,10 @@ func migrateRepoLocalCCPGitignore(ctx migrationContext) error {
 	if !info.IsDir() {
 		return nil
 	}
-	if err := projectfiles.EnsureNestedCCPGitignore(ctx.cwd); err != nil {
+	if err := projectfiles.EnsureNestedCmdshapeGitignore(ctx.cwd); err != nil {
 		return err
 	}
-	return projectfiles.RemoveLegacyRootCCPGitignoreEntries(ctx.cwd)
+	return projectfiles.RemoveProductRootGitignoreEntries(ctx.cwd)
 }
 
 func isGitRoot(path string) bool {

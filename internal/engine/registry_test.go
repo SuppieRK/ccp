@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/filters"
-	yamlfilters "go-command-compression-proxy/internal/filters/yaml"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/filters"
+	yamlfilters "github.com/SuppieRK/cmdshape/internal/filters/yaml"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

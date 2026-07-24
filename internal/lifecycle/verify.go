@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	core "go-command-compression-proxy/internal"
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/replay"
+	core "github.com/SuppieRK/cmdshape/internal"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 type verifyRunner interface {
@@ -36,7 +36,7 @@ func RunVerify(args []string) error {
 	setLifecycleUsage(
 		fs,
 		"replay captured fixtures through the current filter",
-		[]string{"ccp verify [--dir <path>]"},
+		[]string{"cmdshape verify [--dir <path>]"},
 		"verify reads command.yaml and optional sequenced stdout.txt/stderr.txt from the fixture directory.",
 		"missing stdout.txt or stderr.txt means that stream is empty.",
 		"verify always writes verify-output.txt, verify-stdout.txt, verify-stderr.txt, verify-decisions.txt, and verify-dispatch.txt into the fixture directory.",

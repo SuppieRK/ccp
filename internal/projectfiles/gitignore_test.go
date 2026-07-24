@@ -10,25 +10,25 @@ import (
 
 const gitignorePathName = ".gitignore"
 
-var _ = Describe("EnsureNestedCCPGitignore", func() {
-	It("creates the nested CCP-owned gitignore with canonical contents", func() {
+var _ = Describe("EnsureNestedCmdshapeGitignore", func() {
+	It("creates the nested cmdshape-owned gitignore with canonical contents", func() {
 		root := GinkgoT().TempDir()
 
-		Expect(EnsureNestedCCPGitignore(root)).To(Succeed())
+		Expect(EnsureNestedCmdshapeGitignore(root)).To(Succeed())
 
-		body, err := os.ReadFile(filepath.Join(root, ".ccp", gitignorePathName))
+		body, err := os.ReadFile(filepath.Join(root, ".cmdshape", gitignorePathName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(body)).To(Equal("gain.db\n.gitignore\n"))
 	})
 
 	It("overwrites user edits with canonical contents", func() {
 		root := GinkgoT().TempDir()
-		path := filepath.Join(root, ".ccp", gitignorePathName)
+		path := filepath.Join(root, ".cmdshape", gitignorePathName)
 		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
 		Expect(os.WriteFile(path, []byte("custom\n!filters/\n"), 0o644)).To(Succeed())
 
-		Expect(EnsureNestedCCPGitignore(root)).To(Succeed())
-		Expect(EnsureNestedCCPGitignore(root)).To(Succeed())
+		Expect(EnsureNestedCmdshapeGitignore(root)).To(Succeed())
+		Expect(EnsureNestedCmdshapeGitignore(root)).To(Succeed())
 
 		body, err := os.ReadFile(path)
 		Expect(err).NotTo(HaveOccurred())
@@ -36,26 +36,26 @@ var _ = Describe("EnsureNestedCCPGitignore", func() {
 	})
 
 	It("treats a blank root as a noop", func() {
-		Expect(EnsureNestedCCPGitignore("  ")).To(Succeed())
+		Expect(EnsureNestedCmdshapeGitignore("  ")).To(Succeed())
 	})
 
-	It("returns an error when .ccp is a file", func() {
+	It("returns an error when .cmdshape is a file", func() {
 		root := GinkgoT().TempDir()
-		Expect(os.WriteFile(filepath.Join(root, ".ccp"), []byte("not a directory"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, ".cmdshape"), []byte("not a directory"), 0o644)).To(Succeed())
 
-		err := EnsureNestedCCPGitignore(root)
+		err := EnsureNestedCmdshapeGitignore(root)
 
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("refuses to write through a symlinked .ccp directory", func() {
+	It("refuses to write through a symlinked .cmdshape directory", func() {
 		root := GinkgoT().TempDir()
 		outside := GinkgoT().TempDir()
-		if err := os.Symlink(outside, filepath.Join(root, ".ccp")); err != nil {
+		if err := os.Symlink(outside, filepath.Join(root, ".cmdshape")); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		err := EnsureNestedCCPGitignore(root)
+		err := EnsureNestedCmdshapeGitignore(root)
 
 		Expect(err).To(HaveOccurred())
 		_, statErr := os.Stat(filepath.Join(outside, gitignorePathName))
@@ -65,14 +65,14 @@ var _ = Describe("EnsureNestedCCPGitignore", func() {
 	It("refuses to overwrite a symlinked nested gitignore", func() {
 		root := GinkgoT().TempDir()
 		outside := filepath.Join(GinkgoT().TempDir(), "outside-gitignore")
-		path := filepath.Join(root, ".ccp", gitignorePathName)
+		path := filepath.Join(root, ".cmdshape", gitignorePathName)
 		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
 		Expect(os.WriteFile(outside, []byte("keep\n"), 0o644)).To(Succeed())
 		if err := os.Symlink(outside, path); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		err := EnsureNestedCCPGitignore(root)
+		err := EnsureNestedCmdshapeGitignore(root)
 
 		Expect(err).To(HaveOccurred())
 		body, readErr := os.ReadFile(outside)
@@ -81,46 +81,46 @@ var _ = Describe("EnsureNestedCCPGitignore", func() {
 	})
 })
 
-var _ = Describe("RemoveLegacyRootCCPGitignoreEntries", func() {
+var _ = Describe("RemoveProductRootGitignoreEntries", func() {
 	DescribeTable("removing only exact legacy entries",
 		func(initial string, expected string) {
 			root := GinkgoT().TempDir()
 			path := filepath.Join(root, gitignorePathName)
 			Expect(os.WriteFile(path, []byte(initial), 0o644)).To(Succeed())
 
-			Expect(RemoveLegacyRootCCPGitignoreEntries(root)).To(Succeed())
-			Expect(RemoveLegacyRootCCPGitignoreEntries(root)).To(Succeed())
+			Expect(RemoveProductRootGitignoreEntries(root)).To(Succeed())
+			Expect(RemoveProductRootGitignoreEntries(root)).To(Succeed())
 
 			body, err := os.ReadFile(path)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).To(Equal(expected))
 		},
-		Entry("removes dot ccp lines", "node_modules/\n.ccp\n.ccp/\n", "node_modules/\n"),
-		Entry("trims whitespace before matching", "  .ccp  \n\t.ccp/\t\nkeep\n", "keep\n"),
-		Entry("preserves comments and non-legacy patterns", "# .ccp\nfoo.ccp\n.ccp/**\n!.ccp/filters/\n", "# .ccp\nfoo.ccp\n.ccp/**\n!.ccp/filters/\n"),
-		Entry("preserves CRLF on kept lines", "node_modules/\r\n.ccp\r\nkeep\r\n", "node_modules/\r\nkeep\r\n"),
-		Entry("handles a final line without newline", "keep\n.ccp", "keep\n"),
-		Entry("can remove all lines", ".ccp\n.ccp/\n", ""),
+		Entry("removes dot cmdshape lines", "node_modules/\n.cmdshape\n.cmdshape/\n", "node_modules/\n"),
+		Entry("trims whitespace before matching", "  .cmdshape  \n\t.cmdshape/\t\nkeep\n", "keep\n"),
+		Entry("preserves comments and non-legacy patterns", "# .cmdshape\nfoo.cmdshape\n.cmdshape/**\n!.cmdshape/filters/\n", "# .cmdshape\nfoo.cmdshape\n.cmdshape/**\n!.cmdshape/filters/\n"),
+		Entry("preserves CRLF on kept lines", "node_modules/\r\n.cmdshape\r\nkeep\r\n", "node_modules/\r\nkeep\r\n"),
+		Entry("handles a final line without newline", "keep\n.cmdshape", "keep\n"),
+		Entry("can remove all lines", ".cmdshape\n.cmdshape/\n", ""),
 	)
 
 	It("treats a missing gitignore as a noop", func() {
 		root := GinkgoT().TempDir()
 
-		Expect(RemoveLegacyRootCCPGitignoreEntries(root)).To(Succeed())
+		Expect(RemoveProductRootGitignoreEntries(root)).To(Succeed())
 
 		_, err := os.Stat(filepath.Join(root, gitignorePathName))
 		Expect(err).To(MatchError(os.ErrNotExist))
 	})
 
 	It("treats a blank root as a noop", func() {
-		Expect(RemoveLegacyRootCCPGitignoreEntries("  ")).To(Succeed())
+		Expect(RemoveProductRootGitignoreEntries("  ")).To(Succeed())
 	})
 
 	It("returns an error when .gitignore is a directory", func() {
 		root := GinkgoT().TempDir()
 		Expect(os.Mkdir(filepath.Join(root, gitignorePathName), 0o755)).To(Succeed())
 
-		err := RemoveLegacyRootCCPGitignoreEntries(root)
+		err := RemoveProductRootGitignoreEntries(root)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -129,16 +129,16 @@ var _ = Describe("RemoveLegacyRootCCPGitignoreEntries", func() {
 		root := GinkgoT().TempDir()
 		outside := filepath.Join(GinkgoT().TempDir(), "outside-gitignore")
 		path := filepath.Join(root, gitignorePathName)
-		Expect(os.WriteFile(outside, []byte(".ccp\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(outside, []byte(".cmdshape\n"), 0o644)).To(Succeed())
 		if err := os.Symlink(outside, path); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
 
-		err := RemoveLegacyRootCCPGitignoreEntries(root)
+		err := RemoveProductRootGitignoreEntries(root)
 
 		Expect(err).To(HaveOccurred())
 		body, readErr := os.ReadFile(outside)
 		Expect(readErr).NotTo(HaveOccurred())
-		Expect(string(body)).To(Equal(".ccp\n"))
+		Expect(string(body)).To(Equal(".cmdshape\n"))
 	})
 })

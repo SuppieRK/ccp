@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,7 +107,7 @@ var _ = Describe("installUpgradeReplacement", func() {
 	It("moves the running Windows image aside before installing the staged binary", func() {
 		tmpDir := GinkgoT().TempDir()
 		src := filepath.Join(tmpDir, "staged.exe")
-		dst := filepath.Join(tmpDir, "ccp.exe")
+		dst := filepath.Join(tmpDir, "cmdshape.exe")
 		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
 		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
 
@@ -135,7 +135,7 @@ var _ = Describe("installUpgradeReplacement", func() {
 
 	It("restores the Windows binary when staged installation fails", func() {
 		tmpDir := GinkgoT().TempDir()
-		dst := filepath.Join(tmpDir, "ccp.exe")
+		dst := filepath.Join(tmpDir, "cmdshape.exe")
 		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
 
 		prevOS := upgradeRuntimeOS
@@ -156,7 +156,7 @@ var _ = Describe("installUpgradeReplacement", func() {
 	It("repairs the new Windows binary before scheduling removal of the old image", func() {
 		tmpDir := GinkgoT().TempDir()
 		src := filepath.Join(tmpDir, "staged.exe")
-		dst := filepath.Join(tmpDir, "ccp.exe")
+		dst := filepath.Join(tmpDir, "cmdshape.exe")
 		Expect(os.WriteFile(src, []byte(newBinaryContent), 0o755)).To(Succeed())
 		Expect(os.WriteFile(dst, []byte("old-binary"), 0o755)).To(Succeed())
 
@@ -205,8 +205,8 @@ var _ = Describe("releaseAssetName", func() {
 			Expect(asset).To(Equal(wantAsset))
 			Expect(bin).To(Equal(wantBin))
 		},
-		Entry("linux amd64", "linux", "amd64", "ccp_1.2.3_linux_amd64.zip", "ccp"),
-		Entry("windows arm64", "windows", "arm64", "ccp_1.2.3_windows_arm64.zip", "ccp.exe"),
+		Entry("linux amd64", "linux", "amd64", "cmdshape_1.2.3_linux_amd64.zip", "cmdshape"),
+		Entry("windows arm64", "windows", "arm64", "cmdshape_1.2.3_windows_arm64.zip", "cmdshape.exe"),
 	)
 
 	It("rejects unsupported operating systems", func() {
@@ -261,10 +261,10 @@ var _ = Describe("upgrade helper functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sum).To(Equal(expected))
 		},
-		Entry("matches plain filenames", "abc123  ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "abc123"),
-		Entry("matches starred checksum entries", "def456 *ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "def456"),
-		Entry("matches dot-slash checksum entries", "fedcba  ./ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "fedcba"),
-		Entry("ignores uppercase checksum text differences during later verification", "ABC123  ./ccp_1.2.3_linux_amd64.zip\n", "ccp_1.2.3_linux_amd64.zip", "ABC123"),
+		Entry("matches plain filenames", "abc123  cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "abc123"),
+		Entry("matches starred checksum entries", "def456 *cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "def456"),
+		Entry("matches dot-slash checksum entries", "fedcba  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "fedcba"),
+		Entry("ignores uppercase checksum text differences during later verification", "ABC123  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "ABC123"),
 	)
 
 	It("returns an error when the archive does not contain the binary", func() {
@@ -276,8 +276,8 @@ var _ = Describe("upgrade helper functions", func() {
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { _ = zr.Close() })
 
-		_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
-		Expect(err).To(MatchError(ContainSubstring("binary ccp not found in archive")))
+		_, err = extractBinaryFromZip(zr.File, "cmdshape", tmpDir)
+		Expect(err).To(MatchError(ContainSubstring("binary cmdshape not found in archive")))
 	})
 
 	DescribeTable("rejects unsafe binary archive entries",
@@ -289,20 +289,20 @@ var _ = Describe("upgrade helper functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() { _ = zr.Close() })
 
-			_, err = extractBinaryFromZip(zr.File, "ccp", tmpDir)
+			_, err = extractBinaryFromZip(zr.File, "cmdshape", tmpDir)
 			Expect(err).To(MatchError(ContainSubstring(message)))
 		},
-		Entry("path traversal", []zipTestEntry{{name: "../ccp", body: "x"}}, "unsafe archive entry"),
-		Entry("absolute path", []zipTestEntry{{name: "/ccp", body: "x"}}, "unsafe archive entry"),
-		Entry("duplicate binaries", []zipTestEntry{{name: "ccp", body: "one"}, {name: "ccp", body: "two"}}, "duplicate binary"),
-		Entry("symlink binary", []zipTestEntry{{name: "ccp", body: "target", mode: os.ModeSymlink | 0o777}}, "not a regular file"),
+		Entry("path traversal", []zipTestEntry{{name: "../cmdshape", body: "x"}}, "unsafe archive entry"),
+		Entry("absolute path", []zipTestEntry{{name: "/cmdshape", body: "x"}}, "unsafe archive entry"),
+		Entry("duplicate binaries", []zipTestEntry{{name: "cmdshape", body: "one"}, {name: "cmdshape", body: "two"}}, "duplicate binary"),
+		Entry("symlink binary", []zipTestEntry{{name: "cmdshape", body: "target", mode: os.ModeSymlink | 0o777}}, "not a regular file"),
 	)
 
 	It("requires exact staged --version output", func() {
 		if runtime.GOOS == "windows" {
 			Skip("uses a unix shell script")
 		}
-		path := filepath.Join(GinkgoT().TempDir(), "ccp")
+		path := filepath.Join(GinkgoT().TempDir(), "cmdshape")
 		Expect(os.WriteFile(path, []byte("#!/bin/sh\nprintf '1.2.3\\n'\n"), 0o755)).To(Succeed())
 		Expect(validateStagedBinaryVersion(path, "1.2.3")).To(Succeed())
 		Expect(validateStagedBinaryVersion(path, "1.2.4")).To(MatchError(ContainSubstring("does not match requested")))
@@ -328,7 +328,7 @@ var _ = Describe("upgrade helper functions", func() {
 
 			tmpDir := GinkgoT().TempDir()
 			logPath := filepath.Join(tmpDir, "repair.log")
-			exePath := filepath.Join(tmpDir, "ccp")
+			exePath := filepath.Join(tmpDir, "cmdshape")
 			script := "#!/bin/sh\nprintf '%s %s' \"$1\" \"$2\" >" + shellQuoteArg(logPath) + "\n"
 			Expect(os.WriteFile(exePath, []byte(script), 0o755)).To(Succeed())
 
@@ -354,8 +354,8 @@ var _ = Describe("verifyDownloadedAssetChecksum", func() {
 
 	BeforeEach(func() {
 		tmpDir = GinkgoT().TempDir()
-		assetName = "ccp_1.2.3_linux_amd64.zip"
-		assetBody = makeZipArchive("ccp", []byte(newBinaryContent))
+		assetName = "cmdshape_1.2.3_linux_amd64.zip"
+		assetBody = makeZipArchive("cmdshape", []byte(newBinaryContent))
 		assetPath = filepath.Join(tmpDir, assetName)
 		checksumsPath = filepath.Join(tmpDir, releaseChecksumsAsset)
 		Expect(os.WriteFile(assetPath, assetBody, 0o644)).To(Succeed())
@@ -385,7 +385,7 @@ var _ = Describe("verifyDownloadedAssetChecksum", func() {
 		Entry("when the asset is absent from the checksum file", func() {
 			Expect(os.WriteFile(checksumsPath, []byte("deadbeef  ./other.zip\n"), 0o644)).To(Succeed())
 		}, func(err error) {
-			Expect(err.Error()).To(ContainSubstring(`checksum for asset "ccp_1.2.3_linux_amd64.zip" not found`))
+			Expect(err.Error()).To(ContainSubstring(`checksum for asset "cmdshape_1.2.3_linux_amd64.zip" not found`))
 		}),
 		Entry("when the downloaded asset cannot be hashed", func() {
 			Expect(os.WriteFile(checksumsPath, checksumFixtureBody(assetName, assetBody, false), 0o644)).To(Succeed())
@@ -403,7 +403,7 @@ var _ = Describe("upgrade permission helpers", func() {
 				Skip("unix executable bits are not observable on Windows filesystems")
 			}
 
-			path := filepath.Join(GinkgoT().TempDir(), "ccp")
+			path := filepath.Join(GinkgoT().TempDir(), "cmdshape")
 			Expect(os.WriteFile(path, []byte("binary"), 0o644)).To(Succeed())
 
 			prevOS := upgradeRuntimeOS
@@ -438,7 +438,7 @@ var _ = Describe("RunUpgrade", func() {
 
 	BeforeEach(func() {
 		tmpDir = GinkgoT().TempDir()
-		dest = filepath.Join(tmpDir, "ccp")
+		dest = filepath.Join(tmpDir, "cmdshape")
 		Expect(os.WriteFile(dest, []byte("old"), 0o755)).To(Succeed())
 		args = nil
 		client = mockUpgradeClient(defaultUpgradeRepo, "1.2.3", "linux", "amd64", []byte(newBinaryContent), false)
@@ -476,11 +476,11 @@ var _ = Describe("RunUpgrade", func() {
 			DeferCleanup(func() { upgradePrintf = prevPrintf })
 
 			Expect(RunUpgrade(args)).To(Succeed())
-			Expect(printed).To(Equal(fmt.Sprintf("ccp upgrade: replaced %s with %s (%s)\n", dest, "ccp_1.2.3_linux_amd64.zip", "1.2.3")))
+			Expect(printed).To(Equal(fmt.Sprintf("cmdshape upgrade: replaced %s with %s (%s)\n", dest, "cmdshape_1.2.3_linux_amd64.zip", "1.2.3")))
 		})
 
 		It("cleans up temporary extracted upgrade directories", func() {
-			pattern := filepath.Join(os.TempDir(), "ccp-upgrade-*")
+			pattern := filepath.Join(os.TempDir(), "cmdshape-upgrade-*")
 			before, err := filepath.Glob(pattern)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -678,7 +678,7 @@ var _ = Describe("RunUpgrade", func() {
 			Expect(err).To(MatchError(ContainSubstring("repair failed")))
 			Expect(err).To(MatchError(ContainSubstring("post-upgrade repair failed after installing the new binary")))
 			Expect(err).To(MatchError(ContainSubstring("the new binary remains installed")))
-			Expect(err).To(MatchError(ContainSubstring("ccp repair --yes")))
+			Expect(err).To(MatchError(ContainSubstring("cmdshape repair --yes")))
 
 			b, readErr := os.ReadFile(dest)
 			Expect(readErr).NotTo(HaveOccurred())
@@ -688,7 +688,7 @@ var _ = Describe("RunUpgrade", func() {
 
 	Context("when the removed repo flag is provided", func() {
 		BeforeEach(func() {
-			args = []string{"--repo", "acme/ccp"}
+			args = []string{"--repo", "acme/cmdshape"}
 		})
 
 		It("rejects the flag", func() {
@@ -767,8 +767,12 @@ func mockUpgradeClientWithoutChecksums(repo string, tag string, goos string, goa
 }
 
 func mockUpgradeClientWithOptions(repo string, tag string, goos string, goarch string, binary []byte, failAPI bool, failDownload bool, includeChecksums bool, mismatchChecksum bool) *http.Client {
-	asset := fmt.Sprintf("ccp_%s_%s_%s.zip", tag, goos, goarch)
-	zipBody := makeZipArchive("ccp", binary)
+	asset := fmt.Sprintf("cmdshape_%s_%s_%s.zip", tag, goos, goarch)
+	binaryName := "cmdshape"
+	if goos == "windows" {
+		binaryName += ".exe"
+	}
+	zipBody := makeZipArchive(binaryName, binary)
 	checksumBody := checksumFixtureBody(asset, zipBody, mismatchChecksum)
 
 	return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {

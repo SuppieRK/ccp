@@ -3,7 +3,7 @@ package filters
 import (
 	"path/filepath"
 
-	"go-command-compression-proxy/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -72,11 +72,11 @@ var _ = Describe("filter sources", func() {
 		}),
 		Entry("project source", ProjectSource, "/repo", FilterSource{
 			Kind:      SourceProject,
-			Directory: filepath.Join("/repo", ".ccp", "filters"),
+			Directory: filepath.Join("/repo", ".cmdshape", "filters"),
 		}),
 		Entry("home source", HomeSource, "/home/user", FilterSource{
 			Kind:      SourceHome,
-			Directory: filepath.Join("/home/user", ".config", "ccp", "filters"),
+			Directory: filepath.Join("/home/user", ".config", "cmdshape", "filters"),
 		}),
 	)
 })

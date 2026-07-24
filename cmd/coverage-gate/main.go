@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"go-command-compression-proxy/internal/quality/coverage"
+	"github.com/SuppieRK/cmdshape/internal/quality/coverage"
 )
 
 func main() {
@@ -67,7 +67,7 @@ func parseConfig(args []string) (config, int, error) {
 	flags := flag.NewFlagSet("coverage-gate", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.StringVar(&cfg.coverProfile, "coverprofile", "", "path to go coverage profile")
-	flags.StringVar(&cfg.modulePath, "module", "go-command-compression-proxy", "go module path")
+	flags.StringVar(&cfg.modulePath, "module", "github.com/SuppieRK/cmdshape", "go module path")
 	flags.StringVar(&cfg.internalPrefix, "internal-prefix", "internal/", "required package prefix")
 	flags.Float64Var(&cfg.threshold, "threshold", 80.0, "required minimum coverage percentage")
 	flags.StringVar(&cfg.outPath, "summary-out", "", "optional file path to write markdown summary")

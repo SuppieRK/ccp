@@ -37,7 +37,7 @@ func scheduleExecutableRemoval(exePath string) error {
 }
 
 func uninstallRemovalScript(exePath string) (string, string, error) {
-	name := fmt.Sprintf("ccp-uninstall-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("cmdshape-uninstall-%d", time.Now().UnixNano())
 	if runtime.GOOS == "windows" {
 		scriptPath := filepath.Join(os.TempDir(), name+".cmd")
 		body := "@echo off\r\n" +

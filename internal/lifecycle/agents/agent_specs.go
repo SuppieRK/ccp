@@ -43,66 +43,66 @@ var managedRuleFileAdapterSpecs = []managedRuleFileAdapterSpec{
 	{
 		ID:             AgentAmazonQ,
 		DetectRootPath: ".amazonq",
-		TargetRelPath:  ".amazonq/rules/ccp.md",
+		TargetRelPath:  ".amazonq/rules/cmdshape.md",
 		MissingFmt:     "missing amazon q rule file: %s",
 		GuidanceFmt:    "missing amazon q managed guidance in %s",
-		Render:         ccpManagedGuidanceMarkdown,
+		Render:         cmdshapeManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
 	{
 		ID:             AgentCline,
 		DetectRootPath: ".clinerules",
-		TargetRelPath:  ".clinerules/ccp.md",
+		TargetRelPath:  ".clinerules/cmdshape.md",
 		MissingFmt:     "missing cline rule file: %s",
 		GuidanceFmt:    "missing cline managed guidance in %s",
-		Render:         ccpManagedGuidanceMarkdown,
+		Render:         cmdshapeManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
 	{
 		ID:             AgentCursor,
 		DetectRootPath: ".cursor",
-		TargetRelPath:  ".cursor/rules/ccp.mdc",
+		TargetRelPath:  ".cursor/rules/cmdshape.mdc",
 		MissingFmt:     "missing cursor rule file: %s",
 		GuidanceFmt:    "missing cursor managed guidance in %s",
 		Render:         cursorRuleContent,
 		VerifyRequired: []string{
 			"alwaysApply: true",
-			"Use `ccp` as the command prefix for every executable in shell commands",
-			"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
-			ccpRawEscapeHatch,
-			ccpFilterPromptHint,
+			"Use `cmdshape` as the command prefix for every executable in shell commands",
+			"`cmdshape nl -ba spec.md | cmdshape sed -n '1,260p'`",
+			cmdshapeRawEscapeHatch,
+			cmdshapeFilterPromptHint,
 		},
 		TargetScope: managedRuleFileTargetRepo,
 	},
 	{
 		ID:             AgentRooCode,
 		DetectRootPath: ".roo",
-		TargetRelPath:  ".roo/rules/ccp.md",
+		TargetRelPath:  ".roo/rules/cmdshape.md",
 		MissingFmt:     "missing roocode rule file: %s",
 		GuidanceFmt:    "missing roocode managed guidance in %s",
-		Render:         ccpManagedGuidanceMarkdown,
+		Render:         cmdshapeManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetHome,
 	},
 	{
 		ID:             AgentTrae,
 		DetectRootPath: ".trae",
-		TargetRelPath:  ".trae/rules/ccp.md",
+		TargetRelPath:  ".trae/rules/cmdshape.md",
 		MissingFmt:     "missing trae rule file: %s",
 		GuidanceFmt:    "missing trae managed guidance in %s",
-		Render:         ccpManagedGuidanceMarkdown,
+		Render:         cmdshapeManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
 	{
 		ID:             AgentWindsurf,
 		DetectRootPath: ".windsurf",
-		TargetRelPath:  ".windsurf/rules/ccp.md",
+		TargetRelPath:  ".windsurf/rules/cmdshape.md",
 		MissingFmt:     "missing windsurf rule file: %s",
 		GuidanceFmt:    "missing windsurf managed guidance in %s",
-		Render:         ccpManagedGuidanceMarkdown,
+		Render:         cmdshapeManagedGuidanceMarkdown,
 		VerifyRequired: canonicalRuleVerificationSnippets(),
 		TargetScope:    managedRuleFileTargetRepo,
 	},
@@ -326,7 +326,7 @@ var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
 	HookScriptName: codebuddyHookScriptName,
 	SettingsName:   codebuddySettingsName,
 	HookContent: func() string {
-		return bashRewriteHookScriptContent("codebuddy", "ccp-codebuddy-hook.log")
+		return bashRewriteHookScriptContent("codebuddy", "cmdshape-codebuddy-hook.log")
 	},
 	PlanSettingsContent: preToolUseCommandSettingsContent,
 	UpsertSettings:      upsertCodeBuddySettings,
@@ -357,11 +357,11 @@ var codebuddyHookSettingsSpec = ManagedHookSettingsAdapterSpec{
 
 func canonicalRuleVerificationSnippets() []string {
 	return []string{
-		"## CCP Integration (Managed)",
-		"Use `ccp` as the command prefix for every executable in shell commands",
-		"`ccp nl -ba spec.md | ccp sed -n '1,260p'`",
-		ccpRawEscapeHatch,
-		ccpFilterPromptHint,
+		"## cmdshape Integration (Managed)",
+		"Use `cmdshape` as the command prefix for every executable in shell commands",
+		"`cmdshape nl -ba spec.md | cmdshape sed -n '1,260p'`",
+		cmdshapeRawEscapeHatch,
+		cmdshapeFilterPromptHint,
 	}
 }
 
@@ -457,10 +457,10 @@ func newManagedRuleFileAdapterFromSpec(spec managedRuleFileAdapterSpec) Adapter 
 
 func cursorRuleContent() string {
 	return "---\n" +
-		"description: Route shell commands through ccp\n" +
+		"description: Route shell commands through cmdshape\n" +
 		"alwaysApply: true\n" +
 		"---\n\n" +
-		ccpManagedGuidanceMarkdown()
+		cmdshapeManagedGuidanceMarkdown()
 }
 
 func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {

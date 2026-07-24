@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"go-command-compression-proxy/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +24,7 @@ func syncMissingPackagedFilters(homeDir string) error {
 		return err
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
-	dstDir := filepath.Join(homeDir, configDirName, "ccp", "filters")
+	dstDir := filepath.Join(homeDir, configDirName, "cmdshape", "filters")
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func syncMissingPackagedFilters(homeDir string) error {
 }
 
 func materializedPackagedFiltersDir() (string, error) {
-	tmpDir, err := os.MkdirTemp("", "ccp-filters-*")
+	tmpDir, err := os.MkdirTemp("", "cmdshape-filters-*")
 	if err != nil {
 		return "", err
 	}

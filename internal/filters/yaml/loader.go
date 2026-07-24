@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	v2filters "go-command-compression-proxy/internal/filters"
-	"go-command-compression-proxy/internal/filtertrust"
-	"go-command-compression-proxy/internal/version"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	v2filters "github.com/SuppieRK/cmdshape/internal/filters"
+	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/version"
 
 	"gopkg.in/yaml.v3"
 )
@@ -69,7 +69,7 @@ func prepareFilterSource(source v2filters.FilterSource) (preparedFilterSource, b
 		return preparedFilterSource{source: source}, false, nil
 	}
 
-	source.Directory = filepath.Join(decision.Root, ".ccp", "filters")
+	source.Directory = filepath.Join(decision.Root, ".cmdshape", "filters")
 	projectFiles := make(map[string][]byte, len(files))
 	for _, file := range files {
 		projectFiles[file.Name] = file.Raw
@@ -763,7 +763,7 @@ func compileFiltersFromSource(loaded []LoadedFilter, source v2filters.FilterSour
 		}
 		// Intentional override behavior: within a single source directory, later
 		// lexicographically loaded files replace earlier ones for the same filter
-		// id. This matches CCP's documented override model and keeps precedence
+		// id. This matches cmdshape's documented override model and keeps precedence
 		// deterministic instead of failing registry construction on collisions.
 		filter.WithProvenance(filterProvenance(source, candidate.Path, candidate.Raw))
 		filters[candidate.Spec.Filter] = filter

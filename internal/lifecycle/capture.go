@@ -14,10 +14,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	core "go-command-compression-proxy/internal"
-	"go-command-compression-proxy/internal/audit"
-	"go-command-compression-proxy/internal/contracts"
-	"go-command-compression-proxy/internal/replay"
+	core "github.com/SuppieRK/cmdshape/internal"
+	"github.com/SuppieRK/cmdshape/internal/audit"
+	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/replay"
 )
 
 const (
@@ -42,8 +42,8 @@ func RunCapture(args []string) error {
 	confidentialFlag := fs.String("confidential", "", "comma-separated literal values to redact from captured argv and output")
 	setLifecycleUsage(
 		fs,
-		"capture native stdout/stderr and replay CCP output for local filter iteration",
-		[]string{"ccp capture [--dir <path>] -- <command> [args...]"},
+		"capture native stdout/stderr and replay cmdshape output for local filter iteration",
+		[]string{"cmdshape capture [--dir <path>] -- <command> [args...]"},
 		"capture writes command.yaml, sequenced native streams, merged output.txt, and exact output.stdout.txt/output.stderr.txt expectations.",
 		"when --dir is omitted, capture writes to the current working directory.",
 		"stdout.txt and stderr.txt use sequenced 00000| prefixes so replay preserves cross-stream ordering.",

@@ -11,10 +11,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"go-command-compression-proxy/internal/benchmark"
+	"github.com/SuppieRK/cmdshape/internal/benchmark"
 )
 
-var _ = Describe("ccp-ci", func() {
+var _ = Describe("cmdshape-ci", func() {
 	Describe("parseConfig", func() {
 		It("reads the configured flags", func() {
 			cfg, code, err := parseConfig([]string{
@@ -112,7 +112,7 @@ var _ = Describe("ccp-ci", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(received.FixturesRoot).To(Equal(filepath.Join("fixtures", "grep")))
 			Expect(received.ArtifactsDir).To(Equal("artifacts"))
-			Expect(received.ProxyBinary).To(Equal("ccp"))
+			Expect(received.ProxyBinary).To(Equal("cmdshape"))
 			Expect(received.Timeout).To(Equal(2 * time.Minute))
 			Expect(received.PreviousReport).To(Equal("report.json"))
 		})
@@ -138,8 +138,8 @@ var _ = Describe("ccp-ci", func() {
 
 	Describe("fatal", func() {
 		It("prints the message and exits non-zero", func() {
-			cmd := exec.Command(os.Args[0], "-test.run=TestCCPCI", "--", "fatal-helper")
-			cmd.Env = append(os.Environ(), "CCP_CI_FATAL_HELPER=1")
+			cmd := exec.Command(os.Args[0], "-test.run=TestCmdshapeCI", "--", "fatal-helper")
+			cmd.Env = append(os.Environ(), "CMDSHAPE_CI_FATAL_HELPER=1")
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 
@@ -169,7 +169,7 @@ func init() {
 }
 
 func runFatalHelperIfRequested() {
-	if os.Getenv("CCP_CI_FATAL_HELPER") != "1" {
+	if os.Getenv("CMDSHAPE_CI_FATAL_HELPER") != "1" {
 		return
 	}
 

@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"go-command-compression-proxy/internal/lifecycle/agents"
-	"go-command-compression-proxy/internal/workspaces"
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 var (
@@ -22,10 +22,10 @@ func RunUninstall(args []string) error {
 	toolsArg := fs.String("tools", "", "comma-separated tool names (optional: limit uninstall to selected integrations)")
 	setLifecycleUsage(
 		fs,
-		"remove ccp integrations or fully uninstall ccp",
-		[]string{"ccp uninstall [--tools <tool,tool,...>]"},
-		"When --tools is provided, ccp removes only the selected integrations from their canonical install targets.",
-		"When --tools is omitted, ccp performs a complete uninstall of managed integrations, recorded workspace state, and global CCP files before removing the executable.",
+		"remove cmdshape integrations or fully uninstall cmdshape",
+		[]string{"cmdshape uninstall [--tools <tool,tool,...>]"},
+		"When --tools is provided, cmdshape removes only the selected integrations from their canonical install targets.",
+		"When --tools is omitted, cmdshape performs a complete uninstall of managed integrations, recorded workspace state, and global cmdshape files before removing the executable.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -62,6 +62,12 @@ func runToolScopedUninstall(tools []string, adapters map[string]agents.Adapter) 
 }
 
 func runCompleteUninstall(adapters map[string]agents.Adapter) error {
+	if journal, err := executeBrandMigration(); err != nil {
+		writeLifecycleWarning("cmdshape uninstall: warning: previous-installation cleanup failed: %v\n", err)
+	} else if !journal.Complete {
+		writeLifecycleWarning("cmdshape uninstall: warning: some previous-installation artifacts could not be removed; run `cmdshape migrate status` for details before cmdshape removes itself\n")
+	}
+
 	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return err
@@ -73,9 +79,9 @@ func runCompleteUninstall(adapters map[string]agents.Adapter) error {
 
 	entries, err := workspaces.ListPath(workspaces.PathForHome(homeDir))
 	if err != nil {
-		writeLifecycleWarning("ccp uninstall: warning: could not read workspace registry: %v\n", err)
-		writeLifecycleWarning("ccp uninstall: warning: repo-scoped CCP files in other workspaces may remain; manual repo cleanup example:\n  %s\n", manualRepoUninstallCommand())
-		writeLifecycleWarning("ccp uninstall: warning: review mixed-content files like AGENTS.md in other repos for remaining CCP managed blocks\n")
+		writeLifecycleWarning("cmdshape uninstall: warning: could not read workspace registry: %v\n", err)
+		writeLifecycleWarning("cmdshape uninstall: warning: repo-scoped cmdshape files in other workspaces may remain; manual repo cleanup example:\n  %s\n", manualRepoUninstallCommand())
+		writeLifecycleWarning("cmdshape uninstall: warning: review mixed-content files like AGENTS.md in other repos for remaining cmdshape managed blocks\n")
 		entries = nil
 	}
 	scopes := uninstallScopes(scopeRoot, entries)
@@ -89,7 +95,7 @@ func runCompleteUninstall(adapters map[string]agents.Adapter) error {
 	if err := removeWorkspaceState(scopes, entries); err != nil {
 		return err
 	}
-	if err := removeGlobalCCPState(homeDir); err != nil {
+	if err := removeGlobalCmdshapeState(homeDir); err != nil {
 		return err
 	}
 
@@ -100,7 +106,7 @@ func runCompleteUninstall(adapters map[string]agents.Adapter) error {
 	if err := uninstallScheduleSelfRemoval(exePath); err != nil {
 		return err
 	}
-	fmt.Printf("ccp uninstall: scheduled executable removal (%s)\n", exePath)
+	fmt.Printf("cmdshape uninstall: scheduled executable removal (%s)\n", exePath)
 	return nil
 }
 
@@ -111,7 +117,7 @@ func applyUninstallAdapters(ctx agents.Context, tools []string, adapters map[str
 		uninstaller, ok := adapter.(agents.Uninstaller)
 		if !ok {
 			states = append(states, toolState{Tool: tool, Status: "noop", Reason: "no uninstall action"})
-			fmt.Printf("ccp uninstall: [%s] status=noop (no uninstall action)\n", tool)
+			fmt.Printf("cmdshape uninstall: [%s] status=noop (no uninstall action)\n", tool)
 			continue
 		}
 		res, err := uninstaller.Uninstall(ctx)
@@ -125,7 +131,7 @@ func applyUninstallAdapters(ctx agents.Context, tools []string, adapters map[str
 			status = "noop"
 		}
 		states = append(states, toolState{Tool: tool, Status: status, Reason: reason})
-		fmt.Printf("ccp uninstall: [%s] status=%s (%s)\n", tool, status, reason)
+		fmt.Printf("cmdshape uninstall: [%s] status=%s (%s)\n", tool, status, reason)
 	}
 	return states, nil
 }
@@ -191,10 +197,10 @@ func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error
 }
 
 func removeManagedWorkspaceState(scope string) error {
-	ccpDir := filepath.Join(scope, ".ccp")
-	targets, err := managedWorkspaceStatePaths(ccpDir)
+	cmdshapeDir := filepath.Join(scope, ".cmdshape")
+	targets, err := managedWorkspaceStatePaths(cmdshapeDir)
 	if err != nil {
-		return fmt.Errorf("resolve workspace state %q: %w", ccpDir, err)
+		return fmt.Errorf("resolve workspace state %q: %w", cmdshapeDir, err)
 	}
 
 	var errs []error
@@ -203,18 +209,18 @@ func removeManagedWorkspaceState(scope string) error {
 			errs = append(errs, fmt.Errorf("remove workspace state %q: %w", path, err))
 		}
 	}
-	if err := removeEmptyDirsUnder(ccpDir); err != nil {
-		errs = append(errs, fmt.Errorf("cleanup workspace state %q: %w", ccpDir, err))
+	if err := removeEmptyDirsUnder(cmdshapeDir); err != nil {
+		errs = append(errs, fmt.Errorf("cleanup workspace state %q: %w", cmdshapeDir, err))
 	}
 	return errors.Join(errs...)
 }
 
-func managedWorkspaceStatePaths(ccpDir string) ([]string, error) {
+func managedWorkspaceStatePaths(cmdshapeDir string) ([]string, error) {
 	targets := []string{
-		filepath.Join(ccpDir, "gain.db"),
-		filepath.Join(ccpDir, "init.json"),
+		filepath.Join(cmdshapeDir, "gain.db"),
+		filepath.Join(cmdshapeDir, "init.json"),
 	}
-	matches, err := filepath.Glob(filepath.Join(ccpDir, "init.json.bak.*"))
+	matches, err := filepath.Glob(filepath.Join(cmdshapeDir, "init.json.bak.*"))
 	if err != nil {
 		return nil, err
 	}
@@ -261,18 +267,18 @@ func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
 	}
 	workspaceRoot := filepath.Clean(entry.CWD)
 	metricsPath := filepath.Clean(entry.MetricsPath)
-	canonical := filepath.Join(workspaceRoot, ".ccp", "gain.db")
+	canonical := filepath.Join(workspaceRoot, ".cmdshape", "gain.db")
 	if metricsPath != canonical {
 		return "", false
 	}
 	return metricsPath, true
 }
 
-func removeGlobalCCPState(homeDir string) error {
+func removeGlobalCmdshapeState(homeDir string) error {
 	var errs []error
 	for _, path := range []string{
-		filepath.Join(homeDir, configDirName, "ccp"),
-		filepath.Join(homeDir, ".ccp"),
+		filepath.Join(homeDir, configDirName, "cmdshape"),
+		filepath.Join(homeDir, ".cmdshape"),
 	} {
 		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
 			errs = append(errs, fmt.Errorf("remove %q: %w", path, err))
@@ -282,7 +288,7 @@ func removeGlobalCCPState(homeDir string) error {
 }
 
 func manualRepoUninstallCommand() string {
-	return `REPO=/path/to/repo && rm -f "$REPO/.ccp/gain.db" "$REPO/.ccp/init.json" "$REPO"/.ccp/init.json.bak.* "$REPO/.cursor/rules/ccp.mdc" "$REPO/.clinerules/ccp.md" "$REPO/.amazonq/rules/ccp.md" "$REPO/.trae/rules/ccp.md" "$REPO/.windsurf/rules/ccp.md"`
+	return `REPO=/path/to/repo && rm -f "$REPO/.cmdshape/gain.db" "$REPO/.cmdshape/init.json" "$REPO"/.cmdshape/init.json.bak.* "$REPO/.cursor/rules/cmdshape.mdc" "$REPO/.clinerules/cmdshape.md" "$REPO/.amazonq/rules/cmdshape.md" "$REPO/.trae/rules/cmdshape.md" "$REPO/.windsurf/rules/cmdshape.md"`
 }
 
 func writeLifecycleWarning(format string, args ...any) {
