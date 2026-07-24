@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,38 +20,36 @@ import (
 )
 
 var _ = Describe("filter", func() {
-	captureStdout := func(fn func() error) string {
-		orig := os.Stdout
+	captureOutput := func(stream **os.File, fn func() error) string {
+		orig := *stream
 		r, w, err := os.Pipe()
 		Expect(err).NotTo(HaveOccurred())
-		os.Stdout = w
-		DeferCleanup(func() { os.Stdout = orig })
-
-		Expect(fn()).To(Succeed())
-		Expect(w.Close()).To(Succeed())
+		*stream = w
+		defer func() {
+			*stream = orig
+		}()
 
 		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Close()).To(Succeed())
+		copyDone := make(chan error, 1)
+		go func() {
+			_, copyErr := io.Copy(&buf, r)
+			copyDone <- copyErr
+		}()
+
+		runErr := fn()
+		*stream = orig
+		writeCloseErr := w.Close()
+		copyErr := <-copyDone
+		readCloseErr := r.Close()
+		Expect(errors.Join(runErr, writeCloseErr, copyErr, readCloseErr)).To(Succeed())
 		return buf.String()
 	}
 
+	captureStdout := func(fn func() error) string {
+		return captureOutput(&os.Stdout, fn)
+	}
 	captureStderr := func(fn func() error) string {
-		orig := os.Stderr
-		r, w, err := os.Pipe()
-		Expect(err).NotTo(HaveOccurred())
-		os.Stderr = w
-		DeferCleanup(func() { os.Stderr = orig })
-
-		Expect(fn()).To(Succeed())
-		Expect(w.Close()).To(Succeed())
-
-		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Close()).To(Succeed())
-		return buf.String()
+		return captureOutput(&os.Stderr, fn)
 	}
 
 	setHomeDir := func(home string) {
