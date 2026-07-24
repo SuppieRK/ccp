@@ -142,7 +142,7 @@ func InstallPlannedArtifacts(plan []PlannedArtifact, write WriterFunc) (InstallR
 			return res, err
 		}
 		if item.Kind == ArtifactHook {
-			if err := os.Chmod(item.Path, 0o755); err != nil {
+			if err := os.Chmod(item.Path, privateHookMode); err != nil {
 				return res, err
 			}
 		}

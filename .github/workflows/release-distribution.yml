@@ -119,19 +119,19 @@ jobs:
         env:
           TAG: ${{ needs.preflight.outputs.tag }}
           SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          TARGET_GOOS: ${{ matrix.goos }}
+          TARGET_GOARCH: ${{ matrix.goarch }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
           cmdshape_bin="cmdshape"
-          if [[ "$GOOS" == "windows" ]]; then
+          if [[ "$TARGET_GOOS" == "windows" ]]; then
             cmdshape_bin="cmdshape.exe"
           fi
           out_bin="dist/${cmdshape_bin}"
           ldflags="-s -w -X github.com/SuppieRK/cmdshape/internal/version.Version=${TAG}"
-          CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+          CGO_ENABLED=0 GOOS="$TARGET_GOOS" GOARCH="$TARGET_GOARCH" \
             go build -trimpath -ldflags "$ldflags" -o "$out_bin" ./cmd/cmdshape
           grep -aFq "${TAG}" "$out_bin"
 
@@ -140,7 +140,7 @@ jobs:
           test "$("$host_probe" --version)" = "${TAG}"
           rm -f "$host_probe"
 
-          asset="cmdshape_${TAG}_${GOOS}_${GOARCH}.zip"
+          asset="cmdshape_${TAG}_${TARGET_GOOS}_${TARGET_GOARCH}.zip"
           (
             cd dist
             zip -q "$asset" "$cmdshape_bin"
@@ -150,8 +150,8 @@ jobs:
           jq -n \
             --arg tag "$TAG" \
             --arg source_sha "$SOURCE_SHA" \
-            --arg goos "$GOOS" \
-            --arg goarch "$GOARCH" \
+            --arg goos "$TARGET_GOOS" \
+            --arg goarch "$TARGET_GOARCH" \
             --arg distribution "cmdshape" \
             --arg binary "$cmdshape_bin" \
             --arg asset "$asset" \

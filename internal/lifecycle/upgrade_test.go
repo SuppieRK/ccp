@@ -415,7 +415,7 @@ var _ = Describe("upgrade permission helpers", func() {
 			info, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
 			if expectExecutable {
-				Expect(info.Mode() & 0o111).NotTo(BeZero())
+				Expect(info.Mode().Perm()).To(Equal(privateExecutableMode))
 				return
 			}
 			Expect(info.Mode().IsRegular()).To(BeTrue())
@@ -637,7 +637,7 @@ var _ = Describe("RunUpgrade", func() {
 
 			info, err := os.Stat(dest)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(info.Mode() & 0o111).NotTo(BeZero())
+			Expect(info.Mode().Perm()).To(Equal(privateExecutableMode))
 		})
 	})
 

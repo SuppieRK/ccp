@@ -50,9 +50,12 @@ var _ = Describe("release distribution workflow", func() {
 		for _, snippet := range []string{
 			`goos: [linux, darwin, windows]`,
 			`goarch: [amd64, arm64]`,
-			`CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH"`,
+			`TARGET_GOOS: ${{ matrix.goos }}`,
+			`TARGET_GOARCH: ${{ matrix.goarch }}`,
+			`CGO_ENABLED=0 GOOS="$TARGET_GOOS" GOARCH="$TARGET_GOARCH"`,
 			`go build -trimpath -ldflags "$ldflags"`,
-			`asset="cmdshape_${TAG}_${GOOS}_${GOARCH}.zip"`,
+			`CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$host_probe"`,
+			`asset="cmdshape_${TAG}_${TARGET_GOOS}_${TARGET_GOARCH}.zip"`,
 			`test "$(unzip -Z1 "$asset")" = "$cmdshape_bin"`,
 			`source_sha:$source_sha`,
 			`name '*.zip' | wc -l)" -eq 6`,
@@ -76,6 +79,8 @@ var _ = Describe("release distribution workflow", func() {
 			"distributions+=(ccp)",
 			`$distributions += "ccp"`,
 			`legacy_bin="ccp"`,
+			"\n          GOOS: ${{ matrix.goos }}",
+			"\n          GOARCH: ${{ matrix.goarch }}",
 		} {
 			Expect(workflow).NotTo(ContainSubstring(forbidden))
 		}
@@ -140,6 +145,10 @@ var _ = Describe("validation workflow dependencies", func() {
 			Expect(workflow).To(ContainSubstring("go mod download"))
 			Expect(workflow).NotTo(ContainSubstring("go install "))
 			Expect(workflow).NotTo(ContainSubstring("raw.githubusercontent.com/golangci"))
+			Expect(workflow).To(ContainSubstring(
+				"uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8",
+			))
+			Expect(workflow).NotTo(ContainSubstring("uses: SonarSource/sonarqube-scan-action@v8"))
 		},
 		Entry("main validation", "main-validation.yml"),
 		Entry("pull-request validation", "pr-validation.yml"),

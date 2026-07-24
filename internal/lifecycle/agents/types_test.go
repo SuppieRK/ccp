@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("agent type helpers", func() {
 			if runtime.GOOS == "windows" {
 				Expect(info.Mode().IsRegular()).To(BeTrue())
 			} else {
-				Expect(info.Mode().Perm() & 0o111).NotTo(BeZero())
+				Expect(info.Mode().Perm()).To(Equal(privateHookMode))
 			}
 		})
 

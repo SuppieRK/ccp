@@ -10,6 +10,53 @@ import (
 )
 
 var _ = ginkgo.Describe("legacy integration migration", func() {
+	ginkgo.DescribeTable("resolves primary legacy artifact paths",
+		func(tool, relativePath string) {
+			home := ginkgo.GinkgoT().TempDir()
+			ctx := Context{ScopeRoot: filepath.Join(home, "repo"), HomeDir: home}
+
+			Expect(legacyPrimaryArtifactPaths(ctx, tool)).To(ContainElement(
+				filepath.Join(home, filepath.FromSlash(relativePath)),
+			))
+		},
+		ginkgo.Entry("OpenCode plugin", string(AgentOpenCode), ".config/opencode/plugins/"+legacyJSPluginName),
+		ginkgo.Entry("Kilocode plugin", string(AgentKilocode), ".config/kilocode/plugins/"+legacyJSPluginName),
+		ginkgo.Entry("Claude hook", string(AgentClaude), ".claude/hooks/"+legacyHookName),
+		ginkgo.Entry("CodeBuddy hook", string(AgentCodeBuddy), ".codebuddy/hooks/"+legacyHookName),
+	)
+
+	ginkgo.It("removes owned legacy plugins and Claude hooks", func() {
+		home := ginkgo.GinkgoT().TempDir()
+		ctx := Context{ScopeRoot: filepath.Join(home, "repo"), HomeDir: home}
+		legacyPaths := []struct {
+			tool      string
+			path      string
+			signature string
+		}{
+			{
+				tool:      string(AgentOpenCode),
+				path:      filepath.Join(home, ".config", "opencode", "plugins", legacyJSPluginName),
+				signature: legacyPluginSignature,
+			},
+			{
+				tool:      string(AgentKilocode),
+				path:      filepath.Join(home, ".config", "kilocode", "plugins", legacyJSPluginName),
+				signature: legacyPluginSignature,
+			},
+			{
+				tool:      string(AgentClaude),
+				path:      filepath.Join(home, ".claude", "hooks", legacyHookName),
+				signature: legacyHookSignature,
+			},
+		}
+		for _, legacy := range legacyPaths {
+			Expect(os.MkdirAll(filepath.Dir(legacy.path), 0o700)).To(Succeed())
+			Expect(os.WriteFile(legacy.path, []byte(legacy.signature+"\n"), 0o600)).To(Succeed())
+			Expect(CleanupLegacyArtifacts(ctx, []string{legacy.tool})).To(Succeed())
+			Expect(legacy.path).NotTo(BeAnExistingFile())
+		}
+	})
+
 	ginkgo.It("detects and removes an owned legacy rule after retaining the replacement", func() {
 		root := ginkgo.GinkgoT().TempDir()
 		ctx := Context{ScopeRoot: root, HomeDir: filepath.Join(root, "home")}

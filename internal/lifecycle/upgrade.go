@@ -25,6 +25,8 @@ const (
 	releaseChecksumsAsset = "cmdshape_checksums.txt"
 )
 
+const privateExecutableMode os.FileMode = 0o700
+
 type upgradeAssets struct {
 	archiveName string
 	binaryName  string
@@ -227,7 +229,7 @@ func ensureUpgradeExecutablePermissions(exePath string) error {
 	if upgradeRuntimeOS() == "windows" {
 		return nil
 	}
-	return os.Chmod(exePath, 0o755)
+	return os.Chmod(exePath, privateExecutableMode)
 }
 
 func printUpgradeSuccess(exePath, assetName, tag string) error {
@@ -520,7 +522,7 @@ func copyZipFileToPath(f *zip.File, dstPath string) (err error) {
 	}
 	defer closeWithErr(rc, &err)
 
-	df, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	df, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, privateExecutableMode)
 	if err != nil {
 		return err
 	}
@@ -534,7 +536,7 @@ func ensureExecutableIfNeeded(path string) error {
 	if upgradeRuntimeOS() == "windows" {
 		return nil
 	}
-	return os.Chmod(path, 0o755)
+	return os.Chmod(path, privateExecutableMode)
 }
 
 func backupBinaryPath(exePath string) string {

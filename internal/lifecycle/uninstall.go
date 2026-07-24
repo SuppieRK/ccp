@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/product"
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
@@ -197,7 +198,7 @@ func removeWorkspaceState(scopes []string, entries []workspaces.Workspace) error
 }
 
 func removeManagedWorkspaceState(scope string) error {
-	cmdshapeDir := filepath.Join(scope, ".cmdshape")
+	cmdshapeDir := filepath.Join(scope, product.ProjectDir)
 	targets, err := managedWorkspaceStatePaths(cmdshapeDir)
 	if err != nil {
 		return fmt.Errorf("resolve workspace state %q: %w", cmdshapeDir, err)
@@ -267,7 +268,7 @@ func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
 	}
 	workspaceRoot := filepath.Clean(entry.CWD)
 	metricsPath := filepath.Clean(entry.MetricsPath)
-	canonical := filepath.Join(workspaceRoot, ".cmdshape", "gain.db")
+	canonical := filepath.Join(workspaceRoot, product.ProjectDir, "gain.db")
 	if metricsPath != canonical {
 		return "", false
 	}
@@ -278,7 +279,7 @@ func removeGlobalCmdshapeState(homeDir string) error {
 	var errs []error
 	for _, path := range []string{
 		filepath.Join(homeDir, configDirName, "cmdshape"),
-		filepath.Join(homeDir, ".cmdshape"),
+		filepath.Join(homeDir, product.ProjectDir),
 	} {
 		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
 			errs = append(errs, fmt.Errorf("remove %q: %w", path, err))
