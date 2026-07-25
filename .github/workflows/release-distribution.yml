@@ -258,7 +258,7 @@ jobs:
   smoke-draft:
     needs: [preflight, create-draft]
     permissions:
-      contents: read
+      contents: write
     strategy:
       fail-fast: false
       matrix:
