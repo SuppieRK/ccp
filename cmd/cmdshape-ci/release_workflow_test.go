@@ -91,6 +91,7 @@ var _ = Describe("release distribution workflow", func() {
 		Expect(draft).To(BeNumerically(">", 0))
 		Expect(smoke).To(BeNumerically(">", draft))
 		Expect(publish).To(BeNumerically(">", smoke))
+		Expect(workflow[smoke:publish]).To(ContainSubstring("permissions:\n      contents: write"))
 	})
 })
 
