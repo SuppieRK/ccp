@@ -79,20 +79,21 @@ func RunVerify(args []string) error {
 	if err != nil {
 		return recordFailure(dir, "runner_replay", err)
 	}
-	if err := replay.WriteArtifact(fixture.VerifyOutput, []byte(replayed.Output), 0o644); err != nil {
-		return recordFailure(dir, "write_output", err)
+	artifacts := []struct {
+		stage string
+		path  string
+		body  string
+	}{
+		{stage: "write_output", path: fixture.VerifyOutput, body: replayed.Output},
+		{stage: "write_stdout", path: fixture.VerifyStdout, body: replayed.Stdout},
+		{stage: "write_stderr", path: fixture.VerifyStderr, body: replayed.Stderr},
+		{stage: "write_decisions", path: fixture.VerifyDecisions, body: replayed.Decisions},
+		{stage: "write_dispatch", path: fixture.VerifyDispatch, body: replayed.Dispatch + "\n"},
 	}
-	if err := replay.WriteArtifact(fixture.VerifyStdout, []byte(replayed.Stdout), 0o644); err != nil {
-		return recordFailure(dir, "write_stdout", err)
-	}
-	if err := replay.WriteArtifact(fixture.VerifyStderr, []byte(replayed.Stderr), 0o644); err != nil {
-		return recordFailure(dir, "write_stderr", err)
-	}
-	if err := replay.WriteArtifact(fixture.VerifyDecisions, []byte(replayed.Decisions), 0o644); err != nil {
-		return recordFailure(dir, "write_decisions", err)
-	}
-	if err := replay.WriteArtifact(fixture.VerifyDispatch, []byte(replayed.Dispatch+"\n"), 0o644); err != nil {
-		return recordFailure(dir, "write_dispatch", err)
+	for _, artifact := range artifacts {
+		if err := replay.WriteArtifact(artifact.path, []byte(artifact.body), 0o644); err != nil {
+			return recordFailure(dir, artifact.stage, err)
+		}
 	}
 
 	if err := audit.Append("verify_invocation_finish", map[string]any{

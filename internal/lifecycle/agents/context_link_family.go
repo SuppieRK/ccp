@@ -24,11 +24,15 @@ type ManagedContextLinkAdapterSpec struct {
 }
 
 type ManagedContextLinkAdapter struct {
-	spec ManagedContextLinkAdapterSpec
+	spec    ManagedContextLinkAdapterSpec
+	context ManagedContextAdapter
 }
 
 func NewManagedContextLinkAdapter(spec ManagedContextLinkAdapterSpec) ManagedContextLinkAdapter {
-	return ManagedContextLinkAdapter{spec: spec}
+	return ManagedContextLinkAdapter{
+		spec:    spec,
+		context: NewManagedContextAdapter(spec.ContextSpec),
+	}
 }
 
 func (a ManagedContextLinkAdapter) ID() string { return string(a.spec.ID) }
@@ -51,11 +55,11 @@ func (a ManagedContextLinkAdapter) Plan(ctx Context) []PlannedArtifact {
 		Path:    a.spec.ConfigPath(ctx),
 		Content: a.spec.ConfigPlanContent(ctx),
 		Perm:    0o644,
-	}}, NewManagedContextAdapter(a.spec.ContextSpec).Plan(ctx)...)
+	}}, a.context.Plan(ctx)...)
 }
 
 func (a ManagedContextLinkAdapter) Install(ctx Context, write WriterFunc) (InstallResult, error) {
-	res, err := NewManagedContextAdapter(a.spec.ContextSpec).Install(ctx, write)
+	res, err := a.context.Install(ctx, write)
 	if err != nil {
 		return InstallResult{}, err
 	}
@@ -72,14 +76,14 @@ func (a ManagedContextLinkAdapter) Install(ctx Context, write WriterFunc) (Insta
 }
 
 func (a ManagedContextLinkAdapter) Verify(ctx Context) error {
-	if err := NewManagedContextAdapter(a.spec.ContextSpec).Verify(ctx); err != nil {
+	if err := a.context.Verify(ctx); err != nil {
 		return err
 	}
 	return a.spec.VerifyConfig(a.spec.ConfigPath(ctx), ctx)
 }
 
 func (a ManagedContextLinkAdapter) Uninstall(ctx Context) (InstallResult, error) {
-	res, err := NewManagedContextAdapter(a.spec.ContextSpec).Uninstall(ctx)
+	res, err := a.context.Uninstall(ctx)
 	if err != nil {
 		return InstallResult{}, err
 	}

@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	captureStdoutFileName       = "stdout.txt"
-	captureStderrFileName       = "stderr.txt"
-	captureOutputFileName       = "output.txt"
-	captureOutputStdoutFileName = "output.stdout.txt"
-	captureOutputStderrFileName = "output.stderr.txt"
+	captureStdoutFileName       = replay.StdoutFileName
+	captureStderrFileName       = replay.StderrFileName
+	captureOutputFileName       = replay.OutputFileName
+	captureOutputStdoutFileName = replay.OutputStdoutFileName
+	captureOutputStderrFileName = replay.OutputStderrFileName
 )
 
 type captureVerifier interface {
@@ -105,12 +105,13 @@ func executeCapture(commandArgs []string, captureDir string, confidential []stri
 		return recordFailure("mkdir", err)
 	}
 
-	commandPath := filepath.Join(captureDir, replay.CommandFileName)
-	stdoutPath := filepath.Join(captureDir, captureStdoutFileName)
-	stderrPath := filepath.Join(captureDir, captureStderrFileName)
-	outputPath := filepath.Join(captureDir, captureOutputFileName)
-	outputStdoutPath := filepath.Join(captureDir, captureOutputStdoutFileName)
-	outputStderrPath := filepath.Join(captureDir, captureOutputStderrFileName)
+	paths := replay.FixturePaths(captureDir)
+	commandPath := paths[replay.CommandFileName]
+	stdoutPath := paths[replay.StdoutFileName]
+	stderrPath := paths[replay.StderrFileName]
+	outputPath := paths[replay.OutputFileName]
+	outputStdoutPath := paths[replay.OutputStdoutFileName]
+	outputStderrPath := paths[replay.OutputStderrFileName]
 	if err := tightenCaptureTargets([]string{commandPath, stdoutPath, stderrPath, outputPath, outputStdoutPath, outputStderrPath}); err != nil {
 		return recordFailure("tighten_targets", err)
 	}

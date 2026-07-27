@@ -127,6 +127,21 @@ func (v ArgumentView) MatchesLackAny(disallowed []string) bool {
 	return len(disallowed) == 0 || !v.MatchesHaveAny(disallowed)
 }
 
+func (v ArgumentView) MatchesPositionalsLackAny(disallowed []string) bool {
+	return len(disallowed) == 0 || !containsAny(v.positionals, disallowed)
+}
+
+func (v ArgumentView) MatchesNoPositionals(want, allowLeadingCommand bool) bool {
+	if !want {
+		return true
+	}
+	allowed := 0
+	if allowLeadingCommand && len(v.raw) > 0 {
+		allowed = 1
+	}
+	return len(v.positionals) <= allowed
+}
+
 func (v ArgumentView) MatchesHaveSequence(sequence []string) bool {
 	if len(sequence) == 0 {
 		return true

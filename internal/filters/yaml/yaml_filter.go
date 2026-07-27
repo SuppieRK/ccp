@@ -434,9 +434,7 @@ func cloneVariableValues(values map[string]string) map[string]string {
 	if len(values) == 0 {
 		return nil
 	}
-	cloned := make(map[string]string, len(values))
-	maps.Copy(cloned, values)
-	return cloned
+	return maps.Clone(values)
 }
 
 func cloneCompiledScope(src *compiledScope) *compiledScope {
@@ -494,12 +492,7 @@ func compileWhenArguments(when *WhenArguments) compiledWhen {
 }
 
 func cloneStrings(values []string) []string {
-	if values == nil {
-		return nil
-	}
-	cloned := make([]string, len(values))
-	copy(cloned, values)
-	return cloned
+	return slices.Clone(values)
 }
 
 func buildCompiledScope(name string, scope *OutputScope) (*compiledScope, error) {
@@ -1393,8 +1386,8 @@ func matchesWhenArguments(when compiledWhen, flagsWithValues, args []string) boo
 		operations.MatchesNotHaveShortFlag(view.BeforeSeparator(), when.notHaveShortFlag) &&
 		operations.MatchesHaveAllShortFlags(view.BeforeSeparator(), when.haveAllShortFlags) &&
 		operations.MatchesNotHaveAllShortFlags(view.BeforeSeparator(), when.notHaveAllShortFlags) &&
-		operations.MatchesPositionalsLackAny(args, when.positionalsLackAny, flagsWithValues) &&
-		operations.MatchesNoPositionals(args, flagsWithValues, when.noPositionals, leadingCommandContext)
+		view.MatchesPositionalsLackAny(when.positionalsLackAny) &&
+		view.MatchesNoPositionals(when.noPositionals, leadingCommandContext)
 }
 
 func outputCombined(out *OutputShape) *OutputScope {

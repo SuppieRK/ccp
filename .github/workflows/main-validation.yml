@@ -192,9 +192,11 @@ jobs:
           fi
 
           if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            echo "## Main Benchmark Summary (${tool})" >> "${GITHUB_STEP_SUMMARY}"
-            echo "" >> "${GITHUB_STEP_SUMMARY}"
-            echo "- Result: success" >> "${GITHUB_STEP_SUMMARY}"
+            {
+              echo "## Main Benchmark Summary (${tool})"
+              echo ""
+              echo "- Result: success"
+            } >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: Delete benchmark history cache key

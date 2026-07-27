@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 	"github.com/SuppieRK/cmdshape/internal/product"
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
@@ -268,7 +269,7 @@ func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
 	}
 	workspaceRoot := filepath.Clean(entry.CWD)
 	metricsPath := filepath.Clean(entry.MetricsPath)
-	canonical := filepath.Join(workspaceRoot, product.ProjectDir, "gain.db")
+	canonical := metrics.ProjectPath(workspaceRoot)
 	if metricsPath != canonical {
 		return "", false
 	}

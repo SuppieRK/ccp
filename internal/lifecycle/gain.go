@@ -250,7 +250,7 @@ func containedMetricsProject(cwd, metricsPath string) string {
 		return ""
 	}
 	path, err := filepath.Abs(filepath.Clean(metricsPath))
-	if err != nil || path != filepath.Join(root, ".cmdshape", "gain.db") {
+	if err != nil || path != metrics.ProjectPath(root) {
 		return ""
 	}
 	return root

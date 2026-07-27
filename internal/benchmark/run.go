@@ -315,7 +315,7 @@ func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTok
 	if err := os.MkdirAll(filepath.Join(artifactDir, ".cmdshape"), 0o755); err != nil {
 		return err
 	}
-	return metrics.Append(filepath.Join(artifactDir, ".cmdshape", "gain.db"), metrics.RunMetric{
+	return metrics.Append(metrics.ProjectPath(artifactDir), metrics.RunMetric{
 		Timestamp:  time.Now().UTC(),
 		Command:    strings.Join(args, " "),
 		Tool:       args[0],

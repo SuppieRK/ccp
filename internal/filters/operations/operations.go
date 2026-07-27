@@ -2,6 +2,7 @@ package operations
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
 )
@@ -43,7 +44,7 @@ func MatchesNotHaveAllShortFlags(args, flags []string) bool {
 }
 
 func MatchesPositionalsLackAny(args, disallowed, valueFlags []string) bool {
-	return len(disallowed) == 0 || !containsAny(ParseArguments(args, valueFlags).Positionals(), disallowed)
+	return ParseArguments(args, valueFlags).MatchesPositionalsLackAny(disallowed)
 }
 
 func HasExplicitPositionals(args, valueFlags []string) bool {
@@ -51,16 +52,7 @@ func HasExplicitPositionals(args, valueFlags []string) bool {
 }
 
 func MatchesNoPositionals(args, valueFlags []string, want bool, allowLeadingCommand bool) bool {
-	if !want {
-		return true
-	}
-	if len(args) == 0 {
-		return true
-	}
-	if allowLeadingCommand {
-		return len(ParseArguments(args[1:], valueFlags).Positionals()) == 0
-	}
-	return len(ParseArguments(args, valueFlags).Positionals()) == 0
+	return ParseArguments(args, valueFlags).MatchesNoPositionals(want, allowLeadingCommand)
 }
 
 func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T) (*T, bool) {
@@ -102,15 +94,7 @@ func containsSequence(args, sequence []string) bool {
 }
 
 func equalSequence(left, right []string) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for i := range left {
-		if left[i] != right[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(left, right)
 }
 
 func containsShortFlag(args, flags []string) bool {
@@ -140,12 +124,7 @@ func containsAllShortFlags(args, flags []string) bool {
 }
 
 func containsRune(value string, want rune) bool {
-	for _, current := range value {
-		if current == want {
-			return true
-		}
-	}
-	return false
+	return strings.ContainsRune(value, want)
 }
 
 func takesStandaloneValue(arg string, flags []string) bool {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	core "github.com/SuppieRK/cmdshape/internal"
 	"github.com/SuppieRK/cmdshape/internal/audit"
 	"github.com/SuppieRK/cmdshape/internal/cli"
 	"github.com/SuppieRK/cmdshape/internal/lifecycle"
+	"github.com/SuppieRK/cmdshape/internal/metrics"
 	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
@@ -133,7 +133,7 @@ func defaultMetricsPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(cwd, ".cmdshape", "gain.db")
+	return metrics.ProjectPath(cwd)
 }
 
 func usageText() string {

@@ -92,17 +92,6 @@ run_validate=false
 run_benchmarks=false
 change_class="none"
 
-append_lines_to_array() {
-  local __var_name="$1"
-  shift
-  local line
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    eval "$__var_name+=(\"\$line\")"
-  done < <("$@")
-  return 0
-}
-
 selected_contains() {
   local expected="$1"
   local existing
@@ -155,7 +144,10 @@ load_changed_files() {
 
   if [[ -n "$base_sha" && -n "$head_sha" ]]; then
     changed=()
-    append_lines_to_array changed git diff --name-only "$base_sha" "$head_sha"
+    while IFS= read -r path; do
+      [[ -z "$path" ]] && continue
+      changed+=("$path")
+    done < <(git diff --name-only "$base_sha" "$head_sha")
     return 0
   fi
 
@@ -214,8 +206,11 @@ if [[ "$run_all" -eq 1 ]]; then
   benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
   has_tools=true
 elif [[ ${#selected_tools[@]} -gt 0 ]]; then
-  IFS=$'\n' selected_tools=($(printf "%s\n" "${selected_tools[@]}" | sort))
-  unset IFS
+  sorted_tools=()
+  while IFS= read -r tool; do
+    sorted_tools+=("$tool")
+  done < <(printf "%s\n" "${selected_tools[@]}" | sort)
+  selected_tools=("${sorted_tools[@]}")
   benchmark_matrix=$(build_matrix_json "${selected_tools[@]}")
   has_tools=true
 else

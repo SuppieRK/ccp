@@ -1,10 +1,12 @@
 package lifecycle
 
 import (
+	"cmp"
 	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -227,71 +229,89 @@ func globalQuerySourceLabel(failure globalQueryFailure) string {
 }
 
 func queryGlobalSummaryRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryRow, error) {
-	grouped := map[string]metrics.SummaryRow{}
-	for _, source := range session.sources {
-		rows, err := metrics.QuerySummaryRows(source.MetricsPath, opts)
-		if err != nil {
-			session.recordFailure(source, err)
-			continue
-		}
-		for _, row := range rows {
-			current := grouped[row.Command]
+	return aggregateGlobalRows(
+		session,
+		opts,
+		metrics.QuerySummaryRows,
+		func(row metrics.SummaryRow) string { return row.Command },
+		func(current *metrics.SummaryRow, row metrics.SummaryRow) {
 			current.Command = row.Command
 			current.Commands += row.Commands
 			current.RawBytes += row.RawBytes
 			current.KeptBytes += row.KeptBytes
-			grouped[row.Command] = current
-		}
-	}
-	out := make([]metrics.SummaryRow, 0, len(grouped))
-	for _, row := range grouped {
-		fillLocalSummaryRowDerived(&row)
-		out = append(out, row)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedInputTokens != out[j].EstimatedInputTokens {
-			return out[i].EstimatedInputTokens > out[j].EstimatedInputTokens
-		}
-		return out[i].Command < out[j].Command
-	})
-	return out, nil
+		},
+		fillLocalSummaryRowDerived,
+		compareGlobalSummaryRows,
+	)
 }
 
 func queryGlobalSummaryToolRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryToolRow, error) {
-	grouped := map[string]metrics.SummaryToolRow{}
+	return aggregateGlobalRows(
+		session,
+		opts,
+		metrics.QuerySummaryRowsByTool,
+		func(row metrics.SummaryToolRow) string { return row.Tool },
+		func(current *metrics.SummaryToolRow, row metrics.SummaryToolRow) {
+			current.Tool = row.Tool
+			current.Commands += row.Commands
+			current.RawBytes += row.RawBytes
+			current.KeptBytes += row.KeptBytes
+		},
+		fillLocalSummaryToolDerived,
+		compareGlobalSummaryToolRows,
+	)
+}
+
+func aggregateGlobalRows[T any, K comparable](
+	session *globalQuerySession,
+	opts metrics.QueryOptions,
+	query func(string, metrics.QueryOptions) ([]T, error),
+	key func(T) K,
+	merge func(*T, T),
+	finalize func(*T),
+	compare func(T, T) int,
+) ([]T, error) {
+	grouped := make(map[K]T)
 	for _, source := range session.sources {
-		rows, err := metrics.QuerySummaryRowsByTool(source.MetricsPath, opts)
+		rows, err := query(source.MetricsPath, opts)
 		if err != nil {
 			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range rows {
-			current := grouped[row.Tool]
-			current.Tool = row.Tool
-			current.Commands += row.Commands
-			current.RawBytes += row.RawBytes
-			current.KeptBytes += row.KeptBytes
-			grouped[row.Tool] = current
+			rowKey := key(row)
+			current := grouped[rowKey]
+			merge(&current, row)
+			grouped[rowKey] = current
 		}
 	}
-	out := make([]metrics.SummaryToolRow, 0, len(grouped))
+	out := make([]T, 0, len(grouped))
 	for _, row := range grouped {
-		fillLocalSummaryToolDerived(&row)
+		finalize(&row)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedInputTokens != out[j].EstimatedInputTokens {
-			return out[i].EstimatedInputTokens > out[j].EstimatedInputTokens
-		}
-		return out[i].Tool < out[j].Tool
-	})
+	slices.SortFunc(out, compare)
 	return out, nil
+}
+
+func compareGlobalSummaryRows(left, right metrics.SummaryRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Command, right.Command)
+}
+
+func compareGlobalSummaryToolRows(left, right metrics.SummaryToolRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Tool, right.Tool)
 }
 
 func queryGlobalPeriodRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
