@@ -29,7 +29,7 @@ func (f *YamlFilter) CloneFilter() contracts.Filter {
 	}
 	return &YamlFilter{
 		spec:                  f.spec,
-		flagsConsumingNextArg: cloneStrings(f.flagsConsumingNextArg),
+		flagsConsumingNextArg: slices.Clone(f.flagsConsumingNextArg),
 		cases:                 cloneCompiledCases(f.cases),
 		provenance:            f.provenance,
 	}
@@ -50,7 +50,7 @@ func NewFilter(spec *FilterDefinition) (*YamlFilter, error) {
 	}
 	return &YamlFilter{
 		spec:                  spec,
-		flagsConsumingNextArg: cloneStrings(spec.FlagsConsumingNextArg),
+		flagsConsumingNextArg: slices.Clone(spec.FlagsConsumingNextArg),
 		cases:                 cases,
 	}, nil
 }
@@ -420,21 +420,14 @@ func cloneCompiledCase(src compiledCase) compiledCase {
 		id:          src.id,
 		passthrough: src.passthrough,
 		when:        src.when,
-		variables:   cloneVariableValues(src.variables),
-		initials:    cloneVariableValues(src.initials),
+		variables:   maps.Clone(src.variables),
+		initials:    maps.Clone(src.initials),
 		command:     src.command,
 		stdout:      cloneCompiledScope(src.stdout),
 		stderr:      cloneCompiledScope(src.stderr),
 		shared:      cloneCompiledScope(src.shared),
 		onExit:      src.onExit,
 	}
-}
-
-func cloneVariableValues(values map[string]string) map[string]string {
-	if len(values) == 0 {
-		return nil
-	}
-	return maps.Clone(values)
 }
 
 func cloneCompiledScope(src *compiledScope) *compiledScope {
@@ -466,9 +459,9 @@ func compileCommandMutation(command *CommandMutation) *compiledCommand {
 		return nil
 	}
 	return &compiledCommand{
-		appendIfMissing:       cloneStrings(command.AppendIfMissing),
-		appendIfNoPositionals: cloneStrings(command.AppendIfNoPositionals),
-		addShortFlags:         cloneStrings(command.AddShortFlags),
+		appendIfMissing:       slices.Clone(command.AppendIfMissing),
+		appendIfNoPositionals: slices.Clone(command.AppendIfNoPositionals),
+		addShortFlags:         slices.Clone(command.AddShortFlags),
 	}
 }
 
@@ -478,21 +471,17 @@ func compileWhenArguments(when *WhenArguments) compiledWhen {
 	}
 	return compiledWhen{
 		firstIs:              when.FirstIs,
-		firstIn:              cloneStrings(when.FirstIn),
-		haveAny:              cloneStrings(when.HaveAny),
-		lackAny:              cloneStrings(when.LackAny),
-		haveSequence:         cloneStrings(when.HaveSequence),
-		haveShortFlag:        cloneStrings(when.HaveShortFlag),
-		notHaveShortFlag:     cloneStrings(when.NotHaveShortFlag),
-		haveAllShortFlags:    cloneStrings(when.HaveAllShortFlags),
-		notHaveAllShortFlags: cloneStrings(when.NotHaveAllShortFlags),
-		positionalsLackAny:   cloneStrings(when.PositionalsLackAny),
+		firstIn:              slices.Clone(when.FirstIn),
+		haveAny:              slices.Clone(when.HaveAny),
+		lackAny:              slices.Clone(when.LackAny),
+		haveSequence:         slices.Clone(when.HaveSequence),
+		haveShortFlag:        slices.Clone(when.HaveShortFlag),
+		notHaveShortFlag:     slices.Clone(when.NotHaveShortFlag),
+		haveAllShortFlags:    slices.Clone(when.HaveAllShortFlags),
+		notHaveAllShortFlags: slices.Clone(when.NotHaveAllShortFlags),
+		positionalsLackAny:   slices.Clone(when.PositionalsLackAny),
 		noPositionals:        when.NoPositionals,
 	}
-}
-
-func cloneStrings(values []string) []string {
-	return slices.Clone(values)
 }
 
 func buildCompiledScope(name string, scope *OutputScope) (*compiledScope, error) {
@@ -1315,10 +1304,10 @@ func filterArgs(args []string) []string {
 
 func applyCommandMutations(args []string, when compiledWhen, flagsWithValues []string, command *compiledCommand) []string {
 	if command == nil {
-		return cloneStrings(args)
+		return slices.Clone(args)
 	}
 
-	mutated := cloneStrings(args)
+	mutated := slices.Clone(args)
 	for _, flag := range command.addShortFlags {
 		mutated = addShortFlagIfMissing(mutated, flag)
 	}

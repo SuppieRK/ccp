@@ -86,15 +86,11 @@ func containsSequence(args, sequence []string) bool {
 		return false
 	}
 	for i := 0; i <= len(args)-len(sequence); i++ {
-		if equalSequence(args[i:i+len(sequence)], sequence) {
+		if slices.Equal(args[i:i+len(sequence)], sequence) {
 			return true
 		}
 	}
 	return false
-}
-
-func equalSequence(left, right []string) bool {
-	return slices.Equal(left, right)
 }
 
 func containsShortFlag(args, flags []string) bool {
@@ -106,7 +102,7 @@ func containsShortFlag(args, flags []string) bool {
 			if len(flag) != 2 || flag[0] != '-' {
 				continue
 			}
-			if containsRune(arg[1:], rune(flag[1])) {
+			if strings.ContainsRune(arg[1:], rune(flag[1])) {
 				return true
 			}
 		}
@@ -121,10 +117,6 @@ func containsAllShortFlags(args, flags []string) bool {
 		}
 	}
 	return true
-}
-
-func containsRune(value string, want rune) bool {
-	return strings.ContainsRune(value, want)
 }
 
 func takesStandaloneValue(arg string, flags []string) bool {

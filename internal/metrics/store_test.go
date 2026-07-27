@@ -634,24 +634,6 @@ var _ = Describe("metrics storage", func() {
 		Entry("rounds five bytes up to two tokens", int64(5), int64(2)),
 	)
 
-	DescribeTable("clamping helpers floor negative values at zero",
-		func(value int, expected int) {
-			Expect(max0(value)).To(Equal(expected))
-		},
-		Entry("clamps a negative int", -1, 0),
-		Entry("keeps zero unchanged", 0, 0),
-		Entry("preserves a positive int", 7, 7),
-	)
-
-	DescribeTable("clamping int64 helpers floor negative values at zero",
-		func(value int64, expected int64) {
-			Expect(max0i64(value)).To(Equal(expected))
-		},
-		Entry("clamps a negative int64", int64(-1), int64(0)),
-		Entry("keeps a zero int64 unchanged", int64(0), int64(0)),
-		Entry("preserves a positive int64", int64(9), int64(9)),
-	)
-
 	DescribeTable("bounded integer decoders",
 		func(src []byte, decode func([]byte) int64, expected int64) {
 			Expect(decode(src)).To(Equal(expected))
@@ -1322,17 +1304,6 @@ var _ = Describe("metrics storage", func() {
 			Entry("when the tool payload is short by one byte", 1+8+8+8+8+1+len("go:test")+4),
 			Entry("when the dispatch payload is short by one byte", 1+8+8+8+8+1),
 			Entry("when the fixed-width tail is short by one byte", 1),
-		)
-
-		DescribeTable("reverses history rows in place",
-			func(rows []HistoryRow, expected []HistoryRow) {
-				reverseHistoryRows(rows)
-				Expect(rows).To(Equal(expected))
-			},
-			Entry("keeps an empty slice unchanged", []HistoryRow{}, []HistoryRow{}),
-			Entry("keeps a single row unchanged", []HistoryRow{{Command: "one"}}, []HistoryRow{{Command: "one"}}),
-			Entry("reverses two rows", []HistoryRow{{Command: "one"}, {Command: "two"}}, []HistoryRow{{Command: "two"}, {Command: "one"}}),
-			Entry("reverses multiple rows", []HistoryRow{{Command: "one"}, {Command: "two"}, {Command: "three"}}, []HistoryRow{{Command: "three"}, {Command: "two"}, {Command: "one"}}),
 		)
 
 		DescribeTable("truncates commands only when they exceed the rune limit",

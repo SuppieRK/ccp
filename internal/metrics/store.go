@@ -345,16 +345,16 @@ func normalizeMetric(metric RunMetric) runRecord {
 		Command:               metric.Command,
 		Tool:                  metric.Tool,
 		Dispatch:              metric.Dispatch,
-		RawBytes:              int64(max0(metric.RawBytes)),
-		KeptBytes:             int64(max0(metric.KeptBytes)),
+		RawBytes:              int64(max(metric.RawBytes, 0)),
+		KeptBytes:             int64(max(metric.KeptBytes, 0)),
 		ExitCode:              metric.ExitCode,
-		DurationMS:            max0i64(metric.DurationMS),
+		DurationMS:            max(metric.DurationMS, 0),
 		Passthrough:           metric.Passthrough,
 		FilterSourceKind:      strings.TrimSpace(metric.FilterSourceKind),
 		FilterPath:            strings.TrimSpace(metric.FilterPath),
 		FilterHash:            strings.TrimSpace(metric.FilterHash),
 		RegistryBuildRecorded: metric.RegistryBuildRecorded,
-		RegistryBuildMS:       max0i64(metric.RegistryBuildMS),
+		RegistryBuildMS:       max(metric.RegistryBuildMS, 0),
 		RegistrySources:       normalizeRegistrySources(metric.RegistrySources),
 	}
 }
@@ -591,7 +591,7 @@ func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err err
 		return nil, nil
 	}
 
-	reverseHistoryRows(out)
+	slices.Reverse(out)
 	return out, nil
 }
 
@@ -767,9 +767,9 @@ func updateRegistrySourceBuildAcc(grouped map[string]*registrySourceBuildAcc, so
 	if strings.TrimSpace(source.Error) != "" {
 		acc.row.Errors++
 	}
-	acc.row.Definitions += max0i64(source.Definitions)
-	acc.row.Compiled += max0i64(source.Compiled)
-	acc.durations = append(acc.durations, max0i64(source.DurationMS))
+	acc.row.Definitions += max(source.Definitions, 0)
+	acc.row.Compiled += max(source.Compiled, 0)
+	acc.durations = append(acc.durations, max(source.DurationMS, 0))
 }
 
 func registryBuildSummaryFromDurations(durations []int64) RegistryBuildSummary {
@@ -779,7 +779,7 @@ func registryBuildSummaryFromDurations(durations []int64) RegistryBuildSummary {
 	var sum int64
 	var maxDuration int64
 	for _, duration := range durations {
-		duration = max0i64(duration)
+		duration = max(duration, 0)
 		sum += duration
 		maxDuration = max(maxDuration, duration)
 	}
@@ -805,7 +805,7 @@ func percentileDuration(durations []int64, percentile float64) int64 {
 	}
 	sorted := append([]int64(nil), durations...)
 	for i, duration := range sorted {
-		sorted[i] = max0i64(duration)
+		sorted[i] = max(duration, 0)
 	}
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i] < sorted[j]
@@ -875,10 +875,6 @@ func dispatchFilterCase(dispatch, fallbackTool string) (string, string) {
 		return filterID, ""
 	}
 	return filterID, caseID
-}
-
-func reverseHistoryRows(rows []HistoryRow) {
-	slices.Reverse(rows)
 }
 
 func updatePeriodAcc(groups map[string]*periodAcc, rec runRecord, period string) error {
@@ -1133,9 +1129,9 @@ func normalizeRegistrySources(sources []RegistrySourceBuildMetric) []RegistrySou
 		out = append(out, RegistrySourceBuildMetric{
 			SourceKind:  strings.TrimSpace(source.SourceKind),
 			SourceDir:   strings.TrimSpace(source.SourceDir),
-			Definitions: max0i64(source.Definitions),
-			Compiled:    max0i64(source.Compiled),
-			DurationMS:  max0i64(source.DurationMS),
+			Definitions: max(source.Definitions, 0),
+			Compiled:    max(source.Compiled, 0),
+			DurationMS:  max(source.DurationMS, 0),
 			Error:       strings.TrimSpace(source.Error),
 		})
 	}
@@ -1410,14 +1406,6 @@ func truncateCommand(cmd string) string {
 		return cmd
 	}
 	return string(runes[:maxCommandTextRunes-3]) + "..."
-}
-
-func max0(v int) int {
-	return max(v, 0)
-}
-
-func max0i64(v int64) int64 {
-	return max(v, 0)
 }
 
 func ensureSchema(projectRoot, path string) (err error) {
