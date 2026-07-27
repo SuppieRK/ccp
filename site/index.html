@@ -9,8 +9,7 @@
       content="cmdshape filters noisy command output for coding agents with deterministic, command-aware rules while preserving exit codes, diagnostics, and native escape hatches."
     >
     <link rel="canonical" href="https://suppierk.github.io/cmdshape/">
-    <meta name="theme-color" content="#f6f0e5" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#19151d" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f3eee5">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="cmdshape">
     <meta property="og:title" content="cmdshape — Command-output filtering for coding agents">
@@ -62,162 +61,125 @@
             <rect x="2.5" y="4.5" width="27" height="23" rx="3"></rect>
             <path d="m7.5 10 3 2.5-3 2.5M14 15h9M14 20h6"></path>
           </svg>
-          <span>cmdshape</span>
+          <code class="tool-name">cmdshape</code>
         </a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="#proof">Proof</a>
+          <a href="#install">Install</a>
+          <a href="#integrations">Integrations</a>
           <a href="#contract">Contract</a>
           <a href="#filters">Filters</a>
-          <a href="#integrations">Integrations</a>
         </nav>
         <a class="button button-ghost header-button" href="https://github.com/SuppieRK/cmdshape">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10.226 17.284c-2.965-.36-5.054-2.493-5.054-5.256 0-1.123.404-2.336 1.078-3.144-.292-.741-.247-2.314.09-2.965.898-.112 2.111.36 2.83 1.01.853-.269 1.752-.404 2.853-.404 1.1 0 1.999.135 2.807.382.696-.629 1.932-1.1 2.83-.988.315.606.36 2.179.067 2.942.72.854 1.101 2 1.101 3.167 0 2.763-2.089 4.852-5.098 5.234.763.494 1.28 1.572 1.28 2.807v2.336c0 .674.561 1.056 1.235.786 4.066-1.55 7.255-5.615 7.255-10.646C23.5 6.188 18.334 1 11.978 1 5.62 1 .5 6.188.5 12.545c0 4.986 3.167 9.12 7.435 10.669.606.225 1.19-.18 1.19-.786V20.63a2.9 2.9 0 0 1-1.078.224c-1.483 0-2.359-.808-2.987-2.313-.247-.607-.517-.966-1.034-1.033-.27-.023-.359-.135-.359-.27 0-.27.45-.471.898-.471.652 0 1.213.404 1.797 1.235.45.651.921.943 1.483.943.561 0 .92-.202 1.437-.719.382-.381.674-.718.944-.943"></path>
+          </svg>
           <span>GitHub</span>
-          <span aria-hidden="true">↗</span>
         </a>
       </div>
     </header>
 
     <main class="content-shell" id="main" tabindex="-1">
       <section class="hero section anchor-target" id="top">
-        <div class="hero-grid">
-          <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-cursor" aria-hidden="true"></span> deterministic output shaping</p>
-            <h1>Shape command output. Preserve command truth.</h1>
-            <p class="hero-lede">
-              cmdshape removes terminal noise before it reaches your coding agent while keeping command behavior,
-              exit codes, failure detail, and raw-output escape hatches intact.
-            </p>
-            <article class="install-card anchor-target" id="install" data-copy-card>
-              <div class="install-label">Install cmdshape</div>
-              <pre id="install-command"><code>curl -fsSL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh</code></pre>
-              <button class="copy-button" type="button" data-copy-target="install-command" aria-label="Copy install command">
-                <svg class="icon-copy" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                  <path fill="currentColor" d="M3.75 2A1.75 1.75 0 0 0 2 3.75v7.5C2 12.216 2.784 13 3.75 13H5v-1.5H3.75a.25.25 0 0 1-.25-.25v-7.5a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25V5H11V3.75A1.75 1.75 0 0 0 9.25 2z"></path>
-                  <path fill="currentColor" d="M6.75 5A1.75 1.75 0 0 0 5 6.75v5.5C5 13.216 5.784 14 6.75 14h5.5A1.75 1.75 0 0 0 14 12.25v-5.5A1.75 1.75 0 0 0 12.25 5zm0 1.5h5.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25"></path>
-                </svg>
-                <svg class="icon-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                  <path fill="currentColor" d="M13.78 3.97a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0l-3.25-3.25a.75.75 0 1 1 1.06-1.06L6 10.69l6.72-6.72a.75.75 0 0 1 1.06 0"></path>
-                </svg>
-              </button>
-              <output class="copy-status" data-copy-status aria-live="polite" aria-atomic="true"></output>
-            </article>
-            <ul class="trust-list">
-              <li>Native exit code</li>
-              <li>Critical diagnostics</li>
-              <li><code>--raw</code> passthrough</li>
-            </ul>
-          </div>
-
-          <article class="hero-proof terminal" aria-labelledby="hero-proof-title">
-            <div class="terminal-bar">
-              <span id="hero-proof-title">verified fixture / go test</span>
-              <span class="terminal-state"><span aria-hidden="true">✓</span> exit 1 preserved</span>
-            </div>
-            <div class="hero-proof-body">
-              <p class="terminal-command"><span aria-hidden="true">›</span> cmdshape go test -count=1 ./...</p>
-              <div class="proof-output proof-output-before">
-                <span class="proof-output-label">native · 65 tokens</span>
-                <pre><code>--- FAIL: TestGlobalHistorySource (0.00s)
-    gain_test.go:405: source field mismatch
-        expected: /tmp/lifecycle/repo-one
-        actual: /tmp/lifecycle/repo
-    gain_test.go:406: source field should include repo tail
-FAIL
-FAIL    fixture-go-test    0.001s</code></pre>
-              </div>
-              <div class="shape-divider" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="proof-output proof-output-after">
-                <span class="proof-output-label">shaped · 54 tokens</span>
-                <pre><code>--- FAIL: TestGlobalHistorySource
-    gain_test.go:405: source field mismatch
-        expected: /tmp/lifecycle/repo-one
-        actual: /tmp/lifecycle/repo
-    gain_test.go:406: source field should include repo tail</code></pre>
-              </div>
-            </div>
-          </article>
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-cursor" aria-hidden="true"></span> deterministic output shaping</p>
+          <h1>Shape command output.<br>Preserve command truth.</h1>
+          <p class="hero-lede">
+            <code class="tool-name">cmdshape</code> removes terminal noise before it reaches your coding agent while
+            keeping command behavior, exit codes, failure detail, and raw-output escape hatches intact.
+          </p>
         </div>
 
-        <dl class="proof-rail" id="proof">
-          <div>
-            <dt>Command truth</dt>
-            <dd>Exit status and critical diagnostics stay intact.</dd>
-          </div>
-          <div>
-            <dt>Measured gain</dt>
-            <dd>Every reduction is visible through <code>cmdshape gain</code>.</dd>
-          </div>
-          <div>
-            <dt>Safe fallback</dt>
-            <dd>Ambiguous or precision-sensitive output passes through.</dd>
-          </div>
-        </dl>
+        <div class="install-wrap anchor-target" id="get-started">
+          <article class="install-card anchor-target" id="install" data-copy-card>
+            <div class="install-label">Install</div>
+            <pre id="install-command"><code>curl -fsSL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh</code></pre>
+            <button class="copy-button" type="button" data-copy-target="install-command" aria-label="Copy install command">
+              <svg class="icon-copy" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M3.75 2A1.75 1.75 0 0 0 2 3.75v7.5C2 12.216 2.784 13 3.75 13H5v-1.5H3.75a.25.25 0 0 1-.25-.25v-7.5a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25V5H11V3.75A1.75 1.75 0 0 0 9.25 2z"></path>
+                <path fill="currentColor" d="M6.75 5A1.75 1.75 0 0 0 5 6.75v5.5C5 13.216 5.784 14 6.75 14h5.5A1.75 1.75 0 0 0 14 12.25v-5.5A1.75 1.75 0 0 0 12.25 5zm0 1.5h5.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25"></path>
+              </svg>
+              <svg class="icon-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M13.78 3.97a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0l-3.25-3.25a.75.75 0 1 1 1.06-1.06L6 10.69l6.72-6.72a.75.75 0 0 1 1.06 0"></path>
+              </svg>
+            </button>
+            <output class="copy-status" data-copy-status aria-live="polite" aria-atomic="true"></output>
+          </article>
+        </div>
       </section>
 
-      <section class="section contract-section anchor-target" id="contract">
+      <section class="section integrations-section section-flow anchor-target" id="integrations">
+        <div class="section-heading">
+          <p class="eyebrow">agent integrations</p>
+          <h2>One filtering layer, across the tools you already use.</h2>
+          <p>Connect <code class="tool-name">cmdshape</code> to the coding agents already in your workflow.</p>
+        </div>
+
+        <div class="logo-marquee" data-logo-carousel>
+          <div class="logo-marquee-track">
+            <ul class="logo-group">
+              <li><img class="logo-mark logo-mark-claude" src="./assets/agent-logos/claudecode.svg" alt="Claude Code"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/codex.svg" alt="Codex"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/opencode.svg" alt="OpenCode"></li>
+              <li><img class="logo-mark logo-mark-wide" src="./assets/agent-logos/cursor.svg" alt="Cursor"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/githubcopilot.svg" alt="GitHub Copilot"></li>
+              <li><img class="logo-mark logo-mark-gemini" src="./assets/agent-logos/gemini.svg" alt="Gemini"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/windsurf.svg" alt="Windsurf"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/roocode.svg" alt="Roo Code"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/kilocode.svg" alt="KiloCode"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/qwen.svg" alt="Qwen"></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/cline.svg" alt="Cline"></li>
+            </ul>
+            <ul class="logo-group" aria-hidden="true">
+              <li><img class="logo-mark logo-mark-claude" src="./assets/agent-logos/claudecode.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/codex.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/opencode.svg" alt=""></li>
+              <li><img class="logo-mark logo-mark-wide" src="./assets/agent-logos/cursor.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/githubcopilot.svg" alt=""></li>
+              <li><img class="logo-mark logo-mark-gemini" src="./assets/agent-logos/gemini.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/windsurf.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/roocode.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/kilocode.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/qwen.svg" alt=""></li>
+              <li><img class="logo-mark" src="./assets/agent-logos/cline.svg" alt=""></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section contract-section section-flow anchor-target" id="contract">
         <div class="section-heading">
           <p class="eyebrow">the runtime contract</p>
           <h2>The output gets shorter. The command stays itself.</h2>
           <p>
-            Terminal output is written for human scanning. cmdshape removes banners, repeated status lines, and
-            boilerplate only when a command-aware filter can preserve the information needed for the next action.
+            Terminal output is written for human scanning. <code class="tool-name">cmdshape</code> removes banners,
+            repeated status lines, and boilerplate only when a command-aware filter can preserve the information needed
+            for the next action.
           </p>
         </div>
         <div class="contract-grid">
           <article>
-            <span class="step-index">01</span>
-            <h3>Run what was typed</h3>
-            <p>The native command shape executes without a shadow implementation.</p>
+            <h3>Execute natively</h3>
+            <p>The command shape runs exactly as typed, with its exit status intact.</p>
           </article>
           <article>
-            <span class="step-index">02</span>
-            <h3>Match with evidence</h3>
-            <p>Deterministic YAML rules select only the command and output shape they understand.</p>
+            <h3>Shape with evidence</h3>
+            <p>Deterministic rules remove noise only when the command and output shape are understood.</p>
           </article>
           <article>
-            <span class="step-index">03</span>
-            <h3>Keep the signal</h3>
-            <p>Failures, paths, diagnostics, and line-oriented follow-up affordances remain visible.</p>
-          </article>
-          <article>
-            <span class="step-index">04</span>
             <h3>Pass through doubt</h3>
-            <p>Raw, structured, interactive, and ambiguous modes retain native output.</p>
+            <p>Diagnostics, structured output, interactive modes, and <code>--raw</code> remain native.</p>
           </article>
         </div>
       </section>
 
-      <section class="section integrations-section stack-lg anchor-target" id="integrations">
-        <div class="section-heading">
-          <p class="eyebrow">agent integrations</p>
-          <h2>One filtering layer, across the tools you already use.</h2>
-          <p>Integrations stay explicit and static—no moving logo rail, no hidden compatibility claims.</p>
-        </div>
-
-        <ul class="integration-grid">
-          <li><span class="integration-icon"><img src="./assets/agent-logos/claudecode.svg" alt=""></span><span>Claude Code</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/codex.svg" alt=""></span><span>Codex</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/opencode.svg" alt=""></span><span>OpenCode</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/cursor.svg" alt=""></span><span>Cursor</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/githubcopilot.svg" alt=""></span><span>GitHub Copilot</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/gemini.svg" alt=""></span><span>Gemini</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/windsurf.svg" alt=""></span><span>Windsurf</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/roocode.svg" alt=""></span><span>Roo Code</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/kilocode.svg" alt=""></span><span>KiloCode</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/qwen.svg" alt=""></span><span>Qwen</span></li>
-          <li><span class="integration-icon"><img src="./assets/agent-logos/cline.svg" alt=""></span><span>Cline</span></li>
-        </ul>
-      </section>
-
-      <section class="section gain-section stack-lg">
+      <section class="section gain-section section-flow">
         <div class="section-heading anchor-target" id="gain">
           <p class="eyebrow">measured on real commands</p>
           <h2>Gains on real work</h2>
           <p>
-            cmdshape does not just promise smaller output. <code>cmdshape gain</code> shows the token impact of real
-            commands, so you can see where filtering helps, where it does not, and whether the result stays worth trusting.
+            <code class="tool-name">cmdshape</code> does not just promise smaller output. <code>cmdshape gain</code>
+            shows the token impact of real commands, so you can see where filtering helps, where it does not, and whether
+            the result stays worth trusting.
           </p>
         </div>
 
@@ -225,7 +187,6 @@ FAIL    fixture-go-test    0.001s</code></pre>
           <article class="terminal">
             <div class="terminal-bar">
               <span>Claude Code</span>
-              <span>Gradle project</span>
             </div>
             <pre><code class="gain-report"><span class="gain-line">88 cmds · 5,330,571 → 90,127 tokens (<span class="gain-verdict gain-verdict-high">98.3% saved</span>)</span>
 <span class="gain-line"><span class="gain-label">Wins </span>: <span class="gain-tool">find</span> <span class="gain-shell">(</span><span class="gain-detail">4.8m</span><span class="gain-shell"> / </span><span class="gain-detail">99%</span><span class="gain-shell">)</span> · <span class="gain-tool">gradle</span> <span class="gain-shell">(</span><span class="gain-detail">367k</span><span class="gain-shell"> / </span><span class="gain-detail">87%</span><span class="gain-shell">)</span> · <span class="gain-tool">grep</span> <span class="gain-shell">(</span><span class="gain-detail">6k</span><span class="gain-shell"> / </span><span class="gain-detail">1%</span><span class="gain-shell">)</span></span><span class="gain-line"><span class="gain-label">Drag </span>: <span class="gain-tool">cd</span> <span class="gain-detail">(23 cmds)</span> · <span class="gain-tool">jar</span> <span class="gain-detail">(21 cmds)</span> · <span class="gain-tool">grep</span> <span class="gain-detail">(4 cmds)</span></span><span class="gain-line"><span class="gain-label">Trend</span>: <span class="gain-trend-positive-delta">↑ +12.4 pts</span> week over week <span class="gain-trend-compare">(85.9% → 98.3%)</span> · on a roll</span></code></pre>
@@ -234,7 +195,6 @@ FAIL    fixture-go-test    0.001s</code></pre>
           <article class="terminal">
             <div class="terminal-bar">
               <span>Codex</span>
-              <span>this repository</span>
             </div>
             <pre><code class="gain-report"><span class="gain-line">1,825 cmds · 2,461,959 → 2,160,427 tokens (<span class="gain-verdict gain-verdict-mid">12.3% saved</span>)</span>
 <span class="gain-line"><span class="gain-label">Wins </span>: <span class="gain-tool">grep</span> <span class="gain-shell">(</span><span class="gain-detail">67k</span><span class="gain-shell"> / </span><span class="gain-detail">60%</span><span class="gain-shell">)</span> · <span class="gain-tool">go</span> <span class="gain-shell">(</span><span class="gain-detail">54k</span><span class="gain-shell"> / </span><span class="gain-detail">90%</span><span class="gain-shell">)</span> · <span class="gain-tool">git</span> <span class="gain-shell">(</span><span class="gain-detail">16k</span><span class="gain-shell"> / </span><span class="gain-detail">59%</span><span class="gain-shell">)</span></span><span class="gain-line"><span class="gain-label">Drag </span>: <span class="gain-tool">sed</span> <span class="gain-detail">(765 cmds)</span> · <span class="gain-tool">openspec</span> <span class="gain-detail">(245 cmds)</span></span><span class="gain-line"><span class="gain-label">Trend</span>: <span class="gain-trend-negative-delta">↓ -2.1 pts</span> week over week <span class="gain-trend-compare">(14.4% → 12.3%)</span> · slipping</span></code></pre>
@@ -242,14 +202,14 @@ FAIL    fixture-go-test    0.001s</code></pre>
         </div>
       </section>
 
-      <section class="section filters-section stack-lg">
+      <section class="section filters-section section-flow">
         <div class="section-heading anchor-target" id="filters">
           <p class="eyebrow">rules you can inspect</p>
           <h2>Create CLI output filters for your workflow</h2>
           <p>Write command-aware YAML, replay real output, and verify exactly what changed before you promote a terminal output filter.</p>
         </div>
 
-        <div class="filter-demo" data-filter-demo>
+        <div class="filter-demo anchor-target" id="proof" data-filter-demo>
           <article class="terminal filter-demo-source">
             <div class="terminal-bar">
               <span data-filter-stage>start with the command</span>
@@ -285,11 +245,14 @@ FAIL    fixture-go-test    0.001s</code></pre>
         <p><a class="text-link" href="https://github.com/SuppieRK/cmdshape/blob/main/FILTERS.md">Read more about command-aware YAML filters <span aria-hidden="true">→</span></a></p>
       </section>
 
-      <section class="section proof-section stack-lg">
+      <section class="section proof-section section-flow">
         <div class="section-heading anchor-target" id="examples">
           <p class="eyebrow">fixture-backed comparisons</p>
           <h2>Recorded examples from benchmark fixtures</h2>
-          <p>The command on the left is the recorded fixture input. The right side is the verified cmdshape output for that same case.</p>
+          <p>
+            The command on the left is the recorded fixture input. The right side is the verified
+            <code class="tool-name">cmdshape</code> output for that same case.
+          </p>
         </div>
 
         <div class="example-tabs" role="tablist" aria-label="Benchmark examples">
@@ -376,18 +339,6 @@ FAIL    fixture-go-test    0.001s</code></pre>
             data-example-tab="pytest"
           >
             Pytest
-          </button>
-          <button
-            class="button button-ghost"
-            id="example-tab-go"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            tabindex="-1"
-            aria-controls="example-panel-go"
-            data-example-tab="go"
-          >
-            Go
           </button>
           <button
             class="button button-ghost"
@@ -831,48 +782,6 @@ FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
 
         <article
           class="example-panel"
-          id="example-panel-go"
-          role="tabpanel"
-          aria-labelledby="example-tab-go"
-          data-example-panel="go"
-          hidden
-        >
-          <div class="example-header">
-            <div>
-              <h3>go test -count=1 ./...</h3>
-            </div>
-            <p class="example-meta">65 tokens → 54 tokens</p>
-          </div>
-          <div class="comparison-scroll">
-            <div class="terminal-pair">
-              <div class="terminal">
-                <div class="terminal-bar">
-                  <span>original</span>
-                </div>
-                <pre><code>--- FAIL: TestGlobalHistorySource (0.00s)
-    gain_test.go:405: source field mismatch
-        expected: /tmp/lifecycle/repo-one
-        actual: /tmp/lifecycle/repo
-    gain_test.go:406: source field should include repo tail
-FAIL
-FAIL	fixture-go-test	0.001s</code></pre>
-              </div>
-              <div class="terminal">
-                <div class="terminal-bar">
-                  <span>compressed</span>
-                </div>
-                <pre><code>--- FAIL: TestGlobalHistorySource
-    gain_test.go:405: source field mismatch
-        expected: /tmp/lifecycle/repo-one
-        actual: /tmp/lifecycle/repo
-    gain_test.go:406: source field should include repo tail</code></pre>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article
-          class="example-panel"
           id="example-panel-gradle"
           role="tabpanel"
           aria-labelledby="example-tab-gradle"
@@ -941,18 +850,6 @@ BUILD FAILED in 1s</code></pre>
         </article>
 
       </section>
-
-      <section class="section closing-section anchor-target" id="get-started">
-        <div>
-          <p class="eyebrow">ready when the output is not</p>
-          <h2>Keep the command. Shape what comes back.</h2>
-          <p>Install the local binary, connect the integration you use, and inspect every saved token from the terminal.</p>
-        </div>
-        <div class="closing-actions">
-          <a class="button button-primary" href="#install">Copy install command</a>
-          <a class="button button-ghost" href="https://github.com/SuppieRK/cmdshape">View the repository <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
     </main>
 
     <footer class="site-footer">
@@ -962,7 +859,7 @@ BUILD FAILED in 1s</code></pre>
             <rect x="2.5" y="4.5" width="27" height="23" rx="3"></rect>
             <path d="m7.5 10 3 2.5-3 2.5M14 15h9M14 20h6"></path>
           </svg>
-          <span>cmdshape</span>
+          <code class="tool-name">cmdshape</code>
         </a>
         <p class="footer-copy">Smaller output you can still trust.</p>
         <nav class="footer-links" aria-label="Footer">
