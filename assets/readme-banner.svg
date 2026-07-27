@@ -1,20 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1450" height="350" viewBox="0 0 1450 350" role="img" aria-labelledby="title description">
   <title id="title">cmdshape</title>
   <desc id="description">Shape command output. Preserve command truth.</desc>
-  <rect width="1450" height="350" fill="#f6f0e5"/>
-  <path d="M0 1h1450M0 349h1450" stroke="#312936" stroke-width="2"/>
-  <path d="M54 55h1342v240H54z" fill="#fffaf0" stroke="#312936" stroke-width="3"/>
-  <path d="M54 99h1342" stroke="#312936" stroke-width="3"/>
-  <circle cx="82" cy="77" r="7" fill="#d9593d"/>
-  <circle cx="106" cy="77" r="7" fill="#d6a53a"/>
-  <circle cx="130" cy="77" r="7" fill="#4d8b64"/>
-  <text x="167" y="84" fill="#665969" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">~/work — output contract</text>
-  <g transform="translate(102 145)">
-    <rect width="78" height="72" rx="7" fill="none" stroke="#312936" stroke-width="4"/>
-    <path d="m17 20 12 11-12 11m22 3h23" fill="none" stroke="#312936" stroke-linecap="square" stroke-width="4"/>
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1450" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9b7440"/>
+      <stop offset=".382" stop-color="#9b7440"/>
+      <stop offset=".382" stop-color="#b53229"/>
+      <stop offset="1" stop-color="#b53229"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="-38" y1="-38" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9b7440"/>
+      <stop offset="1" stop-color="#b53229"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .banner-brand {
+      font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+      font-size: 82px;
+      font-weight: 600;
+      letter-spacing: -.022em;
+    }
+
+    .banner-tagline {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 29px;
+      font-weight: 400;
+      letter-spacing: -.011em;
+    }
+  </style>
+
+  <rect width="1450" height="350" fill="#f3eee5"/>
+  <rect width="1450" height="5" fill="url(#accent)"/>
+
+  <g transform="translate(84 0)">
+    <text class="banner-brand" y="178" fill="#211b18">cmdshape</text>
+    <text class="banner-tagline" x="2" y="230" fill="#6c5f58">Shape command output. Preserve command truth.</text>
   </g>
-  <text x="220" y="206" fill="#312936" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="78" font-weight="700" letter-spacing="-4">cmdshape</text>
-  <text x="222" y="255" fill="#665969" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="27">Shape command output. Preserve command truth.</text>
-  <path d="M1105 152h217M1105 177h165M1105 202h244M1105 227h126" stroke="#d9593d" stroke-width="8"/>
-  <path d="M1105 257h90" stroke="#4d8b64" stroke-width="8"/>
+
+  <g transform="translate(1210 175)">
+    <circle r="104" fill="#fff9f0" stroke="#d4c7ba" stroke-width="2"/>
+    <rect x="-59" y="-59" width="118" height="118" rx="26" fill="none" stroke="#9b7440" stroke-opacity=".7" stroke-width="3" transform="rotate(-15)"/>
+    <rect x="-59" y="-59" width="118" height="118" rx="26" fill="none" stroke="#b53229" stroke-opacity=".9" stroke-width="3" transform="rotate(15)"/>
+    <path d="M0-39 39 0 0 39-39 0Z" fill="url(#mark)"/>
+    <path d="M0-18 18 0 0 18-18 0Z" fill="#f3eee5"/>
+  </g>
 </svg>

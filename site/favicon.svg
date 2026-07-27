@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
   <title id="title">cmdshape terminal mark</title>
   <style>
-    .paper { fill: #07131c; }
-    .ink { fill: none; stroke: #e8f6f7; }
-    .cursor { fill: none; stroke: #2dd4bf; }
+    .paper { fill: #f3eee5; }
+    .ink { fill: none; stroke: #211b18; }
+    .cursor { fill: none; stroke: #b53229; }
   </style>
   <rect class="paper" width="64" height="64" rx="12"/>
   <rect class="ink" x="9" y="12" width="46" height="40" rx="6" stroke-width="4"/>
