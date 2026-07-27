@@ -161,7 +161,7 @@ func confirmRepair() (bool, error) {
 	}
 
 	line, err := bufio.NewReader(repairStdin).ReadString('\n')
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return false, err
 	}
 	answer := strings.TrimSpace(strings.ToLower(line))

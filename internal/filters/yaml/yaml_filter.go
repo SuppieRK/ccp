@@ -6,7 +6,6 @@ import (
 	"maps"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -639,7 +638,7 @@ func compileCollectedGroup(name string, group OutputGroup) (compiledGroup, error
 		return compiledGroup{}, fmt.Errorf("scope %q group %q variables: %w", name, group.ID, err)
 	}
 	for _, variable := range vars {
-		if variable.regexGroup != "" && !regexpHasNamedCapture(re, variable.regexGroup) {
+		if variable.regexGroup != "" && !slices.Contains(re.SubexpNames(), variable.regexGroup) {
 			return compiledGroup{}, fmt.Errorf("scope %q group %q variable %q regex_group must reference a named capture from matches_regex", name, group.ID, variable.name)
 		}
 	}
@@ -679,7 +678,7 @@ func compileBoundaryGroup(name string, group OutputGroup) (compiledGroup, error)
 		if startsRegex == nil {
 			return compiledGroup{}, fmt.Errorf("scope %q group %q variable %q regex_group requires starts_with_regex", name, group.ID, variable.name)
 		}
-		if !regexpHasNamedCapture(startsRegex, variable.regexGroup) {
+		if !slices.Contains(startsRegex.SubexpNames(), variable.regexGroup) {
 			return compiledGroup{}, fmt.Errorf("scope %q group %q variable %q regex_group must reference a named capture from starts_with_regex", name, group.ID, variable.name)
 		}
 	}
@@ -717,10 +716,6 @@ func compileGroupVariables(variables []Variable) ([]compiledVariable, error) {
 		})
 	}
 	return compiled, nil
-}
-
-func regexpHasNamedCapture(re *regexp.Regexp, name string) bool {
-	return slices.Contains(re.SubexpNames(), name)
 }
 
 func (f *YamlFilter) onStream(stream contracts.Stream, line string, context contracts.Context) contracts.Action {
@@ -794,7 +789,7 @@ func (c *compiledScope) actionForLine(line string, bufferedCount int, variables 
 	if c == nil {
 		return contracts.Action{Kind: contracts.ActionEmit}
 	}
-	content := trimLineEnding(line)
+	content := strings.TrimRight(line, "\n")
 	action := c.baseActionForLine(line, content, variables)
 	if action.Kind == contracts.ActionIgnore {
 		return action
@@ -807,13 +802,17 @@ func (c *compiledScope) actionForLine(line string, bufferedCount int, variables 
 }
 
 func (c *compiledScope) baseActionForLine(line, content string, variables map[string]string) contracts.Action {
-	if len(c.keep) > 0 && matchesAnyMatcher(c.keep, content) {
+	if len(c.keep) > 0 && slices.ContainsFunc(c.keep, func(pattern compiledMatcher) bool {
+		return pattern.matches(content)
+	}) {
 		return contracts.Action{Kind: contracts.ActionKeep}
 	}
 	if replaced, ok := c.replaceLine(line, content, variables); ok {
 		return contracts.Action{Kind: contracts.ActionReplace, Output: replaced, ReplaceCount: 1}
 	}
-	if len(c.skip) > 0 && matchesAnyMatcher(c.skip, content) {
+	if len(c.skip) > 0 && slices.ContainsFunc(c.skip, func(pattern compiledMatcher) bool {
+		return pattern.matches(content)
+	}) {
 		return contracts.Action{Kind: contracts.ActionIgnore}
 	}
 	if len(c.keep) > 0 {
@@ -826,19 +825,16 @@ func (c *compiledScope) collectGroupLine(line string) bool {
 	if c == nil || len(c.groups) == 0 {
 		return false
 	}
-	content := trimLineEnding(line)
+	content := strings.TrimRight(line, "\n")
 	if c.startBoundaryGroup(content) {
 		return true
 	}
 	if c.appendBoundaryLine(content) {
 		return true
 	}
-	for i := range c.groups {
-		if c.groups[i].mode == groupModeCollect && c.groups[i].collect(content) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(c.groups, func(group compiledGroup) bool {
+		return group.mode == groupModeCollect && group.collect(content)
+	})
 }
 
 func (c *compiledScope) startBoundaryGroup(content string) bool {
@@ -1043,11 +1039,7 @@ func (g *compiledGroup) renderCollected(exitCode int) []renderedLine {
 	if len(g.items) == 0 {
 		return nil
 	}
-	keys := make([]string, 0, len(g.items))
-	for key := range g.items {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(g.items))
 
 	rendered := make([]renderedLine, 0)
 	for _, key := range keys {
@@ -1132,7 +1124,7 @@ func (g *compiledGroup) renderGroupItem(item compiledGroupItem, emitted int) (st
 	if g.lines == nil {
 		return item.line, true, false
 	}
-	action := g.lines.baseActionForLine(item.line, trimLineEnding(item.line), item.vars)
+	action := g.lines.baseActionForLine(item.line, strings.TrimRight(item.line, "\n"), item.vars)
 	if action.Kind == contracts.ActionIgnore {
 		return "", false, false
 	}
@@ -1267,19 +1259,6 @@ func collectOmittedGroupSummaries(hidden []renderedLine) []omittedGroupSummary {
 	return items
 }
 
-func trimLineEnding(line string) string {
-	return strings.TrimRight(line, "\n")
-}
-
-func matchesAnyMatcher(patterns []compiledMatcher, line string) bool {
-	for _, pattern := range patterns {
-		if pattern.matches(line) {
-			return true
-		}
-	}
-	return false
-}
-
 func (m compiledMatcher) matches(content string) bool {
 	switch {
 	case m.regex != nil:
@@ -1339,7 +1318,9 @@ func argumentPresent(args []string, want string, flagsWithValues []string) bool 
 }
 
 func addShortFlagIfMissing(args []string, flag string) []string {
-	if !isShortFlag(flag) || containsShortFlag(args, rune(flag[1])) {
+	if !isShortFlag(flag) || slices.ContainsFunc(args, func(arg string) bool {
+		return len(arg) >= 2 && arg[0] == '-' && arg[1] != '-' && strings.ContainsRune(arg[1:], rune(flag[1]))
+	}) {
 		return args
 	}
 	return append(args, flag)
@@ -1347,20 +1328,6 @@ func addShortFlagIfMissing(args []string, flag string) []string {
 
 func isShortFlag(flag string) bool {
 	return len(flag) == 2 && flag[0] == '-'
-}
-
-func containsShortFlag(args []string, want rune) bool {
-	for _, arg := range args {
-		if len(arg) < 2 || arg[0] != '-' || arg[1] == '-' {
-			continue
-		}
-		for _, current := range arg[1:] {
-			if current == want {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func matchesWhenArguments(when compiledWhen, flagsWithValues, args []string) bool {

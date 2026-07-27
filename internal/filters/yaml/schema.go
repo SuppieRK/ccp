@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
@@ -311,7 +312,7 @@ func validateGroupVariables(variables []Variable, path validationPath, regex str
 		return nil, err
 	}
 	return validateVariables(variables, path, func(variable Variable, itemPath validationPath) error {
-		if variable.RegexGroup != "" && !regexpHasNamedCapture(compiled, variable.RegexGroup) {
+		if variable.RegexGroup != "" && !slices.Contains(compiled.SubexpNames(), variable.RegexGroup) {
 			return ValidationError{Path: string(itemPath.Path("regex_group")), Message: "regex_group must reference a named capture from matches_regex"}
 		}
 		if variable.Type == "number" && variable.RegexGroup != "" {
@@ -503,7 +504,9 @@ func validateOutputScope(scope *OutputScope, path validationPath) error {
 	}
 	if scope.Lines != nil {
 		if err := validateLines(scope.Lines, path.Path("lines"), linesValidationMode{
-			allowGroupsSummary: scopeHasCollectGroups(scope.Groups),
+			allowGroupsSummary: slices.ContainsFunc(scope.Groups, func(group OutputGroup) bool {
+				return group.MatchesRegex != "" && group.GroupBy != ""
+			}),
 		}); err != nil {
 			return err
 		}
@@ -660,15 +663,6 @@ func validateMaxGroupsSummary(summary *MaxGroupsSummary, path validationPath) er
 		return err
 	}
 	return nil
-}
-
-func scopeHasCollectGroups(groups []OutputGroup) bool {
-	for _, group := range groups {
-		if group.MatchesRegex != "" && group.GroupBy != "" {
-			return true
-		}
-	}
-	return false
 }
 
 func matcherCount(values ...string) int {

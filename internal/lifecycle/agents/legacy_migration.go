@@ -26,7 +26,12 @@ func HasLegacyArtifacts(ctx Context, tool string) bool {
 	}
 	for _, path := range paths {
 		raw, err := os.ReadFile(path)
-		if err == nil && legacyArtifactContent(string(raw)) {
+		content := string(raw)
+		if err == nil && (strings.Contains(content, legacyManagedBlockStart) ||
+			strings.Contains(content, legacyRuleSignature) ||
+			strings.Contains(content, legacyHookSignature) ||
+			strings.Contains(content, legacyPluginSignature) ||
+			strings.Contains(content, legacyAwarenessSignature)) {
 			return true
 		}
 	}
@@ -92,14 +97,6 @@ func legacySecondaryArtifactPaths(ctx Context, tool string) []string {
 	default:
 		return nil
 	}
-}
-
-func legacyArtifactContent(content string) bool {
-	return strings.Contains(content, legacyManagedBlockStart) ||
-		strings.Contains(content, legacyRuleSignature) ||
-		strings.Contains(content, legacyHookSignature) ||
-		strings.Contains(content, legacyPluginSignature) ||
-		strings.Contains(content, legacyAwarenessSignature)
 }
 
 // CleanupLegacyArtifacts removes only files and settings contributions owned

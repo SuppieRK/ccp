@@ -16,11 +16,15 @@ func MatchesFirstIn(args, options []string) bool {
 }
 
 func MatchesHaveAny(args, wants []string) bool {
-	return len(wants) == 0 || containsAny(args, wants)
+	return len(wants) == 0 || slices.ContainsFunc(args, func(arg string) bool {
+		return slices.Contains(wants, arg)
+	})
 }
 
 func MatchesLackAny(args, disallowed []string) bool {
-	return len(disallowed) == 0 || !containsAny(args, disallowed)
+	return len(disallowed) == 0 || !slices.ContainsFunc(args, func(arg string) bool {
+		return slices.Contains(disallowed, arg)
+	})
 }
 
 func MatchesHaveSequence(args, sequence []string) bool {
@@ -28,19 +32,37 @@ func MatchesHaveSequence(args, sequence []string) bool {
 }
 
 func MatchesHaveShortFlag(args, flags []string) bool {
-	return len(flags) == 0 || containsShortFlag(args, flags)
+	return len(flags) == 0 || slices.ContainsFunc(args, func(arg string) bool {
+		return len(arg) >= 2 && arg[0] == '-' && arg[1] != '-' &&
+			slices.ContainsFunc(flags, func(flag string) bool {
+				return len(flag) == 2 && flag[0] == '-' && strings.ContainsRune(arg[1:], rune(flag[1]))
+			})
+	})
 }
 
 func MatchesNotHaveShortFlag(args, flags []string) bool {
-	return len(flags) == 0 || !containsShortFlag(args, flags)
+	return len(flags) == 0 || !slices.ContainsFunc(args, func(arg string) bool {
+		return len(arg) >= 2 && arg[0] == '-' && arg[1] != '-' &&
+			slices.ContainsFunc(flags, func(flag string) bool {
+				return len(flag) == 2 && flag[0] == '-' && strings.ContainsRune(arg[1:], rune(flag[1]))
+			})
+	})
 }
 
 func MatchesHaveAllShortFlags(args, flags []string) bool {
-	return len(flags) == 0 || containsAllShortFlags(args, flags)
+	return len(flags) == 0 || !slices.ContainsFunc(flags, func(flag string) bool {
+		return len(flag) != 2 || flag[0] != '-' || !slices.ContainsFunc(args, func(arg string) bool {
+			return len(arg) >= 2 && arg[0] == '-' && arg[1] != '-' && strings.ContainsRune(arg[1:], rune(flag[1]))
+		})
+	})
 }
 
 func MatchesNotHaveAllShortFlags(args, flags []string) bool {
-	return len(flags) == 0 || !containsAllShortFlags(args, flags)
+	return len(flags) == 0 || slices.ContainsFunc(flags, func(flag string) bool {
+		return len(flag) != 2 || flag[0] != '-' || !slices.ContainsFunc(args, func(arg string) bool {
+			return len(arg) >= 2 && arg[0] == '-' && arg[1] != '-' && strings.ContainsRune(arg[1:], rune(flag[1]))
+		})
+	})
 }
 
 func MatchesPositionalsLackAny(args, disallowed, valueFlags []string) bool {
@@ -69,15 +91,6 @@ func ScopeForStream[T any](stream contracts.Stream, combined, stdout, stderr *T)
 	return combined, combined != nil
 }
 
-func containsAny(args, wants []string) bool {
-	for _, arg := range args {
-		if slices.Contains(wants, arg) {
-			return true
-		}
-	}
-	return false
-}
-
 func containsSequence(args, sequence []string) bool {
 	if len(sequence) == 0 {
 		return true
@@ -85,40 +98,10 @@ func containsSequence(args, sequence []string) bool {
 	if len(sequence) > len(args) {
 		return false
 	}
-	for i := 0; i <= len(args)-len(sequence); i++ {
+	for i := range len(args) - len(sequence) + 1 {
 		if slices.Equal(args[i:i+len(sequence)], sequence) {
 			return true
 		}
 	}
 	return false
-}
-
-func containsShortFlag(args, flags []string) bool {
-	for _, arg := range args {
-		if len(arg) < 2 || arg[0] != '-' || arg[1] == '-' {
-			continue
-		}
-		for _, flag := range flags {
-			if len(flag) != 2 || flag[0] != '-' {
-				continue
-			}
-			if strings.ContainsRune(arg[1:], rune(flag[1])) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func containsAllShortFlags(args, flags []string) bool {
-	for _, flag := range flags {
-		if len(flag) != 2 || flag[0] != '-' || !containsShortFlag(args, []string{flag}) {
-			return false
-		}
-	}
-	return true
-}
-
-func takesStandaloneValue(arg string, flags []string) bool {
-	return slices.Contains(flags, arg)
 }

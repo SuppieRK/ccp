@@ -250,15 +250,6 @@ var _ = Describe("init basic behavior", func() {
 })
 
 var _ = Describe("init helper functions", func() {
-	DescribeTable("detecting all-noop tool states",
-		func(states []toolState, want bool) {
-			Expect(allToolStatesNoop(states)).To(Equal(want))
-		},
-		Entry("treats an empty state list as noop", nil, true),
-		Entry("treats only noop states as noop", []toolState{{Tool: "codex", Status: "noop"}}, true),
-		Entry("treats mixed states as non-noop", []toolState{{Tool: "codex", Status: "noop"}, {Tool: "cursor", Status: "applied"}}, false),
-	)
-
 	It("writes managed bytes once and becomes noop for unchanged content", func() {
 		path := filepath.Join(GinkgoT().TempDir(), "managed", "AGENTS.md")
 

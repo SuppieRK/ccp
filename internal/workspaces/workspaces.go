@@ -1,11 +1,12 @@
 package workspaces
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -152,8 +153,8 @@ func ListPath(path string) (entries []Workspace, err error) {
 	}); err != nil {
 		return nil, err
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].CWD < out[j].CWD
+	slices.SortFunc(out, func(left, right Workspace) int {
+		return cmp.Compare(left.CWD, right.CWD)
 	})
 	return out, nil
 }
@@ -271,8 +272,8 @@ func replacePathElement(path, oldDir, newDir string) string {
 	if strings.Contains(clean, needle) {
 		return strings.Replace(clean, needle, replacement, 1)
 	}
-	if strings.HasSuffix(clean, separator+oldDir) {
-		return strings.TrimSuffix(clean, separator+oldDir) + separator + newDir
+	if prefix, ok := strings.CutSuffix(clean, separator+oldDir); ok {
+		return prefix + separator + newDir
 	}
 	return clean
 }

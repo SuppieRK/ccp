@@ -362,7 +362,10 @@ func upsertCrushConfig(configPath, contextPath string) (string, error) {
 		root["options"] = options
 	}
 	paths := crushContextPaths(options["context_paths"])
-	if !slicesContainsPath(paths, contextPath) {
+	normalized := filepath.Clean(strings.TrimSpace(contextPath))
+	if !slices.ContainsFunc(paths, func(path string) bool {
+		return filepath.Clean(strings.TrimSpace(path)) == normalized
+	}) {
 		paths = append(paths, contextPath)
 	}
 	options["context_paths"] = paths
@@ -386,7 +389,10 @@ func crushConfigUsesContext(configPath, contextPath string) (bool, error) {
 	if options == nil {
 		return false, nil
 	}
-	return slicesContainsPath(crushContextPaths(options["context_paths"]), contextPath), nil
+	normalized := filepath.Clean(strings.TrimSpace(contextPath))
+	return slices.ContainsFunc(crushContextPaths(options["context_paths"]), func(path string) bool {
+		return filepath.Clean(strings.TrimSpace(path)) == normalized
+	}), nil
 }
 
 func removeCrushContextPath(configPath, contextPath string) (updated string, changed bool, removeAll bool, err error) {
@@ -452,16 +458,6 @@ func crushContextPaths(v any) []string {
 		paths = append(paths, s)
 	}
 	return paths
-}
-
-func slicesContainsPath(paths []string, contextPath string) bool {
-	normalized := filepath.Clean(strings.TrimSpace(contextPath))
-	for _, path := range paths {
-		if filepath.Clean(strings.TrimSpace(path)) == normalized {
-			return true
-		}
-	}
-	return false
 }
 
 func upsertQwenSettings(path string) (string, error) {

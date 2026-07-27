@@ -3,9 +3,10 @@ package audit
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -197,11 +198,7 @@ func attrsFor(fields map[string]any) []slog.Attr {
 	if len(fields) == 0 {
 		return nil
 	}
-	keys := make([]string, 0, len(fields))
-	for key := range fields {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(fields))
 
 	attrs := make([]slog.Attr, 0, len(keys))
 	for _, key := range keys {

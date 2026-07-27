@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
@@ -26,7 +27,7 @@ func ParseCommandArgs(args []string) (contracts.Command, error) {
 		return contracts.Command{}, errNoCommandProvided
 	}
 
-	cloned := append([]string(nil), args...)
+	cloned := slices.Clone(args)
 	return contracts.Command{
 		RawInput: renderCommandArgs(cloned),
 		Args:     cloned,
@@ -49,20 +50,13 @@ func renderCommandArg(arg string) string {
 	if arg == "" {
 		return `''`
 	}
-	if isShellSafeArg(arg) {
+	const safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@%_+=:,./-"
+	if strings.IndexFunc(arg, func(r rune) bool {
+		return !strings.ContainsRune(safe, r)
+	}) < 0 {
 		return arg
 	}
 	return quoteShellArg(arg)
-}
-
-func isShellSafeArg(arg string) bool {
-	const safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@%_+=:,./-"
-	for _, r := range arg {
-		if !strings.ContainsRune(safe, r) {
-			return false
-		}
-	}
-	return true
 }
 
 func quoteShellArg(arg string) string {

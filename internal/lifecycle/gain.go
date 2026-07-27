@@ -681,12 +681,12 @@ func averageSavings(rows []metrics.PeriodRow) float64 {
 
 func formatInt(v int64) string {
 	s := strconv.FormatInt(v, 10)
-	if len(s) <= 3 && !strings.HasPrefix(s, "-") {
+	unsigned, neg := strings.CutPrefix(s, "-")
+	if len(s) <= 3 && !neg {
 		return s
 	}
-	neg := strings.HasPrefix(s, "-")
 	if neg {
-		s = s[1:]
+		s = unsigned
 	}
 	var b strings.Builder
 	if neg {

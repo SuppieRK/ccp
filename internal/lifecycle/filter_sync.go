@@ -3,9 +3,10 @@ package lifecycle
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/projectfiles"
@@ -152,11 +153,7 @@ func readLifecycleMappings(path string) (lifecycleMappingsFile, error) {
 }
 
 func marshalLifecycleMappings(payload lifecycleMappingsFile) ([]byte, error) {
-	keys := make([]string, 0, len(payload.Map))
-	for key := range payload.Map {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(payload.Map))
 	ordered := lifecycleMappingsFile{
 		Version: payload.Version,
 		Map:     make(map[string]string, len(payload.Map)),

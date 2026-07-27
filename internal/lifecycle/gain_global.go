@@ -4,10 +4,10 @@ import (
 	"cmp"
 	"encoding/csv"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -202,15 +202,12 @@ func (s *globalQuerySession) writeWarnings(command string) {
 	if s == nil || len(s.failures) == 0 {
 		return
 	}
-	failures := make([]globalQueryFailure, 0, len(s.failures))
-	for _, failure := range s.failures {
-		failures = append(failures, failure)
-	}
-	sort.Slice(failures, func(i, j int) bool {
-		if failures[i].CWD != failures[j].CWD {
-			return failures[i].CWD < failures[j].CWD
-		}
-		return failures[i].MetricsPath < failures[j].MetricsPath
+	failures := slices.Collect(maps.Values(s.failures))
+	slices.SortFunc(failures, func(left, right globalQueryFailure) int {
+		return cmp.Or(
+			cmp.Compare(left.CWD, right.CWD),
+			cmp.Compare(left.MetricsPath, right.MetricsPath),
+		)
 	})
 	for _, failure := range failures {
 		writeLifecycleWarning("cmdshape %s --global: warning: skipped workspace %s (%s): %v\n", command, globalQuerySourceLabel(failure), failure.MetricsPath, failure.Err)
@@ -338,8 +335,8 @@ func queryGlobalPeriodRows(session *globalQuerySession, opts metrics.QueryOption
 		fillLocalPeriodRowDerived(&row)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].BucketStart < out[j].BucketStart
+	slices.SortFunc(out, func(left, right metrics.PeriodRow) int {
+		return cmp.Compare(left.BucketStart, right.BucketStart)
 	})
 	return out, nil
 }
@@ -359,14 +356,14 @@ func queryGlobalHistoryRows(session *globalQuerySession, opts metrics.QueryOptio
 			})
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Timestamp.Equal(rows[j].Timestamp) {
-			if rows[i].Source != rows[j].Source {
-				return rows[i].Source < rows[j].Source
-			}
-			return rows[i].Command < rows[j].Command
+	slices.SortFunc(rows, func(left, right globalHistoryRow) int {
+		if order := right.Timestamp.Compare(left.Timestamp); order != 0 {
+			return order
 		}
-		return rows[i].Timestamp.After(rows[j].Timestamp)
+		return cmp.Or(
+			cmp.Compare(left.Source, right.Source),
+			cmp.Compare(left.Command, right.Command),
+		)
 	})
 	return rows, nil
 }

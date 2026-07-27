@@ -2,11 +2,13 @@ package coverage
 
 import (
 	"bufio"
+	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"path"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -127,13 +129,14 @@ func appendProfileBlock(byFile map[string]*cover.Profile, files *[]string, mode 
 
 func readProfileMode(reader *bufio.Reader) (string, error) {
 	line, err := readProfileLine(reader)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return "", err
 	}
-	if !strings.HasPrefix(line, coverModePrefix) {
+	mode, ok := strings.CutPrefix(line, coverModePrefix)
+	if !ok {
 		return "", fmt.Errorf("first line must start with %q", coverModePrefix)
 	}
-	mode := strings.TrimSpace(strings.TrimPrefix(line, coverModePrefix))
+	mode = strings.TrimSpace(mode)
 	if mode == "" {
 		return "", fmt.Errorf("coverage mode is required")
 	}
@@ -295,8 +298,12 @@ func buildReport(byPackage map[string]totals, modulePath, internalPrefix string,
 			report.OtherPackages = append(report.OtherPackages, stat)
 		}
 	}
-	sort.Slice(report.InternalPackages, func(i, j int) bool { return report.InternalPackages[i].Package < report.InternalPackages[j].Package })
-	sort.Slice(report.OtherPackages, func(i, j int) bool { return report.OtherPackages[i].Package < report.OtherPackages[j].Package })
+	slices.SortFunc(report.InternalPackages, func(left, right PackageStat) int {
+		return cmp.Compare(left.Package, right.Package)
+	})
+	slices.SortFunc(report.OtherPackages, func(left, right PackageStat) int {
+		return cmp.Compare(left.Package, right.Package)
+	})
 	report.InternalTotal.Package = internalPrefix
 	report.InternalTotal.Percent = percent(report.InternalTotal.Covered, report.InternalTotal.Statements)
 	return report

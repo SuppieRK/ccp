@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -482,11 +481,11 @@ func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err er
 		fillSummaryDerived(&r)
 		out = append(out, r)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		return out[i].Command < out[j].Command
+	slices.SortFunc(out, func(left, right SummaryRow) int {
+		return cmp.Or(
+			cmp.Compare(right.Commands, left.Commands),
+			cmp.Compare(left.Command, right.Command),
+		)
 	})
 	return out, nil
 }
@@ -518,11 +517,11 @@ func QuerySummaryRowsByTool(path string, opts QueryOptions) (rows []SummaryToolR
 		fillSummaryToolDerived(&r)
 		out = append(out, r)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		return out[i].Tool < out[j].Tool
+	slices.SortFunc(out, func(left, right SummaryToolRow) int {
+		return cmp.Or(
+			cmp.Compare(right.Commands, left.Commands),
+			cmp.Compare(left.Tool, right.Tool),
+		)
 	})
 	return out, nil
 }
@@ -611,8 +610,8 @@ func QueryPeriod(path string, opts QueryOptions) (periodRows []PeriodRow, err er
 	for _, g := range groups {
 		out = append(out, periodRowFromAcc(g))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].BucketStart > out[j].BucketStart
+	slices.SortFunc(out, func(left, right PeriodRow) int {
+		return cmp.Compare(right.BucketStart, left.BucketStart)
 	})
 	return out, nil
 }
@@ -706,17 +705,13 @@ func RegistrySourceBuildRowsFromEvents(events []RegistryBuildEvent) []RegistrySo
 		fillRegistrySourceBuildDerived(&row, acc.durations)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].AvgDurationMS != out[j].AvgDurationMS {
-			return out[i].AvgDurationMS > out[j].AvgDurationMS
-		}
-		if out[i].MaxDurationMS != out[j].MaxDurationMS {
-			return out[i].MaxDurationMS > out[j].MaxDurationMS
-		}
-		if out[i].SourceKind != out[j].SourceKind {
-			return out[i].SourceKind < out[j].SourceKind
-		}
-		return out[i].SourceDir < out[j].SourceDir
+	slices.SortFunc(out, func(left, right RegistrySourceBuildRow) int {
+		return cmp.Or(
+			cmp.Compare(right.AvgDurationMS, left.AvgDurationMS),
+			cmp.Compare(right.MaxDurationMS, left.MaxDurationMS),
+			cmp.Compare(left.SourceKind, right.SourceKind),
+			cmp.Compare(left.SourceDir, right.SourceDir),
+		)
 	})
 	return out
 }
@@ -803,13 +798,11 @@ func percentileDuration(durations []int64, percentile float64) int64 {
 	if len(durations) == 0 {
 		return 0
 	}
-	sorted := append([]int64(nil), durations...)
+	sorted := slices.Clone(durations)
 	for i, duration := range sorted {
 		sorted[i] = max(duration, 0)
 	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i] < sorted[j]
-	})
+	slices.Sort(sorted)
 	index := int(math.Ceil(percentile*float64(len(sorted)))) - 1
 	index = max(0, min(index, len(sorted)-1))
 	return sorted[index]
@@ -1176,10 +1169,7 @@ func getU32(src []byte) uint32 {
 }
 
 func putNonNegativeInt64AsU64(dst []byte, v int64) {
-	if v < 0 {
-		v = 0
-	}
-	putU64(dst, uint64(v))
+	putU64(dst, uint64(max(v, 0)))
 }
 
 func putIntAsU64(dst []byte, v int) {

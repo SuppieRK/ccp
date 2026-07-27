@@ -2,12 +2,14 @@ package yaml
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -108,7 +110,7 @@ func (s preparedFilterSource) matchedFilterFiles() ([]string, error) {
 			matches = append(matches, filepath.Join(s.source.Directory, name))
 		}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 	return matches, nil
 }
 
@@ -350,12 +352,7 @@ func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSou
 	for order, source := range sources {
 		builder.addSource(source, order)
 	}
-	sort.SliceStable(builder.rows, func(i, j int) bool {
-		if diff := compareStatusRows(builder.rows[i], builder.rows[j]); diff != 0 {
-			return diff < 0
-		}
-		return false
-	})
+	slices.SortStableFunc(builder.rows, compareStatusRows)
 	return builder.registered, builder.rows, nil
 }
 
@@ -672,11 +669,7 @@ func registerMappedFilters(registered map[string]contracts.Filter, filters map[s
 }
 
 func registerCompiledFilterStatuses(registered map[string]contracts.Filter, filters map[string]compiledStatusFilter, source v2filters.FilterSource, order int, rows *[]RegistryStatusRow) {
-	keys := make([]string, 0, len(filters))
-	for key := range filters {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(filters))
 	for _, key := range keys {
 		entry := filters[key]
 		status := "ok"
@@ -710,11 +703,7 @@ func registerMappedFilterStatuses(registered map[string]contracts.Filter, filter
 		}
 		return
 	}
-	aliases := make([]string, 0, len(mappings))
-	for alias := range mappings {
-		aliases = append(aliases, alias)
-	}
-	sort.Strings(aliases)
+	aliases := slices.Sorted(maps.Keys(mappings))
 	for _, alias := range aliases {
 		target := mappings[alias]
 		entry, ok := filters[target]
@@ -882,7 +871,9 @@ func loadFilterDefinitions(source preparedFilterSource) ([]LoadedFilter, error) 
 		}
 		out = append(out, LoadedFilter{Path: p, Raw: raw, Spec: spec})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	slices.SortFunc(out, func(left, right LoadedFilter) int {
+		return cmp.Compare(left.Path, right.Path)
+	})
 	return out, nil
 }
 
@@ -924,6 +915,6 @@ func matchedFilterFiles(root string) ([]string, error) {
 			matches = append(matches, filepath.Join(root, entry.Name()))
 		}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 	return matches, nil
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -247,7 +248,7 @@ func readSequencedFromReader(r io.Reader, stream contracts.Stream, path string) 
 	for {
 		line, err := readReplayLine(reader)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return events, nil
 			}
 			return nil, fmt.Errorf("read sequenced stream %s: %w", path, err)
@@ -304,12 +305,12 @@ func CombinedInput(events []Event) string {
 
 func HasRequiredFixtureFiles(dir string) bool {
 	paths := FixturePaths(dir)
-	for _, name := range []string{StdoutFileName, StderrFileName, OutputFileName} {
+	return slices.ContainsFunc([]string{StdoutFileName, StderrFileName, OutputFileName}, func(name string) bool {
 		if info, err := os.Stat(paths[name]); err == nil && !info.IsDir() {
 			return true
 		}
-	}
-	return false
+		return false
+	})
 }
 
 func LoadFixture(dir string) (Fixture, error) {
@@ -399,10 +400,11 @@ func replayPayloadNeedsEncoding(line string) bool {
 }
 
 func decodeReplayPayload(payload string) (string, error) {
-	if !strings.HasPrefix(payload, encodedPayloadPrefix) {
+	encoded, ok := strings.CutPrefix(payload, encodedPayloadPrefix)
+	if !ok {
 		return payload, nil
 	}
-	encoded := strings.TrimSuffix(strings.TrimPrefix(payload, encodedPayloadPrefix), "\n")
+	encoded = strings.TrimSuffix(encoded, "\n")
 	body, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", fmt.Errorf("decode base64 replay payload: %w", err)

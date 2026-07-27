@@ -1471,7 +1471,7 @@ var _ = Describe("YamlFilter", func() {
 	Context("mutation hardening helpers", func() {
 		DescribeTable("applies scope action precedence deterministically",
 			func(scope *compiledScope, line string, expected contracts.Action) {
-				Expect(scope.baseActionForLine(line, trimLineEnding(line), map[string]string{"name": "demo"})).To(Equal(expected))
+				Expect(scope.baseActionForLine(line, strings.TrimRight(line, "\n"), map[string]string{"name": "demo"})).To(Equal(expected))
 			},
 			Entry("keeps lines before considering replacements or skips",
 				&compiledScope{
@@ -1837,16 +1837,6 @@ var _ = Describe("YamlFilter", func() {
 			},
 			Entry("drops the tool name and returns the remaining args", []string{"go", "test", "./..."}, []string{"test", "./..."}),
 			Entry("returns nil when no filtered args remain", []string{"go"}, nil),
-		)
-
-		DescribeTable("matches short flags deterministically",
-			func(args []string, want rune, expected bool) {
-				Expect(containsShortFlag(args, want)).To(Equal(expected))
-			},
-			Entry("finds grouped short flags", []string{"ls", "-la"}, 'a', true),
-			Entry("ignores bare dashes when scanning short flags", []string{"ls", "-", "file"}, 'a', false),
-			Entry("ignores long flags", []string{"ls", "--all"}, 'a', false),
-			Entry("returns false when no matching flag exists", []string{"ls", "-l"}, 'a', false),
 		)
 
 		DescribeTable("classifies atomic argument helpers deterministically",

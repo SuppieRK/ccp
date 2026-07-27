@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,7 +88,7 @@ func runCompleteUninstall(adapters map[string]agents.Adapter) error {
 		entries = nil
 	}
 	scopes := uninstallScopes(scopeRoot, entries)
-	tools := canonicalUninstallTools(adapters)
+	tools := slices.Sorted(maps.Keys(adapters))
 	for _, scope := range scopes {
 		if _, err := applyUninstallAdapters(agents.Context{ScopeRoot: scope, HomeDir: homeDir}, tools, adapters); err != nil {
 			return err
@@ -136,19 +137,6 @@ func applyUninstallAdapters(ctx agents.Context, tools []string, adapters map[str
 		fmt.Printf("cmdshape uninstall: [%s] status=%s (%s)\n", tool, status, reason)
 	}
 	return states, nil
-}
-
-func joinTools(adapters map[string]agents.Adapter) string {
-	return strings.Join(agents.SupportedTools(adapters), ", ")
-}
-
-func canonicalUninstallTools(adapters map[string]agents.Adapter) []string {
-	tools := make([]string, 0, len(adapters))
-	for id := range adapters {
-		tools = append(tools, id)
-	}
-	slices.Sort(tools)
-	return tools
 }
 
 func uninstallScopes(currentScope string, entries []workspaces.Workspace) []string {

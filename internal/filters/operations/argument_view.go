@@ -59,7 +59,7 @@ func (v *ArgumentView) appendBeforeSeparator(args []string, index int, valueFlag
 		return v.appendLongOption(args, index, valueFlags)
 	}
 	v.appendNormalized(arg)
-	if takesStandaloneValue(arg, valueFlags) {
+	if slices.Contains(valueFlags, arg) {
 		return v.appendStandaloneValue(args, index)
 	}
 	if !strings.HasPrefix(arg, "-") {
@@ -105,12 +105,7 @@ func (v ArgumentView) MatchesHaveAny(wants []string) bool {
 	if len(wants) == 0 {
 		return true
 	}
-	for _, want := range wants {
-		if v.matchesWantedArgument(want) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(wants, v.matchesWantedArgument)
 }
 
 func (v ArgumentView) matchesWantedArgument(want string) bool {
@@ -128,7 +123,9 @@ func (v ArgumentView) MatchesLackAny(disallowed []string) bool {
 }
 
 func (v ArgumentView) MatchesPositionalsLackAny(disallowed []string) bool {
-	return len(disallowed) == 0 || !containsAny(v.positionals, disallowed)
+	return len(disallowed) == 0 || !slices.ContainsFunc(v.positionals, func(arg string) bool {
+		return slices.Contains(disallowed, arg)
+	})
 }
 
 func (v ArgumentView) MatchesNoPositionals(want, allowLeadingCommand bool) bool {
@@ -153,26 +150,19 @@ func (v ArgumentView) MatchesHaveSequence(sequence []string) bool {
 }
 
 func (v ArgumentView) HasLongOption(name string) bool {
-	for _, option := range v.longOptions {
-		if option.name == name {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(v.longOptions, func(option longOption) bool {
+		return option.name == name
+	})
 }
 
 func (v ArgumentView) HasLongOptionValue(name, value string) bool {
-	for _, option := range v.longOptions {
-		if option.name == name && option.hasValue && option.value == value {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(v.longOptions, func(option longOption) bool {
+		return option.name == name && option.hasValue && option.value == value
+	})
 }
 
 func (v ArgumentView) LastLongOptionValue(name string) (string, bool) {
-	for index := len(v.longOptions) - 1; index >= 0; index-- {
-		option := v.longOptions[index]
+	for _, option := range slices.Backward(v.longOptions) {
 		if option.name == name && option.hasValue {
 			return option.value, true
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 type BuiltInAdapterSpec struct {
@@ -458,10 +459,6 @@ func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {
 	}
 }
 
-func expectedRuleDetectRoot(scopeRoot string, spec managedRuleFileAdapterSpec) string {
-	return filepath.Join(scopeRoot, spec.DetectRootPath)
-}
-
 var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 	catalog := []BuiltInAdapterSpec{
 		{ID: AgentClaude, New: func() Adapter { return ClaudeAdapter{} }},
@@ -475,9 +472,7 @@ var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 }()
 
 func BuiltInAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, len(builtInAdapterCatalog))
-	copy(catalog, builtInAdapterCatalog)
-	return catalog
+	return slices.Clone(builtInAdapterCatalog)
 }
 
 func NewBuiltInAdapters() (map[string]Adapter, error) {

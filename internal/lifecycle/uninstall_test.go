@@ -506,22 +506,6 @@ var _ = Describe("uninstall", func() {
 		Expect(states[0].Status).To(Equal("failed"))
 	})
 
-	It("joins adapter ids", func() {
-		adapters := map[string]agents.Adapter{
-			"beta":  uninstallStubAdapter{id: "beta"},
-			"alpha": uninstallStubAdapter{id: "alpha"},
-		}
-		Expect(joinTools(adapters)).To(Equal("alpha, beta"))
-	})
-
-	It("sorts canonical uninstall tool ids", func() {
-		tools := canonicalUninstallTools(map[string]agents.Adapter{
-			"beta":  uninstallStubAdapter{id: "beta"},
-			"alpha": uninstallStubAdapter{id: "alpha"},
-		})
-		Expect(tools).To(Equal([]string{"alpha", "beta"}))
-	})
-
 	It("normalizes and deduplicates uninstall scopes", func() {
 		base := GinkgoT().TempDir()
 		scopes := uninstallScopes(filepath.Join(base, "repo", "."), []workspaces.Workspace{

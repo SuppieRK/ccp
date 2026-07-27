@@ -60,11 +60,11 @@ var _ = ginkgo.Describe("Family conformance", func() {
 	ginkgo.Describe("managed rule file adapters", func() {
 		ginkgo.DescribeTable("conforms to the rule file family contract",
 			func(spec managedRuleFileAdapterSpec) {
-				Expect(os.MkdirAll(expectedRuleDetectRoot(ctx.ScopeRoot, spec), 0o755)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(ctx.ScopeRoot, spec.DetectRootPath), 0o755)).To(Succeed())
 
 				adapter := newManagedRuleFileAdapterFromSpec(spec)
 				Expect(adapter.ID()).To(Equal(string(spec.ID)))
-				Expect(adapter.DetectRoot(ctx.ScopeRoot)).To(Equal(expectedRuleDetectRoot(ctx.ScopeRoot, spec)))
+				Expect(adapter.DetectRoot(ctx.ScopeRoot)).To(Equal(filepath.Join(ctx.ScopeRoot, spec.DetectRootPath)))
 
 				plan := adapter.Plan(ctx)
 				Expect(plan).To(HaveLen(1))
