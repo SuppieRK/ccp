@@ -121,38 +121,27 @@ func reconcileManagedHomeLayout() error {
 }
 
 func cleanupManagedConfigDir(homeDir string) error {
-	configDir := filepath.Join(homeDir, configDirName, "cmdshape")
-	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
-	if err := removeAllChildrenExcept(
-		configDir,
-		startupMaintenanceLockName,
-		workspacesPath,
-		"filter-trust.json",
-		"recovery.json",
-		"recovery",
-	); err != nil {
-		return err
-	}
-
-	legacyDir := filepath.Join(homeDir, ".ccp")
-	if err := os.RemoveAll(legacyDir); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
+	return cleanupManagedConfigDirWithPolicy(homeDir, false)
 }
 
 func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
+	return cleanupManagedConfigDirWithPolicy(homeDir, true)
+}
+
+func cleanupManagedConfigDirWithPolicy(homeDir string, preserveFilters bool) error {
 	configDir := filepath.Join(homeDir, configDirName, "cmdshape")
 	workspacesPath := filepath.Base(workspaces.PathForHome(homeDir))
-	if err := removeAllChildrenExcept(
-		configDir,
-		"filters",
+	keep := []string{
 		startupMaintenanceLockName,
 		workspacesPath,
 		"filter-trust.json",
 		"recovery.json",
 		"recovery",
-	); err != nil {
+	}
+	if preserveFilters {
+		keep = append(keep, "filters")
+	}
+	if err := removeAllChildrenExcept(configDir, keep...); err != nil {
 		return err
 	}
 

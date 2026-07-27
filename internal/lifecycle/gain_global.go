@@ -1,11 +1,13 @@
 package lifecycle
 
 import (
+	"cmp"
 	"encoding/csv"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -200,15 +202,12 @@ func (s *globalQuerySession) writeWarnings(command string) {
 	if s == nil || len(s.failures) == 0 {
 		return
 	}
-	failures := make([]globalQueryFailure, 0, len(s.failures))
-	for _, failure := range s.failures {
-		failures = append(failures, failure)
-	}
-	sort.Slice(failures, func(i, j int) bool {
-		if failures[i].CWD != failures[j].CWD {
-			return failures[i].CWD < failures[j].CWD
-		}
-		return failures[i].MetricsPath < failures[j].MetricsPath
+	failures := slices.Collect(maps.Values(s.failures))
+	slices.SortFunc(failures, func(left, right globalQueryFailure) int {
+		return cmp.Or(
+			cmp.Compare(left.CWD, right.CWD),
+			cmp.Compare(left.MetricsPath, right.MetricsPath),
+		)
 	})
 	for _, failure := range failures {
 		writeLifecycleWarning("cmdshape %s --global: warning: skipped workspace %s (%s): %v\n", command, globalQuerySourceLabel(failure), failure.MetricsPath, failure.Err)
@@ -227,71 +226,89 @@ func globalQuerySourceLabel(failure globalQueryFailure) string {
 }
 
 func queryGlobalSummaryRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryRow, error) {
-	grouped := map[string]metrics.SummaryRow{}
-	for _, source := range session.sources {
-		rows, err := metrics.QuerySummaryRows(source.MetricsPath, opts)
-		if err != nil {
-			session.recordFailure(source, err)
-			continue
-		}
-		for _, row := range rows {
-			current := grouped[row.Command]
+	return aggregateGlobalRows(
+		session,
+		opts,
+		metrics.QuerySummaryRows,
+		func(row metrics.SummaryRow) string { return row.Command },
+		func(current *metrics.SummaryRow, row metrics.SummaryRow) {
 			current.Command = row.Command
 			current.Commands += row.Commands
 			current.RawBytes += row.RawBytes
 			current.KeptBytes += row.KeptBytes
-			grouped[row.Command] = current
-		}
-	}
-	out := make([]metrics.SummaryRow, 0, len(grouped))
-	for _, row := range grouped {
-		fillLocalSummaryRowDerived(&row)
-		out = append(out, row)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedInputTokens != out[j].EstimatedInputTokens {
-			return out[i].EstimatedInputTokens > out[j].EstimatedInputTokens
-		}
-		return out[i].Command < out[j].Command
-	})
-	return out, nil
+		},
+		fillLocalSummaryRowDerived,
+		compareGlobalSummaryRows,
+	)
 }
 
 func queryGlobalSummaryToolRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.SummaryToolRow, error) {
-	grouped := map[string]metrics.SummaryToolRow{}
+	return aggregateGlobalRows(
+		session,
+		opts,
+		metrics.QuerySummaryRowsByTool,
+		func(row metrics.SummaryToolRow) string { return row.Tool },
+		func(current *metrics.SummaryToolRow, row metrics.SummaryToolRow) {
+			current.Tool = row.Tool
+			current.Commands += row.Commands
+			current.RawBytes += row.RawBytes
+			current.KeptBytes += row.KeptBytes
+		},
+		fillLocalSummaryToolDerived,
+		compareGlobalSummaryToolRows,
+	)
+}
+
+func aggregateGlobalRows[T any, K comparable](
+	session *globalQuerySession,
+	opts metrics.QueryOptions,
+	query func(string, metrics.QueryOptions) ([]T, error),
+	key func(T) K,
+	merge func(*T, T),
+	finalize func(*T),
+	compare func(T, T) int,
+) ([]T, error) {
+	grouped := make(map[K]T)
 	for _, source := range session.sources {
-		rows, err := metrics.QuerySummaryRowsByTool(source.MetricsPath, opts)
+		rows, err := query(source.MetricsPath, opts)
 		if err != nil {
 			session.recordFailure(source, err)
 			continue
 		}
 		for _, row := range rows {
-			current := grouped[row.Tool]
-			current.Tool = row.Tool
-			current.Commands += row.Commands
-			current.RawBytes += row.RawBytes
-			current.KeptBytes += row.KeptBytes
-			grouped[row.Tool] = current
+			rowKey := key(row)
+			current := grouped[rowKey]
+			merge(&current, row)
+			grouped[rowKey] = current
 		}
 	}
-	out := make([]metrics.SummaryToolRow, 0, len(grouped))
+	out := make([]T, 0, len(grouped))
 	for _, row := range grouped {
-		fillLocalSummaryToolDerived(&row)
+		finalize(&row)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		if out[i].EstimatedInputTokens != out[j].EstimatedInputTokens {
-			return out[i].EstimatedInputTokens > out[j].EstimatedInputTokens
-		}
-		return out[i].Tool < out[j].Tool
-	})
+	slices.SortFunc(out, compare)
 	return out, nil
+}
+
+func compareGlobalSummaryRows(left, right metrics.SummaryRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Command, right.Command)
+}
+
+func compareGlobalSummaryToolRows(left, right metrics.SummaryToolRow) int {
+	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
+		return order
+	}
+	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+		return order
+	}
+	return strings.Compare(left.Tool, right.Tool)
 }
 
 func queryGlobalPeriodRows(session *globalQuerySession, opts metrics.QueryOptions) ([]metrics.PeriodRow, error) {
@@ -318,8 +335,8 @@ func queryGlobalPeriodRows(session *globalQuerySession, opts metrics.QueryOption
 		fillLocalPeriodRowDerived(&row)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].BucketStart < out[j].BucketStart
+	slices.SortFunc(out, func(left, right metrics.PeriodRow) int {
+		return cmp.Compare(left.BucketStart, right.BucketStart)
 	})
 	return out, nil
 }
@@ -339,14 +356,14 @@ func queryGlobalHistoryRows(session *globalQuerySession, opts metrics.QueryOptio
 			})
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Timestamp.Equal(rows[j].Timestamp) {
-			if rows[i].Source != rows[j].Source {
-				return rows[i].Source < rows[j].Source
-			}
-			return rows[i].Command < rows[j].Command
+	slices.SortFunc(rows, func(left, right globalHistoryRow) int {
+		if order := right.Timestamp.Compare(left.Timestamp); order != 0 {
+			return order
 		}
-		return rows[i].Timestamp.After(rows[j].Timestamp)
+		return cmp.Or(
+			cmp.Compare(left.Source, right.Source),
+			cmp.Compare(left.Command, right.Command),
+		)
 	})
 	return rows, nil
 }

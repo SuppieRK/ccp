@@ -764,7 +764,7 @@ func migrateLegacyRecoveryPayloads(configRoots []string) brandMigrationLocation 
 		Target: strings.Join(roots, ","),
 	}
 	for _, root := range roots {
-		err := rewriteLegacyRecoveryPayloads(root)
+		err := filepath.WalkDir(root, rewriteLegacyRecoveryEntry)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			location.State = brandMigrationSkipped
 			location.Reason = err.Error()
@@ -773,10 +773,6 @@ func migrateLegacyRecoveryPayloads(configRoots []string) brandMigrationLocation 
 	}
 	location.State = brandMigrationCompleted
 	return location
-}
-
-func rewriteLegacyRecoveryPayloads(root string) error {
-	return filepath.WalkDir(root, rewriteLegacyRecoveryEntry)
 }
 
 func rewriteLegacyRecoveryEntry(path string, entry os.DirEntry, walkErr error) error {

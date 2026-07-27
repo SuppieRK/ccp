@@ -9,7 +9,7 @@ import (
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -73,7 +73,9 @@ func RunInit(args []string) error {
 	if err != nil {
 		writeLifecycleWarning("cmdshape init: warning: could not update workspace registry: %v\n", err)
 	}
-	if allToolStatesNoop(states) {
+	if !slices.ContainsFunc(states, func(state toolState) bool {
+		return state.Status != "noop"
+	}) {
 		fmt.Printf("cmdshape init: already configured\n")
 		return nil
 	}
@@ -99,10 +101,9 @@ func resolveInitTools(toolsArg string, adapters map[string]agents.Adapter) ([]st
 }
 
 func parseTools(input string) []string {
-	parts := strings.Split(input, ",")
 	seen := map[string]bool{}
 	var out []string
-	for _, p := range parts {
+	for p := range strings.SplitSeq(input, ",") {
 		t := agents.NormalizeToolID(strings.TrimSpace(strings.ToLower(p)))
 		if t == "" || seen[t] {
 			continue
@@ -110,7 +111,7 @@ func parseTools(input string) []string {
 		seen[t] = true
 		out = append(out, t)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -143,18 +144,6 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 		fmt.Printf("cmdshape init: [%s] status=%s (%s)\n", tool, status, reason)
 	}
 	return states, nil
-}
-
-func allToolStatesNoop(states []toolState) bool {
-	if len(states) == 0 {
-		return true
-	}
-	for _, state := range states {
-		if state.Status != "noop" {
-			return false
-		}
-	}
-	return true
 }
 
 func writeManagedBytes(path string, data []byte, perm os.FileMode) (changed bool, err error) {

@@ -2,12 +2,14 @@ package yaml
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -46,6 +48,12 @@ type compiledStatusFilter struct {
 	tool   string
 	path   string
 	filter contracts.Filter
+}
+
+type inspectedFilterSource struct {
+	filters     map[string]compiledStatusFilter
+	rows        []RegistryStatusRow
+	definitions int64
 }
 
 type preparedFilterSource struct {
@@ -102,7 +110,7 @@ func (s preparedFilterSource) matchedFilterFiles() ([]string, error) {
 			matches = append(matches, filepath.Join(s.source.Directory, name))
 		}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 	return matches, nil
 }
 
@@ -344,12 +352,7 @@ func LoadRegistryStatusFromSourcesWithProjectState(sources []v2filters.FilterSou
 	for order, source := range sources {
 		builder.addSource(source, order)
 	}
-	sort.SliceStable(builder.rows, func(i, j int) bool {
-		if diff := compareStatusRows(builder.rows[i], builder.rows[j]); diff != 0 {
-			return diff < 0
-		}
-		return false
-	})
+	slices.SortStableFunc(builder.rows, compareStatusRows)
 	return builder.registered, builder.rows, nil
 }
 
@@ -421,10 +424,7 @@ func loadLegacyTargetDefinitionAfter(source preparedFilterSource, targets []stri
 }
 
 func compileExecutionFilter(source v2filters.FilterSource, loaded LoadedFilter) contracts.Filter {
-	if loaded.Spec == nil {
-		return nil
-	}
-	filter, err := NewFilter(loaded.Spec)
+	filter, err := compileLoadedFilter(source, loaded)
 	if err != nil {
 		audit.MustAppend("filter_compile_invalid", map[string]any{
 			"path":   loaded.Path,
@@ -433,7 +433,7 @@ func compileExecutionFilter(source v2filters.FilterSource, loaded LoadedFilter) 
 		})
 		return nil
 	}
-	return filter.WithProvenance(filterProvenance(source, loaded.Path, loaded.Raw))
+	return filter
 }
 
 func LoadRegistryFiltersFromSourcesWithTiming(sources []v2filters.FilterSource) (map[string]contracts.Filter, contracts.FilterRegistryBuildTiming, error) {
@@ -492,7 +492,7 @@ func loadCompiledFiltersFromSourceWithTiming(prepared preparedFilterSource) (map
 		SourceKind: string(source.Kind),
 		SourceDir:  source.Directory,
 	}
-	items, err := loadFilterDefinitions(prepared)
+	inspected, err := inspectFilterSource(prepared, 0, true)
 	if err != nil {
 		audit.MustAppend("filter_discovery_error", map[string]any{
 			"source_kind": string(source.Kind),
@@ -501,74 +501,114 @@ func loadCompiledFiltersFromSourceWithTiming(prepared preparedFilterSource) (map
 		})
 		return nil, timing, err
 	}
-	timing.Definitions = int64(len(items))
-	filters, err := compileFiltersFromSource(items, source)
-	if err != nil {
-		audit.MustAppend("filter_compile_error", map[string]any{
-			"source_kind": string(source.Kind),
-			"source_dir":  source.Directory,
-			"error":       err.Error(),
-		})
-		return nil, timing, err
+	timing.Definitions = inspected.definitions
+	filters := make(map[string]contracts.Filter, len(inspected.filters))
+	for tool, entry := range inspected.filters {
+		filters[tool] = entry.filter
 	}
 	timing.Compiled = int64(len(filters))
 	audit.MustAppend("filter_discovery", map[string]any{
 		"source_kind":    string(source.Kind),
 		"source_dir":     source.Directory,
-		"definitions":    len(items),
+		"definitions":    timing.Definitions,
 		"compiled_count": len(filters),
 	})
 	return filters, timing, nil
 }
 
 func inspectCompiledFiltersFromSource(source v2filters.FilterSource, order int) (map[string]compiledStatusFilter, []RegistryStatusRow, error) {
-	paths, err := matchedFilterFiles(source.Directory)
+	inspected, err := inspectFilterSource(preparedFilterSource{source: source}, order, false)
 	if err != nil {
 		return nil, nil, err
 	}
+	return inspected.filters, inspected.rows, nil
+}
 
+func inspectFilterSource(source preparedFilterSource, order int, auditInvalid bool) (inspectedFilterSource, error) {
+	paths, err := source.matchedFilterFiles()
+	if err != nil {
+		return inspectedFilterSource{}, err
+	}
 	compiled := make(map[string]compiledStatusFilter, len(paths))
 	rows := make([]RegistryStatusRow, 0)
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
+		raw, err := source.readFile(path)
 		if err != nil {
-			return nil, rows, fmt.Errorf("read filter %s: %w", path, err)
+			return inspectedFilterSource{filters: compiled, rows: rows}, fmt.Errorf("read filter %s: %w", path, err)
 		}
 		spec, err := ParseDefinition(raw)
 		if err != nil {
+			if auditInvalid {
+				audit.MustAppend("filter_definition_invalid", map[string]any{
+					"path":  path,
+					"error": err.Error(),
+				})
+			}
 			rows = append(rows, RegistryStatusRow{
 				Tool:       "-",
 				FilterPath: path,
-				SourceKind: source.Kind,
+				SourceKind: source.source.Kind,
 				Status:     "invalid filter: " + err.Error(),
 				order:      order,
 			})
 			continue
 		}
-		filter, err := NewFilter(spec)
-		if err != nil {
+		loaded := LoadedFilter{Path: path, Raw: raw, Spec: spec}
+		filter, compileErr := compileLoadedFilter(source.source, loaded)
+		if compileErr != nil {
+			if auditInvalid {
+				audit.MustAppend("filter_compile_invalid", map[string]any{
+					"path":   loaded.Path,
+					"filter": loaded.Spec.Filter,
+					"error":  compileErr.Error(),
+				})
+			}
 			rows = append(rows, RegistryStatusRow{
 				Tool:       spec.Filter,
 				FilterPath: path,
-				SourceKind: source.Kind,
-				Status:     "invalid filter: " + err.Error(),
+				SourceKind: source.source.Kind,
+				Status:     "invalid filter: " + compileErr.Error(),
 				order:      order,
 			})
 			continue
 		}
-		filter.WithProvenance(filterProvenance(source, path, raw))
 		if previous, ok := compiled[spec.Filter]; ok {
 			rows = append(rows, RegistryStatusRow{
 				Tool:       previous.tool,
 				FilterPath: previous.path,
-				SourceKind: source.Kind,
+				SourceKind: source.source.Kind,
 				Status:     "overridden",
 				order:      order,
 			})
 		}
 		compiled[spec.Filter] = compiledStatusFilter{tool: spec.Filter, path: path, filter: filter}
 	}
-	return compiled, rows, nil
+	return inspectedFilterSource{
+		filters:     compiled,
+		rows:        rows,
+		definitions: int64(len(paths) - countInvalidDefinitionRows(rows)),
+	}, nil
+}
+
+func countInvalidDefinitionRows(rows []RegistryStatusRow) int {
+	count := 0
+	for _, row := range rows {
+		if row.Tool == "-" && strings.HasPrefix(row.Status, "invalid filter:") {
+			count++
+		}
+	}
+	return count
+}
+
+func compileLoadedFilter(source v2filters.FilterSource, loaded LoadedFilter) (contracts.Filter, error) {
+	if loaded.Spec == nil {
+		return nil, nil
+	}
+	filter, err := NewFilter(loaded.Spec)
+	if err != nil {
+		return nil, err
+	}
+	return filter.WithProvenance(filterProvenance(source, loaded.Path, loaded.Raw)), nil
 }
 
 func registerCompiledFilters(registered map[string]contracts.Filter, filters map[string]contracts.Filter, source v2filters.FilterSource) {
@@ -629,11 +669,7 @@ func registerMappedFilters(registered map[string]contracts.Filter, filters map[s
 }
 
 func registerCompiledFilterStatuses(registered map[string]contracts.Filter, filters map[string]compiledStatusFilter, source v2filters.FilterSource, order int, rows *[]RegistryStatusRow) {
-	keys := make([]string, 0, len(filters))
-	for key := range filters {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(filters))
 	for _, key := range keys {
 		entry := filters[key]
 		status := "ok"
@@ -667,11 +703,7 @@ func registerMappedFilterStatuses(registered map[string]contracts.Filter, filter
 		}
 		return
 	}
-	aliases := make([]string, 0, len(mappings))
-	for alias := range mappings {
-		aliases = append(aliases, alias)
-	}
-	sort.Strings(aliases)
+	aliases := slices.Sorted(maps.Keys(mappings))
 	for _, alias := range aliases {
 		target := mappings[alias]
 		entry, ok := filters[target]
@@ -752,7 +784,7 @@ func compileFilters(loaded []LoadedFilter) (map[string]contracts.Filter, error) 
 func compileFiltersFromSource(loaded []LoadedFilter, source v2filters.FilterSource) (map[string]contracts.Filter, error) {
 	filters := make(map[string]contracts.Filter, len(loaded))
 	for _, candidate := range loaded {
-		filter, err := NewFilter(candidate.Spec)
+		filter, err := compileLoadedFilter(source, candidate)
 		if err != nil {
 			audit.MustAppend("filter_compile_invalid", map[string]any{
 				"path":   candidate.Path,
@@ -765,7 +797,6 @@ func compileFiltersFromSource(loaded []LoadedFilter, source v2filters.FilterSour
 		// lexicographically loaded files replace earlier ones for the same filter
 		// id. This matches cmdshape's documented override model and keeps precedence
 		// deterministic instead of failing registry construction on collisions.
-		filter.WithProvenance(filterProvenance(source, candidate.Path, candidate.Raw))
 		filters[candidate.Spec.Filter] = filter
 	}
 	return filters, nil
@@ -840,7 +871,9 @@ func loadFilterDefinitions(source preparedFilterSource) ([]LoadedFilter, error) 
 		}
 		out = append(out, LoadedFilter{Path: p, Raw: raw, Spec: spec})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	slices.SortFunc(out, func(left, right LoadedFilter) int {
+		return cmp.Compare(left.Path, right.Path)
+	})
 	return out, nil
 }
 
@@ -882,6 +915,6 @@ func matchedFilterFiles(root string) ([]string, error) {
 			matches = append(matches, filepath.Join(root, entry.Name()))
 		}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 	return matches, nil
 }

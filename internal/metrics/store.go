@@ -10,10 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
+	"github.com/SuppieRK/cmdshape/internal/product"
 	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	bolt "go.etcd.io/bbolt"
@@ -33,6 +33,13 @@ var (
 	runsBucket   = []byte("runs")
 	eventsBucket = []byte("event_ids")
 )
+
+func ProjectPath(workspaceRoot string) string {
+	if strings.TrimSpace(workspaceRoot) == "" {
+		return ""
+	}
+	return filepath.Join(product.ProjectStatePath(workspaceRoot), projectMetricsFile)
+}
 
 type RunMetric struct {
 	Timestamp             time.Time
@@ -337,16 +344,16 @@ func normalizeMetric(metric RunMetric) runRecord {
 		Command:               metric.Command,
 		Tool:                  metric.Tool,
 		Dispatch:              metric.Dispatch,
-		RawBytes:              int64(max0(metric.RawBytes)),
-		KeptBytes:             int64(max0(metric.KeptBytes)),
+		RawBytes:              int64(max(metric.RawBytes, 0)),
+		KeptBytes:             int64(max(metric.KeptBytes, 0)),
 		ExitCode:              metric.ExitCode,
-		DurationMS:            max0i64(metric.DurationMS),
+		DurationMS:            max(metric.DurationMS, 0),
 		Passthrough:           metric.Passthrough,
 		FilterSourceKind:      strings.TrimSpace(metric.FilterSourceKind),
 		FilterPath:            strings.TrimSpace(metric.FilterPath),
 		FilterHash:            strings.TrimSpace(metric.FilterHash),
 		RegistryBuildRecorded: metric.RegistryBuildRecorded,
-		RegistryBuildMS:       max0i64(metric.RegistryBuildMS),
+		RegistryBuildMS:       max(metric.RegistryBuildMS, 0),
 		RegistrySources:       normalizeRegistrySources(metric.RegistrySources),
 	}
 }
@@ -423,39 +430,50 @@ func LoadSummary(path string) (Summary, error) {
 	}, nil
 }
 
-func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err error) {
+func scanRunRecords(path string, opts QueryOptions, visit func(runRecord) error) (found bool, err error) {
 	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
+		return false, nil
 	}
 	db, err := openDB(path, true)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	defer closeBoltDBWithErr(db, &err)
 
-	grouped := make(map[string]SummaryRow, 32)
+	threshold := sinceThreshold(opts)
+	found = true
 	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
+		bucket := tx.Bucket(runsBucket)
+		if bucket == nil {
 			return nil
 		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
+		return bucket.ForEach(func(_, value []byte) error {
+			record := decodeRunRecord(value)
+			if !matchesOptions(record, opts, threshold) {
 				return nil
 			}
-			row := grouped[rec.Command]
-			row.Command = rec.Command
-			row.Commands++
-			row.RawBytes += rec.RawBytes
-			row.KeptBytes += rec.KeptBytes
-			grouped[rec.Command] = row
-			return nil
+			return visit(record)
 		})
+	})
+	return found, err
+}
+
+func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err error) {
+	grouped := make(map[string]SummaryRow, 32)
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		row := grouped[record.Command]
+		row.Command = record.Command
+		row.Commands++
+		row.RawBytes += record.RawBytes
+		row.KeptBytes += record.KeptBytes
+		grouped[record.Command] = row
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 
 	out := make([]SummaryRow, 0, len(grouped))
@@ -463,52 +481,35 @@ func QuerySummaryRows(path string, opts QueryOptions) (rows []SummaryRow, err er
 		fillSummaryDerived(&r)
 		out = append(out, r)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		return out[i].Command < out[j].Command
+	slices.SortFunc(out, func(left, right SummaryRow) int {
+		return cmp.Or(
+			cmp.Compare(right.Commands, left.Commands),
+			cmp.Compare(left.Command, right.Command),
+		)
 	})
 	return out, nil
 }
 
 func QuerySummaryRowsByTool(path string, opts QueryOptions) (rows []SummaryToolRow, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	grouped := make(map[string]SummaryToolRow, 16)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
-			return nil
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		key := record.Tool
+		if key == "" {
+			key = "unknown"
 		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
-				return nil
-			}
-			key := rec.Tool
-			if key == "" {
-				key = "unknown"
-			}
-			row := grouped[key]
-			row.Tool = key
-			row.Commands++
-			row.RawBytes += rec.RawBytes
-			row.KeptBytes += rec.KeptBytes
-			grouped[key] = row
-			return nil
-		})
+		row := grouped[key]
+		row.Tool = key
+		row.Commands++
+		row.RawBytes += record.RawBytes
+		row.KeptBytes += record.KeptBytes
+		grouped[key] = row
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 
 	out := make([]SummaryToolRow, 0, len(grouped))
@@ -516,41 +517,21 @@ func QuerySummaryRowsByTool(path string, opts QueryOptions) (rows []SummaryToolR
 		fillSummaryToolDerived(&r)
 		out = append(out, r)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Commands != out[j].Commands {
-			return out[i].Commands > out[j].Commands
-		}
-		return out[i].Tool < out[j].Tool
+	slices.SortFunc(out, func(left, right SummaryToolRow) int {
+		return cmp.Or(
+			cmp.Compare(right.Commands, left.Commands),
+			cmp.Compare(left.Tool, right.Tool),
+		)
 	})
 	return out, nil
 }
 
 func QuerySummary(path string, opts QueryOptions) (total SummaryTotal, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return SummaryTotal{}, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return SummaryTotal{}, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
-			return nil
-		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
-				return nil
-			}
-			total.Commands++
-			total.RawBytes += rec.RawBytes
-			total.KeptBytes += rec.KeptBytes
-			return nil
-		})
+	_, err = scanRunRecords(path, opts, func(record runRecord) error {
+		total.Commands++
+		total.RawBytes += record.RawBytes
+		total.KeptBytes += record.KeptBytes
+		return nil
 	})
 	if err != nil {
 		return SummaryTotal{}, err
@@ -560,36 +541,22 @@ func QuerySummary(path string, opts QueryOptions) (total SummaryTotal, err error
 }
 
 func QueryMissedOpportunities(path string, opts QueryOptions, limit int) (opps []MissedOpportunity, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
 	if limit <= 0 {
 		limit = defaultMissedTopLimit
 	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	grouped := make(map[string]int64, 16)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		if !record.Passthrough {
 			return nil
 		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) || !rec.Passthrough {
-				return nil
-			}
-			grouped[rec.Command]++
-			return nil
-		})
+		grouped[record.Command]++
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 
 	out := make([]MissedOpportunity, 0, len(grouped))
@@ -611,106 +578,55 @@ func compareMissedOpportunities(left, right MissedOpportunity) int {
 }
 
 func QueryHistory(path string, opts QueryOptions) (history []HistoryRow, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	out := make([]HistoryRow, 0, 64)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
-			return nil
-		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
-				return nil
-			}
-			out = append(out, historyRowFromRecord(rec))
-			return nil
-		})
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		out = append(out, historyRowFromRecord(record))
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	if !found {
+		return nil, nil
+	}
 
-	reverseHistoryRows(out)
+	slices.Reverse(out)
 	return out, nil
 }
 
 func QueryPeriod(path string, opts QueryOptions) (periodRows []PeriodRow, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	groups := make(map[string]*periodAcc, 16)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
-			return nil
-		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
-				return nil
-			}
-			return updatePeriodAcc(groups, rec, opts.Period)
-		})
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		return updatePeriodAcc(groups, record, opts.Period)
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 
 	out := make([]PeriodRow, 0, len(groups))
 	for _, g := range groups {
 		out = append(out, periodRowFromAcc(g))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].BucketStart > out[j].BucketStart
+	slices.SortFunc(out, func(left, right PeriodRow) int {
+		return cmp.Compare(right.BucketStart, left.BucketStart)
 	})
 	return out, nil
 }
 
 func QueryPerformanceRows(path string, opts QueryOptions) (rows []PerformanceRow, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	grouped := make(map[string]*performanceAcc, 32)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
-			return nil
-		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) {
-				return nil
-			}
-			updatePerformanceAcc(grouped, rec)
-			return nil
-		})
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		updatePerformanceAcc(grouped, record)
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 
 	out := make([]PerformanceRow, 0, len(grouped))
@@ -748,36 +664,22 @@ func QueryRegistryBuild(path string, opts QueryOptions) (summary RegistryBuildSu
 }
 
 func QueryRegistryBuildEvents(path string, opts QueryOptions) (events []RegistryBuildEvent, err error) {
-	if strings.TrimSpace(path) == "" || !fileExists(path) {
-		return nil, nil
-	}
-	db, err := openDB(path, true)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBoltDBWithErr(db, &err)
-
 	out := make([]RegistryBuildEvent, 0, 16)
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(runsBucket)
-		if b == nil {
+	found, err := scanRunRecords(path, opts, func(record runRecord) error {
+		if !record.RegistryBuildRecorded {
 			return nil
 		}
-		threshold := sinceThreshold(opts)
-		return b.ForEach(func(_, v []byte) error {
-			rec := decodeRunRecord(v)
-			if !matchesOptions(rec, opts, threshold) || !rec.RegistryBuildRecorded {
-				return nil
-			}
-			out = append(out, RegistryBuildEvent{
-				DurationMS: rec.RegistryBuildMS,
-				Sources:    append([]RegistrySourceBuildMetric(nil), rec.RegistrySources...),
-			})
-			return nil
+		out = append(out, RegistryBuildEvent{
+			DurationMS: record.RegistryBuildMS,
+			Sources:    slices.Clone(record.RegistrySources),
 		})
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 	return out, nil
 }
@@ -803,17 +705,13 @@ func RegistrySourceBuildRowsFromEvents(events []RegistryBuildEvent) []RegistrySo
 		fillRegistrySourceBuildDerived(&row, acc.durations)
 		out = append(out, row)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].AvgDurationMS != out[j].AvgDurationMS {
-			return out[i].AvgDurationMS > out[j].AvgDurationMS
-		}
-		if out[i].MaxDurationMS != out[j].MaxDurationMS {
-			return out[i].MaxDurationMS > out[j].MaxDurationMS
-		}
-		if out[i].SourceKind != out[j].SourceKind {
-			return out[i].SourceKind < out[j].SourceKind
-		}
-		return out[i].SourceDir < out[j].SourceDir
+	slices.SortFunc(out, func(left, right RegistrySourceBuildRow) int {
+		return cmp.Or(
+			cmp.Compare(right.AvgDurationMS, left.AvgDurationMS),
+			cmp.Compare(right.MaxDurationMS, left.MaxDurationMS),
+			cmp.Compare(left.SourceKind, right.SourceKind),
+			cmp.Compare(left.SourceDir, right.SourceDir),
+		)
 	})
 	return out
 }
@@ -864,9 +762,9 @@ func updateRegistrySourceBuildAcc(grouped map[string]*registrySourceBuildAcc, so
 	if strings.TrimSpace(source.Error) != "" {
 		acc.row.Errors++
 	}
-	acc.row.Definitions += max0i64(source.Definitions)
-	acc.row.Compiled += max0i64(source.Compiled)
-	acc.durations = append(acc.durations, max0i64(source.DurationMS))
+	acc.row.Definitions += max(source.Definitions, 0)
+	acc.row.Compiled += max(source.Compiled, 0)
+	acc.durations = append(acc.durations, max(source.DurationMS, 0))
 }
 
 func registryBuildSummaryFromDurations(durations []int64) RegistryBuildSummary {
@@ -876,7 +774,7 @@ func registryBuildSummaryFromDurations(durations []int64) RegistryBuildSummary {
 	var sum int64
 	var maxDuration int64
 	for _, duration := range durations {
-		duration = max0i64(duration)
+		duration = max(duration, 0)
 		sum += duration
 		maxDuration = max(maxDuration, duration)
 	}
@@ -900,13 +798,11 @@ func percentileDuration(durations []int64, percentile float64) int64 {
 	if len(durations) == 0 {
 		return 0
 	}
-	sorted := append([]int64(nil), durations...)
+	sorted := slices.Clone(durations)
 	for i, duration := range sorted {
-		sorted[i] = max0i64(duration)
+		sorted[i] = max(duration, 0)
 	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i] < sorted[j]
-	})
+	slices.Sort(sorted)
 	index := int(math.Ceil(percentile*float64(len(sorted)))) - 1
 	index = max(0, min(index, len(sorted)-1))
 	return sorted[index]
@@ -972,13 +868,6 @@ func dispatchFilterCase(dispatch, fallbackTool string) (string, string) {
 		return filterID, ""
 	}
 	return filterID, caseID
-}
-
-func reverseHistoryRows(rows []HistoryRow) {
-
-	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
-		rows[i], rows[j] = rows[j], rows[i]
-	}
 }
 
 func updatePeriodAcc(groups map[string]*periodAcc, rec runRecord, period string) error {
@@ -1105,82 +994,126 @@ func encodeRunRecord(rec runRecord) []byte {
 }
 
 func decodeRunRecord(b []byte) runRecord {
-
-	if len(b) < 8+4+4+4+8+8+8+8+1 {
+	decoder := runRecordDecoder{raw: b}
+	rec, ok := decoder.requiredFields()
+	if !ok {
 		return runRecord{}
 	}
-	i := 0
-	rec := runRecord{}
-	rec.TimestampUnix = getBoundedInt64FromU64(b[i : i+8])
-	i += 8
-	cmdLen := getBoundedIntFromU32(b[i : i+4])
-	i += 4
-	if i+cmdLen > len(b) {
-		return runRecord{}
-	}
-	rec.Command = string(b[i : i+cmdLen])
-	i += cmdLen
-	toolLen := getBoundedIntFromU32(b[i : i+4])
-	i += 4
-	if i+toolLen > len(b) {
-		return runRecord{}
-	}
-	rec.Tool = string(b[i : i+toolLen])
-	i += toolLen
-	dispatchLen := getBoundedIntFromU32(b[i : i+4])
-	i += 4
-	if i+dispatchLen > len(b) {
-		return runRecord{}
-	}
-	rec.Dispatch = string(b[i : i+dispatchLen])
-	i += dispatchLen
-	if i+8*4+1 > len(b) {
-		return runRecord{}
-	}
-	rec.RawBytes = getBoundedInt64FromU64(b[i : i+8])
-	i += 8
-	rec.KeptBytes = getBoundedInt64FromU64(b[i : i+8])
-	i += 8
-	rec.ExitCode = getBoundedSignedIntFromU64(b[i : i+8])
-	i += 8
-	rec.DurationMS = getBoundedInt64FromU64(b[i : i+8])
-	i += 8
-	rec.Passthrough = b[i] == 1
-	i++
 	if rec.Tool == "" {
 		rec.Tool = "unknown"
 	}
-	if i == len(b) {
+	if decoder.atEnd() {
 		return rec
 	}
-	var ok bool
-	rec.FilterSourceKind, i, ok = getEncodedString(b, i)
-	if !ok {
+	if rec.FilterSourceKind, ok = decoder.string(); !ok {
 		return runRecord{}
 	}
-	rec.FilterPath, i, ok = getEncodedString(b, i)
-	if !ok {
+	if rec.FilterPath, ok = decoder.string(); !ok {
 		return runRecord{}
 	}
-	rec.FilterHash, i, ok = getEncodedString(b, i)
-	if !ok {
+	if rec.FilterHash, ok = decoder.string(); !ok {
 		return runRecord{}
 	}
-	if i == len(b) {
+	if decoder.atEnd() {
 		return rec
 	}
-	if i+8 > len(b) {
+	if rec.RegistryBuildMS, ok = decoder.nonNegativeInt64(); !ok {
 		return runRecord{}
 	}
 	rec.RegistryBuildRecorded = true
-	rec.RegistryBuildMS = getBoundedInt64FromU64(b[i : i+8])
-	i += 8
-	rawSources, _, ok := getEncodedString(b, i)
+	rawSources, ok := decoder.string()
 	if !ok {
 		return runRecord{}
 	}
 	rec.RegistrySources = decodeRegistrySources(rawSources)
 	return rec
+}
+
+type runRecordDecoder struct {
+	raw    []byte
+	offset int
+}
+
+func (d *runRecordDecoder) requiredFields() (runRecord, bool) {
+	var rec runRecord
+	var ok bool
+	if rec.TimestampUnix, ok = d.nonNegativeInt64(); !ok {
+		return runRecord{}, false
+	}
+	if rec.Command, ok = d.string(); !ok {
+		return runRecord{}, false
+	}
+	if rec.Tool, ok = d.string(); !ok {
+		return runRecord{}, false
+	}
+	if rec.Dispatch, ok = d.string(); !ok {
+		return runRecord{}, false
+	}
+	if rec.RawBytes, ok = d.nonNegativeInt64(); !ok {
+		return runRecord{}, false
+	}
+	if rec.KeptBytes, ok = d.nonNegativeInt64(); !ok {
+		return runRecord{}, false
+	}
+	if rec.ExitCode, ok = d.signedInt(); !ok {
+		return runRecord{}, false
+	}
+	if rec.DurationMS, ok = d.nonNegativeInt64(); !ok {
+		return runRecord{}, false
+	}
+	if rec.Passthrough, ok = d.boolean(); !ok {
+		return runRecord{}, false
+	}
+	return rec, true
+}
+
+func (d *runRecordDecoder) string() (string, bool) {
+	lengthBytes, ok := d.take(4)
+	if !ok {
+		return "", false
+	}
+	value, ok := d.take(getBoundedIntFromU32(lengthBytes))
+	if !ok {
+		return "", false
+	}
+	return string(value), true
+}
+
+func (d *runRecordDecoder) nonNegativeInt64() (int64, bool) {
+	value, ok := d.take(8)
+	if !ok {
+		return 0, false
+	}
+	return getBoundedInt64FromU64(value), true
+}
+
+func (d *runRecordDecoder) signedInt() (int, bool) {
+	value, ok := d.take(8)
+	if !ok {
+		return 0, false
+	}
+	return getBoundedSignedIntFromU64(value), true
+}
+
+func (d *runRecordDecoder) boolean() (bool, bool) {
+	value, ok := d.take(1)
+	if !ok {
+		return false, false
+	}
+	return value[0] == 1, true
+}
+
+func (d *runRecordDecoder) take(size int) ([]byte, bool) {
+	if size < 0 || size > len(d.raw)-d.offset {
+		return nil, false
+	}
+	value := d.raw[d.offset : d.offset+size]
+	d.offset += size
+	return value, true
+}
+
+func (d *runRecordDecoder) atEnd() bool {
+	return d.offset == len(d.raw)
 }
 
 func normalizeRegistrySources(sources []RegistrySourceBuildMetric) []RegistrySourceBuildMetric {
@@ -1189,9 +1122,9 @@ func normalizeRegistrySources(sources []RegistrySourceBuildMetric) []RegistrySou
 		out = append(out, RegistrySourceBuildMetric{
 			SourceKind:  strings.TrimSpace(source.SourceKind),
 			SourceDir:   strings.TrimSpace(source.SourceDir),
-			Definitions: max0i64(source.Definitions),
-			Compiled:    max0i64(source.Compiled),
-			DurationMS:  max0i64(source.DurationMS),
+			Definitions: max(source.Definitions, 0),
+			Compiled:    max(source.Compiled, 0),
+			DurationMS:  max(source.DurationMS, 0),
 			Error:       strings.TrimSpace(source.Error),
 		})
 	}
@@ -1227,18 +1160,6 @@ func putEncodedString(dst []byte, offset int, value []byte) int {
 	return offset + len(value)
 }
 
-func getEncodedString(src []byte, offset int) (string, int, bool) {
-	if offset+4 > len(src) {
-		return "", offset, false
-	}
-	valueLen := getBoundedIntFromU32(src[offset : offset+4])
-	offset += 4
-	if offset+valueLen > len(src) {
-		return "", offset, false
-	}
-	return string(src[offset : offset+valueLen]), offset + valueLen, true
-}
-
 func putU32(dst []byte, v uint32) {
 	binary.BigEndian.PutUint32(dst, v)
 }
@@ -1248,10 +1169,7 @@ func getU32(src []byte) uint32 {
 }
 
 func putNonNegativeInt64AsU64(dst []byte, v int64) {
-	if v < 0 {
-		v = 0
-	}
-	putU64(dst, uint64(v))
+	putU64(dst, uint64(max(v, 0)))
 }
 
 func putIntAsU64(dst []byte, v int) {
@@ -1478,20 +1396,6 @@ func truncateCommand(cmd string) string {
 		return cmd
 	}
 	return string(runes[:maxCommandTextRunes-3]) + "..."
-}
-
-func max0(v int) int {
-	if v < 0 {
-		return 0
-	}
-	return v
-}
-
-func max0i64(v int64) int64 {
-	if v < 0 {
-		return 0
-	}
-	return v
 }
 
 func ensureSchema(projectRoot, path string) (err error) {

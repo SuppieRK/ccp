@@ -50,7 +50,14 @@ func newStateWithLimit(command contracts.Command, filter contracts.Filter, buffe
 }
 
 func (e *Engine) Start(command contracts.Command) *State {
-	return newState(command, e.registry.Resolve(command))
+	return e.StartResolved(command, e.registry.Resolve(command))
+}
+
+func (e *Engine) StartResolved(command contracts.Command, filter contracts.Filter) *State {
+	if filter == nil {
+		filter = e.registry.Resolve(command)
+	}
+	return newState(command, filter)
 }
 
 func (s *State) Stdout(line string) []BufferEntry {

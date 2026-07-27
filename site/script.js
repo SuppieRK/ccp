@@ -1,8 +1,8 @@
 (function () {
   const header = document.querySelector("[data-site-header]");
-  const copyButtons = document.querySelectorAll("[data-copy-target]");
-  const tabButtons = document.querySelectorAll("[data-example-tab]");
-  const panels = document.querySelectorAll("[data-example-panel]");
+  const copyButtons = [...document.querySelectorAll("[data-copy-target]")];
+  const tabButtons = [...document.querySelectorAll("[data-example-tab]")];
+  const panels = [...document.querySelectorAll("[data-example-panel]")];
   const filterDemo = document.querySelector("[data-filter-demo]");
 
   function syncHeader() {
@@ -69,7 +69,7 @@
     }
 
     filterDemo.querySelectorAll(".filter-demo-source code, .filter-demo-result code").forEach(function (code) {
-      Array.prototype.slice.call(code.childNodes).forEach(function (node) {
+      [...code.childNodes].forEach(function (node) {
         if (node.nodeType === 3) {
           node.remove();
         }
@@ -78,14 +78,12 @@
     filterDemo.classList.add("is-enhanced");
 
     if (globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      if (filterDemo) {
-        filterDemo.querySelectorAll(".filter-demo-source [data-filter-show]").forEach(function (line) {
-          line.classList.add("is-active");
-        });
-        filterDemo.querySelectorAll(".filter-demo-result [data-filter-hide]").forEach(function (line) {
-          line.classList.add("is-hidden");
-        });
-      }
+      filterDemo.querySelectorAll(".filter-demo-source [data-filter-show]").forEach(function (line) {
+        line.classList.add("is-active");
+      });
+      filterDemo.querySelectorAll(".filter-demo-result [data-filter-hide]").forEach(function (line) {
+        line.classList.add("is-hidden");
+      });
       return;
     }
 
@@ -182,7 +180,7 @@
     });
 
     button.addEventListener("keydown", function (event) {
-      const index = Array.prototype.indexOf.call(tabButtons, button);
+      const index = tabButtons.indexOf(button);
       let nextIndex;
 
       if (event.key === "ArrowRight") {

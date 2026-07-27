@@ -179,7 +179,7 @@ func shouldSplitWinsDrags(rows []metrics.SummaryToolRow) bool {
 }
 
 func topWinsText(rows []metrics.SummaryToolRow) string {
-	sorted := append([]metrics.SummaryToolRow(nil), rows...)
+	sorted := slices.Clone(rows)
 	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
 		if diff := cmp.Compare(b.EstimatedSavedTokens, a.EstimatedSavedTokens); diff != 0 {
 			return diff
@@ -234,7 +234,7 @@ func dragToolsText(rows []metrics.SummaryToolRow) string {
 }
 
 func toolsSummaryText(rows []metrics.SummaryToolRow) string {
-	sorted := append([]metrics.SummaryToolRow(nil), rows...)
+	sorted := slices.Clone(rows)
 	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
 		if diff := cmp.Compare(b.EstimatedSavedTokens, a.EstimatedSavedTokens); diff != 0 {
 			return diff
@@ -391,7 +391,7 @@ func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 	if len(rows) < 2 {
 		return trendInsufficientData
 	}
-	sorted := append([]metrics.PeriodRow(nil), rows...)
+	sorted := slices.Clone(rows)
 	slices.SortFunc(sorted, func(a, b metrics.PeriodRow) int {
 		return cmp.Compare(a.BucketStart, b.BucketStart)
 	})
@@ -645,15 +645,8 @@ func sortGainTableRows(rows []metrics.SummaryToolRow) []metrics.SummaryToolRow {
 	return append(savingRows, zeroRows...)
 }
 
-func runeLen(input string) int {
-	return utf8.RuneCountInString(input)
-}
-
 func padTableCell(value string, width int, right bool) string {
-	padding := width - runeLen(value)
-	if padding < 0 {
-		padding = 0
-	}
+	padding := max(width-utf8.RuneCountInString(value), 0)
 	if right {
 		return " " + strings.Repeat(" ", padding) + value + " "
 	}
@@ -663,11 +656,11 @@ func padTableCell(value string, width int, right bool) string {
 func renderTextTable(columns []textTableColumn, rows [][]string) string {
 	widths := make([]int, len(columns))
 	for i, col := range columns {
-		widths[i] = runeLen(col.header)
+		widths[i] = utf8.RuneCountInString(col.header)
 	}
 	for _, row := range rows {
 		for i, cell := range row {
-			widths[i] = max(widths[i], runeLen(cell))
+			widths[i] = max(widths[i], utf8.RuneCountInString(cell))
 		}
 	}
 

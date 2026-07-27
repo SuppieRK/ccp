@@ -2,9 +2,10 @@ package agents
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -91,16 +92,13 @@ type Uninstaller interface {
 }
 
 func SupportedTools(adapters map[string]Adapter) []string {
-	keys := make([]string, 0, len(adapters)+len(toolAliases))
-	for k := range adapters {
-		keys = append(keys, k)
-	}
+	keys := slices.Collect(maps.Keys(adapters))
 	for alias, canonical := range toolAliases {
 		if _, ok := adapters[canonical]; ok {
 			keys = append(keys, alias)
 		}
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 
@@ -115,11 +113,7 @@ func ValidateSelectedTools(tools []string, adapters map[string]Adapter) error {
 
 func DetectTools(scopeRoot string, adapters map[string]Adapter) []string {
 	detected := make([]string, 0, len(adapters))
-	ids := make([]string, 0, len(adapters))
-	for id := range adapters {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
+	ids := slices.Sorted(maps.Keys(adapters))
 	for _, id := range ids {
 		if detector, ok := adapters[id].(Detector); ok {
 			if detector.Detect(scopeRoot) {

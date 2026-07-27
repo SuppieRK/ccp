@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -21,11 +22,11 @@ import (
 )
 
 const (
-	captureStdoutFileName       = "stdout.txt"
-	captureStderrFileName       = "stderr.txt"
-	captureOutputFileName       = "output.txt"
-	captureOutputStdoutFileName = "output.stdout.txt"
-	captureOutputStderrFileName = "output.stderr.txt"
+	captureStdoutFileName       = replay.StdoutFileName
+	captureStderrFileName       = replay.StderrFileName
+	captureOutputFileName       = replay.OutputFileName
+	captureOutputStdoutFileName = replay.OutputStdoutFileName
+	captureOutputStderrFileName = replay.OutputStderrFileName
 )
 
 type captureVerifier interface {
@@ -78,7 +79,7 @@ func RunCapture(args []string) error {
 
 func recordCaptureFailure(commandArgs []string, dir string, confidential []string, stage string, err error) error {
 	audit.MustAppend("capture_invocation_finish", map[string]any{
-		"command": captureAuditCommand(commandArgs, confidential),
+		"command": strings.Join(redactCaptureArgs(commandArgs, confidential), " "),
 		"dir":     redactCaptureText(dir, confidential),
 		"success": false,
 		"stage":   stage,
@@ -88,7 +89,7 @@ func recordCaptureFailure(commandArgs []string, dir string, confidential []strin
 }
 
 func executeCapture(commandArgs []string, captureDir string, confidential []string) error {
-	auditCommand := captureAuditCommand(commandArgs, confidential)
+	auditCommand := strings.Join(redactCaptureArgs(commandArgs, confidential), " ")
 	recordFailure := func(stage string, err error) error {
 		return recordCaptureFailure(commandArgs, captureDir, confidential, stage, err)
 	}
@@ -105,12 +106,13 @@ func executeCapture(commandArgs []string, captureDir string, confidential []stri
 		return recordFailure("mkdir", err)
 	}
 
-	commandPath := filepath.Join(captureDir, replay.CommandFileName)
-	stdoutPath := filepath.Join(captureDir, captureStdoutFileName)
-	stderrPath := filepath.Join(captureDir, captureStderrFileName)
-	outputPath := filepath.Join(captureDir, captureOutputFileName)
-	outputStdoutPath := filepath.Join(captureDir, captureOutputStdoutFileName)
-	outputStderrPath := filepath.Join(captureDir, captureOutputStderrFileName)
+	paths := replay.FixturePaths(captureDir)
+	commandPath := paths[replay.CommandFileName]
+	stdoutPath := paths[replay.StdoutFileName]
+	stderrPath := paths[replay.StderrFileName]
+	outputPath := paths[replay.OutputFileName]
+	outputStdoutPath := paths[replay.OutputStdoutFileName]
+	outputStderrPath := paths[replay.OutputStderrFileName]
 	if err := tightenCaptureTargets([]string{commandPath, stdoutPath, stderrPath, outputPath, outputStdoutPath, outputStderrPath}); err != nil {
 		return recordFailure("tighten_targets", err)
 	}
@@ -163,10 +165,6 @@ func executeCapture(commandArgs []string, captureDir string, confidential []stri
 		return fmt.Errorf("captured command exited with code %d", exitCode)
 	}
 	return nil
-}
-
-func captureAuditCommand(commandArgs, confidential []string) string {
-	return strings.Join(redactCaptureArgs(commandArgs, confidential), " ")
 }
 
 func resolveCaptureDir(dir, _ string) (string, error) {
@@ -302,7 +300,9 @@ func runNativeCaptureContext(ctx context.Context, args []string) ([]replay.Event
 		}
 		return nil, 0, ctx.Err()
 	}
-	sort.Slice(events, func(i, j int) bool { return events[i].Sequence < events[j].Sequence })
+	slices.SortFunc(events, func(left, right replay.Event) int {
+		return cmp.Compare(left.Sequence, right.Sequence)
+	})
 	if err := replay.ValidateSequence(events); err != nil {
 		return nil, 0, err
 	}

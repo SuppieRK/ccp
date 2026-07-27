@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -9,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -89,11 +90,11 @@ func Run(opts RunOptions) (RunReport, error) {
 			report.Failed = true
 		}
 	}
-	sort.Slice(report.Results, func(i, j int) bool {
-		if report.Results[i].Tool == report.Results[j].Tool {
-			return report.Results[i].Case < report.Results[j].Case
-		}
-		return report.Results[i].Tool < report.Results[j].Tool
+	slices.SortFunc(report.Results, func(left, right CaseResult) int {
+		return cmp.Or(
+			cmp.Compare(left.Tool, right.Tool),
+			cmp.Compare(left.Case, right.Case),
+		)
 	})
 	if err := writeReportJSON(opts.ArtifactsDir, report); err != nil {
 		return report, err
@@ -315,7 +316,7 @@ func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTok
 	if err := os.MkdirAll(filepath.Join(artifactDir, ".cmdshape"), 0o755); err != nil {
 		return err
 	}
-	return metrics.Append(filepath.Join(artifactDir, ".cmdshape", "gain.db"), metrics.RunMetric{
+	return metrics.Append(metrics.ProjectPath(artifactDir), metrics.RunMetric{
 		Timestamp:  time.Now().UTC(),
 		Command:    strings.Join(args, " "),
 		Tool:       args[0],
@@ -355,12 +356,12 @@ func FailureSummary(report RunReport) []string {
 
 func WriteSummary(report RunReport) error {
 	var b strings.Builder
-	rows := append([]CaseResult(nil), report.Results...)
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Tool == rows[j].Tool {
-			return rows[i].Case < rows[j].Case
-		}
-		return rows[i].Tool < rows[j].Tool
+	rows := slices.Clone(report.Results)
+	slices.SortFunc(rows, func(left, right CaseResult) int {
+		return cmp.Or(
+			cmp.Compare(left.Tool, right.Tool),
+			cmp.Compare(left.Case, right.Case),
+		)
 	})
 	for _, r := range rows {
 		_, _ = fmt.Fprintf(

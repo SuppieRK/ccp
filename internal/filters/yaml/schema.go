@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
@@ -272,6 +273,19 @@ func validateCaseOutput(cs *CaseClause, variables map[string]struct{}, path vali
 }
 
 func validateCaseVariables(variables []Variable, path validationPath) (map[string]struct{}, error) {
+	return validateVariables(variables, path, func(variable Variable, itemPath validationPath) error {
+		if variable.RegexGroup != "" {
+			return ValidationError{Path: string(itemPath.Path("regex_group")), Message: "case variables must not define regex_group"}
+		}
+		return nil
+	})
+}
+
+func validateVariables(
+	variables []Variable,
+	path validationPath,
+	validateRegex func(Variable, validationPath) error,
+) (map[string]struct{}, error) {
 	seen := make(map[string]struct{}, len(variables))
 	for i, variable := range variables {
 		itemPath := indexedValidationPath(path, i)
@@ -281,8 +295,8 @@ func validateCaseVariables(variables []Variable, path validationPath) (map[strin
 		if variable.Type != "number" && variable.Type != "string" {
 			return nil, ValidationError{Path: string(itemPath.Path("type")), Message: variableTypeInvalidMessage}
 		}
-		if variable.RegexGroup != "" {
-			return nil, ValidationError{Path: string(itemPath.Path("regex_group")), Message: "case variables must not define regex_group"}
+		if err := validateRegex(variable, itemPath); err != nil {
+			return nil, err
 		}
 		if _, ok := seen[variable.Name]; ok {
 			return nil, ValidationError{Path: string(itemPath.Path("name")), Message: variableNameUniqueMessage}
@@ -293,31 +307,19 @@ func validateCaseVariables(variables []Variable, path validationPath) (map[strin
 }
 
 func validateGroupVariables(variables []Variable, path validationPath, regex string) (map[string]struct{}, error) {
-	seen := make(map[string]struct{}, len(variables))
 	compiled, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
 	}
-	for i, variable := range variables {
-		itemPath := indexedValidationPath(path, i)
-		if variable.Name == "" {
-			return nil, ValidationError{Path: string(itemPath.Path("name")), Message: variableNameEmptyMessage}
-		}
-		if variable.Type != "number" && variable.Type != "string" {
-			return nil, ValidationError{Path: string(itemPath.Path("type")), Message: variableTypeInvalidMessage}
-		}
-		if variable.RegexGroup != "" && !regexpHasNamedCapture(compiled, variable.RegexGroup) {
-			return nil, ValidationError{Path: string(itemPath.Path("regex_group")), Message: "regex_group must reference a named capture from matches_regex"}
+	return validateVariables(variables, path, func(variable Variable, itemPath validationPath) error {
+		if variable.RegexGroup != "" && !slices.Contains(compiled.SubexpNames(), variable.RegexGroup) {
+			return ValidationError{Path: string(itemPath.Path("regex_group")), Message: "regex_group must reference a named capture from matches_regex"}
 		}
 		if variable.Type == "number" && variable.RegexGroup != "" {
-			return nil, ValidationError{Path: string(itemPath.Path("regex_group")), Message: "number variables must not define regex_group"}
+			return ValidationError{Path: string(itemPath.Path("regex_group")), Message: "number variables must not define regex_group"}
 		}
-		if _, ok := seen[variable.Name]; ok {
-			return nil, ValidationError{Path: string(itemPath.Path("name")), Message: variableNameUniqueMessage}
-		}
-		seen[variable.Name] = struct{}{}
-	}
-	return seen, nil
+		return nil
+	})
 }
 
 func validateCommand(cmd *CommandMutation, path validationPath) error {
@@ -460,24 +462,12 @@ func validateBoundaryGroupVariables(variables []Variable, path validationPath, s
 }
 
 func validateBoundaryGroupVariablesWithoutRegex(variables []Variable, path validationPath) (map[string]struct{}, error) {
-	seen := make(map[string]struct{}, len(variables))
-	for i, variable := range variables {
-		itemPath := indexedValidationPath(path, i)
-		if variable.Name == "" {
-			return nil, ValidationError{Path: string(itemPath.Path("name")), Message: variableNameEmptyMessage}
-		}
-		if variable.Type != "number" && variable.Type != "string" {
-			return nil, ValidationError{Path: string(itemPath.Path("type")), Message: variableTypeInvalidMessage}
-		}
+	return validateVariables(variables, path, func(variable Variable, itemPath validationPath) error {
 		if variable.RegexGroup != "" {
-			return nil, ValidationError{Path: string(itemPath.Path("regex_group")), Message: "boundary groups without starts_with_regex must not define regex_group"}
+			return ValidationError{Path: string(itemPath.Path("regex_group")), Message: "boundary groups without starts_with_regex must not define regex_group"}
 		}
-		if _, ok := seen[variable.Name]; ok {
-			return nil, ValidationError{Path: string(itemPath.Path("name")), Message: variableNameUniqueMessage}
-		}
-		seen[variable.Name] = struct{}{}
-	}
-	return seen, nil
+		return nil
+	})
 }
 
 var templateVariablePattern = regexp.MustCompile(`\{\{([A-Za-z0-9_-]+)\}\}`)
@@ -514,7 +504,9 @@ func validateOutputScope(scope *OutputScope, path validationPath) error {
 	}
 	if scope.Lines != nil {
 		if err := validateLines(scope.Lines, path.Path("lines"), linesValidationMode{
-			allowGroupsSummary: scopeHasCollectGroups(scope.Groups),
+			allowGroupsSummary: slices.ContainsFunc(scope.Groups, func(group OutputGroup) bool {
+				return group.MatchesRegex != "" && group.GroupBy != ""
+			}),
 		}); err != nil {
 			return err
 		}
@@ -671,15 +663,6 @@ func validateMaxGroupsSummary(summary *MaxGroupsSummary, path validationPath) er
 		return err
 	}
 	return nil
-}
-
-func scopeHasCollectGroups(groups []OutputGroup) bool {
-	for _, group := range groups {
-		if group.MatchesRegex != "" && group.GroupBy != "" {
-			return true
-		}
-	}
-	return false
 }
 
 func matcherCount(values ...string) int {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 type BuiltInAdapterSpec struct {
@@ -366,65 +367,51 @@ func canonicalRuleVerificationSnippets() []string {
 }
 
 func builtInRuleFileAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, 0, len(managedRuleFileAdapterSpecs))
-	for _, spec := range managedRuleFileAdapterSpecs {
-		catalog = append(catalog, BuiltInAdapterSpec{
-			ID: spec.ID,
-			New: func() Adapter {
-				return newManagedRuleFileAdapterFromSpec(spec)
-			},
-		})
-	}
-	return catalog
+	return buildAdapterCatalog(
+		managedRuleFileAdapterSpecs,
+		func(spec managedRuleFileAdapterSpec) ID { return spec.ID },
+		newManagedRuleFileAdapterFromSpec,
+	)
 }
 
 func builtInJSPluginAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, 0, len(managedJSPluginAdapterSpecs))
-	for _, spec := range managedJSPluginAdapterSpecs {
-		catalog = append(catalog, BuiltInAdapterSpec{
-			ID: spec.ID,
-			New: func() Adapter {
-				return NewManagedJSPluginAdapter(spec)
-			},
-		})
-	}
-	return catalog
+	return buildAdapterCatalog(
+		managedJSPluginAdapterSpecs,
+		func(spec ManagedJSPluginAdapterSpec) ID { return spec.ID },
+		func(spec ManagedJSPluginAdapterSpec) Adapter { return NewManagedJSPluginAdapter(spec) },
+	)
 }
 
 func builtInContextAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, 0, len(simpleContextAdapterSpecs))
-	for _, spec := range simpleContextAdapterSpecs {
-		catalog = append(catalog, BuiltInAdapterSpec{
-			ID: spec.ID,
-			New: func() Adapter {
-				return NewManagedContextAdapter(spec)
-			},
-		})
-	}
-	return catalog
+	return buildAdapterCatalog(
+		simpleContextAdapterSpecs,
+		func(spec ManagedContextFileAdapterSpec) ID { return spec.ID },
+		func(spec ManagedContextFileAdapterSpec) Adapter { return NewManagedContextAdapter(spec) },
+	)
 }
 
 func builtInContextLinkAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, 0, len(managedContextLinkAdapterSpecs))
-	for _, spec := range managedContextLinkAdapterSpecs {
-		catalog = append(catalog, BuiltInAdapterSpec{
-			ID: spec.ID,
-			New: func() Adapter {
-				return NewManagedContextLinkAdapter(spec)
-			},
-		})
-	}
-	return catalog
+	return buildAdapterCatalog(
+		managedContextLinkAdapterSpecs,
+		func(spec ManagedContextLinkAdapterSpec) ID { return spec.ID },
+		func(spec ManagedContextLinkAdapterSpec) Adapter { return NewManagedContextLinkAdapter(spec) },
+	)
 }
 
 func builtInHookSettingsAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, 0, len(managedHookSettingsAdapterSpecs))
-	for _, spec := range managedHookSettingsAdapterSpecs {
+	return buildAdapterCatalog(
+		managedHookSettingsAdapterSpecs,
+		func(spec ManagedHookSettingsAdapterSpec) ID { return spec.ID },
+		func(spec ManagedHookSettingsAdapterSpec) Adapter { return NewManagedHookSettingsAdapter(spec) },
+	)
+}
+
+func buildAdapterCatalog[S any](specs []S, id func(S) ID, build func(S) Adapter) []BuiltInAdapterSpec {
+	catalog := make([]BuiltInAdapterSpec, 0, len(specs))
+	for _, spec := range specs {
 		catalog = append(catalog, BuiltInAdapterSpec{
-			ID: spec.ID,
-			New: func() Adapter {
-				return NewManagedHookSettingsAdapter(spec)
-			},
+			ID:  id(spec),
+			New: func() Adapter { return build(spec) },
 		})
 	}
 	return catalog
@@ -472,10 +459,6 @@ func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {
 	}
 }
 
-func expectedRuleDetectRoot(scopeRoot string, spec managedRuleFileAdapterSpec) string {
-	return filepath.Join(scopeRoot, spec.DetectRootPath)
-}
-
 var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 	catalog := []BuiltInAdapterSpec{
 		{ID: AgentClaude, New: func() Adapter { return ClaudeAdapter{} }},
@@ -489,9 +472,7 @@ var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 }()
 
 func BuiltInAdapterCatalog() []BuiltInAdapterSpec {
-	catalog := make([]BuiltInAdapterSpec, len(builtInAdapterCatalog))
-	copy(catalog, builtInAdapterCatalog)
-	return catalog
+	return slices.Clone(builtInAdapterCatalog)
 }
 
 func NewBuiltInAdapters() (map[string]Adapter, error) {

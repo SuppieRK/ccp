@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 )
 
 func newLifecycleFlagSet(name string) *flag.FlagSet {
@@ -47,13 +48,9 @@ func setLifecycleUsage(fs *flag.FlagSet, summary string, usageLines []string, no
 }
 
 func lifecycleHelpRequested(args []string) bool {
-	for _, arg := range args {
-		if arg == "--" {
-			return false
-		}
-		if arg == "--help" || arg == "-h" {
-			return true
-		}
+	end := slices.Index(args, "--")
+	if end < 0 {
+		end = len(args)
 	}
-	return false
+	return slices.Contains(args[:end], "--help") || slices.Contains(args[:end], "-h")
 }

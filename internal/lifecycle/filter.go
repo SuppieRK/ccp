@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -340,11 +341,7 @@ func ensureIdentityFilterMapping(path, filterID string) error {
 	}
 	mappings.Map[filterID] = filterID
 
-	ordered := make([]string, 0, len(mappings.Map))
-	for key := range mappings.Map {
-		ordered = append(ordered, key)
-	}
-	slices.Sort(ordered)
+	ordered := slices.Sorted(maps.Keys(mappings.Map))
 
 	var b strings.Builder
 	b.WriteString("version: 1\n")

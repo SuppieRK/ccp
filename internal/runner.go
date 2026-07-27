@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,6 +51,13 @@ type ReplayResult struct {
 }
 
 type entrySink func([]engine.BufferEntry) (int, error)
+
+type executionAudit struct {
+	command   string
+	tool      string
+	raw       bool
+	startedAt time.Time
+}
 
 type redactingWriter struct {
 	writer       io.Writer
@@ -97,24 +105,12 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	if r.opts.Raw {
 		return r.runRaw(ctx, command, args)
 	}
-	startedAt := time.Now().UTC()
-	shape := cli.DescribeExecutionShape(args)
-	auditCommand := r.auditCommand(command.RawInput)
-	if err := audit.Append("execution_start", map[string]any{
-		"command":         auditCommand,
-		"tool":            command.Tool,
-		"raw":             false,
-		"uses_shell":      shape.UsesShell,
-		"has_pipeline":    shape.HasPipeline,
-		"has_chain":       shape.HasChain,
-		"has_find_exec":   shape.HasFindExec,
-		"has_xargs":       shape.HasXargs,
-		"nested_cmdshape": shape.NestedCmdshape,
-	}); err != nil {
+	execution, err := r.startExecution(args, command, false)
+	if err != nil {
 		return 1, err
 	}
 
-	registry, buildTiming, err := r.loadExecutionRegistry(auditCommand, command.Tool)
+	registry, buildTiming, err := r.loadExecutionRegistry(execution.command, command.Tool)
 	if err != nil {
 		return 1, err
 	}
@@ -122,11 +118,11 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	if len(r.opts.Confidential) == 0 && terminalDescriptorAttached() {
 		command.Dispatch = resolved.Dispatch(command)
 		audit.MustAppend("execution_terminal_fallback", map[string]any{
-			"command":  auditCommand,
+			"command":  execution.command,
 			"tool":     command.Tool,
 			"dispatch": command.Dispatch,
 		})
-		return r.runAttached(ctx, command, startedAt, false)
+		return r.runAttached(ctx, command, execution)
 	}
 	matchingArgs := slices.Clone(command.Args)
 	command, err = resolved.PrepareCommand(command)
@@ -135,7 +131,7 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	}
 	command.MatchingArgs = matchingArgs
 	command.Dispatch = resolved.Dispatch(command)
-	state := engine.NewEngine(registry).Start(command)
+	state := engine.NewEngine(registry).StartResolved(command, resolved)
 	cmd, stdout, stderr, err := CommandWithPipesContext(ctx, command.Args[0], command.Args[1:])
 	if err != nil {
 		return 1, err
@@ -145,21 +141,12 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 		return 127, err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
 	stdoutStats := &streamStats{}
 	stderrStats := &streamStats{}
-	var stdoutWriteErr error
-	var stderrWriteErr error
-	go func() {
-		defer wg.Done()
-		stdoutWriteErr = r.drainStream(stdout, state.Stdout, stdoutStats, r.writeEntries)
-	}()
-	go func() {
-		defer wg.Done()
-		stderrWriteErr = r.drainStream(stderr, state.Stderr, stderrStats, r.writeEntries)
-	}()
-	wg.Wait()
+	stdoutWriteErr, stderrWriteErr := runConcurrently(
+		func() error { return r.drainStream(stdout, state.Stdout, stdoutStats, r.writeEntries) },
+		func() error { return r.drainStream(stderr, state.Stderr, stderrStats, r.writeEntries) },
+	)
 
 	exitCode, err := waitExitCode(cmd)
 	exitWritten, exitWriteErr := r.writeEntries(state.Exit(exitCode))
@@ -170,20 +157,18 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.maybeStoreRecovery(command, resolved, state, exitCode, rawBytes, keptBytes)
+	durationMS := execution.durationMS()
 	r.appendMetrics(command, filterProvenance(resolved), buildTiming, executionMetricStats{
 		passthrough: isPassthroughFilter(resolved, command) || state.Passthrough(),
 		exitCode:    exitCode,
-		durationMS:  time.Since(startedAt).Milliseconds(),
+		durationMS:  durationMS,
 		rawBytes:    rawBytes,
 		keptBytes:   keptBytes,
 	})
-	auditErr := audit.Append("execution_finish", map[string]any{
-		"command":     auditCommand,
-		"tool":        command.Tool,
+	auditErr := execution.finish(map[string]any{
 		"dispatch":    command.Dispatch,
-		"raw":         false,
 		"exit_code":   exitCode,
-		"duration_ms": time.Since(startedAt).Milliseconds(),
+		"duration_ms": durationMS,
 		"raw_bytes":   rawBytes,
 		"kept_bytes":  keptBytes,
 	})
@@ -266,24 +251,12 @@ func auditFailureResult(exitCode int, err error) (int, error) {
 }
 
 func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []string) (int, error) {
-	startedAt := time.Now().UTC()
-	shape := cli.DescribeExecutionShape(args)
-	auditCommand := r.auditCommand(command.RawInput)
-	if err := audit.Append("execution_start", map[string]any{
-		"command":         auditCommand,
-		"tool":            command.Tool,
-		"raw":             true,
-		"uses_shell":      shape.UsesShell,
-		"has_pipeline":    shape.HasPipeline,
-		"has_chain":       shape.HasChain,
-		"has_find_exec":   shape.HasFindExec,
-		"has_xargs":       shape.HasXargs,
-		"nested_cmdshape": shape.NestedCmdshape,
-	}); err != nil {
+	execution, err := r.startExecution(args, command, true)
+	if err != nil {
 		return 1, err
 	}
 	if len(r.opts.Confidential) == 0 {
-		return r.runAttached(ctx, command, startedAt, true)
+		return r.runAttached(ctx, command, execution)
 	}
 
 	cmd, stdout, stderr, err := CommandWithPipesContext(ctx, command.Args[0], command.Args[1:])
@@ -295,31 +268,18 @@ func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []s
 		return 127, err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var stdoutWriteErr error
-	var stderrWriteErr error
-	go func() {
-		defer wg.Done()
-		stdoutWriteErr = r.copyRawStream(stdout, os.Stdout)
-	}()
-	go func() {
-		defer wg.Done()
-		stderrWriteErr = r.copyRawStream(stderr, os.Stderr)
-	}()
-	wg.Wait()
+	stdoutWriteErr, stderrWriteErr := runConcurrently(
+		func() error { return r.copyRawStream(stdout, os.Stdout) },
+		func() error { return r.copyRawStream(stderr, os.Stderr) },
+	)
 
 	exitCode, err := waitExitCode(cmd)
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr)
 	if ctx.Err() != nil {
 		return 1, errors.Join(ctx.Err(), outputErr)
 	}
-	auditErr := audit.Append("execution_finish", map[string]any{
-		"command":     auditCommand,
-		"tool":        command.Tool,
-		"raw":         true,
-		"exit_code":   exitCode,
-		"duration_ms": time.Since(startedAt).Milliseconds(),
+	auditErr := execution.finish(map[string]any{
+		"exit_code": exitCode,
 	})
 	if auditErr != nil {
 		if exitCode == 0 {
@@ -336,7 +296,7 @@ func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []s
 	return exitCode, err
 }
 
-func (r *Runner) runAttached(ctx context.Context, command contracts.Command, startedAt time.Time, raw bool) (int, error) {
+func (r *Runner) runAttached(ctx context.Context, command contracts.Command, execution executionAudit) (int, error) {
 	cmd := CommandAttachedContext(ctx, command.Args[0], command.Args[1:])
 	if err := cmd.Start(); err != nil {
 		return 127, err
@@ -345,19 +305,64 @@ func (r *Runner) runAttached(ctx context.Context, command contracts.Command, sta
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return 1, ctxErr
 	}
-	auditErr := audit.Append("execution_finish", map[string]any{
-		"command":     r.auditCommand(command.RawInput),
-		"tool":        command.Tool,
+	auditErr := execution.finish(map[string]any{
 		"dispatch":    command.Dispatch,
-		"raw":         raw,
-		"passthrough": !raw,
+		"passthrough": !execution.raw,
 		"exit_code":   exitCode,
-		"duration_ms": time.Since(startedAt).Milliseconds(),
 	})
 	if auditErr != nil {
 		return auditFailureResult(exitCode, errors.Join(waitErr, auditErr))
 	}
 	return exitCode, waitErr
+}
+
+func (r *Runner) startExecution(args []string, command contracts.Command, raw bool) (executionAudit, error) {
+	execution := executionAudit{
+		command:   r.auditCommand(command.RawInput),
+		tool:      command.Tool,
+		raw:       raw,
+		startedAt: time.Now().UTC(),
+	}
+	shape := cli.DescribeExecutionShape(args)
+	err := audit.Append("execution_start", map[string]any{
+		"command":         execution.command,
+		"tool":            execution.tool,
+		"raw":             execution.raw,
+		"uses_shell":      shape.UsesShell,
+		"has_pipeline":    shape.HasPipeline,
+		"has_chain":       shape.HasChain,
+		"has_find_exec":   shape.HasFindExec,
+		"has_xargs":       shape.HasXargs,
+		"nested_cmdshape": shape.NestedCmdshape,
+	})
+	return execution, err
+}
+
+func (e executionAudit) finish(fields map[string]any) error {
+	payload := map[string]any{
+		"command":     e.command,
+		"tool":        e.tool,
+		"raw":         e.raw,
+		"duration_ms": e.durationMS(),
+	}
+	maps.Copy(payload, fields)
+	return audit.Append("execution_finish", payload)
+}
+
+func (e executionAudit) durationMS() int64 {
+	return time.Since(e.startedAt).Milliseconds()
+}
+
+func runConcurrently(first, second func() error) (firstErr, secondErr error) {
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		firstErr = first()
+	})
+	wg.Go(func() {
+		secondErr = second()
+	})
+	wg.Wait()
+	return firstErr, secondErr
 }
 
 func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error) {
@@ -401,7 +406,7 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 	}
 	command.MatchingArgs = matchingArgs
 	command.Dispatch = resolved.Dispatch(command)
-	state := engine.NewEngine(registry).Start(command)
+	state := engine.NewEngine(registry).StartResolved(command, resolved)
 	collector := &replayCollector{}
 	for _, event := range events {
 		var (
@@ -466,7 +471,7 @@ func defaultMetricsPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(cwd, ".cmdshape", "gain.db")
+	return metrics.ProjectPath(cwd)
 }
 
 type streamStats struct {
@@ -721,7 +726,7 @@ func defaultProjectMetricsRoot(workingDir, metricsPath string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	return root, path == filepath.Join(root, ".cmdshape", "gain.db")
+	return root, path == metrics.ProjectPath(root)
 }
 
 func metricRegistrySources(sources []contracts.FilterSourceBuildTiming) []metrics.RegistrySourceBuildMetric {

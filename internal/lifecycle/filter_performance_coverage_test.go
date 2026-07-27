@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/SuppieRK/cmdshape/internal/metrics"
 
@@ -52,7 +53,7 @@ var _ = Describe("filter performance decision coverage", func() {
 			{Tool: "y", Commands: 2},
 		}
 
-		sortPerformanceRows(rows)
+		slices.SortFunc(rows, comparePerformanceRows)
 
 		Expect(rows[0].Tool).To(Equal("y"))
 		Expect(rows[1].Tool).To(Equal("x"))

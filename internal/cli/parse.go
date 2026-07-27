@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -9,13 +10,8 @@ import (
 const confidentialFlag = "--confidential"
 
 func LifecycleCommands() []string {
-	commands := make([]string, 0, len(lifecycleCommands)+len(filterCommands))
-	for command := range lifecycleCommands {
-		commands = append(commands, command)
-	}
-	for command := range filterCommands {
-		commands = append(commands, command)
-	}
+	commands := slices.Collect(maps.Keys(lifecycleCommands))
+	commands = slices.AppendSeq(commands, maps.Keys(filterCommands))
 	slices.Sort(commands)
 	return commands
 }
@@ -138,10 +134,10 @@ func parseConfidentialRedactions(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
 	}
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	seen := make(map[string]struct{}, len(parts))
-	for _, part := range parts {
+	count := strings.Count(raw, ",") + 1
+	out := make([]string, 0, count)
+	seen := make(map[string]struct{}, count)
+	for part := range strings.SplitSeq(raw, ",") {
 		token := strings.TrimSpace(part)
 		if token == "" {
 			continue
@@ -156,12 +152,12 @@ func parseConfidentialRedactions(raw string) []string {
 }
 
 func IsLifecycleCommand(token string) bool {
-	_, ok := lifecycleCommands[normalizeToken(token)]
+	_, ok := lifecycleCommands[strings.TrimSpace(strings.ToLower(token))]
 	return ok
 }
 
 func IsFilterCommand(token string) bool {
-	_, ok := filterCommands[normalizeToken(token)]
+	_, ok := filterCommands[strings.TrimSpace(strings.ToLower(token))]
 	return ok
 }
 
@@ -233,15 +229,11 @@ func DescribeExecutionShape(args []string) ExecutionShape {
 	return shape
 }
 
-func normalizeToken(token string) string {
-	return strings.TrimSpace(strings.ToLower(token))
-}
-
 func isShellCommand(args []string) bool {
 	if len(args) < 2 {
 		return false
 	}
-	switch normalizeToken(args[0]) {
+	switch strings.TrimSpace(strings.ToLower(args[0])) {
 	case "sh", "bash", "zsh":
 		return strings.Contains(args[1], "c")
 	default:

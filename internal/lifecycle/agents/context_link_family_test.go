@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -343,7 +345,9 @@ var _ = ginkgo.Describe("context link families", func() {
 			Expect(json.Unmarshal([]byte(updated), &root)).To(Succeed())
 			options, _ := root["options"].(map[string]any)
 			Expect(options).NotTo(BeNil())
-			Expect(slicesContainsPath(crushContextPaths(options["context_paths"]), contextPath)).To(BeTrue())
+			Expect(slices.ContainsFunc(crushContextPaths(options["context_paths"]), func(path string) bool {
+				return filepath.Clean(strings.TrimSpace(path)) == filepath.Clean(contextPath)
+			})).To(BeTrue())
 
 			Expect(os.WriteFile(configPath, []byte(updated), 0o644)).To(Succeed())
 

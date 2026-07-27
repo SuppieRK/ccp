@@ -133,42 +133,33 @@ need_cmd uname
 need_cmd curl
 need_cmd unzip
 
-validate_release_version() {
-  ver="$(printf '%s' "$1" | tr -d '\r\n')"
-  old_ifs="$IFS"
-  IFS=.
-  set -- $ver
-  IFS="$old_ifs"
+parse_release_version() {
+  parsed_version="$(printf '%s' "$1" | tr -d '\r\n')"
+  parsed_remainder="${parsed_version#*.}"
+  [ "$parsed_remainder" != "$parsed_version" ] || return 1
+  parsed_major="${parsed_version%%.*}"
 
-  [ "$#" -eq 3 ] || return 1
-  for part in "$@"; do
-    case "$part" in
-      ''|*[!0-9]*) return 1 ;;
-    esac
-  done
+  parsed_patch="${parsed_remainder#*.}"
+  [ "$parsed_patch" != "$parsed_remainder" ] || return 1
+  parsed_minor="${parsed_remainder%%.*}"
 
-  printf '%s' "$ver"
+  case "$parsed_major:$parsed_minor:$parsed_patch" in
+    :*|*::*|*:) return 1 ;;
+    *[!0-9:]*) return 1 ;;
+  esac
   return 0
 }
 
+validate_release_version() {
+  parse_release_version "$1" || return 1
+  printf '%s' "$parsed_version"
+}
+
 version_lt() {
-  ver="$(validate_release_version "$1")" || return 1
-  cutoff="$(validate_release_version "$2")" || return 1
-
-  old_ifs="$IFS"
-  IFS=.
-  set -- $ver
-  [ "$#" -eq 3 ] || return 1
-  ver_major="${1:-}" ver_minor="${2:-}" ver_patch="${3:-}"
-  set -- $cutoff
-  [ "$#" -eq 3 ] || return 1
-  cutoff_major="${1:-}" cutoff_minor="${2:-}" cutoff_patch="${3:-}"
-  IFS="$old_ifs"
-
-  case "$ver_major:$ver_minor:$ver_patch:$cutoff_major:$cutoff_minor:$cutoff_patch" in
-    *::*) return 1 ;;
-    *[!0-9:]*) return 1 ;;
-  esac
+  parse_release_version "$1" || return 1
+  ver_major="$parsed_major" ver_minor="$parsed_minor" ver_patch="$parsed_patch"
+  parse_release_version "$2" || return 1
+  cutoff_major="$parsed_major" cutoff_minor="$parsed_minor" cutoff_patch="$parsed_patch"
 
   if [ "$ver_major" -lt "$cutoff_major" ]; then
     return 0

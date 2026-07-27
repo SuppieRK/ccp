@@ -7,7 +7,6 @@ import (
 	"math"
 	"os"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -236,7 +235,15 @@ func queryGlobalPerformanceRows(session *globalQuerySession, opts metrics.QueryO
 			continue
 		}
 		for _, row := range rows {
-			key := performanceRowKey(row)
+			key := strings.Join([]string{
+				row.Tool,
+				row.Filter,
+				row.Case,
+				row.DispatchKey,
+				row.FilterSourceKind,
+				row.FilterPath,
+				row.FilterHash,
+			}, "\x00")
 			acc := grouped[key]
 			if acc == nil {
 				acc = &performanceGlobalAcc{row: performanceRowIdentity(row)}
@@ -256,7 +263,7 @@ func queryGlobalPerformanceRows(session *globalQuerySession, opts metrics.QueryO
 		metrics.FillPerformanceDerived(&row, int64(math.Round(acc.durationMS)))
 		out = append(out, row)
 	}
-	sortPerformanceRows(out)
+	slices.SortFunc(out, comparePerformanceRows)
 	return out, nil
 }
 
@@ -278,11 +285,11 @@ func queryGlobalMissedOpportunities(session *globalQuerySession, opts metrics.Qu
 	for command, count := range grouped {
 		out = append(out, metrics.MissedOpportunity{Command: command, Count: count})
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Count != out[j].Count {
-			return out[i].Count > out[j].Count
-		}
-		return out[i].Command < out[j].Command
+	slices.SortFunc(out, func(left, right metrics.MissedOpportunity) int {
+		return cmp.Or(
+			cmp.Compare(right.Count, left.Count),
+			cmp.Compare(left.Command, right.Command),
+		)
 	})
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
@@ -303,18 +310,6 @@ func queryGlobalRegistryBuild(session *globalQuerySession, opts metrics.QueryOpt
 	return metrics.RegistryBuildSummaryFromEvents(events), metrics.RegistrySourceBuildRowsFromEvents(events), nil
 }
 
-func performanceRowKey(row metrics.PerformanceRow) string {
-	return strings.Join([]string{
-		row.Tool,
-		row.Filter,
-		row.Case,
-		row.DispatchKey,
-		row.FilterSourceKind,
-		row.FilterPath,
-		row.FilterHash,
-	}, "\x00")
-}
-
 func performanceRowIdentity(row metrics.PerformanceRow) metrics.PerformanceRow {
 	return metrics.PerformanceRow{
 		Tool:             row.Tool,
@@ -325,10 +320,6 @@ func performanceRowIdentity(row metrics.PerformanceRow) metrics.PerformanceRow {
 		FilterPath:       row.FilterPath,
 		FilterHash:       row.FilterHash,
 	}
-}
-
-func sortPerformanceRows(rows []metrics.PerformanceRow) {
-	slices.SortFunc(rows, comparePerformanceRows)
 }
 
 func comparePerformanceRows(left, right metrics.PerformanceRow) int {
@@ -412,11 +403,11 @@ func appendPassthroughSuggestions(suggestions []filterPerformanceSuggestion, mis
 
 func appendRegistryCostSuggestions(suggestions []filterPerformanceSuggestion, buildRows []metrics.RegistrySourceBuildRow) []filterPerformanceSuggestion {
 	sortedBuildRows := slices.Clone(buildRows)
-	sort.Slice(sortedBuildRows, func(i, j int) bool {
-		if sortedBuildRows[i].AvgDurationMS != sortedBuildRows[j].AvgDurationMS {
-			return sortedBuildRows[i].AvgDurationMS > sortedBuildRows[j].AvgDurationMS
-		}
-		return sortedBuildRows[i].SourceDir < sortedBuildRows[j].SourceDir
+	slices.SortFunc(sortedBuildRows, func(left, right metrics.RegistrySourceBuildRow) int {
+		return cmp.Or(
+			cmp.Compare(right.AvgDurationMS, left.AvgDurationMS),
+			cmp.Compare(left.SourceDir, right.SourceDir),
+		)
 	})
 	for _, row := range sortedBuildRows {
 		if row.Builds == 0 || row.AvgDurationMS <= 0 {
