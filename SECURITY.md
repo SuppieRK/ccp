@@ -1,121 +1,107 @@
-# Security Policy
+# Security policy
 
-## Project Status
+cmdshape is pre-1.0 software. Interfaces and behavior can change between 0.x
+releases, so keep the latest release installed when security coverage matters.
+Only the latest released binary is supported; older releases do not receive
+backported fixes.
 
-This project is currently in an incubating state.
+## Supported versions
 
-It follows zerover-style semantic versioning (0.y.z). All versions prior to 1.0.0 MUST be considered unstable. Backward
-compatibility is not guaranteed, and internal or external interfaces may change without notice.
+| Version | Supported |
+|---|---|
+| Latest release | Yes |
+| Older releases | No |
 
-Consumers MUST assume that any 0.x release may introduce breaking changes.
+When a new release is published, the previous release becomes unsupported.
+The project does not maintain LTS branches or backport security fixes. Upgrade
+to the latest release to receive a fix.
 
----
+## What cmdshape can do
 
-## Supported Versions
+cmdshape runs native commands with the invoking user's privileges and reads
+their stdout and stderr. It is not a sandbox and does not isolate commands from
+the host filesystem, Git repositories, containers, or toolchains. The safety
+boundary is conservative filtering: ambiguous, structured, interactive, or
+unsafe shapes fall back to native passthrough.
 
-Only the latest released binary is supported.
+Filters do not grant additional privileges. Review project-local YAML before
+trusting it, and treat commands supplied by automated agents as untrusted input
+until you understand what they will execute.
 
-| Version | Supported          |
-|---------|--------------------|
-| latest  | :white_check_mark: |
-| older   | :x:                |
+Security-sensitive behavior includes:
 
-There are no security patches for previous versions.
+- preserving argv and documented normalization semantics;
+- avoiding command injection through parsing, mappings, or filter templates;
+- preserving native exit codes and actionable diagnostics;
+- keeping raw-mode and confidential-mode boundaries exact;
+- retaining stdout/stderr identity where the contract requires it;
+- falling back to passthrough when a shape is ambiguous or unsafe.
 
-When a new release is published:
+Project-local filters are executable policy in the sense that they decide what
+output is hidden or rewritten. Approval covers the exact current project filter
+source. Any content, mapping, path, addition, removal, or rename invalidates
+that approval.
 
-- The previous release is immediately unsupported.
-- No backported fixes are issued.
-- No LTS branches exist.
-- No CVE backport commitments are made.
+## Local data
 
-Users MUST upgrade to the latest release to receive security fixes.
+Normal runtime metrics are stored locally, are crash-safe, and are retained for
+90 days. They record command and output-size metadata for gain/history reports;
+cmdshape does not send normal runtime telemetry to a remote service. Capture
+fixtures may contain complete command output, including secrets, paths, or
+source. Review them before sharing or committing; `--confidential` performs
+literal redaction for values you name, not full secret detection.
 
----
+Recovery is disabled by default. When enabled, it keeps only bounded failed and
+compacted artifacts: at most 20 artifacts, 1 MiB per artifact, and seven days
+of age. Raw, passthrough, confidential, zero-byte, and oversized runs are not
+stored. Remove recovery artifacts with `cmdshape recovery purge`.
 
-## Security Scope
+The installer and upgrade command contact GitHub for release files and
+checksums. That network activity is separate from normal command execution.
 
-This project is a command proxy that:
+## Report a vulnerability
 
-- Executes native system commands.
-- Processes stdout and stderr streams.
-- May interact with local filesystems, Git repositories, container tooling, and language toolchains.
+Please do not open a public issue. Use a private GitHub security advisory and
+include:
 
-Security considerations therefore include:
+- a clear description and impact;
+- reproduction steps or a minimal fixture;
+- the affected version, operating system, and shell when relevant.
 
-- Command execution integrity.
-- Argument normalization and dispatch safety.
-- Stream handling correctness.
-- Passthrough safety in ambiguous cases.
-- Avoidance of command injection via filter logic.
-- Preservation of native exit codes and diagnostics.
+We aim to acknowledge reports within 72 hours. Triage, a fix, and coordinated
+disclosure depend on severity. Because only the latest release is supported,
+fixes ship on the current development line.
 
-The project intentionally falls back to passthrough execution for ambiguous or unsafe command shapes to reduce risk
-amplification.
+## Disclosure
 
----
+We coordinate public disclosure after a fix is available. A public advisory may
+be published with affected versions, impact, and upgrade guidance. No backport
+is created for an older release.
 
-## Reporting a Vulnerability
+Issues that compromise native execution integrity, exit-code parity, critical
+diagnostics, exact raw behavior, filter trust, or deterministic command
+selection are treated as high-impact runtime concerns.
 
-If you discover a security vulnerability:
+## Security boundaries
 
-1. Do NOT open a public issue.
-2. Open a private GitHub security advisory.
-3. Provide:
-    - A clear description of the issue.
-    - Reproduction steps.
-    - Impact assessment.
-    - Affected version (if known).
+cmdshape does not:
 
-Response expectations:
+- sandbox commands;
+- lower the invoking user's privileges;
+- isolate the filesystem, network, containers, or toolchains;
+- review commands generated by an agent;
+- guarantee that literal confidential redaction finds every secret;
+- make an unsafe project filter safe merely because it parses.
 
-- Initial acknowledgment: within 72 hours.
-- Triage and severity classification: best effort.
-- Fix timeline: determined by impact and complexity.
-- Disclosure: coordinated after fix release.
+The host operating system owns process isolation. Users own command review,
+least-privilege execution, project-filter approval, and capture handling.
 
-Because only the latest version is maintained, fixes will be released exclusively in the current development line.
+## User responsibilities
 
----
+Run cmdshape with least privilege in environments you trust. Keep project
+filters reviewable, remove sensitive captures, and upgrade promptly when a
+security release is available.
 
-## Disclosure Policy
-
-After a fix is published:
-
-- A public advisory may be issued.
-- No backports will be created.
-- Users are expected to upgrade immediately.
-
-If a vulnerability affects runtime behavior guarantees (exit code parity, diagnostic preservation, raw-mode integrity,
-or deterministic execution), it will be treated as high severity.
-
----
-
-## Security Boundaries
-
-The project:
-
-- Does NOT sandbox native commands.
-- Does NOT provide isolation guarantees.
-- Relies on the host operating system for process security.
-- Executes commands with the invoking user’s privileges.
-
-Users are responsible for:
-
-- Running the proxy in trusted environments.
-- Reviewing command inputs provided by automated agents.
-- Applying least-privilege execution practices.
-
----
-
-## Stability and Risk Notice
-
-Due to incubating status and zerover versioning:
-
-- APIs, CLI flags, and behavioral contracts may change.
-- Security posture may evolve.
-- Hardening is incremental.
-
-Use in production environments requires independent risk evaluation.
-
-Upgrading to the latest version is mandatory for continued security coverage.
+Because the project is pre-1.0, CLI flags, integration files, filter behavior,
+and operational contracts may evolve. Evaluate production use against your own
+risk requirements and review release notes before upgrading.

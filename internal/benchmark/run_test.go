@@ -1,9 +1,7 @@
 package benchmark
 
 import (
-	"bytes"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
-	"github.com/SuppieRK/cmdshape/internal/metrics"
 	"github.com/SuppieRK/cmdshape/internal/replay"
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
@@ -474,45 +471,6 @@ var _ = Describe("benchmark replay runner", func() {
 			}).To(Equal([]string{"alpha/beta", "zeta/beta"}))
 		})
 
-		It("warns when token compaction ratio drops from the previous report", func() {
-			fixtureDir := filepath.Join(root, "grep", "recursive-match")
-			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
-			writeFixtureFile(fixtureDir, "stdout.txt", "00000|match one\n00001|match two\n")
-			writeFixtureFile(fixtureDir, "output.txt", "grouped output\n")
-
-			prev := runVerifyFixture
-			runVerifyFixture = func(_ string, dir string, _ time.Duration) error {
-				Expect(os.WriteFile(filepath.Join(dir, "verify-output.txt"), []byte("grouped output\n"), 0o644)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(dir, "verify-decisions.txt"), []byte("<keep>    | match one\n"), 0o644)).To(Succeed())
-				return nil
-			}
-			DeferCleanup(func() { runVerifyFixture = prev })
-
-			previousReportPath := filepath.Join(GinkgoT().TempDir(), "report.json")
-			Expect(writeReportJSON(filepath.Dir(previousReportPath), RunReport{
-				Results: []CaseResult{{
-					Tool:                 "grep",
-					Case:                 "recursive-match",
-					InputHash:            fixtureInputHash(replay.CommandSpec{Argv: []string{"grep", "-r", "needle", "./internal"}}, []replay.Event{{Sequence: 0, Line: "match one\n"}, {Sequence: 1, Line: "match two\n"}}),
-					TokenCompactionRatio: 10,
-				}},
-			})).To(Succeed())
-
-			report, err := Run(RunOptions{
-				FixturesRoot:   root,
-				ArtifactsDir:   artifacts,
-				ProxyBinary:    "cmdshape",
-				Timeout:        time.Second,
-				PreviousReport: previousReportPath,
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(report.Results).To(HaveLen(1))
-			Expect(report.Results[0].Warnings).To(ContainElement("token compaction ratio dropped from 10.00 to 1.25"))
-			Expect(report.Results[0].Success).To(BeTrue())
-			Expect(report.Failed).To(BeFalse())
-		})
-
 		It("skips compaction-drop comparison for legacy previous reports without input hash", func() {
 			fixtureDir := filepath.Join(root, "grep", "recursive-match")
 			writeFixtureFile(fixtureDir, "command.yaml", "argv: [\"grep\", \"-r\", \"needle\", \"./internal\"]\n")
@@ -617,150 +575,6 @@ var _ = Describe("benchmark replay runner", func() {
 			Expect(third).To(BeNumerically(">", second))
 		})
 
-		It("writes markdown summary to GITHUB_STEP_SUMMARY when set", func() {
-			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
-			prev := os.Getenv("GITHUB_STEP_SUMMARY")
-			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
-			DeferCleanup(func() {
-				if prev == "" {
-					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
-					return
-				}
-				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
-			})
-
-			report := RunReport{
-				Generated: time.Date(2026, time.March, 17, 12, 0, 0, 0, time.UTC),
-				Results: []CaseResult{{
-					Tool:         "grep",
-					Case:         "recursive-match",
-					Command:      "grep -r needle ./internal",
-					NativeTokens: 10,
-					ProxyTokens:  4,
-					Success:      true,
-				}},
-			}
-
-			Expect(WriteSummary(report)).To(Succeed())
-
-			body, err := os.ReadFile(summaryPath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(body)).To(ContainSubstring("| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |"))
-			Expect(string(body)).To(ContainSubstring("| 🟢 | grep/recursive-match | `grep -r needle ./internal` | 10 | 4 | 60.00 |  |"))
-		})
-
-		It("appends multiple invocations into a single benchmark table", func() {
-			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
-			prev := os.Getenv("GITHUB_STEP_SUMMARY")
-			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
-			DeferCleanup(func() {
-				if prev == "" {
-					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
-					return
-				}
-				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
-			})
-
-			Expect(WriteSummary(RunReport{
-				Results: []CaseResult{{
-					Tool:         "grep",
-					Case:         "recursive-match",
-					Command:      "grep -r needle ./internal",
-					NativeTokens: 10,
-					ProxyTokens:  4,
-					Success:      true,
-				}},
-			})).To(Succeed())
-			Expect(WriteSummary(RunReport{
-				Results: []CaseResult{{
-					Tool:         "grep",
-					Case:         "no-match",
-					Command:      "grep needle missing",
-					NativeTokens: 3,
-					ProxyTokens:  0,
-					Success:      false,
-					Warnings:     []string{"output mismatch"},
-				}},
-			})).To(Succeed())
-
-			body, err := os.ReadFile(summaryPath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(strings.Count(string(body), "| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |")).To(Equal(1))
-			Expect(string(body)).To(ContainSubstring("| 🟢 | grep/recursive-match | `grep -r needle ./internal` | 10 | 4 | 60.00 |  |"))
-			Expect(string(body)).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 3 | 0 | 100.00 | output mismatch |"))
-		})
-
-		It("prints markdown summary to stdout when GITHUB_STEP_SUMMARY is unset", func() {
-			prevEnv := os.Getenv("GITHUB_STEP_SUMMARY")
-			Expect(os.Unsetenv("GITHUB_STEP_SUMMARY")).To(Succeed())
-			DeferCleanup(func() {
-				if prevEnv == "" {
-					return
-				}
-				_ = os.Setenv("GITHUB_STEP_SUMMARY", prevEnv)
-			})
-
-			stdoutReader, stdoutWriter, err := os.Pipe()
-			Expect(err).NotTo(HaveOccurred())
-			prevStdout := os.Stdout
-			os.Stdout = stdoutWriter
-			DeferCleanup(func() { os.Stdout = prevStdout })
-
-			output := make(chan string, 1)
-			go func() {
-				var buf bytes.Buffer
-				_, _ = io.Copy(&buf, stdoutReader)
-				output <- buf.String()
-			}()
-
-			report := RunReport{
-				Generated: time.Date(2026, time.March, 17, 12, 0, 0, 0, time.UTC),
-				Results: []CaseResult{{
-					Tool:         "grep",
-					Case:         "no-match",
-					Command:      "grep needle missing",
-					NativeTokens: 0,
-					ProxyTokens:  0,
-					Success:      false,
-					Warnings:     []string{"output mismatch"},
-				}},
-			}
-
-			Expect(WriteSummary(report)).To(Succeed())
-			Expect(stdoutWriter.Close()).To(Succeed())
-			Expect(<-output).To(ContainSubstring("| 🔴 | grep/no-match | `grep needle missing` | 0 | 0 | 0.00 | output mismatch |"))
-		})
-
-		It("renders warning-only rows with a yellow status", func() {
-			summaryPath := filepath.Join(GinkgoT().TempDir(), "summary.md")
-			prev := os.Getenv("GITHUB_STEP_SUMMARY")
-			Expect(os.Setenv("GITHUB_STEP_SUMMARY", summaryPath)).To(Succeed())
-			DeferCleanup(func() {
-				if prev == "" {
-					_ = os.Unsetenv("GITHUB_STEP_SUMMARY")
-					return
-				}
-				_ = os.Setenv("GITHUB_STEP_SUMMARY", prev)
-			})
-
-			Expect(WriteSummary(RunReport{
-				Results: []CaseResult{{
-					Tool:                 "grep",
-					Case:                 "warning-only",
-					Command:              "grep warning",
-					NativeTokens:         10,
-					ProxyTokens:          9,
-					Success:              true,
-					Warnings:             []string{"token compaction ratio dropped from 10.00 to 1.11"},
-					TokenCompactionRatio: 1.11,
-				}},
-			})).To(Succeed())
-
-			body, err := os.ReadFile(summaryPath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(body)).To(ContainSubstring("| 🟡 | grep/warning-only | `grep warning` | 10 | 9 | 10.00 | token compaction ratio dropped from 10.00 to 1.11 |"))
-		})
-
 		DescribeTable("loads previous results",
 			func(contents string, useMissingPath bool, expectKey bool, matcher OmegaMatcher) {
 				path := ""
@@ -787,23 +601,6 @@ var _ = Describe("benchmark replay runner", func() {
 			Entry("reports invalid JSON", "{", false, false, MatchError(ContainSubstring("read previous report: parse report json:"))),
 		)
 
-		DescribeTable("handles compaction-ratio comparisons",
-			func(current *CaseResult, previous CaseResult, expectedWarnings []string, expectedSuccess bool) {
-				maybeWarnCompactionDrop(current, previous)
-				Expect(current.Warnings).To(Equal(expectedWarnings))
-				Expect(current.Success).To(Equal(expectedSuccess))
-			},
-			Entry("ignores missing previous ratio", &CaseResult{InputHash: "same", Success: true}, CaseResult{InputHash: "same"}, nil, true),
-			Entry("ignores legacy previous reports without input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{TokenCompactionRatio: 10}, nil, true),
-			Entry("ignores changed input hash", &CaseResult{InputHash: "current", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "previous", TokenCompactionRatio: 10}, nil, true),
-			Entry("ignores non-positive previous ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 0}, nil, true),
-			Entry("ignores negative previous ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: -1}, nil, true),
-			Entry("does not warn at the exact five percent threshold", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
-			Entry("ignores stable ratios", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.9, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, nil, true),
-			Entry("warns once the drop moves just past the five percent threshold", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.89, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 2}, []string{"token compaction ratio dropped from 2.00 to 1.89"}, true),
-			Entry("warns on material drop", &CaseResult{InputHash: "same", TokenCompactionRatio: 1.25, Success: true}, CaseResult{InputHash: "same", TokenCompactionRatio: 10}, []string{"token compaction ratio dropped from 10.00 to 1.25"}, true),
-		)
-
 		DescribeTable("computes token compaction ratio",
 			func(nativeTokens, proxyTokens int, expected float64) {
 				Expect(tokenCompactionRatio(nativeTokens, proxyTokens)).To(Equal(expected))
@@ -811,20 +608,6 @@ var _ = Describe("benchmark replay runner", func() {
 			Entry("uses native to proxy ratio", 10, 4, 2.5),
 			Entry("treats zero proxy tokens as best-case improvement", 10, 0, 10.0),
 			Entry("returns a neutral ratio when both token counts are zero", 0, 0, 1.0),
-		)
-
-		DescribeTable("normalizing token savings percentages",
-			func(result CaseResult, expected float64) {
-				Expect(tokenSavingsPct(result)).To(BeNumerically("~", expected, 1e-12))
-			},
-			Entry("returns zero for no native tokens", CaseResult{NativeTokens: 0, ProxyTokens: 10}, 0.0),
-			Entry("rounds tiny regressions to zero", CaseResult{NativeTokens: 100, ProxyTokens: 103}, 0.0),
-			Entry("rounds tiny improvements to zero", CaseResult{NativeTokens: 100, ProxyTokens: 96}, 0.0),
-			Entry("keeps exact five percent savings", CaseResult{NativeTokens: 100, ProxyTokens: 95}, 5.0),
-			Entry("keeps exact five percent regressions", CaseResult{NativeTokens: 100, ProxyTokens: 105}, -5.0),
-			Entry("keeps improvements just past the flat threshold", CaseResult{NativeTokens: 100, ProxyTokens: 94}, 6.0),
-			Entry("keeps regressions just past the flat threshold", CaseResult{NativeTokens: 100, ProxyTokens: 106}, -6.0),
-			Entry("preserves meaningful regressions", CaseResult{NativeTokens: 100, ProxyTokens: 110}, -10.000000000000009),
 		)
 
 		It("hashes fixture input from command and replayed streams", func() {
@@ -845,21 +628,6 @@ var _ = Describe("benchmark replay runner", func() {
 	})
 
 	Describe("file helpers", func() {
-		It("persists benchmark metric bytes from token counts", func() {
-			artifactDir := GinkgoT().TempDir()
-
-			Expect(appendCaseMetrics(artifactDir, []string{"grep", "-r", "needle", "."}, 7, 3)).To(Succeed())
-
-			history, err := metrics.QueryHistory(filepath.Join(artifactDir, ".cmdshape", "gain.db"), metrics.QueryOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(history).To(HaveLen(1))
-			Expect(history[0].Command).To(Equal("grep -r needle ."))
-			Expect(history[0].Tool).To(Equal("grep"))
-			Expect(history[0].DispatchKey).To(Equal("grep"))
-			Expect(history[0].RawBytes).To(Equal(int64(28)))
-			Expect(history[0].KeptBytes).To(Equal(int64(12)))
-		})
-
 		It("copies fixture inputs when present", func() {
 			srcDir := GinkgoT().TempDir()
 			dstDir := GinkgoT().TempDir()

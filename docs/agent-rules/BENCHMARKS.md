@@ -26,10 +26,10 @@
 - `cmd/cmdshape-ci` is a thin wrapper over `internal/benchmark.Run`.
 - The runner discovers fixture directories, copies each case into an artifact directory, and runs
   `cmdshape verify --dir <artifact-dir>`.
-- Native token count comes from merged sequenced `stdout.txt` + `stderr.txt`.
-- Proxy token count comes from `verify-output.txt`.
-- Exact proxy bytes must not exceed exact native stdout plus stderr bytes.
-  Expansion fails the case even if token estimation appears flat.
+- Native bytes come from merged sequenced `stdout.txt` + `stderr.txt`.
+- Shaped bytes come from `verify-output.txt`.
+- Exact shaped bytes must not exceed exact native stdout plus stderr bytes.
+  Expansion fails the case.
 - Per-case metrics are written to `<artifact-dir>/.cmdshape/gain.db`.
 - Benchmark metrics are local to each artifact and must not be written into normal workspace metrics stores or the
   global workspace registry.
@@ -37,8 +37,9 @@
 
 ## Working Rules
 
-- Primary KPI: token-oriented compaction from real replay fixtures.
-- Corpus honesty matters as much as savings. Add boundary and passthrough cases, not just wins.
+- Primary KPI: exact byte reduction from real replay fixtures.
+- Corpus honesty matters as much as reduction. Add boundary and passthrough
+  cases, not just compacting cases.
 - Prefer widening real corpus before redesigning a filter around tiny or toy fixtures.
 - When a fixture drifts, inspect `verify-output.txt`,
   `verify-stdout.txt`, `verify-stderr.txt`, `verify-decisions.txt`, and
@@ -49,7 +50,7 @@
   `exit_code`, decisions, and stream-aware output.
 - Treat missing `gain.db`, missing `verify-output.txt`, output mismatches, decision mismatches, dispatch mismatches, or any non-zero
   benchmark exit as failures to investigate.
-- Use `cmdshape gain`, not just the harness summary, to judge compression for the changed tool.
+- Use `cmdshape gain`, not just the harness summary, to inspect routed-output reduction for the changed tool.
 - Benchmark logs or other user-defined output only when the intended result is native passthrough or the tool provides a
   safe structured mode.
 

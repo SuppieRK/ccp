@@ -1,192 +1,218 @@
-# cmdshape Architecture
+# cmdshape architecture
 
-## Purpose
+`cmdshape` is a native-command proxy for coding agents. It resolves a command,
+loads one YAML-authored filter when a safe match exists, and compacts output
+without replacing the underlying tool. The runtime is Go; filter behavior is
+data-driven.
 
-`cmdshape` is a command compression proxy for coding agents:
+## Components
 
-- runs native commands
-- compacts output to reduce bytes/tokens sent to coding agents
-- preserves execution correctness, especially exit code and actionable diagnostics
+- `cmd/cmdshape`: CLI entrypoint and runtime wiring.
+- `internal/contracts`: stable command and filter contracts.
+- `internal/parser.go` and `internal/runner.go`: command parsing, source
+  resolution, and execution setup.
+- `internal/engine`: ordered stdout/stderr processing and retained output.
+- `internal/filters` and `internal/filters/yaml`: filter sources, schema
+  validation, compilation, and registry helpers.
+- `internal/metrics`: local gain/history persistence and reports.
+- `internal/lifecycle`: capture, verification, integrations, repair, recovery,
+  upgrade, and uninstall commands.
+- `filters/`: shipped YAML definitions embedded into release builds.
+- `cmd/cmdshape-ci`, `internal/benchmark`, and `testdata/benchmarks`: replay
+  verification and benchmark reporting.
 
-The implementation is split between one canonical Go runtime under `internal/`
-and YAML-authored filter definitions loaded at runtime.
-
-## High-Level Components
-
-- `cmd/cmdshape`: CLI entrypoint and runtime wiring
-- `cmd/coverage-gate`: coverage gate CLI for enforcing internal package thresholds
-- `internal/`: canonical runtime packages
-- `internal/contracts`: stable runtime command/filter contracts
-- `internal/engine`: streaming engine and ordered retained-output buffer
-- `internal/filters`: filter source definitions and registry helpers
-- `internal/filters/yaml`: authored YAML schema, validation, loading, and compilation
-- `internal/metrics`: runtime metric persistence and gain/history reporting
-- `internal/lifecycle`: lifecycle subcommands and coding-agent integration entrypoints
-- `internal/lifecycle/agents`: coding-agent specific adapters
-- `filters/`: shipped YAML filter definitions and `.mappings.yaml`, embedded into release builds
-- `cmd/cmdshape-ci` + `internal/benchmark`: replay benchmark runner for fixture-driven verification and reporting
-- `testdata/benchmarks`: benchmark scenarios, replay fixtures, and optional copied projects
-
-## End-to-End Runtime Flow
+## Runtime flow
 
 ```mermaid
 flowchart LR
     U[User command] --> C[cmdshape]
-    IN[Parent stdin] --> C
-    C --> O[Parse CLI options]
-    O -->|lifecycle command| L[internal/lifecycle]
-    O -->|execution command| P[Parse command args]
-    P --> D[Load YAML filters + mappings from ordered sources]
-    D --> R[Resolve filter in registry]
-    R -->|--raw| X0[Raw subprocess execution]
-    R -->|default| X1[Filtered subprocess execution]
-    IN --> X0
-    IN --> X1
-    X1 --> S1[stdout stream]
-    X1 --> S2[stderr stream]
-    S1 --> E[Engine state]
-    S2 --> E
-    E --> F[Resolved filter]
-    F --> OUT[Compacted output]
-    OUT --> T[Terminal / agent]
-    X0 --> TR[Passthrough output]
+    C --> O[Parse options]
+    O -->|lifecycle| L[Lifecycle command]
+    O -->|execution| P[Parse argv]
+    P --> D[Load filters and mappings]
+    D --> R[Resolve filter or passthrough]
+    R --> X[Run native subprocess]
+    X --> E[Filter stdout and stderr]
+    E --> T[Terminal or agent]
+    R -->|--raw| T
 ```
 
-## Runtime Structure (`internal/`)
+Execution commands build an `internal/contracts.Command`, resolve the active
+source, stream native stdout and stderr through the engine, and record local
+metrics for non-raw runs. Stdin remains attached to the subprocess. Exit
+status is returned from the native process.
 
-The canonical runtime path is:
+## Runtime structure
 
-1. `cmd/cmdshape` parses CLI flags through `internal/cli`.
-2. Execution commands build `internal/contracts.Command` through `internal/parser.go`.
-3. `internal/runner.go` resolves the active filter sources and loads YAML filters plus mappings.
-4. `internal/engine` creates command state and streams stdout/stderr through the resolved filter.
-5. `internal/metrics` records one metrics entry for each non-raw execution command.
+The canonical execution path is:
 
-There is no second legacy runtime path and no built-in Go filter catalog fallback.
+1. `cmd/cmdshape` parses global flags and distinguishes lifecycle commands from
+   native execution.
+2. `internal/parser.go` builds `internal/contracts.Command` with the raw input,
+   argv, canonical tool, and eventual dispatch key.
+3. `internal/runner.go` resolves trusted filter sources, mappings, and the
+   effective filter.
+4. The native child process inherits stdin while stdout and stderr are read as
+   separate streams.
+5. `internal/engine` applies the selected YAML case and preserves ordered
+   retained output.
+6. The runner returns the native exit status and records a local metric for a
+   non-raw execution.
 
-## Filter Discovery and Registry
+There is one Go runtime and no legacy execution path or hardcoded per-tool Go
+filter catalog. Tool-specific behavior belongs in YAML. Shared parsing,
+streaming, safety, and lifecycle behavior belongs in the owning `internal/`
+package.
 
-Authored filter behavior comes from YAML, not from a hardcoded Go per-tool
-filter catalog.
+## Filter sources and safety
 
-The runtime source order is explicit in `internal/runner.go`:
+Release builds use this precedence:
 
-- dev builds load only the repository `filters/` directory
-- non-dev builds load project-local `./.cmdshape/filters` first, then home-scoped `~/.config/cmdshape/filters`
+1. trusted project-local `./.cmdshape/filters/*.yaml`;
+2. trusted project-local `./.cmdshape/filters/.mappings.yaml`;
+3. home-scoped `~/.config/cmdshape/filters/*.yaml`;
+4. home-scoped `~/.config/cmdshape/filters/.mappings.yaml`.
 
-That order matters because registration is first-wins:
+Project definitions and aliases win when their canonical id or key is already
+registered. An alias binds only to a filter compiled successfully in its own
+source. Invalid definitions, broken mappings, duplicate lower-priority entries,
+and unresolved tools fall back safely. Project filters are ignored when absent,
+untrusted, changed, or unsafe; `cmdshape filter trust` approves the exact
+current project bytes and every later edit requires approval again.
 
-- project YAML filter definitions override home-scoped definitions with the same canonical filter id
-- project `.mappings.yaml` aliases override home-scoped aliases with the same key
-- mappings are resolved within their own source, so an alias only binds to a target filter that compiled successfully in
-  the same directory
+Development builds load the repository `filters/` directory directly. Release
+builds materialize embedded shipped filters into the managed home directory
+through startup maintenance and `cmdshape repair`; `cmdshape init` installs
+agent integrations but does not own filter materialization.
 
-The current YAML override order in release builds is therefore source-based:
+The execution hot path prepares only relevant sources and resolves the invoked
+command. Administrative commands such as `filter status` and `repair` may scan
+full inventories. The registry always has a passthrough fallback.
 
-1. load project-local filter definitions from `./.cmdshape/filters/*.yaml`
-2. apply project-local aliases from `./.cmdshape/filters/.mappings.yaml`
-3. fill remaining gaps from home-scoped filter definitions in `~/.config/cmdshape/filters/*.yaml`
-4. fill remaining alias gaps from `~/.config/cmdshape/filters/.mappings.yaml`
+Mappings are source-local:
 
-The shipped `filters/` directory is not part of release-build runtime discovery.
-Instead, release builds materialize shipped filters into `~/.config/cmdshape/filters`
-through lifecycle maintenance.
+- a project alias can bind only to a project filter that compiled;
+- a home alias can bind only to a home filter that compiled;
+- lower-priority definitions and aliases do not replace existing keys;
+- a broken source is recorded for status and audit output without becoming
+  active.
 
-Safety rules in the loader:
+Shipped files are embedded into the binary and materialized into the managed
+home directory. Project files remain project-owned and are never rewritten by
+repair.
 
-- invalid filter definitions are skipped
-- invalid `.mappings.yaml` files are ignored for that source
-- duplicate ids or aliases from lower-priority sources are ignored
-- missing mapping targets are ignored
-- unresolved tools fall back to passthrough
+## Command and stream model
 
-The registry always resolves to a filter, defaulting to passthrough when no
-valid filter matches.
+The parsed command keeps:
 
-## Command and Stream Model
+- the original command text;
+- argv in execution order;
+- the invoked and canonical tool names;
+- the selected `filter|case` dispatch identity.
 
-The parsed command carries:
-
-- raw input text
-- argv
-- canonical tool name
-- dispatch key once resolved
-
-The engine handles only `stdout` and `stderr` as filterable streams. `stdin`
-remains attached directly to the subprocess.
+The engine filters only stdout and stderr. Stdin is not parsed or buffered by
+the filter engine. Combined scopes consume stdout and stderr in recorded order;
+split scopes retain the native destination for every emitted line.
 
 The ordered buffer:
 
-- retains `keep` output in stream-tagged insertion order
-- skips blank lines
-- flushes retained output on exit in engine-owned order
+- retains `keep` output with stream identity;
+- applies deterministic replace, skip, grouping, and max behavior;
+- omits blank records according to the engine contract;
+- flushes retained and lifecycle output in engine-owned order.
 
-## Execution Modes
+## Output and execution boundaries
 
-Supported execution flags:
+The engine handles stdout and stderr as filterable streams and preserves their
+ordered insertion for retained lines. It skips only what the selected YAML case
+declares. Structured, interactive, precision-sensitive, ambiguous, or unsafe
+shapes use passthrough. `--raw` bypasses semantic compaction; `--confidential`
+redacts configured literals from emitted output and capture artifacts.
 
-- `--raw`: bypass semantic compaction and pass through native output
-- `--confidential`: redact configured substrings from emitted output and capture artifacts
+Filters may define explicit `normalize_command` behavior. Without that filter
+contract, argv is passed to the native executable as supplied. This exception
+is documented in the filter schema and is covered by command-shape tests.
 
-Lifecycle commands such as `capture`, `filter`, `gain`, `history`, `init`,
-`migrate`, `recovery`, `repair`, `uninstall`, `upgrade`, and `verify` are
-handled by `internal/lifecycle`.
+Lifecycle commands such as `capture`, `verify`, `filter`, `gain`, `history`,
+`init`, `repair`, `recovery`, `migrate`, `upgrade`, and `uninstall` are handled
+by `internal/lifecycle` rather than the execution hot path.
 
-Current lifecycle split:
+## Lifecycle ownership
 
-- `capture` records native sequenced streams and replay output without changing
-  command semantics
-- `init` installs or updates supported coding-agent integrations
-- `migrate` reports or retries previous-installation state and integration
-  cleanup
-- `repair` rewrites the fully managed home-scoped cmdshape state under `~/.config/cmdshape`
-- maintenance helpers remove obsolete previous-installation state and refresh
-  the managed home layout without deleting `~/.cmdshape`
-- `upgrade` validates the downloaded archive and then runs rewrite repair
-  through the installed binary
-- `uninstall` removes managed integration artifacts from each adapter's canonical target
+- `capture` runs a native command once and records sequenced replay material
+  without changing its exit semantics.
+- `verify` replays a fixture through the active runtime and emits candidate
+  output, decisions, and dispatch.
+- `filter` handles scaffolding, status, performance reports, trust, and
+  untrust.
+- `init` and `uninstall` manage coding-agent hooks, plugins, instructions, and
+  context files through registered adapters.
+- `repair` authoritatively refreshes cmdshape-managed home state while leaving
+  project filters untouched.
+- `migrate` reports or retries guarded cleanup of previous-installation state.
+- `upgrade` verifies the downloaded release and then runs rewrite repair
+  through the installed binary.
+- `gain`, `history`, and `recovery` manage local reporting and bounded failure
+  artifacts.
 
-`init` does not own home filter materialization. Canonical shipped filters are
-owned by `repair` and startup maintenance.
+## Replay and benchmarks
 
-## Benchmark Architecture (`cmd/cmdshape-ci` + `internal/benchmark`)
+`cmdshape capture` records:
 
-The benchmark harness is a separate module and binary path:
+- `command.yaml` with argv and native exit code;
+- sequenced `stdout.txt` and `stderr.txt`;
+- merged `output.txt`;
+- exact `output.stdout.txt` and `output.stderr.txt`.
 
-- entrypoint: `cmd/cmdshape-ci`
-- replay fixtures loaded from `testdata/benchmarks/<tool>/<case>-<invariant>/command.yaml`
+`cmdshape verify` reads the command and optional streams and writes:
 
-For each replay fixture, the harness runs `cmdshape verify`, compares authored
-expectations when present, records token counts, and writes per-fixture
-artifacts. The harness exercises the live runtime rather than a separate filter
-implementation.
+- `verify-output.txt`;
+- `verify-stdout.txt` and `verify-stderr.txt`;
+- `verify-decisions.txt`;
+- `verify-dispatch.txt`.
 
-Artifact contracts:
+The benchmark harness in `cmd/cmdshape-ci` and `internal/benchmark` consumes
+fixtures under `testdata/benchmarks/<tool>/<case>/`. It invokes the live verify
+path, compares authored output, decision, and dispatch expectations, and writes
+artifact-local results. It does not execute copied project trees.
 
-- optional sequenced `stdout.txt` / `stderr.txt` replay inputs
-- optional authored `output.txt` / `decisions.txt` expectations
-- generated `verify-output.txt` / `verify-decisions.txt`
+Human-readable gain and benchmark reports use exact source, emitted, and net
+command-output byte reduction. They measure only output routed through
+`cmdshape`, not billing, model tokens, total context, turns, task cost, or
+result quality. The 0.9.2 JSON and CSV schemas retain their estimated-token
+fields, which use a 4B/token compatibility heuristic rather than observed model
+tokens. Benchmark artifacts keep their own local metrics database and do not
+feed normal `gain` reports.
 
-The harness is replay-driven and validates the live runtime without copied
-projects by default.
+## Testing layers
 
-## Testing Layers
+- Unit tests live in the narrowest package that owns the behavior.
+- Parser and planner tests cover argv, normalization, dispatch, ambiguity, and
+  passthrough selection.
+- Runner and engine tests cover native execution, stream routing, exit codes,
+  raw mode, buffering, and output actions.
+- YAML schema and loader tests cover definitions, mappings, source precedence,
+  and trust.
+- Lifecycle and adapter tests cover command UX and managed integration files.
+- Replay fixtures cover command-specific success, warning, failure,
+  structured, and passthrough behavior.
+- `./scripts/validate.sh` coordinates formatting, tests, race and coverage
+  checks, and benchmark gates for Go changes.
 
-- unit tests in the narrowest owning package under `internal/`
-- runtime tests in `internal/runner_test.go`, `internal/engine/*_test.go`, and `internal/filters/*_test.go`
-- lifecycle and adapter tests under `internal/lifecycle` and `internal/lifecycle/agents`
-- benchmark harness tests under `internal/benchmark`
-- benchmark fixtures under `testdata/benchmarks`
-- validation and race/coverage gates through `./scripts/validate.sh`
+## Invariants
 
-## Design Invariants
+- Native commands, exit codes, actionable diagnostics, and `--raw` remain
+  trustworthy.
+- Zero-byte native output remains zero bytes unless an explicitly selected
+  filter lifecycle contract emits output.
+- Ambiguity and unsafe shapes prefer passthrough to guessed shaping.
+- Filter behavior is deterministic and isolated by command shape.
+- Output remains shell-usable when the native format allows it.
+- Filters stay in YAML; shared behavior belongs in the canonical runtime.
+- Capture preserves cross-stream order and native exit status.
+- Structured and precision modes remain byte-preserving when their contract
+  requires it.
+- Benchmark exact-byte expansion and exit-code mismatches remain failures.
 
-- exit code parity with the native command
-- preserve critical diagnostics
-- exact `--raw` behavior unless explicit confidential redaction is enabled
-- fallback/passthrough on ambiguity, unsafe structured modes, or invalid filter definitions
-- deterministic output and deterministic benchmark evaluation
-- authored YAML is the source of truth for filter behavior and alias routing within each source
-- project-local YAML overrides home-scoped YAML in release builds
-- Go owns the bounded runtime semantics: parsing, source ordering, stream handling, metrics, audit, and lifecycle
-  behavior
+For authoring details, see [FILTERS.md](FILTERS.md). For contributor checks,
+see [CONTRIBUTING.md](CONTRIBUTING.md).

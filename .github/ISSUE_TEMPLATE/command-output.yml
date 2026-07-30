@@ -1,77 +1,111 @@
 name: Command Output
-description: Report when cmdshape output differs from native command output / expectation.
+description: Report when cmdshape output differs from native output or expectation.
 title: "[output] <command>"
 labels:
   - output
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove credentials, tokens, customer data, and private paths.
+        Review every capture before pasting it here.
+
   - type: textarea
     id: command
     attributes:
-      label: Command
-      description: The exact command you ran.
+      label: Exact command
+      description: Include the exact command and arguments, with secrets redacted.
       placeholder: |
-        find . -type f
+        cmdshape find . -type f
     validations:
       required: true
 
   - type: textarea
-    id: normal_stdout
+    id: expected
     attributes:
-      label: Normal Command STDOUT
-      description: Standard output from running the command without cmdshape.
+      label: Expected behavior
+      description: What should be preserved, compacted, or passed through?
       placeholder: |
-        <paste native command stdout here, using cmdshape --capture-raw>
+        Keep the warning and exit with the native status.
+    validations:
+      required: true
+
+  - type: textarea
+    id: shaped_stdout
+    attributes:
+      label: cmdshape stdout
+      description: Paste stdout received through cmdshape. Write `<empty>` when no bytes were emitted.
       render: shell
     validations:
       required: true
 
   - type: textarea
-    id: normal_stderr
+    id: shaped_stderr
     attributes:
-      label: Normal Command STDERR
-      description: Standard error output from running the command without cmdshape.
-      placeholder: |
-        <paste native command stderr here, using cmdshape --capture-raw>
+      label: cmdshape stderr
+      description: Paste stderr received through cmdshape. Write `<empty>` when no bytes were emitted.
       render: shell
     validations:
       required: true
 
   - type: textarea
-    id: received_output
+    id: native_stdout
     attributes:
-      label: Received cmdshape Output
-      description: Output you got when running the command through cmdshape.
-      placeholder: |
-        <paste cmdshape output here>
+      label: Native or raw stdout
+      description: Run the command without cmdshape, or use `cmdshape --raw <command>`, and paste stdout.
       render: shell
     validations:
       required: true
 
   - type: textarea
-    id: desired_output
+    id: native_stderr
     attributes:
-      label: Desired cmdshape Output (Optional)
-      description: If known, show what cmdshape output should look like.
-      placeholder: |
-        <optional expected cmdshape output>
+      label: Native or raw stderr
+      description: Run the command without cmdshape, or use `cmdshape --raw <command>`, and paste stderr.
       render: shell
     validations:
-      required: false
+      required: true
+
+  - type: input
+    id: exit_codes
+    attributes:
+      label: Exit codes
+      description: Give the native and cmdshape exit codes, for example `native=1, cmdshape=1`.
+      placeholder: native=0, cmdshape=0
+    validations:
+      required: true
 
   - type: input
     id: cmdshape_version
     attributes:
-      label: cmdshape Version
+      label: cmdshape version
       description: Output of `cmdshape --version`.
-      placeholder: 0.1.0
+      placeholder: 0.9.2
     validations:
-      required: false
+      required: true
 
   - type: input
-    id: os
+    id: environment
     attributes:
-      label: OS / Shell
-      description: Operating system and shell used.
+      label: OS and shell
       placeholder: Ubuntu 24.04 / bash
     validations:
-      required: false
+      required: true
+
+  - type: textarea
+    id: filter_status
+    attributes:
+      label: Filter status
+      description: Paste `cmdshape filter status` for the affected command.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: integration
+    attributes:
+      label: Integration or direct mode
+      description: Name the coding-agent integration, or say `direct`.
+      placeholder: direct
+    validations:
+      required: true

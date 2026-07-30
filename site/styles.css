@@ -392,7 +392,13 @@ pre {
 }
 
 .install-wrap {
+  display: grid;
   width: 100%;
+  gap: var(--space-sm);
+}
+
+.install-followup {
+  color: var(--muted);
 }
 
 .install-card {

@@ -57,9 +57,8 @@ type periodEnvelope struct {
 }
 
 const (
-	noResultsMsg     = "No results for selected filters."
-	savingsPctFormat = "~%.2f%%"
-	gainHeaderText   = "cmdshape gain (estimated tokens: 4B/token)"
+	noResultsMsg   = "No results for selected filters."
+	gainHeaderText = "cmdshape gain (exact routed command-output bytes)"
 )
 
 var gainNow = func() time.Time {
@@ -262,7 +261,7 @@ func parseReportFlags(name string, args []string) (reportFlags, bool, error) {
 	period := fs.String("period", "", "period aggregation: day|week|month (gain only)")
 	since := fs.String("since", "", "time filter (e.g. 24h, 7d, 2w)")
 	tool := fs.String("tool", "", "filter by tool")
-	failed := fs.Bool("failed", false, "include only failed runs")
+	failed := fs.Bool("failed", false, "include only runs with a nonzero child exit")
 	table := fs.Bool("table", false, "render detailed text table output (gain only)")
 	global := fs.Bool("global", false, "aggregate across registered workspace metrics databases")
 	limit := fs.Int("limit", -1, "limit rows in detailed text views (text output only, 0 = unlimited)")
@@ -499,13 +498,14 @@ func dayStartUTC(value time.Time) time.Time {
 }
 
 func setReportUsage(fs *flag.FlagSet, name string) {
-	summary := "show token savings history"
+	summary := "show source, emitted, and net-reduction command-output bytes"
 	usage := []string{"cmdshape gain [--format text|json|csv] [--table] [--limit <n>] [--period day|week|month] [--since <duration>] [--tool <tool>] [--failed] [--global]"}
 	notes := []string{
 		"Use --period only with cmdshape gain.",
-		"Run cmdshape gain after install or init to verify savings on real work.",
+		"Run cmdshape gain after install or init to inspect output shaping on real work.",
 		"Use --global to aggregate across registered workspace metrics databases.",
 		"Default text output is a short shareable summary; use --table for detailed text tables.",
+		"JSON and CSV retain the 0.9.2 estimated-token compatibility fields; they use a 4B/token heuristic and are not model observations.",
 		"--limit applies to text output only; detailed text views default to 15 rows.",
 		"Use --limit 0 for unlimited text rows; negative values are invalid except -1 (default behavior).",
 		"Legacy --json remains available as an alias for --format json.",
@@ -606,16 +606,29 @@ func printPeriodText(rows []metrics.PeriodRow, period string, filters filtersEnv
 	limitedRows, totalRows := limitRows(rows, limit)
 	fmt.Println(tableSummaryLine(len(limitedRows), totalRows, "buckets"))
 	fmt.Println()
-	fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n", "BUCKET", "START", "END", "COUNT", "SAVINGS")
+	tableRows := make([][]string, 0, len(limitedRows))
 	for _, r := range limitedRows {
-		fmt.Printf("%-10s  %-10s  %-10s  %-8s  %s\n",
+		tableRows = append(tableRows, []string{
 			r.Bucket,
 			r.BucketStart,
 			r.BucketEnd,
 			formatInt(r.Commands),
-			fmt.Sprintf(savingsPctFormat, r.EstimatedSavingsPct),
-		)
+			formatByteSize(r.RawBytes),
+			formatByteSize(r.KeptBytes),
+			formatByteSize(netReductionBytes(r.RawBytes, r.KeptBytes)),
+			byteChangePercentText(r.RawBytes, r.KeptBytes),
+		})
 	}
+	fmt.Print(renderTextTable([]textTableColumn{
+		{header: "BUCKET"},
+		{header: "START"},
+		{header: "END"},
+		{header: "COUNT", right: true},
+		{header: "SOURCE", right: true},
+		{header: "EMITTED", right: true},
+		{header: "NET REDUCTION", right: true},
+		{header: "REDUCTION %", right: true},
+	}, tableRows))
 	return nil
 }
 
@@ -666,17 +679,6 @@ func trendSplitIndex(n int, period string) int {
 	default:
 		return n / 2
 	}
-}
-
-func averageSavings(rows []metrics.PeriodRow) float64 {
-	if len(rows) == 0 {
-		return 0
-	}
-	var sum float64
-	for _, row := range rows {
-		sum += row.EstimatedSavingsPct
-	}
-	return sum / float64(len(rows))
 }
 
 func formatInt(v int64) string {
@@ -828,7 +830,7 @@ func historyStatus(r metrics.HistoryRow) string {
 		return "passthrough"
 	}
 	if r.Failed {
-		return "failed"
+		return "nonzero"
 	}
 	return "ok"
 }

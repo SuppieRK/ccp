@@ -16,7 +16,7 @@ import (
 const (
 	filterPerformanceDataset     = "filter-performance"
 	maxPerformanceHints          = 5
-	filterPerformanceMeasurement = "recorded command metrics only; source/path/hash are blank for legacy rows; registry timing covers observed filter builds; pending or rejected writes are disclosed in storage"
+	filterPerformanceMeasurement = "recorded routed command-output activity only; source/path/hash are blank for legacy rows; registry timing covers observed filter builds; pending or rejected writes are disclosed in storage"
 	suggestionReviewCase         = "review-case"
 	suggestionFailureHeavy       = "failure-heavy"
 	suggestionPassthrough        = "passthrough-opportunity"
@@ -113,7 +113,7 @@ func parseFilterPerformanceFlags(args []string) (filterPerformanceFlags, bool, e
 	format := fs.String("format", "text", "output format: text|json|csv")
 	since := fs.String("since", "", "time filter (e.g. 24h, 7d, 2w)")
 	tool := fs.String("tool", "", "filter by invoked tool")
-	failed := fs.Bool("failed", false, "include only failed runs")
+	failed := fs.Bool("failed", false, "include only runs with a nonzero child exit")
 	global := fs.Bool("global", false, "aggregate across registered workspace metrics databases")
 	limit := fs.Int("limit", -1, "limit rows in text output only, 0 = unlimited")
 	legacyJSON := fs.Bool("json", false, "emit JSON (deprecated alias for --format json)")
@@ -355,7 +355,7 @@ func appendReviewCaseSuggestions(suggestions []filterPerformanceSuggestion, rows
 				Filter:     row.Filter,
 				Case:       row.Case,
 				Count:      row.Commands,
-				Reason:     "matched case has low or no estimated savings",
+				Reason:     "matched case has low or no routed-output reduction",
 				SavingsPct: row.EstimatedSavingsPct,
 			})
 			if countKind(suggestions, suggestionReviewCase) == maxPerformanceHints {
@@ -375,7 +375,7 @@ func appendFailureHeavySuggestions(suggestions []filterPerformanceSuggestion, ro
 				Filter:     row.Filter,
 				Case:       row.Case,
 				Count:      row.FailedCommands,
-				Reason:     "most recorded runs for this row failed",
+				Reason:     "most recorded runs for this row had nonzero exits",
 				SavingsPct: row.EstimatedSavingsPct,
 			})
 			if countKind(suggestions, suggestionFailureHeavy) == maxPerformanceHints {
@@ -461,8 +461,8 @@ func printFilterPerformanceText(rows []metrics.PerformanceRow, buildSummary metr
 				truncateForDisplay(displayPerformanceCase(row.Case), 16),
 				truncateTailForDisplay(displayPerformancePath(row), 28),
 				formatInt(row.Commands),
-				formatCompactSavedTokens(row.EstimatedSavedTokens),
-				formatPercentText(row.EstimatedSavingsPct),
+				formatByteSize(netReductionBytes(row.RawBytes, row.KeptBytes)),
+				byteChangePercentText(row.RawBytes, row.KeptBytes),
 				formatPercentText(row.PassthroughRate * 100),
 				formatPercentText(row.FailedRate * 100),
 			})
@@ -473,10 +473,10 @@ func printFilterPerformanceText(rows []metrics.PerformanceRow, buildSummary metr
 			{header: "CASE"},
 			{header: "PATH"},
 			{header: "RUNS", right: true},
-			{header: "SAVED", right: true},
-			{header: "SAVINGS", right: true},
+			{header: "NET REDUCTION", right: true},
+			{header: "REDUCTION %", right: true},
 			{header: "PASS", right: true},
-			{header: "FAIL", right: true},
+			{header: "NONZERO", right: true},
 		}, tableRows))
 	}
 	printRegistryBuildText(buildSummary, buildRows, limit)

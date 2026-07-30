@@ -17,7 +17,6 @@ import (
 const (
 	defaultTextLimit          = 15
 	textPercentFmt            = "%.1f%%"
-	compactWinsPercentFmt     = "%.0f%%"
 	trendInsufficientData     = "insufficient data"
 	trendFlatCutoff           = 0.05
 	trendFloatEpsilon         = 1e-9
@@ -77,7 +76,7 @@ func compactFilterSuffix(filters filtersEnvelope, extraTags ...string) string {
 		parts = append(parts, "tool="+filters.Tool)
 	}
 	if filters.Failed {
-		parts = append(parts, "failed-only")
+		parts = append(parts, "nonzero-only")
 	}
 	for _, tag := range extraTags {
 		tag = strings.TrimSpace(tag)
@@ -93,11 +92,11 @@ func compactFilterSuffix(filters filtersEnvelope, extraTags ...string) string {
 }
 
 func gainHeadline(total metrics.SummaryTotal, filters filtersEnvelope, extraTags ...string) string {
-	return fmt.Sprintf("%s cmds · %s → %s tokens (%s saved)%s",
+	return fmt.Sprintf("%s cmds · %s source → %s emitted (%s)%s",
 		formatInt(total.Commands),
-		formatInt(total.EstimatedInputTokens),
-		formatInt(total.EstimatedOutputTokens),
-		formatPercentText(total.EstimatedSavingsPct),
+		formatByteSize(total.RawBytes),
+		formatByteSize(total.KeptBytes),
+		byteChangeText(total.RawBytes, total.KeptBytes),
 		compactFilterSuffix(filters, extraTags...),
 	)
 }
@@ -110,78 +109,77 @@ func formatPercentText(v float64) string {
 	return fmt.Sprintf(textPercentFmt, v)
 }
 
-func formatCompactWinsPercentText(v float64) string {
-	return fmt.Sprintf(compactWinsPercentFmt, v)
+func netReductionBytes(sourceBytes, emittedBytes int64) int64 {
+	return sourceBytes - emittedBytes
 }
 
-func formatCompactSavedTokens(v int64) string {
-	abs := v
-	if abs < 0 {
-		abs = -abs
+func netReductionPercent(sourceBytes, emittedBytes int64) (float64, bool) {
+	if sourceBytes == 0 {
+		return 0, emittedBytes == 0
 	}
-	formatScaled := func(value float64, suffix string) string {
-		formatted := fmt.Sprintf("%.1f%s", value, suffix)
-		formatted = strings.Replace(formatted, ".0"+suffix, suffix, 1)
-		if v < 0 {
-			return "-" + formatted
-		}
-		return formatted
+	return float64(netReductionBytes(sourceBytes, emittedBytes)) / float64(sourceBytes) * 100, true
+}
+
+func byteChangeText(sourceBytes, emittedBytes int64) string {
+	pct, defined := netReductionPercent(sourceBytes, emittedBytes)
+	if !defined {
+		return "new output"
 	}
 	switch {
-	case abs < 1_000:
-		return formatInt(v)
-	case abs < 10_000:
-		return formatScaled(float64(abs)/1_000, "k")
-	case abs < 1_000_000:
-		return fmt.Sprintf("%dk", int(math.Round(float64(v)/1_000)))
-	case abs < 10_000_000:
-		return formatScaled(float64(abs)/1_000_000, "m")
+	case pct > 0:
+		return formatPercentText(pct) + " net reduction"
+	case pct < 0:
+		return formatPercentText(-pct) + " expansion"
 	default:
-		return fmt.Sprintf("%dm", int(math.Round(float64(v)/1_000_000)))
+		return "no net byte change"
 	}
 }
 
-func summaryWinsText(row metrics.SummaryToolRow) string {
-	return fmt.Sprintf("%s (%s / %s)", row.Tool, formatCompactSavedTokens(row.EstimatedSavedTokens), formatCompactWinsPercentText(row.EstimatedSavingsPct))
+func byteChangePercentText(sourceBytes, emittedBytes int64) string {
+	pct, defined := netReductionPercent(sourceBytes, emittedBytes)
+	if !defined {
+		return "new output"
+	}
+	if pct < 0 {
+		return formatPercentText(-pct) + " expansion"
+	}
+	return formatPercentText(pct)
 }
 
-func summaryCountText(row metrics.SummaryToolRow) string {
-	return fmt.Sprintf("%s (%s cmds)", row.Tool, formatInt(row.Commands))
-}
-
-func shouldSplitWinsDrags(rows []metrics.SummaryToolRow) bool {
-	if len(rows) < 2 {
-		return false
+func formatByteSize(v int64) string {
+	const unit = int64(1024)
+	if v > -unit && v < unit {
+		return fmt.Sprintf("%d B", v)
 	}
 
-	minPct := rows[0].EstimatedSavingsPct
-	maxPct := rows[0].EstimatedSavingsPct
-	hasStrong := false
-	hasWeak := false
-
-	for _, row := range rows {
-		pct := row.EstimatedSavingsPct
-		minPct = min(minPct, pct)
-		maxPct = max(maxPct, pct)
-		if pct >= 35 {
-			hasStrong = true
+	value := float64(v)
+	suffix := "KiB"
+	for _, next := range []string{"MiB", "GiB", "TiB"} {
+		value /= float64(unit)
+		if math.Abs(value) < float64(unit) {
+			break
 		}
-		if pct <= 20 {
-			hasWeak = true
-		}
+		suffix = next
 	}
-
-	spread := maxPct - minPct
-	if len(rows) == 2 {
-		return hasStrong && hasWeak && spread >= 20
-	}
-	return len(rows) >= 3 && hasStrong && hasWeak && spread >= 10
+	formatted := fmt.Sprintf("%.1f", value)
+	formatted = strings.TrimSuffix(formatted, ".0")
+	return formatted + " " + suffix
 }
 
-func topWinsText(rows []metrics.SummaryToolRow) string {
+func summaryReductionText(row metrics.SummaryToolRow) string {
+	reduction := netReductionBytes(row.RawBytes, row.KeptBytes)
+	return fmt.Sprintf("%s (%s / %s)", row.Tool, formatByteSize(reduction), byteChangePercentText(row.RawBytes, row.KeptBytes))
+}
+
+func summaryExpansionText(row metrics.SummaryToolRow) string {
+	expansion := row.KeptBytes - row.RawBytes
+	return fmt.Sprintf("%s (%s / %s)", row.Tool, formatByteSize(expansion), byteChangePercentText(row.RawBytes, row.KeptBytes))
+}
+
+func topReductionText(rows []metrics.SummaryToolRow) string {
 	sorted := slices.Clone(rows)
 	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
-		if diff := cmp.Compare(b.EstimatedSavedTokens, a.EstimatedSavedTokens); diff != 0 {
+		if diff := cmp.Compare(netReductionBytes(b.RawBytes, b.KeptBytes), netReductionBytes(a.RawBytes, a.KeptBytes)); diff != 0 {
 			return diff
 		}
 		if diff := cmp.Compare(b.Commands, a.Commands); diff != 0 {
@@ -192,10 +190,11 @@ func topWinsText(rows []metrics.SummaryToolRow) string {
 
 	parts := make([]string, 0, 3)
 	for _, row := range sorted {
-		if row.EstimatedSavedTokens <= 0 {
+		pct, defined := netReductionPercent(row.RawBytes, row.KeptBytes)
+		if !defined || pct <= 20 {
 			continue
 		}
-		parts = append(parts, summaryWinsText(row))
+		parts = append(parts, summaryReductionText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -203,21 +202,21 @@ func topWinsText(rows []metrics.SummaryToolRow) string {
 	return strings.Join(parts, " · ")
 }
 
-func dragToolsText(rows []metrics.SummaryToolRow) string {
+func lowReductionText(rows []metrics.SummaryToolRow) string {
 	sorted := make([]metrics.SummaryToolRow, 0, len(rows))
 	for _, row := range rows {
-		if row.EstimatedSavingsPct <= 20 {
+		pct, defined := netReductionPercent(row.RawBytes, row.KeptBytes)
+		if defined && pct >= 0 && pct <= 20 {
 			sorted = append(sorted, row)
 		}
 	}
-	if len(sorted) == 0 {
-		sorted = append(sorted, rows...)
-	}
 	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
 		if diff := cmp.Compare(b.Commands, a.Commands); diff != 0 {
 			return diff
 		}
-		if diff := cmp.Compare(a.EstimatedSavingsPct, b.EstimatedSavingsPct); diff != 0 {
+		aPct, _ := netReductionPercent(a.RawBytes, a.KeptBytes)
+		bPct, _ := netReductionPercent(b.RawBytes, b.KeptBytes)
+		if diff := cmp.Compare(bPct, aPct); diff != 0 {
 			return diff
 		}
 		return cmp.Compare(a.Tool, b.Tool)
@@ -225,7 +224,7 @@ func dragToolsText(rows []metrics.SummaryToolRow) string {
 
 	parts := make([]string, 0, 3)
 	for _, row := range sorted {
-		parts = append(parts, summaryCountText(row))
+		parts = append(parts, summaryReductionText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -233,10 +232,12 @@ func dragToolsText(rows []metrics.SummaryToolRow) string {
 	return strings.Join(parts, " · ")
 }
 
-func toolsSummaryText(rows []metrics.SummaryToolRow) string {
+func expansionText(rows []metrics.SummaryToolRow) string {
 	sorted := slices.Clone(rows)
 	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
-		if diff := cmp.Compare(b.EstimatedSavedTokens, a.EstimatedSavedTokens); diff != 0 {
+		aExpansion := a.KeptBytes - a.RawBytes
+		bExpansion := b.KeptBytes - b.RawBytes
+		if diff := cmp.Compare(bExpansion, aExpansion); diff != 0 {
 			return diff
 		}
 		if diff := cmp.Compare(b.Commands, a.Commands); diff != 0 {
@@ -247,7 +248,10 @@ func toolsSummaryText(rows []metrics.SummaryToolRow) string {
 
 	parts := make([]string, 0, 3)
 	for _, row := range sorted {
-		parts = append(parts, summaryWinsText(row))
+		if row.KeptBytes <= row.RawBytes {
+			continue
+		}
+		parts = append(parts, summaryExpansionText(row))
 		if len(parts) == 3 {
 			break
 		}
@@ -259,17 +263,17 @@ func summaryInsightLines(rows []metrics.SummaryToolRow) []labeledLine {
 	if len(rows) == 0 {
 		return nil
 	}
-	if shouldSplitWinsDrags(rows) {
-		wins := topWinsText(rows)
-		drag := dragToolsText(rows)
-		if wins != "" && drag != "" {
-			return []labeledLine{
-				{label: "Wins", value: wins},
-				{label: "Drag", value: drag},
-			}
-		}
+	lines := make([]labeledLine, 0, 3)
+	if value := topReductionText(rows); value != "" {
+		lines = append(lines, labeledLine{label: "Most net reduction", value: value})
 	}
-	return []labeledLine{{label: "Tools", value: toolsSummaryText(rows)}}
+	if value := lowReductionText(rows); value != "" {
+		lines = append(lines, labeledLine{label: "Low reduction", value: value})
+	}
+	if value := expansionText(rows); value != "" {
+		lines = append(lines, labeledLine{label: "Expansion", value: value})
+	}
+	return lines
 }
 
 func trendLabel(period string) string {
@@ -283,110 +287,6 @@ func trendLabel(period string) string {
 	}
 }
 
-func trendSavingsBucket(pct float64) string {
-	switch {
-	case pct <= 0:
-		return "none"
-	case pct < 20:
-		return "low"
-	case pct < 40:
-		return "mid"
-	case pct < 60:
-		return "high"
-	default:
-		return "extreme"
-	}
-}
-
-func trendDeltaBucket(diff float64) string {
-	absDiff := math.Abs(diff)
-	switch {
-	case absDiff < 2:
-		return "small"
-	case absDiff < 6:
-		return "medium"
-	default:
-		return "large"
-	}
-}
-
-func deterministicVariant(variants []string, earlier, recent float64) string {
-	if len(variants) == 0 {
-		return ""
-	}
-	seed := int64(math.Round(earlier*10))*31 + int64(math.Round(recent*10))*17
-	idx := int(seed % int64(len(variants)))
-	if idx < 0 {
-		idx += len(variants)
-	}
-	return variants[idx]
-}
-
-func trendSuffixUp(deltaBucket, savingsBucket string, earlier, recent float64) string {
-	switch deltaBucket {
-	case "small":
-		return deterministicVariant([]string{"uptick", "firming"}, earlier, recent)
-	case "medium":
-		if savingsBucket == "high" || savingsBucket == "extreme" {
-			return deterministicVariant([]string{"gaining", "dialed in"}, earlier, recent)
-		}
-		return deterministicVariant([]string{"gaining", "coming along"}, earlier, recent)
-	default:
-		if savingsBucket == "high" || savingsBucket == "extreme" {
-			return deterministicVariant([]string{"clear gain", "on a roll"}, earlier, recent)
-		}
-		return deterministicVariant([]string{"clear gain", "picking up"}, earlier, recent)
-	}
-}
-
-func trendSuffixDown(deltaBucket, savingsBucket string, earlier, recent float64) string {
-	if savingsBucket == "none" || savingsBucket == "low" {
-		switch deltaBucket {
-		case "small":
-			return deterministicVariant([]string{"thin", "fading"}, earlier, recent)
-		case "medium":
-			return deterministicVariant([]string{"dragging", "slipping"}, earlier, recent)
-		default:
-			return deterministicVariant([]string{"backslide", "off track"}, earlier, recent)
-		}
-	}
-
-	switch deltaBucket {
-	case "small":
-		return deterministicVariant([]string{"easing", "soft dip"}, earlier, recent)
-	case "medium":
-		return deterministicVariant([]string{"losing ground", "cooling off"}, earlier, recent)
-	default:
-		return deterministicVariant([]string{"hard fade", "running cold"}, earlier, recent)
-	}
-}
-
-func trendSuffixFlat(savingsBucket string, earlier, recent float64) string {
-	switch savingsBucket {
-	case "none", "low":
-		return deterministicVariant([]string{"stuck low", "flatline"}, earlier, recent)
-	case "high", "extreme":
-		return deterministicVariant([]string{"holding high", "dialed in"}, earlier, recent)
-	default:
-		return deterministicVariant([]string{"holding", "steady"}, earlier, recent)
-	}
-}
-
-func trendSuffix(earlier, recent float64) string {
-	diff := recent - earlier
-	deltaBucket := trendDeltaBucket(diff)
-	savingsBucket := trendSavingsBucket(recent)
-
-	switch {
-	case diff > trendFlatCutoff+trendFloatEpsilon:
-		return trendSuffixUp(deltaBucket, savingsBucket, earlier, recent)
-	case diff < -trendFlatCutoff-trendFloatEpsilon:
-		return trendSuffixDown(deltaBucket, savingsBucket, earlier, recent)
-	default:
-		return trendSuffixFlat(savingsBucket, earlier, recent)
-	}
-}
-
 func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 	if len(rows) < 2 {
 		return trendInsufficientData
@@ -396,16 +296,34 @@ func trendSummaryText(rows []metrics.PeriodRow, period string) string {
 		return cmp.Compare(a.BucketStart, b.BucketStart)
 	})
 	if len(sorted) == 2 {
-		return formatTrendSummary(sorted[0].EstimatedSavingsPct, sorted[1].EstimatedSavingsPct, period)
+		earlier, earlierDefined := periodNetReductionPercent(sorted[:1])
+		recent, recentDefined := periodNetReductionPercent(sorted[1:])
+		if !earlierDefined || !recentDefined {
+			return trendInsufficientData
+		}
+		return formatTrendSummary(earlier, recent, period)
 	}
 	split := trendSplitIndex(len(sorted), period)
 	if split <= 0 || split >= len(sorted) {
 		return trendInsufficientData
 	}
 
-	earlier := averageSavings(sorted[:split])
-	recent := averageSavings(sorted[split:])
+	earlier, earlierDefined := periodNetReductionPercent(sorted[:split])
+	recent, recentDefined := periodNetReductionPercent(sorted[split:])
+	if !earlierDefined || !recentDefined {
+		return trendInsufficientData
+	}
 	return formatTrendSummary(earlier, recent, period)
+}
+
+func periodNetReductionPercent(rows []metrics.PeriodRow) (float64, bool) {
+	var sourceBytes int64
+	var emittedBytes int64
+	for _, row := range rows {
+		sourceBytes += row.RawBytes
+		emittedBytes += row.KeptBytes
+	}
+	return netReductionPercent(sourceBytes, emittedBytes)
 }
 
 func formatTrendSummary(earlier, recent float64, period string) string {
@@ -414,27 +332,24 @@ func formatTrendSummary(earlier, recent float64, period string) string {
 
 	switch {
 	case diff > trendFlatCutoff+trendFloatEpsilon:
-		return fmt.Sprintf("↑ +%.1f pts %s (%s → %s) · %s",
+		return fmt.Sprintf("↑ +%.1f pts %s (%s → %s)",
 			diff,
 			label,
 			formatPercentText(earlier),
 			formatPercentText(recent),
-			trendSuffix(earlier, recent),
 		)
 	case diff < -trendFlatCutoff-trendFloatEpsilon:
-		return fmt.Sprintf("↓ -%.1f pts %s (%s → %s) · %s",
+		return fmt.Sprintf("↓ -%.1f pts %s (%s → %s)",
 			-diff,
 			label,
 			formatPercentText(earlier),
 			formatPercentText(recent),
-			trendSuffix(earlier, recent),
 		)
 	default:
-		return fmt.Sprintf("→ flat %s (%s → %s) · %s",
+		return fmt.Sprintf("→ flat %s (%s → %s)",
 			label,
 			formatPercentText(earlier),
 			formatPercentText(recent),
-			trendSuffix(earlier, recent),
 		)
 	}
 }
@@ -464,11 +379,16 @@ func compactGainVerdictColor(pct float64) *color.Color {
 }
 
 func styleCompactGainHeadline(total metrics.SummaryTotal, filters filtersEnvelope, extraTags ...string) string {
-	verdict := compactGainVerdictColor(total.EstimatedSavingsPct).Sprintf("%s saved", formatPercentText(total.EstimatedSavingsPct))
-	return fmt.Sprintf("%s cmds · %s → %s tokens (%s)%s",
+	reductionPercent, defined := netReductionPercent(total.RawBytes, total.KeptBytes)
+	verdictColor := compactGainColors.verdictAmber
+	if defined && reductionPercent >= 0 {
+		verdictColor = compactGainVerdictColor(reductionPercent)
+	}
+	verdict := verdictColor.Sprint(byteChangeText(total.RawBytes, total.KeptBytes))
+	return fmt.Sprintf("%s cmds · %s source → %s emitted (%s)%s",
 		compactGainColors.bold.Sprint(formatInt(total.Commands)),
-		compactGainColors.bold.Sprint(formatInt(total.EstimatedInputTokens)),
-		compactGainColors.bold.Sprint(formatInt(total.EstimatedOutputTokens)),
+		compactGainColors.bold.Sprint(formatByteSize(total.RawBytes)),
+		compactGainColors.bold.Sprint(formatByteSize(total.KeptBytes)),
 		verdict,
 		compactFilterSuffix(filters, extraTags...),
 	)
@@ -478,7 +398,7 @@ func styleCompactGainLabel(label string, width int) string {
 	return compactGainColors.bold.Sprint(fmt.Sprintf("%-*s", width, label))
 }
 
-func styleCompactGainWinsValue(value string) string {
+func styleCompactGainMetricValue(value string) string {
 	parts := strings.Split(value, " · ")
 	for i, part := range parts {
 		tool, rest, ok := strings.Cut(part, " (")
@@ -486,29 +406,16 @@ func styleCompactGainWinsValue(value string) string {
 			continue
 		}
 		inner := strings.TrimSuffix(rest, ")")
-		tokens, pct, ok := strings.Cut(inner, " / ")
+		bytes, pct, ok := strings.Cut(inner, " / ")
 		if !ok {
 			continue
 		}
 		parts[i] = compactGainColors.bold.Sprint(tool) +
 			" " + compactGainColors.gray.Sprint("(") +
-			compactGainColors.gray.Sprint(tokens) +
+			compactGainColors.gray.Sprint(bytes) +
 			compactGainColors.gray.Sprint(" / ") +
 			compactGainColors.gray.Sprint(pct) +
 			compactGainColors.gray.Sprint(")")
-	}
-	return strings.Join(parts, " · ")
-}
-
-func styleCompactGainDragValue(value string) string {
-	parts := strings.Split(value, " · ")
-	for i, part := range parts {
-		tool, rest, ok := strings.Cut(part, " ")
-		if !ok {
-			parts[i] = compactGainColors.bold.Sprint(part)
-			continue
-		}
-		parts[i] = compactGainColors.bold.Sprint(tool) + " " + compactGainColors.gray.Sprint(rest)
 	}
 	return strings.Join(parts, " · ")
 }
@@ -533,11 +440,7 @@ func styleCompactGainTrendValue(value string) string {
 		if !ok {
 			continue
 		}
-		compare, suffix, ok := strings.Cut(rest, " · ")
-		if !ok {
-			return styleCompactTrendDelta(prefix) + " " + label + " " + compactGainColors.gray.Sprint(rest)
-		}
-		return styleCompactTrendDelta(prefix) + " " + label + " " + compactGainColors.gray.Sprint(compare) + " · " + suffix
+		return styleCompactTrendDelta(prefix) + " " + label + " " + compactGainColors.gray.Sprint(rest)
 	}
 	return value
 }
@@ -546,10 +449,8 @@ func styleCompactGainLines(lines []labeledLine) []labeledLine {
 	styled := make([]labeledLine, 0, len(lines))
 	for _, line := range lines {
 		switch line.label {
-		case "Wins", "Tools":
-			line.value = styleCompactGainWinsValue(line.value)
-		case "Drag":
-			line.value = styleCompactGainDragValue(line.value)
+		case "Most net reduction", "Low reduction", "Expansion":
+			line.value = styleCompactGainMetricValue(line.value)
 		case "Trend":
 			line.value = styleCompactGainTrendValue(line.value)
 		}
@@ -617,18 +518,9 @@ func tableSummaryLine(displayed, total int, noun string) string {
 }
 
 func sortGainTableRows(rows []metrics.SummaryToolRow) []metrics.SummaryToolRow {
-	savingRows := make([]metrics.SummaryToolRow, 0, len(rows))
-	zeroRows := make([]metrics.SummaryToolRow, 0, len(rows))
-	for _, row := range rows {
-		if row.EstimatedSavedTokens == 0 {
-			zeroRows = append(zeroRows, row)
-			continue
-		}
-		savingRows = append(savingRows, row)
-	}
-
-	slices.SortFunc(savingRows, func(a, b metrics.SummaryToolRow) int {
-		if diff := cmp.Compare(b.EstimatedSavedTokens, a.EstimatedSavedTokens); diff != 0 {
+	sorted := slices.Clone(rows)
+	slices.SortFunc(sorted, func(a, b metrics.SummaryToolRow) int {
+		if diff := cmp.Compare(netReductionBytes(b.RawBytes, b.KeptBytes), netReductionBytes(a.RawBytes, a.KeptBytes)); diff != 0 {
 			return diff
 		}
 		if diff := cmp.Compare(b.Commands, a.Commands); diff != 0 {
@@ -636,13 +528,7 @@ func sortGainTableRows(rows []metrics.SummaryToolRow) []metrics.SummaryToolRow {
 		}
 		return cmp.Compare(a.Tool, b.Tool)
 	})
-	slices.SortFunc(zeroRows, func(a, b metrics.SummaryToolRow) int {
-		if diff := cmp.Compare(b.Commands, a.Commands); diff != 0 {
-			return diff
-		}
-		return cmp.Compare(a.Tool, b.Tool)
-	})
-	return append(savingRows, zeroRows...)
+	return sorted
 }
 
 func padTableCell(value string, width int, right bool) string {
@@ -727,20 +613,20 @@ func printSummaryTableText(filters filtersEnvelope, total metrics.SummaryTotal, 
 		tableRows = append(tableRows, []string{
 			row.Tool,
 			formatInt(row.Commands),
-			formatInt(row.EstimatedInputTokens),
-			formatInt(row.EstimatedOutputTokens),
-			formatInt(row.EstimatedSavedTokens),
-			formatPercentText(row.EstimatedSavingsPct),
+			formatInt(row.RawBytes),
+			formatInt(row.KeptBytes),
+			formatInt(netReductionBytes(row.RawBytes, row.KeptBytes)),
+			byteChangePercentText(row.RawBytes, row.KeptBytes),
 		})
 	}
 
 	fmt.Print(renderTextTable([]textTableColumn{
 		{header: "TOOL"},
 		{header: "COUNT", right: true},
-		{header: "NATIVE", right: true},
-		{header: "PROXIED", right: true},
-		{header: "SAVED", right: true},
-		{header: "SAVINGS", right: true},
+		{header: "SOURCE", right: true},
+		{header: "EMITTED", right: true},
+		{header: "NET REDUCTION", right: true},
+		{header: "REDUCTION %", right: true},
 	}, tableRows))
 	return nil
 }
@@ -771,7 +657,7 @@ func printHistoryTable(rows []metrics.HistoryRow, filters filtersEnvelope, limit
 			row.Timestamp.Format(time.RFC3339),
 			truncateForDisplay(row.Command, 36),
 			historyStatus(row),
-			formatPercentText(row.EstimatedSavingsPct),
+			byteChangePercentText(row.RawBytes, row.KeptBytes),
 		})
 	}
 
@@ -779,7 +665,7 @@ func printHistoryTable(rows []metrics.HistoryRow, filters filtersEnvelope, limit
 		{header: "TIMESTAMP"},
 		{header: "COMMAND"},
 		{header: "STATUS"},
-		{header: "SAVINGS", right: true},
+		{header: "REDUCTION %", right: true},
 	}, tableRows))
 	return nil
 }
@@ -803,7 +689,7 @@ func printGlobalHistoryTable(rows []globalHistoryRow, filters filtersEnvelope, l
 			truncateTailForDisplay(row.Source, 28),
 			truncateForDisplay(row.Command, 36),
 			historyStatus(row.HistoryRow),
-			formatPercentText(row.EstimatedSavingsPct),
+			byteChangePercentText(row.RawBytes, row.KeptBytes),
 		})
 	}
 
@@ -812,7 +698,7 @@ func printGlobalHistoryTable(rows []globalHistoryRow, filters filtersEnvelope, l
 		{header: "SOURCE"},
 		{header: "COMMAND"},
 		{header: "STATUS"},
-		{header: "SAVINGS", right: true},
+		{header: "REDUCTION %", right: true},
 	}, tableRows))
 	return nil
 }
