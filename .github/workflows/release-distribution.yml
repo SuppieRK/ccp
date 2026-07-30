@@ -229,7 +229,7 @@ jobs:
           )
 
       - name: Generate binary archive attestations
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4
         with:
           subject-path: ./release/*.zip
           predicate-type: https://github.com/SuppieRK/cmdshape/attestations/binary-archive/v1
@@ -240,7 +240,7 @@ jobs:
               "scope": "binary-archives-only",
               "sourceSha": "${{ needs.preflight.outputs.source_sha }}",
               "tag": "${{ needs.preflight.outputs.tag }}",
-              "attestationActionRef": "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
+              "attestationActionRef": "actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d"
             }
 
       - name: Create private draft release
