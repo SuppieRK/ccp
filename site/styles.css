@@ -788,6 +788,8 @@ pre {
 }
 
 .terminal-pair .terminal {
+  display: grid;
+  grid-template-rows: auto 1fr;
   box-shadow: none;
 }
 
