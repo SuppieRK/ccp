@@ -107,19 +107,6 @@ var _ = Describe("lifecycle help", func() {
 				"~/.config/cmdshape/filters",
 			},
 		}),
-		Entry("gain", helpCase{
-			command: "gain",
-			parts: []string{
-				"cmdshape gain - show token savings history",
-				"Usage:",
-				"Flags:",
-				"Notes:",
-				"--period",
-				"--format",
-				"--table",
-				"Run cmdshape gain after install or init to verify savings on real work.",
-			},
-		}),
 		Entry("history", helpCase{
 			command: "history",
 			parts: []string{

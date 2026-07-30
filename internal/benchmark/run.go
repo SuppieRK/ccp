@@ -208,7 +208,7 @@ func runCase(opts RunOptions, item fixtureCase) CaseResult {
 	}
 
 	compareFixtureExpectations(&result, fixture, artifactDir, verifyOutputPath)
-	if err := appendCaseMetrics(artifactDir, fixture.Command.Argv, result.NativeTokens, result.ProxyTokens); err != nil {
+	if err := appendCaseMetrics(artifactDir, fixture.Command.Argv, result.NativeBytes, result.ProxyBytes); err != nil {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("persist benchmark metrics: %v", err))
 	}
 	result.Success = len(result.Warnings) == 0
@@ -310,9 +310,7 @@ func regularFileExists(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTokens int) error {
-	rawBytes := nativeTokens * 4
-	keptBytes := proxyTokens * 4
+func appendCaseMetrics(artifactDir string, args []string, nativeBytes, shapedBytes int) error {
 	if err := os.MkdirAll(filepath.Join(artifactDir, ".cmdshape"), 0o755); err != nil {
 		return err
 	}
@@ -321,8 +319,8 @@ func appendCaseMetrics(artifactDir string, args []string, nativeTokens, proxyTok
 		Command:    strings.Join(args, " "),
 		Tool:       args[0],
 		Dispatch:   args[0],
-		RawBytes:   rawBytes,
-		KeptBytes:  keptBytes,
+		RawBytes:   nativeBytes,
+		KeptBytes:  shapedBytes,
 		ExitCode:   0,
 		DurationMS: 0,
 	})
@@ -370,9 +368,9 @@ func WriteSummary(report RunReport) error {
 			summaryStatusCell(r),
 			sanitizeSummaryCell(r.Tool+"/"+r.Case),
 			sanitizeSummaryCell(r.Command),
-			r.NativeTokens,
-			r.ProxyTokens,
-			tokenSavingsPct(r),
+			r.NativeBytes,
+			r.ProxyBytes,
+			byteReductionPct(r),
 			sanitizeSummaryCell(strings.Join(r.Warnings, "; ")),
 		)
 	}
@@ -413,7 +411,7 @@ func summaryTableHeader() string {
 }
 
 func summaryTableHeaderRow() string {
-	return "| Status | Case | Command | Native tokens | Proxy tokens | Token savings % | Notes |"
+	return "| Status | Case | Command | Native bytes | Shaped bytes | Net byte reduction % | Notes |"
 }
 
 func summaryStatusCell(result CaseResult) string {
@@ -421,22 +419,19 @@ func summaryStatusCell(result CaseResult) string {
 		return "🔴"
 	}
 	for _, warning := range result.Warnings {
-		if strings.Contains(warning, "token compaction ratio dropped") {
+		if strings.Contains(warning, "net byte reduction dropped") ||
+			strings.Contains(warning, "token compaction ratio dropped") {
 			return "🟡"
 		}
 	}
 	return "🟢"
 }
 
-func tokenSavingsPct(result CaseResult) float64 {
-	if result.NativeTokens <= 0 {
+func byteReductionPct(result CaseResult) float64 {
+	if result.NativeBytes <= 0 {
 		return 0
 	}
-	pct := (1 - float64(result.ProxyTokens)/float64(result.NativeTokens)) * 100
-	if pct > -5 && pct < 5 {
-		return 0
-	}
-	return pct
+	return byteReductionRatio(result.NativeBytes, result.ProxyBytes) * 100
 }
 
 func sanitizeSummaryCell(s string) string {
@@ -470,16 +465,65 @@ func maybeWarnCompactionDrop(curr *CaseResult, prev CaseResult) {
 	if curr.InputHash != prev.InputHash {
 		return
 	}
-	if prev.TokenCompactionRatio <= 0 {
+	previousRatio, currentRatio := comparableReductionRatios(*curr, prev)
+	if previousRatio <= 0 || currentRatio >= previousRatio*0.95 {
 		return
 	}
-	if curr.TokenCompactionRatio < prev.TokenCompactionRatio*0.95 {
-		curr.Warnings = append(curr.Warnings, fmt.Sprintf(
-			"token compaction ratio dropped from %.2f to %.2f",
-			prev.TokenCompactionRatio,
-			curr.TokenCompactionRatio,
-		))
+	curr.Warnings = append(curr.Warnings, fmt.Sprintf(
+		"net byte reduction dropped from %.2f%% to %.2f%%",
+		previousRatio*100,
+		currentRatio*100,
+	))
+}
+
+func comparableReductionRatios(curr, prev CaseResult) (float64, float64) {
+	if prev.NativeBytes > 0 {
+		return byteReductionRatio(prev.NativeBytes, prev.ProxyBytes),
+			byteReductionRatio(curr.NativeBytes, curr.ProxyBytes)
 	}
+	if prev.TokenCompactionRatio <= 0 {
+		return 0, 0
+	}
+	currentLegacyRatio := curr.TokenCompactionRatio
+	if currentLegacyRatio <= 0 {
+		currentLegacyRatio = tokenCompactionRatio(
+			legacyEstimatedTokens(curr.NativeBytes),
+			legacyEstimatedTokens(curr.ProxyBytes),
+		)
+	}
+	return reductionFromCompactionRatio(prev.TokenCompactionRatio),
+		reductionFromCompactionRatio(currentLegacyRatio)
+}
+
+func byteReductionRatio(nativeBytes, shapedBytes int) float64 {
+	if nativeBytes <= 0 {
+		return 0
+	}
+	return 1 - float64(shapedBytes)/float64(nativeBytes)
+}
+
+func reductionFromCompactionRatio(compactionRatio float64) float64 {
+	if compactionRatio <= 0 {
+		return 0
+	}
+	return 1 - 1/compactionRatio
+}
+
+func legacyEstimatedTokens(bytes int) int {
+	if bytes <= 0 {
+		return 0
+	}
+	return (bytes + 3) / 4
+}
+
+func tokenCompactionRatio(nativeTokens, proxyTokens int) float64 {
+	if proxyTokens > 0 {
+		return float64(nativeTokens) / float64(proxyTokens)
+	}
+	if nativeTokens > 0 {
+		return float64(nativeTokens)
+	}
+	return 1
 }
 
 func readRunReport(path string) (RunReport, error) {
@@ -496,16 +540,6 @@ func readRunReport(path string) (RunReport, error) {
 
 func comparisonKey(tool, name string) string {
 	return tool + "\x00" + name
-}
-
-func tokenCompactionRatio(nativeTokens, proxyTokens int) float64 {
-	if proxyTokens > 0 {
-		return float64(nativeTokens) / float64(proxyTokens)
-	}
-	if nativeTokens > 0 {
-		return float64(nativeTokens)
-	}
-	return 1
 }
 
 func HashInput(events []replay.Event) string {

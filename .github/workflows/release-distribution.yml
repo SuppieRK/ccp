@@ -248,6 +248,7 @@ jobs:
         with:
           name: ${{ needs.preflight.outputs.tag }}
           tag_name: ${{ needs.preflight.outputs.tag }}
+          generate_release_notes: true
           draft: true
           prerelease: false
           fail_on_unmatched_files: true

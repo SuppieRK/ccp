@@ -1,49 +1,91 @@
-# Tutorial: Create Your Own cmdshape Filter
+# Authoring cmdshape filters
 
-This guide shows how to create, edit, and test your own cmdshape filters.
+cmdshape ships useful defaults, but we do not pretend to know your domain. Use
+a project-local filter when a repository's scripts, generated logs, or failure
+messages need context that a general-purpose default cannot safely infer.
 
-It is for user-authored filters, not built-in repository filters.
+The filter language is ordinary YAML. You can review it like code, replay it
+against captured output, commit it with the repository, and keep native
+passthrough whenever the shape is uncertain.
 
-By the end, you will know how to:
+## The agent-first path
 
-- scaffold a new filter in `./.cmdshape/filters/`
-- inspect which filters are active, overridden, or broken with `cmdshape filter status`
-- edit the YAML safely
-- test the filter live against a command
-- capture a real fixture with `cmdshape capture`
-- replay that fixture with `cmdshape verify`
-
-## The Quick Mental Model
-
-cmdshape has two user-facing filter locations:
-
-- `./.cmdshape/filters/` for project-local filters that travel with one repo
-- `~/.config/cmdshape/filters/` for home-scoped filters you want across repos
-
-If you are just getting started, use `./.cmdshape/filters/`.
-
-Project-local filters are intended to stay visible to Git so they can travel with a repository. cmdshape-generated repo-local state, such as `./.cmdshape/gain.db`, is ignored through a cmdshape-owned `./.cmdshape/.gitignore`; do not customize that nested ignore file because cmdshape rewrites it authoritatively.
-
-That is what this tutorial covers.
-
-When you are unsure which filter cmdshape will actually use, run:
+Give a coding agent the embedded workflow:
 
 ```bash
-cmdshape filter status
+cmdshape filter prompt
+cmdshape filter prompt <filter-id>
 ```
 
-It shows all discovered rows from the active filter scopes and helps answer:
+For a standalone filter, `<filter-id>` is the executed command's basename
+without its path. When multiple executable names intentionally share one
+behavior model, use the canonical target id and map the other names in
+`.mappings.yaml`, for example `gradlew: gradle`. The lifecycle commands trim
+surrounding whitespace, normalize ids to lowercase, and require
+`^[a-z0-9][a-z0-9-]*$`: a lowercase letter or digit followed only by lowercase
+letters, digits, or hyphens. Spaces, underscores, and a leading hyphen are
+invalid.
 
-- which filters are active now
-- which home-scoped filters are overridden by project-local ones
-- which filters or mappings are broken and therefore unavailable
+The prompt tells the agent to work in `./.cmdshape/filters`, copy an existing
+source before editing, capture representative native output, show the proposed
+YAML, ask before trusting it, and verify only after the exact current source is
+active. It also explains how to read the local performance report. This is the
+shortest useful request to paste to an agent:
 
-## What We Will Build
+> Create or improve the `cmdshape` filter with canonical id `<filter-id>`.
+> Start by running `cmdshape filter prompt <filter-id>`. Capture representative
+> output from the actual command, show me the proposed YAML and replay
+> decisions, and ask before trusting the final project filter source.
 
-We will create a tiny fake command called `demo-tool` so you can follow the tutorial end to end without touching a real
-tool first.
+The agent should:
 
-Its raw `run` output looks like this:
+1. Run `cmdshape filter status` and copy any matching home or shipped filter
+   into `./.cmdshape/filters`, or run `cmdshape filter new <filter-id>` for a
+   new passthrough-safe scaffold.
+2. Capture success, warning, failure, structured, and interactive cases that
+   matter to the repository. The native streams remain useful even if the
+   capture's initial replay expectation came from a lower-priority filter.
+3. Edit the project-local YAML and show the complete project source.
+4. Run `cmdshape filter trust` only after the user approves those exact bytes.
+5. Run `cmdshape verify --dir <fixture-dir>` and inspect merged output,
+   stream-specific output, decisions, and dispatch.
+6. If verification leads to an edit, review and trust the changed source again
+   before the next replay.
+
+Project filters are inactive in release builds until their exact current bytes
+are trusted. Any addition, removal, rename, mapping edit, or content change
+invalidates approval. Re-review and trust again after every edit. This is a
+deliberate boundary: a filter can remove useful context, so activation should
+be an explicit project decision. Untrusted, changed, invalid, or unsafe sources
+fall back to the remaining valid source or native passthrough.
+
+## Source locations and precedence
+
+cmdshape has three filter locations with different ownership:
+
+- `./.cmdshape/filters/` contains project-owned filters that can travel with a
+  repository.
+- `~/.config/cmdshape/filters/` contains home-scoped filters and materialized
+  shipped defaults.
+- `filters/` in this repository contains the built-in sources embedded into a
+  release.
+
+Release builds load a trusted project source before the home source.
+Project-local filter ids and mapping keys therefore override matching
+home-scoped entries. Invalid definitions, invalid mappings, and aliases whose
+targets did not compile are ignored safely. Unresolved tools use passthrough.
+
+`cmdshape init` installs coding-agent integrations. It does not materialize
+home filters; startup maintenance and `cmdshape repair` own that state.
+
+Use `cmdshape filter status` whenever the selected filter is surprising. It
+shows the project trust state as well as active, overridden, changed, and
+broken registrations.
+
+## Complete manual tutorial
+
+The same workflow works without an agent. The tutorial uses a small
+`demo-tool` command whose `run` output contains fixed wrapper lines:
 
 ```text
 demo-tool run v1.0.0
@@ -53,38 +95,12 @@ useful-line-2
 Done in 0.01s.
 ```
 
-Our filter will keep the useful lines and remove the boilerplate so cmdshape prints:
+The filter will retain the two useful lines, preserve JSON exactly, and leave
+unmodeled commands native.
 
-```text
-useful-line-1
-useful-line-2
-```
-
-We will also keep JSON output untouched.
-
-## Before You Start
-
-- examples in this guide assume Bash on macOS or Linux
-- make sure `cmdshape` is installed and on your `PATH`
-- work from the root of a project directory
-- make sure your `cmdshape` build includes `cmdshape verify`; if `cmdshape verify --help` says it is dev-only, upgrade first
-- the scaffold already points at the public schema URL, so you do not need a local schema file to follow this tutorial
-
-Useful commands in this tutorial:
+To follow the tutorial, save this as `demo-tool` in the project root:
 
 ```bash
-cmdshape filter new demo-tool
-cmdshape filter status
-cmdshape capture --dir fixture-run -- ./demo-tool run
-cmdshape verify --dir fixture-run
-```
-
-## Step 1: Create A Tiny Command To Filter
-
-Create a file named `demo-tool` in your project root:
-
-```bash
-cat > demo-tool <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -96,7 +112,7 @@ case "${1:-}" in
     echo "useful-line-2"
     echo "Done in 0.01s."
     ;;
-  json)
+  --json)
     printf '{"status":"ok","items":["useful-line-1","useful-line-2"]}\n'
     ;;
   fail)
@@ -105,411 +121,262 @@ case "${1:-}" in
     exit 2
     ;;
   *)
-    echo "usage: demo-tool {run|json|fail}" >&2
+    echo "usage: demo-tool {run|--json|fail}" >&2
     exit 64
     ;;
 esac
-EOF
-
-chmod +x demo-tool
 ```
 
-Check the raw command first:
+Make it executable and inspect each native path before filtering:
 
 ```bash
+chmod +x demo-tool
 ./demo-tool run
+./demo-tool --json
+./demo-tool fail
 ```
 
-You should see:
+### Scaffold and inspect
 
-```text
-demo-tool run v1.0.0
-$ demo-tool internal-task
-useful-line-1
-useful-line-2
-Done in 0.01s.
-```
-
-## Step 2: Scaffold A New Filter
-
-Run:
+Create a project-local scaffold:
 
 ```bash
 cmdshape filter new demo-tool
-```
-
-cmdshape writes the scaffold file and ensures the `.mappings.yaml` file contains an identity mapping:
-
-- `./.cmdshape/filters/demo-tool.yaml`
-- `./.cmdshape/filters/.mappings.yaml`
-
-The scaffold starts safe. It contains a passthrough case, so nothing breaks while you are still authoring the real
-behavior.
-
-The generated mapping file also includes an identity mapping:
-
-```yaml
-version: 1
-map:
-  demo-tool: demo-tool
-```
-
-That means commands such as `./demo-tool run` still resolve to the `demo-tool` filter id.
-
-## Step 2.5: Check Which Filter cmdshape Will Use
-
-Before you start editing behavior, confirm that cmdshape can see your new project-local filter:
-
-```bash
 cmdshape filter status
 ```
 
-You should see a row for `demo-tool` coming from the project scope:
+The scaffold creates:
 
-```text
-cmdshape filter status
+- `./.cmdshape/filters/demo-tool.yaml`;
+- `./.cmdshape/filters/.mappings.yaml` with an identity mapping.
 
-showing 1 rows
+It starts with passthrough behavior so the command remains safe while the
+filter is being authored.
 
-+-----------+------------------------------+---------+--------+
-| TOOL      | FILTER                       | SOURCE  | STATUS |
-+-----------+------------------------------+---------+--------+
-| demo-tool | ./.cmdshape/filters/demo-tool.yaml | project | ok     |
-+-----------+------------------------------+---------+--------+
-```
+### Capture representative native output
 
-As you add more filters over time, this command also shows:
-
-- overridden rows when a project-local filter shadows a home-scoped one
-- broken filter files with parse or validation errors
-- broken `.mappings.yaml` rows and missing mapping targets
-
-Use `cmdshape filter status` first whenever the runtime behavior is surprising. It is the quickest way to confirm whether cmdshape
-is using the filter you think it is.
-
-## Step 3: Start With A Minimal Real Filter
-
-Edit `./.cmdshape/filters/demo-tool.yaml` so it matches this:
-
-```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/SuppieRK/cmdshape/refs/heads/main/schemas/cmdshape-filter.schema.json
-version: 1
-filter: demo-tool
-about: Compact demo-tool run boilerplate while preserving JSON output and any unmodeled commands.
-
-cases:
-  - id: json-passthrough
-    when_arguments:
-      first_is: json
-    passthrough: true
-
-  - id: run
-    when_arguments:
-      first_is: run
-    compress_output:
-      combined:
-        lines:
-          skip:
-            - starts_with: "demo-tool run v"
-            - starts_with: "$ demo-tool internal-task"
-            - starts_with: "Done in "
-
-  - id: passthrough-default
-    passthrough: true
-```
-
-Why this is a good first filter:
-
-- it matches one narrow command shape: `run`
-- it explicitly preserves structured output with a `json-passthrough` case
-- it keeps any unmodeled command in passthrough mode
-- it removes boilerplate instead of inventing a custom summary format
-
-Remember that case order matters. The first matching case wins.
-
-## Step 4: Test The Filter Live
-
-Run the command through cmdshape:
-
-```bash
-cmdshape ./demo-tool run
-```
-
-You should now see:
-
-```text
-useful-line-1
-useful-line-2
-```
-
-Now test the structured mode:
-
-```bash
-cmdshape ./demo-tool json
-```
-
-You should still get the original JSON unchanged:
-
-```text
-{"status":"ok","items":["useful-line-1","useful-line-2"]}
-```
-
-And a failure path:
-
-```bash
-cmdshape ./demo-tool fail
-```
-
-Expected output:
-
-```text
-demo-tool run v1.0.0
-error: something went wrong
-```
-
-That happens because the `fail` command does not match the `run` case, so it falls back to `passthrough-default`.
-
-This is the behavior you usually want while a filter is still growing.
-
-## Step 5: Capture A Real Fixture
-
-Once the filter behaves the way you want, capture a fixture from a real command run:
+Capture each behavior you care about before relying on the new filter:
 
 ```bash
 cmdshape capture --dir fixture-run -- ./demo-tool run
+cmdshape capture --dir fixture-json -- ./demo-tool --json
+cmdshape capture --dir fixture-failure -- ./demo-tool fail
 ```
 
-cmdshape writes these files into `fixture-run/`:
+The capture runs the native command once. Its sequenced streams remain the
+source of truth even when the initial replay files were produced by a home
+filter or passthrough.
 
-- `command.yaml`
-- `stdout.txt`
-- `stderr.txt`
-- `output.txt`
+### Author the project filter
 
-In this tutorial, `command.yaml` looks like this:
-
-```yaml
-argv: [ "./demo-tool", "run" ]
-```
-
-And `stdout.txt` contains the native sequenced output:
-
-```text
-00000|demo-tool run v1.0.0
-00001|$ demo-tool internal-task
-00002|useful-line-1
-00003|useful-line-2
-00004|Done in 0.01s.
-```
-
-The generated `output.txt` contains the current filtered result:
-
-```text
-useful-line-1
-useful-line-2
-```
-
-Two important rules:
-
-- do not hand-edit the `00000|` sequence prefixes in `stdout.txt` or `stderr.txt`
-- if the capture is wrong, regenerate it with `cmdshape capture`
-
-## Step 6: Replay The Fixture With `cmdshape verify`
-
-Now replay that fixture through the current filter:
-
-```bash
-cmdshape verify --dir fixture-run
-```
-
-This writes two more files:
-
-- `verify-output.txt`
-- `verify-decisions.txt`
-
-In this tutorial, `verify-output.txt` is:
-
-```text
-useful-line-1
-useful-line-2
-```
-
-And `verify-decisions.txt` explains what happened to each line:
-
-```text
-<skip>    | demo-tool run v1.0.0
-<skip>    | $ demo-tool internal-task
-<keep>    | useful-line-1
-<keep>    | useful-line-2
-<skip>    | Done in 0.01s.
-```
-
-This is the basic authoring loop:
-
-1. run a real command
-2. adjust the YAML
-3. capture a fixture
-4. verify the fixture
-5. compare `output.txt` with `verify-output.txt`
-
-If the new behavior is correct and you want a checked-in expectation, copy `verify-output.txt` over `output.txt` instead
-of rewriting it by hand.
-
-## Step 7: Capture A Passthrough Boundary Too
-
-You should test the cases you want to preserve, not just the cases you want to compress.
-
-For the JSON path:
-
-```bash
-cmdshape capture --dir fixture-json -- ./demo-tool json
-cmdshape verify --dir fixture-json
-```
-
-The generated `verify-output.txt` should still be:
-
-```text
-{"status":"ok","items":["useful-line-1","useful-line-2"]}
-```
-
-And `verify-decisions.txt` should show that the line was kept:
-
-```text
-<keep>    | {"status":"ok","items":["useful-line-1","useful-line-2"]}
-```
-
-This is how you make passthrough behavior explicit and testable.
-
-## Step 8: Add More Cases Gradually
-
-Once one case works, grow the filter one small step at a time.
-
-A safe order is:
-
-1. add passthrough cases for structured or precision-sensitive output
-2. add one new narrow case
-3. capture one new fixture
-4. verify again
-
-Avoid trying to model an entire tool in one pass.
-
-## Field Reference For Personal Filters
-
-Use this section as a quick lookup while authoring.
-
-You do not need the whole schema on day one. Most personal filters start with a small set of fields and only grow when
-the simple version stops being enough.
-
-### The Top-Level Fields You Start With
-
-This is the smallest useful filter shape:
+Edit `./.cmdshape/filters/demo-tool.yaml`:
 
 ```yaml
 version: 1
 filter: demo-tool
-about: Compact demo-tool boilerplate while preserving safe passthrough behavior.
-
+about: Remove fixed run wrappers while preserving structured and unknown modes.
 cases:
-  - id: passthrough-default
-    passthrough: true
-```
-
-What each field does:
-
-- `version`: must be exactly `1`
-- `filter`: the canonical filter id; this is the name mappings point to
-- `about`: a short note explaining what the filter is trying to do
-- `cases`: the ordered list of matching rules
-
-### `cases`: The Real Authoring Unit
-
-Most of your work happens inside `cases`.
-
-```yaml
-cases:
-  - id: json-passthrough
+  - id: structured
     when_arguments:
-      first_is: json
+      have_any: ["--json"]
     passthrough: true
 
-  - id: run
+  - id: run-success
     when_arguments:
-      first_is: run
+      have_sequence: [run]
     compress_output:
-      combined:
+      stdout:
         lines:
           skip:
+            - starts_with: "demo-tool run v"
+            - starts_with: "$ "
             - starts_with: "Done in "
 
   - id: passthrough-default
     passthrough: true
 ```
 
-Rules to remember:
+Case order matters: the first matching case wins. Put narrow structured or
+precision-sensitive cases first and keep a passthrough fallback last while the
+filter grows.
 
-- `id` is the case name you will see in diagnostics and maintain later
-- case order matters; the first matching case wins
-- specific cases should go above general cases
-- a fallback passthrough case is usually the safest last case while a filter is still growing
+### Review, trust, and replay
 
-### `when_arguments`: Match The Command Shape
+Review every project YAML file and `.mappings.yaml`. Trust the complete source
+only after it matches what you intend to execute:
 
-`when_arguments` decides when a case should apply.
+```bash
+cmdshape filter trust
+cmdshape filter status
+cmdshape verify --dir fixture-run
+cmdshape verify --dir fixture-json
+cmdshape verify --dir fixture-failure
+```
 
-Important matching rules:
+Compare `output.txt` with `verify-output.txt`. Use
+`verify-stdout.txt` and `verify-stderr.txt` when destination matters. Read
+`verify-decisions.txt` to see why each line was kept, replaced, skipped, or
+emitted. Confirm `verify-dispatch.txt` selected the intended `filter|case`
+before copying that exact value to `dispatch.txt` in a checked-in fixture.
 
-- matching happens against the command arguments after the executable name
-- for `cmdshape ./demo-tool run`, `first_is: run` matches because cmdshape matches `run`, not `./demo-tool`
-- if you specify multiple predicates in one `when_arguments` block, they are all required; cmdshape treats them as AND, not
-  OR
+`output.txt` is the earlier capture expectation.
+`verify-output.txt` is the result from the currently trusted filter. If the
+result needs another YAML change, approval becomes `changed`; review and trust
+again before replaying. Trust is not a test shortcut. Revoke it with
+`cmdshape filter untrust` when the project should return to home filters or
+native passthrough.
 
-The most useful matchers are:
+## Captures and verification artifacts
 
-- `first_is`: exact first argument match
-- `first_in`: first argument is one of several values
-- `have_any`: argv contains at least one listed token anywhere
-- `lack_any`: argv contains none of the listed tokens
-- `have_sequence`: argv contains an exact ordered subsequence
-- `have_short_flag`: at least one listed short flag is present
-- `have_all_short_flags`: all listed short flags are present
-- `positionals_lack_any`: listed tokens are absent from positional arguments
-- `no_positionals`: command has no positional arguments
+`cmdshape capture -- <command>` runs the command natively once, records the
+sequenced streams, and bootstraps replay expectations through the current
+runtime. The capture directory and files are private by default, but command
+output may contain credentials, source, paths, or customer data. Redact known
+literal values before they are persisted:
+
+```bash
+cmdshape capture --confidential "$TOKEN" -- tool --flag value
+```
+
+Review all files before sharing or committing. `--confidential` is literal
+redaction; it is not a secret scanner.
+
+Capture creates:
+
+- `command.yaml`, including the native exit code;
+- sequenced `stdout.txt` and `stderr.txt` with `00000|` prefixes;
+- merged `output.txt`;
+- exact stream expectations in `output.stdout.txt` and `output.stderr.txt`.
+
+Non-zero commands still write artifacts. A record that cannot fit one
+newline-terminated fixture line uses the runtime's `@cmdshape/base64:` payload;
+do not decode or rewrite it by hand.
+
+Verification reads `command.yaml` and the optional sequenced streams and writes:
+
+- `verify-output.txt`;
+- `verify-stdout.txt` and `verify-stderr.txt`;
+- `verify-decisions.txt`;
+- `verify-dispatch.txt`.
+
+Missing streams mean empty streams. Broken sequence numbering is an error.
+Merged output remains useful for a human view; stream-specific files assert
+where bytes were written.
+
+## YAML reference
+
+The structural schema is [schemas/cmdshape-filter.schema.json](schemas/cmdshape-filter.schema.json).
+Go validation remains authoritative for runtime-only and cross-field rules.
+The schema is useful for editor completion, but a successful schema check does
+not replace a trusted replay.
+
+### Top-level fields
+
+```yaml
+version: 1
+filter: tool-name
+about: A short reason this filter exists.
+flags_consuming_next_arg:
+  - "--project"
+cases:
+  - id: default
+    passthrough: true
+```
+
+- `version` must be exactly `1`.
+- `filter` is the canonical command/filter id.
+- `about` documents the intent for reviewers.
+- `flags_consuming_next_arg` is an optional filter-wide list used when parsing
+  positional arguments.
+- `cases` are evaluated in order; the first matching case owns the output.
+
+### Cases and selection
+
+Each case has an `id` and may have `when_arguments`. A case without
+`when_arguments` matches as a fallback.
+
+```yaml
+cases:
+  - id: json
+    when_arguments:
+      have_any: ["--json"]
+    passthrough: true
+
+  - id: test
+    when_arguments:
+      first_is: test
+    compress_output:
+      combined:
+        lines:
+          skip:
+            - starts_with: "progress:"
+
+  - id: passthrough-default
+    passthrough: true
+```
+
+Specific cases belong above general cases. A case may define either
+`passthrough: true` or `compress_output`, never both. A passthrough case may
+still define `finally`; passthrough means no line filtering, not that the case
+cannot emit a documented successful-exit footer.
+
+### `when_arguments`
+
+Argument matching excludes the executable name. For
+`cmdshape ./demo-tool run`, `first_is: run` sees `run` as the first argument.
+Predicates within one block are combined with AND.
+
+Available predicates:
+
+- `first_is`: the first argument equals one token;
+- `first_in`: the first argument equals any listed token;
+- `have_any`: argv contains at least one listed token;
+- `lack_any`: argv contains none of the listed tokens;
+- `have_sequence`: argv contains an exact ordered subsequence;
+- `have_short_flag`: at least one listed short flag is present;
+- `not_have_short_flag`: every listed short flag is absent;
+- `have_all_short_flags`: all listed short flags are present;
+- `not_have_all_short_flags`: the complete listed set is not present together;
+- `positionals_lack_any`: parsed positionals contain none of the listed tokens;
+- `no_positionals`: the command has no positional arguments.
 
 Examples:
 
 ```yaml
 when_arguments:
-  first_is: run
+  first_is: test
+  lack_any: ["--json", "--help"]
 ```
 
 ```yaml
 when_arguments:
-  first_in: [ "run", "start" ]
+  first_in: [run, start]
 ```
 
 ```yaml
 when_arguments:
-  have_any: [ "--json", "--format=json" ]
+  have_any: ["--json", "--format=json"]
 ```
 
 ```yaml
 when_arguments:
-  lack_any: [ "--help", "--verbose" ]
+  have_sequence: [config, list]
 ```
 
 ```yaml
 when_arguments:
-  have_sequence: [ "config", "list" ]
+  have_short_flag: ["-v"]
+  not_have_short_flag: ["-q"]
 ```
 
 ```yaml
 when_arguments:
-  have_short_flag: [ "-v" ]
+  have_all_short_flags: ["-a", "-l"]
 ```
 
 ```yaml
 when_arguments:
-  positionals_lack_any: [ "node_modules" ]
+  positionals_lack_any: [node_modules]
 ```
 
 ```yaml
@@ -517,92 +384,84 @@ when_arguments:
   no_positionals: true
 ```
 
-Good practice:
+Prefer literal argv matching over guessing from output. If the invocation is
+not modeled confidently, allow it to reach a passthrough case.
 
-- prefer matching argv shape before reaching for output rules
-- keep the match as narrow and literal as you can
+### `passthrough`
 
-### `passthrough`: Preserve Output Exactly
-
-`passthrough: true` tells cmdshape not to apply `compress_output` rules for that case.
+Use case-level passthrough for JSON, machine-readable output, interactive
+modes, precision-sensitive formats, and shapes that are not modeled yet:
 
 ```yaml
-- id: json-passthrough
+- id: structured
   when_arguments:
-    have_any: [ "--json" ]
+    have_any: ["--json"]
   passthrough: true
 ```
 
-Use passthrough for:
+Unmatched cases and unresolved tools also fall back to native output. Do not
+add a `compress_output` block to a passthrough case.
 
-- JSON and machine-readable output
-- precision-sensitive or structured modes
-- any command shape you have not modeled safely yet
+### `compress_output` and stream routing
 
-Important:
+`compress_output` accepts one of two routing shapes:
 
-- a passthrough case cannot also define `compress_output`
-- a passthrough case can still define `finally`, so it is more accurate to think of passthrough as "no filtering" rather
-  than "absolutely untouched bytes"
+- `combined` processes stdout and stderr as one ordered stream;
+- `stdout` and/or `stderr` process the native streams independently.
 
-### `compress_output`: Choose Which Stream To Transform
+Do not mix `combined` with `stdout` or `stderr`. A stream omitted from a split
+definition remains native.
 
-When you do want compaction, use `compress_output`.
-
-You can shape either:
-
-- `combined`: stdout and stderr merged in original order
-- `stdout`: stdout only
-- `stderr`: stderr only
-
-Start with `combined` unless you have a strong reason to treat the streams differently.
-
-Simple example:
+Combined example:
 
 ```yaml
 compress_output:
   combined:
     lines:
       skip:
-        - starts_with: "Done in "
+        - starts_with: "progress:"
 ```
 
-Separate stream example:
+Split-stream example:
 
 ```yaml
 compress_output:
   stdout:
     lines:
-      skip:
-        - starts_with: "progress:"
+      max:
+        count: 40
+        print: "... {{value}} more stdout lines"
   stderr:
     lines:
       keep:
+        - starts_with: "warning:"
         - starts_with: "error:"
 ```
 
-### `lines.skip`: Remove Boilerplate
+Because `keep` is present for stderr, it acts as a whitelist in that scope.
+If a stream should remain completely native, omit its scope or choose a
+case-level passthrough case.
 
-`skip` is the most common first tool.
+### `lines.skip`
+
+`skip` removes known boilerplate while unmatched lines continue through:
 
 ```yaml
 lines:
   skip:
     - starts_with: "demo-tool run v"
-    - starts_with: "$ demo-tool internal-task"
-    - starts_with: "Done in "
+    - starts_with: "$ "
+    - ends_with: " completed"
+    - regex: "^Done in [0-9.]+s\\.$"
 ```
 
-Use it for:
+Each skip rule must set exactly one matcher: `starts_with`, `contains`,
+`ends_with`, or `regex`.
 
-- banners
-- wrapper command echoes
-- timing/footer noise
-- repetitive hints you do not need in agent workflows
+### `lines.keep`
 
-### `lines.keep`: Protect Important Lines
-
-`keep` is useful when a stream contains some lines that must always survive filtering.
+`keep` protects a known set of useful lines. When at least one keep rule exists
+in a scope, unmatched lines in that scope are ignored:
 
 ```yaml
 lines:
@@ -611,267 +470,150 @@ lines:
     - contains: "warning"
 ```
 
-Use it when:
+Use it only when a real corpus demonstrates that the whitelist retains all
+actionable success, warning, and failure information. Prefer `skip` when the
+noise is easier to identify than the useful output.
 
-- diagnostics matter more than compression
-- a command mixes noise with a small number of critical lines
+### `lines.replace`
 
-Important behavior:
-
-- once you define `keep` rules, they act like a whitelist for lines in that scope
-- lines that do not match `keep` are dropped unless another rule such as `replace` handles them first
-- use `keep` carefully; it is stricter than `skip`
-
-### `lines.replace`: Keep Meaning, Simplify Noise
-
-Use `replace` when a line is useful but too verbose to keep as-is.
-
-Literal example:
+`replace` keeps a line's meaning while making a proven verbose form shorter:
 
 ```yaml
 lines:
   replace:
     - starts_with: "Loaded cache from "
       to: "Loaded cache"
-```
-
-Regex example:
-
-```yaml
-lines:
-  replace:
-    - regex: '^Finished in [0-9.]+s$'
+    - regex: "^Finished in [0-9.]+s$"
       to: "Finished"
 ```
 
-You can also use `contains` or `ends_with` instead of `starts_with` or `regex`:
+Replacement rules use exactly one of `starts_with`, `contains`, `ends_with`,
+or `regex`, and the replacement field is named `to`. Regex replacements and
+group templates must use only captures and variables accepted by runtime
+validation.
+
+### `lines.max`
+
+`max` bounds repetitive output and can report the omitted line count:
 
 ```yaml
 lines:
-  replace:
-    - ends_with: " files checked"
-      to: "check completed"
+  max:
+    count: 20
+    print: "... {{value}} more lines omitted"
 ```
 
-For `skip`, `keep`, and `replace`, each rule should use exactly one matcher field:
+`count` must be positive. `print` is optional. The ordinary template accepts
+`{{value}}`; `{{groups_summary}}` is available only with a valid grouped
+summary in the same scope.
 
-- `starts_with`
-- `contains`
-- `ends_with`
-- `regex`
+### `normalize_command`
 
-Prefer literal matchers first. Reach for `regex` only when the simpler matchers cannot describe the pattern cleanly.
+Normalization changes argv before native execution, so use it more carefully
+than output filtering. Case selection happens first; normalization cannot make
+its own case match.
 
-### `lines.max`: Cap Long Output Safely
-
-If the output is useful but too repetitive, cap it instead of rewriting everything.
-
-```yaml
-compress_output:
-  combined:
-    lines:
-      max:
-        count: 20
-        print: "... {{value}} more lines omitted"
-```
-
-Here, `{{value}}` is the number of omitted lines.
-
-If you omit `print`, cmdshape still truncates at the requested count; you just do not get a summary line.
-
-Use `max` when:
-
-- the first few lines are useful, but the tail is repetitive
-- you want predictable bounded output without inventing a synthetic summary format
-
-### `normalize_command`: Add Safe Defaults When Needed
-
-`normalize_command` lets cmdshape add arguments before execution.
-
-This is useful, but it is more advanced than simple filtering. Use it sparingly.
-
-Important:
-
-- `when_arguments` selects the case first
-- `normalize_command` runs only after the case already matched
-- normalization does not help a case match; it only stabilizes the final executed command shape
-
-Available mutations:
-
-- `append_if_missing`
-- `append_if_no_positionals`
-- `add_short_flags`
-
-Examples:
+Supported mutations:
 
 ```yaml
 normalize_command:
-  append_if_missing: [ "--no-color" ]
+  append_if_missing: ["--no-color"]
+  append_if_no_positionals: [status]
+  add_short_flags: ["-a"]
 ```
 
-```yaml
-normalize_command:
-  append_if_no_positionals: [ "status" ]
-```
+- `append_if_missing` appends tokens not already present.
+- `append_if_no_positionals` appends tokens only when parsed positionals are
+  empty.
+- `add_short_flags` ensures listed short flags are present.
 
-```yaml
-normalize_command:
-  add_short_flags: [ "-a" ]
-```
+Use normalization only when it preserves the documented meaning of the
+command. Without it, cmdshape executes argv as supplied.
 
-Only use normalization when it preserves the expected meaning of the command and gives you a more stable output shape.
+### `flags_consuming_next_arg`
 
-### `flags_consuming_next_arg`: Fix Tricky Argument Parsing
-
-Some flags consume the next argv token. If you do not declare them, positional matching can become wrong.
-
-What this field means:
-
-- it is a top-level list shared by the whole filter
-- each listed flag tells cmdshape: "the next token belongs to this flag"
-- this only matters for split-form arguments such as `--output report.txt`
-- do not list attached forms such as `--output=report.txt`; the value is already attached to the same token
-
-Example:
-
-```yaml
-flags_consuming_next_arg:
-  - "-o"
-  - "--output"
-```
-
-Why this matters:
-
-- cmdshape needs to know which tokens are real positionals and which tokens are just flag values
-- without this list, a flag value can be mistaken for a positional argument
-- that can break predicates like `no_positionals` and `positionals_lack_any`
-- it can also break `normalize_command.append_if_no_positionals`
-
-Concrete example:
-
-```text
-my-tool --output report.txt
-```
-
-If `--output` is not listed in `flags_consuming_next_arg`, cmdshape may incorrectly treat `report.txt` as a positional
-argument.
-
-That means this case can fail to match when you expected it to match:
-
-```yaml
-when_arguments:
-  no_positionals: true
-```
-
-And this normalization can fail to run when you expect it to run:
-
-```yaml
-normalize_command:
-  append_if_no_positionals: [ "status" ]
-```
-
-Another useful example:
-
-```text
-my-tool -C packages/app run test
-```
-
-If `-C` consumes the next token, then `packages/app` is not a real positional argument. Without
-`flags_consuming_next_arg`, cmdshape can misread that command shape too.
-
-Example filter snippet:
+Declare split-form flags whose next token is a value:
 
 ```yaml
 flags_consuming_next_arg:
   - "-C"
   - "--output"
-
-cases:
-  - id: default-status
-    when_arguments:
-      no_positionals: true
-    normalize_command:
-      append_if_no_positionals: [ "status" ]
-    compress_output:
-      combined:
-        lines:
-          skip:
-            - starts_with: "Done in "
 ```
 
-When to add this field:
+For `tool --output report.txt`, this prevents `report.txt` from being mistaken
+for a positional. It affects `no_positionals`,
+`positionals_lack_any`, and `append_if_no_positionals`. Do not list attached
+forms such as `--output=report.txt`, and do not list flags that do not consume
+the next token.
 
-- a flag takes its value as the next separate token
-- your filter uses positional-sensitive matching or normalization
-- the filter behaves as if a flag value were an extra argument
+Common signs that a declaration is missing:
 
-When not to add it:
+- a no-positionals case stops matching only when a split flag is used;
+- `append_if_no_positionals` does not run;
+- the same option behaves differently in attached and split forms.
 
-- the option is already attached, like `--format=json`
-- the token does not consume the next token
-- you are only matching simple flags and never reason about positionals
+### Variables, groups, and `finally`
 
-Common signs you forgot it:
-
-- `no_positionals: true` stops matching unexpectedly
-- `positionals_lack_any` behaves strangely
-- `append_if_no_positionals` does not fire when it should
-- the same command matches when written one way, but not when written with a split flag value
-
-Most first filters do not need this field. Add it when argument matching starts behaving strangely because a flag value
-is being mistaken for a real positional argument.
-
-### Advanced Fields You Can Ignore At First
-
-These fields are powerful, but most personal filters do not need them on day one:
-
-- `variables`: counters or captured values you want to reuse later
-- `finally`: text emitted after a successful case finishes
-- `groups`: grouped output sections for more complex commands
-
-Tiny examples:
+These fields support complex summaries but are not needed for most project
+filters:
 
 ```yaml
 variables:
   - name: warnings
     type: number
+    initial_value: "0"
 ```
+
+- Variables may be numeric counters or captured strings. Replacement and group
+  actions can update only variables declared in the enclosing case.
+- Groups collect or render related lines using declared matchers and templates.
+  Group template variables and references are validated against the group.
+- `max.groups_summary` is valid only when the same scope has at least one
+  collect group.
+- `finally` emits a documented footer only for a successful case; do not rely
+  on it for failure diagnostics.
+
+Example successful-exit footer:
 
 ```yaml
 finally:
   print: "Filtered output complete"
 ```
 
+Prefer `skip`, `keep`, `replace`, and `max` until a captured corpus proves that
+stateful grouping is necessary. Consult the schema for the complete group and
+variable shape rather than copying an unrelated built-in filter blindly.
+
+### Mappings
+
+Aliases live in `.mappings.yaml`:
+
 ```yaml
-compress_output:
-  combined:
-    groups:
-      - id: warning-group
-        matches_regex: '^warning:'
-        group_by: "warning"
-        finally:
-          print: "Warnings were grouped"
+version: 1
+map:
+  gradle: gradle
+  gradlew: gradle
 ```
 
-If simple `skip`, `keep`, `replace`, and `max` are enough, stay there for as long as possible.
+Project aliases override home aliases with the same key. An alias binds only to
+a filter that compiled successfully in the same source. Broken mappings safely
+fall back to passthrough and are visible in `cmdshape filter status`.
 
-One more important detail:
+`cmdshape filter new` creates an identity mapping. Add aliases only when
+multiple executable spellings intentionally share one filter.
 
-- top-level `finally` is emitted only on exit code `0`
-- do not rely on it for failure summaries
+## Reusable patterns
 
-### Common Patterns To Reuse
-
-Preserve structured output:
+Preserve structured modes:
 
 ```yaml
 - id: json
   when_arguments:
-    have_any: [ "--json" ]
+    have_any: ["--json", "--format=json"]
   passthrough: true
 ```
 
-Remove banners and timing lines:
+Remove fixed banners and timing:
 
 ```yaml
 compress_output:
@@ -882,100 +624,115 @@ compress_output:
         - starts_with: "Done in "
 ```
 
-Keep errors visible:
+Keep only known diagnostics:
 
 ```yaml
 compress_output:
-  combined:
+  stderr:
     lines:
       keep:
+        - starts_with: "warning:"
         - starts_with: "error:"
 ```
 
-Simplify noisy status lines:
+Bound a repetitive list:
 
 ```yaml
-lines:
-  replace:
-    - contains: "/tmp/"
-      to: "temporary file created"
+compress_output:
+  stdout:
+    lines:
+      max:
+        count: 25
+        print: "... {{value}} more entries"
 ```
 
-Cap repetitive output:
+## Common mistakes
 
-```yaml
-lines:
-  max:
-    count: 25
-    print: "... {{value}} more lines omitted"
-```
+### The filter never becomes active
 
-## When To Edit `.mappings.yaml`
+Run `cmdshape filter status`. Check the project trust state, filter id, mapping,
+YAML validation result, and whether the project source changed after approval.
 
-Most first-time filters do not need extra mappings beyond the identity mapping that `cmdshape filter new` already adds.
+### The wrong case matches
 
-Add more mappings only when multiple command spellings should share one filter.
+Check case order and the arguments recorded in `command.yaml`. Remember that
+all predicates in one `when_arguments` block are required and that split flag
+values need `flags_consuming_next_arg`.
 
-Example:
+### Structured output was compacted
 
-```yaml
-version: 1
-map:
-  demo-tool: demo-tool
-  demo-tool-alt: demo-tool
-```
+Add a narrow passthrough case above the general compacting case and capture the
+structured mode as a regression fixture.
 
-Keep mappings small and explicit.
+### The fixture still shows old output
 
-## Good Filter Authoring Habits
+`output.txt` is capture-time output. Run `cmdshape verify --dir <fixture-dir>`
+after trusting the current source and inspect `verify-output.txt`.
 
-- start with passthrough, then add narrow cases above it
-- preserve structured output such as JSON unless you have a very strong reason not to
-- prefer small line filtering over aggressive rewrites
-- capture real command output instead of inventing fixtures by hand
-- use `verify-decisions.txt` when you are unsure why a line changed
-- keep one hypothesis per edit, so it is clear what improved or broke
+### Sequence numbers are broken
 
-## Common Mistakes
+Do not renumber `stdout.txt` or `stderr.txt` by hand. Recapture the command.
 
-### My filter never matches
+### An edit appears to have no effect
 
-Check these first:
+Any source or mapping edit invalidates trust. Review the complete source, run
+`cmdshape filter trust`, and verify again.
 
-- the filter id in `demo-tool.yaml`
-- the command shape in `command.yaml`
-- the order of your `cases`
-- whether an earlier case is catching the command first
-- `cmdshape filter status` to confirm the filter is active instead of overridden or broken
+## Performance-guided iteration
 
-### JSON got compacted when I wanted passthrough
-
-Add an explicit passthrough case above the more general case.
-
-### I changed the YAML, but the fixture still looks old
-
-Run `cmdshape verify --dir ...` again. `output.txt` is what capture wrote earlier; `verify-output.txt` is what the current
-filter produces now.
-
-### The replay files have broken sequence numbers
-
-Do not renumber them by hand. Recapture the fixture.
-
-## What To Learn Next
-
-Once you are comfortable with this tutorial, explore these next:
-
-- `schemas/cmdshape-filter.schema.json` for the full field structure
-- `./.cmdshape/filters/.mappings.yaml` for aliasing multiple command names to one filter
-- `~/.config/cmdshape/filters/` when you want the same custom filter across many repos
-- `cmdshape filter status` when you need to inspect active, overridden, or broken filter rows across scopes
-
-The shortest useful loop to remember is:
+Use the local report to decide what to inspect:
 
 ```bash
-cmdshape filter new my-tool
-# edit ./.cmdshape/filters/my-tool.yaml
-cmdshape ./my-tool some-command
-cmdshape capture --dir fixture -- ./my-tool some-command
-cmdshape verify --dir fixture
+cmdshape filter performance --limit 30
+cmdshape filter performance --tool <tool> --limit 30
+cmdshape filter performance --global --tool <tool> --limit 30
 ```
+
+`RUNS` is frequency. `NET REDUCTION` and `REDUCTION %` report exact
+routed-output byte reduction. `PASS` is the passthrough rate and `NONZERO`
+is the rate of native commands with nonzero exits. `review-case`, `failure-heavy`, and
+`passthrough-opportunity` are hints, not proof that a broader filter is safe.
+Capture representative output before changing behavior.
+
+## Authoring habits that scale
+
+- Start with passthrough, then add one narrow case at a time.
+- Capture warnings and failures, not only clean success output.
+- Preserve structured output unless the filter has an explicit, fixture-backed
+  contract for it.
+- Prefer literal matchers before regex.
+- Prefer removing known noise over inventing a new representation.
+- Keep paths, identifiers, counts, and diagnostics that an agent can reuse in
+  its next command.
+- Treat performance reports as prioritization evidence, not permission to
+  broaden a matcher.
+- Commit project filters only after reviewing captures for source, paths,
+  credentials, and customer data.
+
+## Built-in filters and fixtures
+
+Project filters can be committed with the repository. Shipped built-ins belong
+in `filters/<tool>.yaml`, aliases in `filters/.mappings.yaml`, and replay
+fixtures in `testdata/benchmarks/<tool>/<case>/`.
+
+A checked-in fixture has:
+
+- required `command.yaml` with an explicit `exit_code`, including zero;
+- at least one replay input: `stdout.txt`, `stderr.txt`, or legacy
+  `output.txt`;
+- optional merged and stream-specific output expectations;
+- optional `decisions.txt`;
+- required `dispatch.txt` containing the reviewed `filter|case`.
+
+Keep `00000|` stream sequence prefixes contiguous. Use `cmdshape verify` to
+generate candidate output, decision, and dispatch artifacts; promote them only
+after review. Do not hand-edit generated benchmark artifacts or weaken
+expansion and exit-code gates.
+
+A built-in change needs the focused fixture and validation workflow described
+in [CONTRIBUTING.md](CONTRIBUTING.md). Project-only behavior should remain in
+the project instead of being generalized prematurely.
+
+For runtime source precedence and the passthrough boundary, see
+[ARCHITECTURE.md](ARCHITECTURE.md). For vulnerability reporting, see
+[SECURITY.md](SECURITY.md).

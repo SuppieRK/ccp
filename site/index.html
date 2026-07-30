@@ -3,26 +3,26 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>cmdshape — Command-output filtering for coding agents</title>
+    <title>cmdshape — Command-output control for coding agents</title>
     <meta
       name="description"
-      content="cmdshape filters noisy command output for coding agents with deterministic, command-aware rules while preserving exit codes, diagnostics, and native escape hatches."
+      content="Keep known command noise out of your coding agent's context with deterministic filters, conservative passthrough, and --raw."
     >
     <link rel="canonical" href="https://suppierk.github.io/cmdshape/">
     <meta name="theme-color" content="#f3eee5">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="cmdshape">
-    <meta property="og:title" content="cmdshape — Command-output filtering for coding agents">
+    <meta property="og:title" content="cmdshape — Command-output control for coding agents">
     <meta
       property="og:description"
-      content="Smaller command output you can still trust: deterministic filters, preserved diagnostics, and native passthrough."
+      content="Keep known command noise out of your coding agent's context with deterministic filters, conservative passthrough, and --raw."
     >
     <meta property="og:url" content="https://suppierk.github.io/cmdshape/">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="cmdshape — Command-output filtering for coding agents">
+    <meta name="twitter:title" content="cmdshape — Command-output control for coding agents">
     <meta
       name="twitter:description"
-      content="Smaller command output you can still trust: deterministic filters, preserved diagnostics, and native passthrough."
+      content="Keep known command noise out of your coding agent's context with deterministic filters, conservative passthrough, and --raw."
     >
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
@@ -34,7 +34,7 @@
         "alternateName": "Command Output Shaper",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Linux, macOS, Windows",
-        "description": "cmdshape is a deterministic command-output filtering layer for coding agents that preserves command behavior, exit codes, and critical diagnostics.",
+        "description": "Keep known command noise out of your coding agent's context with deterministic filters, conservative passthrough, and --raw.",
         "url": "https://suppierk.github.io/cmdshape/",
         "codeRepository": "https://github.com/SuppieRK/cmdshape",
         "downloadUrl": "https://github.com/SuppieRK/cmdshape/releases",
@@ -81,11 +81,11 @@
     <main class="content-shell" id="main" tabindex="-1">
       <section class="hero section anchor-target" id="top">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="eyebrow-cursor" aria-hidden="true"></span> deterministic output shaping</p>
-          <h1>Shape command output.<br>Preserve command truth.</h1>
+          <p class="eyebrow"><span class="eyebrow-cursor" aria-hidden="true"></span> command-output control for coding agents</p>
+          <h1>Keep known command noise out of your coding agent's context.</h1>
           <p class="hero-lede">
-            <code class="tool-name">cmdshape</code> removes terminal noise before it reaches your coding agent while
-            keeping command behavior, exit codes, failure detail, and raw-output escape hatches intact.
+            <code class="tool-name">cmdshape</code> filters known boilerplate and repetition from command output routed
+            through it. When no valid filter matches, it leaves semantic shaping off.
           </p>
         </div>
 
@@ -104,6 +104,7 @@
             </button>
             <output class="copy-status" data-copy-status aria-live="polite" aria-atomic="true"></output>
           </article>
+          <p class="install-followup">Then run <code>cmdshape init</code> to connect detected coding agents.</p>
         </div>
       </section>
 
@@ -149,17 +150,17 @@
       <section class="section contract-section section-flow anchor-target" id="contract">
         <div class="section-heading">
           <p class="eyebrow">the runtime contract</p>
-          <h2>The output gets shorter. The command stays itself.</h2>
+          <h2>Filter known output noise. Keep the underlying tool.</h2>
           <p>
-            Terminal output is written for human scanning. <code class="tool-name">cmdshape</code> removes banners,
-            repeated status lines, and boilerplate only when a command-aware filter can preserve the information needed
-            for the next action.
+            Terminal output is written for human scanning. <code class="tool-name">cmdshape</code> keeps known banners,
+            repeated status lines, and boilerplate out of routed output only when a command-aware filter can preserve
+            the information needed for the next action.
           </p>
         </div>
         <div class="contract-grid">
           <article>
             <h3>Execute natively</h3>
-            <p>The command shape runs exactly as typed, with its exit status intact.</p>
+            <p>The native command and exit status stay intact. A filter may normalize argv only when its contract documents that behavior.</p>
           </article>
           <article>
             <h3>Shape with evidence</h3>
@@ -172,41 +173,11 @@
         </div>
       </section>
 
-      <section class="section gain-section section-flow">
-        <div class="section-heading anchor-target" id="gain">
-          <p class="eyebrow">measured on real commands</p>
-          <h2>Gains on real work</h2>
-          <p>
-            <code class="tool-name">cmdshape</code> does not just promise smaller output. <code>cmdshape gain</code>
-            shows the token impact of real commands, so you can see where filtering helps, where it does not, and whether
-            the result stays worth trusting.
-          </p>
-        </div>
-
-        <div class="gain-grid">
-          <article class="terminal">
-            <div class="terminal-bar">
-              <span>Claude Code</span>
-            </div>
-            <pre><code class="gain-report"><span class="gain-line">88 cmds · 5,330,571 → 90,127 tokens (<span class="gain-verdict gain-verdict-high">98.3% saved</span>)</span>
-<span class="gain-line"><span class="gain-label">Wins </span>: <span class="gain-tool">find</span> <span class="gain-shell">(</span><span class="gain-detail">4.8m</span><span class="gain-shell"> / </span><span class="gain-detail">99%</span><span class="gain-shell">)</span> · <span class="gain-tool">gradle</span> <span class="gain-shell">(</span><span class="gain-detail">367k</span><span class="gain-shell"> / </span><span class="gain-detail">87%</span><span class="gain-shell">)</span> · <span class="gain-tool">grep</span> <span class="gain-shell">(</span><span class="gain-detail">6k</span><span class="gain-shell"> / </span><span class="gain-detail">1%</span><span class="gain-shell">)</span></span><span class="gain-line"><span class="gain-label">Drag </span>: <span class="gain-tool">cd</span> <span class="gain-detail">(23 cmds)</span> · <span class="gain-tool">jar</span> <span class="gain-detail">(21 cmds)</span> · <span class="gain-tool">grep</span> <span class="gain-detail">(4 cmds)</span></span><span class="gain-line"><span class="gain-label">Trend</span>: <span class="gain-trend-positive-delta">↑ +12.4 pts</span> week over week <span class="gain-trend-compare">(85.9% → 98.3%)</span> · on a roll</span></code></pre>
-          </article>
-
-          <article class="terminal">
-            <div class="terminal-bar">
-              <span>Codex</span>
-            </div>
-            <pre><code class="gain-report"><span class="gain-line">1,825 cmds · 2,461,959 → 2,160,427 tokens (<span class="gain-verdict gain-verdict-mid">12.3% saved</span>)</span>
-<span class="gain-line"><span class="gain-label">Wins </span>: <span class="gain-tool">grep</span> <span class="gain-shell">(</span><span class="gain-detail">67k</span><span class="gain-shell"> / </span><span class="gain-detail">60%</span><span class="gain-shell">)</span> · <span class="gain-tool">go</span> <span class="gain-shell">(</span><span class="gain-detail">54k</span><span class="gain-shell"> / </span><span class="gain-detail">90%</span><span class="gain-shell">)</span> · <span class="gain-tool">git</span> <span class="gain-shell">(</span><span class="gain-detail">16k</span><span class="gain-shell"> / </span><span class="gain-detail">59%</span><span class="gain-shell">)</span></span><span class="gain-line"><span class="gain-label">Drag </span>: <span class="gain-tool">sed</span> <span class="gain-detail">(765 cmds)</span> · <span class="gain-tool">openspec</span> <span class="gain-detail">(245 cmds)</span></span><span class="gain-line"><span class="gain-label">Trend</span>: <span class="gain-trend-negative-delta">↓ -2.1 pts</span> week over week <span class="gain-trend-compare">(14.4% → 12.3%)</span> · slipping</span></code></pre>
-          </article>
-        </div>
-      </section>
-
       <section class="section filters-section section-flow">
         <div class="section-heading anchor-target" id="filters">
           <p class="eyebrow">rules you can inspect</p>
-          <h2>Create CLI output filters for your workflow</h2>
-          <p>Write command-aware YAML, replay real output, and verify exactly what changed before you promote a terminal output filter.</p>
+          <h2>Useful defaults. Your domain, your rules.</h2>
+          <p>We ship useful defaults, but we do not pretend to know your domain. For repository scripts and domain-specific logs, author project-owned YAML, replay real output, and trust only the exact source you reviewed.</p>
         </div>
 
         <div class="filter-demo anchor-target" id="proof" data-filter-demo>
@@ -250,7 +221,7 @@
           <p class="eyebrow">fixture-backed comparisons</p>
           <h2>Recorded examples from benchmark fixtures</h2>
           <p>
-            The command on the left is the recorded fixture input. The right side is the verified
+            The command on the left is recorded native fixture output. The right side is verified
             <code class="tool-name">cmdshape</code> output for that same case.
           </p>
         </div>
@@ -365,7 +336,7 @@
             <div>
               <h3>npm run success-noisy</h3>
             </div>
-            <p class="example-meta">107 tokens → 45 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -429,7 +400,7 @@ ok 2 - divide computes quotient
             <div>
               <h3>git status</h3>
             </div>
-            <p class="example-meta">196 tokens → 109 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -491,7 +462,7 @@ no changes added to commit (use "git add" and/or "git commit -a")</code></pre>
             <div>
               <h3>bun install --frozen-lockfile</h3>
             </div>
-            <p class="example-meta">133 tokens → 125 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -564,7 +535,7 @@ no changes added to commit (use "git add" and/or "git commit -a")</code></pre>
             <div>
               <h3>find ./internal -name "*.go" -type f</h3>
             </div>
-            <p class="example-meta">115 tokens → 73 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -629,7 +600,7 @@ no changes added to commit (use "git add" and/or "git commit -a")</code></pre>
             <div>
               <h3>eslint src/lint_fail.js</h3>
             </div>
-            <p class="example-meta">110 tokens → 39 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -670,7 +641,7 @@ no changes added to commit (use "git add" and/or "git commit -a")</code></pre>
             <div>
               <h3>next build</h3>
             </div>
-            <p class="example-meta">268 tokens → 152 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -734,7 +705,7 @@ Import trace for requested module:
             <div>
               <h3>./.venv/bin/pytest -q tests/test_app.py::test_fail</h3>
             </div>
-            <p class="example-meta">221 tokens → 81 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -792,7 +763,7 @@ FAILED tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...
             <div>
               <h3>./gradlew test</h3>
             </div>
-            <p class="example-meta">323 tokens → 124 tokens</p>
+            <p class="example-meta">recorded native → verified shaped</p>
           </div>
           <div class="comparison-scroll">
             <div class="terminal-pair">
@@ -850,6 +821,28 @@ BUILD FAILED in 1s</code></pre>
         </article>
 
       </section>
+
+      <section class="section gain-section section-flow">
+        <div class="section-heading anchor-target" id="gain">
+          <p class="eyebrow">local command-boundary snapshot</p>
+          <h2>Measure the output routed through <code class="tool-name">cmdshape</code></h2>
+          <p>
+            <code>cmdshape gain</code> reports exact source, emitted, and net-reduction bytes. This local snapshot is
+            not a benchmark or a promise about model tokens, billing, turns, task cost, or result quality.
+          </p>
+        </div>
+
+        <div class="gain-grid">
+          <article class="terminal">
+            <div class="terminal-bar">
+              <span>LOCAL SNAPSHOT · LAST 30 DAYS</span>
+            </div>
+            <pre><code class="gain-report"><span class="gain-line">9,729 cmds · 77.4 MiB source → 76.1 MiB emitted (<span class="gain-verdict">1.6% net reduction</span>)</span>
+<span class="gain-line"><span class="gain-label">Most net reduction</span>: <span class="gain-tool">find</span> <span class="gain-shell">(</span><span class="gain-detail">808.7 KiB</span><span class="gain-shell"> / </span><span class="gain-detail">62%</span><span class="gain-shell">)</span></span>
+<span class="gain-line"><span class="gain-label">Low reduction</span>: <span class="gain-tool">go</span> <span class="gain-shell">(</span><span class="gain-detail">328.5 KiB</span><span class="gain-shell"> / </span><span class="gain-detail">6%</span><span class="gain-shell">)</span> · <span class="gain-tool">git</span> <span class="gain-shell">(</span><span class="gain-detail">101.9 KiB</span><span class="gain-shell"> / </span><span class="gain-detail">2%</span><span class="gain-shell">)</span></span></code></pre>
+          </article>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -861,7 +854,7 @@ BUILD FAILED in 1s</code></pre>
           </svg>
           <code class="tool-name">cmdshape</code>
         </a>
-        <p class="footer-copy">Smaller output you can still trust.</p>
+        <p class="footer-copy">Known noise out. Command truth intact.</p>
         <nav class="footer-links" aria-label="Footer">
           <a href="https://github.com/SuppieRK/cmdshape">GitHub</a>
           <a href="https://github.com/SuppieRK/cmdshape/releases">Releases</a>

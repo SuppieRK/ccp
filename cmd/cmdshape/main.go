@@ -152,7 +152,7 @@ Execution flags:
 Lifecycle commands:
   capture               Write command.yaml, sequenced streams, and replay output artifacts
   init                  Install or update supported agent integrations
-  gain                  Show token savings summary and recent proof output (--global supported)
+  gain                  Show source, emitted, and net-reduction command-output bytes (--global supported)
   filter                YAML filter authoring helpers
   history               Show recorded command history (--global supported)
   recovery              Manage opt-in bounded raw failure recovery
@@ -163,7 +163,7 @@ Lifecycle commands:
   uninstall             Remove selected integrations or fully uninstall cmdshape
 
 Notes:
-  - Run cmdshape gain after install or init to verify savings on real work.
+  - Run cmdshape gain after install or init to inspect output shaping on real work.
   - Structured or precision-sensitive output may pass through unchanged.
   - --raw preserves native output unless --confidential is also used.`
 }

@@ -264,11 +264,11 @@ and missing shipped `.mappings.yaml` entries without mutating repository files.
   treats `--flag=value` and `--flag value` equivalently, stops at `--`, and
   leaves the argv sent to the child untouched. Short-option clusters are not
   split generically.
-- Be skeptical of table rewrites. Many native tables are already near the token floor.
+- Be skeptical of table rewrites. Many native tables are already compact.
 - Be skeptical of log compression. Tool-defined build/test output is often compressible; user application logs usually
   are not.
-- Preserve shell-usable output identity. If a rewrite makes follow-up commands harder to form, the savings are probably
-  not worth it.
+- Preserve shell-usable output identity. If a rewrite makes follow-up commands
+  harder to form, the byte reduction is not worth the loss of usability.
 - Prefer promoting verified output from `verify-output.txt` or fresh `cmdshape capture` output instead of hand-editing
   expectations by guesswork.
 

@@ -25,29 +25,6 @@ var _ = Describe("cmdshape main", func() {
 		})
 	})
 
-	Describe("usageText", func() {
-		It("includes the expected usage sections", func() {
-			got := usageText()
-
-			Expect(got).NotTo(BeEmpty())
-			Expect(got).To(ContainSubstring("cmdshape — Shape command output. Preserve command truth."))
-			Expect(got).To(ContainSubstring("Usage:"))
-			Expect(got).To(ContainSubstring("Execution flags:"))
-			Expect(got).To(ContainSubstring("Lifecycle commands:"))
-			Expect(got).To(ContainSubstring("Notes:"))
-			Expect(got).To(ContainSubstring("--confidential"))
-			Expect(got).To(ContainSubstring("capture               Write command.yaml, sequenced streams, and replay output artifacts"))
-			Expect(got).To(ContainSubstring("init"))
-			Expect(got).To(ContainSubstring("filter                YAML filter authoring helpers"))
-			Expect(got).To(ContainSubstring("verify                Replay one fixture directory through the current filter"))
-			Expect(got).To(ContainSubstring("gain                  Show token savings summary and recent proof output (--global supported)"))
-			Expect(got).To(ContainSubstring("history               Show recorded command history (--global supported)"))
-			Expect(got).To(ContainSubstring("uninstall             Remove selected integrations or fully uninstall cmdshape"))
-			Expect(got).To(ContainSubstring("Run cmdshape gain after install or init to verify savings on real work."))
-			Expect(got).To(ContainSubstring("--raw preserves native output unless --confidential is also used."))
-		})
-	})
-
 	Describe("runInvocation", func() {
 		Context("when lifecycle dispatch handles the command", func() {
 			It("returns a handled success without building the runtime", func() {

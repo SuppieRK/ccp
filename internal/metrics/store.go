@@ -643,7 +643,7 @@ func comparePerformanceRows(left, right PerformanceRow) int {
 	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
 		return order
 	}
-	if order := cmp.Compare(right.EstimatedSavedTokens, left.EstimatedSavedTokens); order != 0 {
+	if order := cmp.Compare(right.DroppedBytes, left.DroppedBytes); order != 0 {
 		return order
 	}
 	if order := strings.Compare(left.Tool, right.Tool); order != 0 {

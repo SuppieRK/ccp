@@ -295,7 +295,7 @@ func compareGlobalSummaryRows(left, right metrics.SummaryRow) int {
 	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
 		return order
 	}
-	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+	if order := cmp.Compare(right.RawBytes, left.RawBytes); order != 0 {
 		return order
 	}
 	return strings.Compare(left.Command, right.Command)
@@ -305,7 +305,7 @@ func compareGlobalSummaryToolRows(left, right metrics.SummaryToolRow) int {
 	if order := cmp.Compare(right.Commands, left.Commands); order != 0 {
 		return order
 	}
-	if order := cmp.Compare(right.EstimatedInputTokens, left.EstimatedInputTokens); order != 0 {
+	if order := cmp.Compare(right.RawBytes, left.RawBytes); order != 0 {
 		return order
 	}
 	return strings.Compare(left.Tool, right.Tool)
@@ -463,10 +463,6 @@ func fillLocalSummaryTotalDerived(total *metrics.SummaryTotal) {
 
 func fillLocalPeriodRowDerived(row *metrics.PeriodRow) {
 	metrics.FillPeriodDerived(row)
-}
-
-func localTokensFromBytes(v int64) int64 {
-	return metrics.TokensFromBytes(v)
 }
 
 func writeGlobalHistoryCSV(rows []globalHistoryRow, filters filtersEnvelope) error {
