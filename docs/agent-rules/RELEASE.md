@@ -14,7 +14,9 @@ When modifying release logic, preserve:
 - Architecture mapping used by release and install flows: `x86_64` -> `amd64`, `aarch64` -> `arm64`
 - Release publication shape: six archives plus `cmdshape_checksums.txt`
 - Smoke-install coverage for cmdshape on Unix and Windows draft assets before
-  publication
+  publication. The `smoke-draft` job requires `contents: write` because GitHub
+  exposes private draft releases only to tokens with push access; keep that
+  permission scoped to the smoke job.
 - Custom attestation predicate URI:
   `https://github.com/SuppieRK/cmdshape/attestations/binary-archive/v1`
 

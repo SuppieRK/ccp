@@ -313,6 +313,9 @@ jobs:
 
   smoke-draft:
     needs: [preflight, create-draft]
+    # GitHub exposes private draft releases only to tokens with push access.
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
