@@ -136,7 +136,7 @@ func containedPathParts(relative string) ([]string, error) {
 		parts = append(parts, part)
 	}
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("contained path has no file component")
+		return nil, errors.New("contained path has no file component")
 	}
 	return parts, nil
 }
@@ -211,5 +211,5 @@ func createContainedTemporary(parentFD int, base string) (string, int, error) {
 			return "", -1, fmt.Errorf("create contained temporary file: %w", err)
 		}
 	}
-	return "", -1, fmt.Errorf("create contained temporary file: exhausted name attempts")
+	return "", -1, errors.New("create contained temporary file: exhausted name attempts")
 }

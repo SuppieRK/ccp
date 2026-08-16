@@ -52,12 +52,34 @@ if [[ -z "$mode" || -z "$output_file" ]]; then
 fi
 
 all_tools=()
+tool_known() {
+  local expected="$1"
+  local existing
+  for existing in "${all_tools[@]-}"; do
+    [[ "$existing" == "$expected" ]] && return 0
+  done
+  return 1
+}
+
+add_known_tool() {
+  local tool="$1"
+  [[ -z "$tool" ]] && return 0
+  tool_known "$tool" || all_tools+=("$tool")
+}
+
 for tool_dir in testdata/benchmarks/*; do
   if [[ -d "$tool_dir" ]]; then
-    all_tools+=("$(basename "$tool_dir")")
+    add_known_tool "$(basename "$tool_dir")"
   fi
 done
-if [[ ${#all_tools[@]} -eq 0 ]]; then
+if [[ -n "$base_sha" ]] && git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+  while IFS= read -r path; do
+    tool="${path#testdata/benchmarks/}"
+    tool="${tool%%/*}"
+    add_known_tool "$tool"
+  done < <(git ls-tree -r --name-only "$base_sha" -- testdata/benchmarks)
+fi
+if [[ -z "${all_tools[*]-}" ]]; then
   echo "No benchmark tools found under benchmark roots" >&2
   exit 1
 fi
@@ -90,15 +112,16 @@ run_all=0
 changed=()
 run_validate=false
 run_benchmarks=false
+run_fixture_verify=false
 change_class="none"
 
 selected_contains() {
   local expected="$1"
   local existing
-  if [[ ${#selected_tools[*]} -eq 0 ]]; then
+  if [[ -z "${selected_tools[*]-}" ]]; then
     return 1
   fi
-  for existing in "${selected_tools[@]}"; do
+  for existing in "${selected_tools[@]-}"; do
     if [[ "$existing" == "$expected" ]]; then
       return 0
     fi
@@ -117,7 +140,7 @@ add_selected_tool() {
 add_prefix() {
   local prefix="$1"
   local t
-  for t in "${all_tools[@]}"; do
+  for t in "${all_tools[@]-}"; do
     if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
       add_selected_tool "$t"
     fi
@@ -128,7 +151,7 @@ add_prefix() {
 add_exact_if_exists() {
   local exact="$1"
   local t
-  for t in "${all_tools[@]}"; do
+  for t in "${all_tools[@]-}"; do
     if [[ "$t" == "$exact" ]]; then
       add_selected_tool "$t"
       return
@@ -137,8 +160,8 @@ add_exact_if_exists() {
 }
 
 load_changed_files() {
-  if [[ ${#changed_override[@]} -gt 0 ]]; then
-    changed=("${changed_override[@]}")
+  if [[ -n "${changed_override[*]-}" ]]; then
+    changed=("${changed_override[@]-}")
     return 0
   fi
 
@@ -168,22 +191,26 @@ mark_full_ci() {
 
 load_changed_files
 
-if [[ ${#changed[@]} -eq 0 ]]; then
+if [[ -z "${changed[*]-}" ]]; then
   mark_full_ci
 fi
 
-for path in "${changed[@]}"; do
+changed_count=0
+for path in "${changed[@]-}"; do
   [[ -z "$path" ]] && continue
+  changed_count=$((changed_count + 1))
   case "$path" in
     testdata/benchmarks/*)
       tool="${path#testdata/benchmarks/}"
       tool="${tool%%/*}"
-      add_exact_if_exists "$tool"
+      add_selected_tool "$tool"
       ;;
     filters/.mappings.yaml)
+	  run_validate=true
       run_all=1
       ;;
     filters/*)
+	  run_validate=true
       tool="${path#filters/}"
       tool="${tool%%/*}"
       tool="${tool%%.*}"
@@ -194,24 +221,27 @@ for path in "${changed[@]}"; do
       cap="${cap%%/*}"
       add_exact_if_exists "$cap"
       ;;
-    cmd/*|internal/*|go.mod|go.sum|.github/workflows/main-validation.yml|.github/workflows/pr-validation.yml|scripts/validate.sh|scripts/benchmark-discover.sh)
+    cmd/*|internal/*|go.mod|go.sum)
       mark_full_ci
       ;;
+    README.md|docs/*|site/*|assets/*|LICENSE|LICENSE.*|CODE_OF_CONDUCT.md|CONTRIBUTING.md|SECURITY.md)
+      ;;
     *)
+	  mark_full_ci
       ;;
   esac
 done
 
 if [[ "$run_all" -eq 1 ]]; then
-  benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
+  benchmark_matrix=$(build_matrix_json "${all_tools[@]-}")
   has_tools=true
-elif [[ ${#selected_tools[@]} -gt 0 ]]; then
+elif [[ -n "${selected_tools[*]-}" ]]; then
   sorted_tools=()
   while IFS= read -r tool; do
     sorted_tools+=("$tool")
-  done < <(printf "%s\n" "${selected_tools[@]}" | sort)
+  done < <(printf "%s\n" "${selected_tools[@]-}" | sort)
   selected_tools=("${sorted_tools[@]}")
-  benchmark_matrix=$(build_matrix_json "${selected_tools[@]}")
+  benchmark_matrix=$(build_matrix_json "${selected_tools[@]-}")
   has_tools=true
 else
   benchmark_matrix="[]"
@@ -226,6 +256,7 @@ fi
 
 if [[ "$has_tools" == "true" ]]; then
   run_benchmarks=true
+  run_fixture_verify=true
 fi
 
 {
@@ -233,6 +264,7 @@ fi
   echo "has_tools=${has_tools}"
   echo "run_validate=${run_validate}"
   echo "run_benchmarks=${run_benchmarks}"
+	 echo "run_fixture_verify=${run_fixture_verify}"
   echo "change_class=${change_class}"
 } >> "$output_file"
 
@@ -240,10 +272,11 @@ if [[ -n "$summary_file" ]]; then
   {
     echo "## Validation Plan"
     echo ""
-    echo "- Changed files analyzed: ${#changed[@]}"
+    echo "- Changed files analyzed: ${changed_count}"
     echo "- Change class: \`${change_class}\`"
     echo "- Run validate: \`${run_validate}\`"
     echo "- Run benchmarks: \`${run_benchmarks}\`"
+	 echo "- Run fixture verification: \`${run_fixture_verify}\`"
     echo "- Selected tools: \`$(jq -c 'map(.tool)' <<< "${benchmark_matrix}")\`"
   } >> "$summary_file"
 fi

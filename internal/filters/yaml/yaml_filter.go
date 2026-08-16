@@ -19,7 +19,9 @@ type YamlFilter struct {
 	cases                 []compiledCase
 	provenance            contracts.FilterProvenance
 
-	activeArgs string
+	activeArgs  string
+	activeCase  *compiledCase
+	activeMatch bool
 }
 
 func (f *YamlFilter) CloneFilter() contracts.Filter {
@@ -89,7 +91,7 @@ func (f *YamlFilter) OnStdoutExit(context contracts.Context) contracts.Action {
 
 func (f *YamlFilter) OnStdoutExitActions(context contracts.Context) []contracts.Action {
 	f.prepareInvocation(context.Args())
-	cs, ok := f.caseForArgs(context.Args())
+	cs, ok := f.activeCase, f.activeMatch
 	if !ok || cs.passthrough {
 		return []contracts.Action{{Kind: contracts.ActionKeep}}
 	}
@@ -115,9 +117,13 @@ func renderStreamExitActions(context contracts.Context, cs *compiledCase) []cont
 }
 
 func renderScopedExitAction(context contracts.Context, stream contracts.Stream, scope *compiledScope, cs *compiledCase, includeFinally bool) contracts.Action {
-	output := renderStdoutExitOutput(strings.Join(context.BufferedLines(stream), ""), scope, context.ExitCode())
+	buffered := strings.Join(context.BufferedLines(stream), "")
+	output := renderStdoutExitOutput(buffered, scope, context.ExitCode())
 	if includeFinally && cs.onExit != nil {
 		output = appendCaseExitPrint(output, cs.onExit, cs.variables, context.ExitCode())
+	}
+	if stream == contracts.StreamCombined && output == buffered {
+		return contracts.Action{Kind: contracts.ActionKeep}
 	}
 	return exitActionForOutput(output, stream)
 }
@@ -719,18 +725,18 @@ func compileGroupVariables(variables []Variable) ([]compiledVariable, error) {
 }
 
 func (f *YamlFilter) onStream(stream contracts.Stream, line string, context contracts.Context) contracts.Action {
-	cs, scope, ok := f.scopeForArgs(context.Args(), stream)
+	cs, scope, ok := f.activeScope(stream)
 	if !ok {
 		return contracts.Action{Kind: contracts.ActionEmit}
 	}
 	if scope.collectGroupLine(line) {
 		return contracts.Action{Kind: contracts.ActionIgnore}
 	}
-	return scope.actionForLine(line, len(context.BufferedLines(stream)), cs.variables)
+	return scope.actionForLine(line, context.BufferedCount(stream), cs.variables)
 }
 
-func (f *YamlFilter) scopeForArgs(args []string, stream contracts.Stream) (*compiledCase, *compiledScope, bool) {
-	cs, ok := f.caseForArgs(args)
+func (f *YamlFilter) activeScope(stream contracts.Stream) (*compiledCase, *compiledScope, bool) {
+	cs, ok := f.activeCase, f.activeMatch
 	if !ok || cs.passthrough {
 		return nil, nil, false
 	}
@@ -764,6 +770,7 @@ func (f *YamlFilter) prepareInvocation(args []string) {
 	for i := range f.cases {
 		f.cases[i].resetState()
 	}
+	f.activeCase, f.activeMatch = f.caseForArgs(args)
 }
 
 func (c *compiledCase) resetState() {
@@ -789,7 +796,7 @@ func (c *compiledScope) actionForLine(line string, bufferedCount int, variables 
 	if c == nil {
 		return contracts.Action{Kind: contracts.ActionEmit}
 	}
-	content := strings.TrimRight(line, "\n")
+	content, _ := splitRecordDelimiter(line)
 	action := c.baseActionForLine(line, content, variables)
 	if action.Kind == contracts.ActionIgnore {
 		return action
@@ -825,7 +832,7 @@ func (c *compiledScope) collectGroupLine(line string) bool {
 	if c == nil || len(c.groups) == 0 {
 		return false
 	}
-	content := strings.TrimRight(line, "\n")
+	content, _ := splitRecordDelimiter(line)
 	if c.startBoundaryGroup(content) {
 		return true
 	}
@@ -877,12 +884,22 @@ func (c *compiledScope) replaceLine(line, content string, variables map[string]s
 			continue
 		}
 		applyMatchActions(rule.onMatch, variables)
-		if strings.HasSuffix(line, "\n") {
-			replaced += "\n"
-		}
+		_, delimiter := splitRecordDelimiter(line)
+		replaced += delimiter
 		return replaced, true
 	}
 	return "", false
+}
+
+func splitRecordDelimiter(line string) (content, delimiter string) {
+	switch {
+	case strings.HasSuffix(line, "\r\n"):
+		return line[:len(line)-2], "\r\n"
+	case strings.HasSuffix(line, "\n"), strings.HasSuffix(line, "\r"):
+		return line[:len(line)-1], line[len(line)-1:]
+	default:
+		return line, ""
+	}
 }
 
 func (r compiledReplace) replace(content string, variables map[string]string) (string, bool) {

@@ -55,7 +55,8 @@ run_case() {
   local expected_class="$3"
   local expected_validate="$4"
   local expected_bench="$5"
-  shift 5
+	local expected_fixture="$6"
+  shift 6
 
   local output_file
   output_file="$(mktemp)"
@@ -77,6 +78,7 @@ run_case() {
   assert_equals "$(get_output_value "$output_file" change_class)" "$expected_class" "${name} change class"
   assert_equals "$(get_output_value "$output_file" run_validate)" "$expected_validate" "${name} run_validate"
   assert_equals "$(get_output_value "$output_file" run_benchmarks)" "$expected_bench" "${name} run_benchmarks"
+	assert_equals "$(get_output_value "$output_file" run_fixture_verify)" "$expected_fixture" "${name} run_fixture_verify"
 
   cat "$output_file"
   rm -f "$output_file"
@@ -84,24 +86,40 @@ run_case() {
   return 0
 }
 
-filter_output="$(run_case "filter-only" "pr" "benchmark_only" "false" "true" "filters/go.yaml")"
+filter_output="$(run_case "filter-only" "pr" "full_ci" "true" "true" "true" "filters/go.yaml")"
 assert_tools "$(printf '%s\n' "$filter_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "go"
 
-mappings_output="$(run_case "mappings" "pr" "benchmark_only" "false" "true" "filters/.mappings.yaml")"
+mappings_output="$(run_case "mappings" "pr" "full_ci" "true" "true" "true" "filters/.mappings.yaml")"
 assert_has_tool "$(printf '%s\n' "$mappings_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "go"
 assert_has_tool "$(printf '%s\n' "$mappings_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "grep"
 
-fixture_output="$(run_case "fixture-main" "main" "benchmark_only" "false" "true" "testdata/benchmarks/git/case/command.yaml")"
+fixture_output="$(run_case "fixture-main" "main" "benchmark_only" "false" "true" "true" "testdata/benchmarks/git/case/command.yaml")"
 assert_tools "$(printf '%s\n' "$fixture_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "git"
 
-runtime_output="$(run_case "runtime" "pr" "full_ci" "true" "true" "internal/runner.go")"
+deleted_fixture_output="$(run_case "deleted-fixture-tool" "pr" "benchmark_only" "false" "true" "true" "testdata/benchmarks/deleted-tool/case/command.yaml")"
+assert_tools "$(printf '%s\n' "$deleted_fixture_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "deleted-tool"
+
+runtime_output="$(run_case "runtime" "pr" "full_ci" "true" "true" "true" "internal/runner.go")"
 assert_has_tool "$(printf '%s\n' "$runtime_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "go"
 assert_has_tool "$(printf '%s\n' "$runtime_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "grep"
 
-workflow_output="$(run_case "workflow" "pr" "full_ci" "true" "true" ".github/workflows/pr-validation.yml")"
+workflow_output="$(run_case "workflow" "pr" "full_ci" "true" "true" "true" ".github/workflows/pr-validation.yml")"
 assert_has_tool "$(printf '%s\n' "$workflow_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" "go"
 
-none_output="$(run_case "none" "pr" "none" "false" "false" "assets/readme-banner.png")"
+none_output="$(run_case "none" "pr" "none" "false" "false" "false" "assets/readme-banner.png")"
 assert_tools "$(printf '%s\n' "$none_output" | sed -n "$BENCHMARK_MATRIX_SED_EXPR")" ""
+
+for path in \
+	"scripts/install.sh" \
+	"schemas/filter.schema.json" \
+	".github/workflows/main-validation.yml" \
+	".github/workflows/pr-validation.yml" \
+	".github/workflows/pages.yml" \
+	".github/workflows/release-distribution.yml" \
+	"scripts/test-benchmark-discover.sh" \
+	"scripts/ci-smoke.sh" \
+	"internal/lifecycle/filter_prompt.md"; do
+	run_case "$path" "pr" "full_ci" "true" "true" "true" "$path" >/dev/null
+done
 
 echo "[planner-test] benchmark-discover routing checks passed"

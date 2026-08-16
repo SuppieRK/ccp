@@ -5,6 +5,10 @@ without rebuilding cmdshape.
 
 ## Authoring Model
 
+The project root is the nearest enclosing Git worktree root, or the current
+directory outside Git repositories. Every project-local `./.cmdshape` path in
+this document is relative to that resolved root.
+
 - Built-in filters belong in `filters/<tool>.yaml`.
 - Wrapper or alias spellings belong in `filters/.mappings.yaml`.
 - Local iteration happens in `./.cmdshape/filters`.
@@ -17,8 +21,10 @@ without rebuilding cmdshape.
   again; `cmdshape filter untrust` removes approval.
 - Project-local filter definitions override home-scoped definitions with the same canonical filter id.
 - Project-local `.mappings.yaml` aliases override home-scoped aliases with the same key.
-- Shipped filters are embedded from `filters/` and materialized into `~/.config/cmdshape/filters` by `cmdshape repair` and startup
-  maintenance. `cmdshape init` installs integrations; it does not own home filter materialization.
+- Shipped filters are embedded from `filters/` and added to
+  `~/.config/cmdshape/filters` on first native or `filter` use by a release
+  binary. `cmdshape repair` restores them explicitly; `cmdshape init` installs
+  integrations and does not own home filter materialization.
 
 Use the existing YAML DSL as-is whenever possible.
 

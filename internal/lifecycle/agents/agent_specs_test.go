@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("adapter catalog", func() {
 			ginkgo.Entry("for invalid settings content", func(settingsPath string) error {
 				return os.WriteFile(settingsPath, []byte("{"), 0o644)
 			}, func(settingsPath string) string {
-				return fmt.Sprintf("invalid codebuddy settings file: %s", settingsPath)
+				return "invalid codebuddy settings file: " + settingsPath
 			}),
 		)
 

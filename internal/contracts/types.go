@@ -62,6 +62,7 @@ type Action struct {
 
 type Context interface {
 	Args() []string
+	BufferedCount(stream Stream) int
 	BufferedLines(stream Stream) []string
 	ExitCode() int
 }

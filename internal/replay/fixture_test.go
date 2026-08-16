@@ -2,10 +2,12 @@ package replay
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
 
@@ -14,6 +16,29 @@ import (
 )
 
 var _ = Describe("replay fixtures", func() {
+	Describe("bounded live stream records", func() {
+		It("returns a bounded chunk before continuing a newline-free record", func() {
+			input := strings.Repeat("x", StreamRecordLimit+17)
+			reader := bufio.NewReader(strings.NewReader(input))
+
+			first, err := ReadStreamRecord(reader)
+			Expect(errors.Is(err, ErrStreamRecordLimit)).To(BeTrue())
+			Expect(first).To(HaveLen(StreamRecordLimit))
+
+			second, err := ReadStreamRecord(reader)
+			Expect(errors.Is(err, io.EOF)).To(BeTrue())
+			Expect(string(first) + string(second)).To(Equal(input))
+		})
+
+		It("keeps allocation growth bounded by the named record limit", func() {
+			allocations := testing.AllocsPerRun(1, func() {
+				reader := bufio.NewReader(strings.NewReader(strings.Repeat("x", StreamRecordLimit+1)))
+				_, _ = ReadStreamRecord(reader)
+			})
+			Expect(allocations).To(BeNumerically("<", 50))
+		})
+	})
+
 	Describe("command yaml", func() {
 		It("writes and reads flow-style argv", func() {
 			path := filepath.Join(GinkgoT().TempDir(), CommandFileName)

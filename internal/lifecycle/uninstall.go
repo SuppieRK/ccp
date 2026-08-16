@@ -65,12 +65,6 @@ func runToolScopedUninstall(tools []string, adapters map[string]agents.Adapter) 
 }
 
 func runCompleteUninstall(adapters map[string]agents.Adapter) error {
-	if journal, err := executeBrandMigration(); err != nil {
-		writeLifecycleWarning("cmdshape uninstall: warning: previous-installation cleanup failed: %v\n", err)
-	} else if !journal.Complete {
-		writeLifecycleWarning("cmdshape uninstall: warning: some previous-installation artifacts could not be removed; run `cmdshape migrate status` for details before cmdshape removes itself\n")
-	}
-
 	scopeRoot, err := os.Getwd()
 	if err != nil {
 		return err
@@ -266,10 +260,7 @@ func managedWorkspaceMetricsPath(entry workspaces.Workspace) (string, bool) {
 
 func removeGlobalCmdshapeState(homeDir string) error {
 	var errs []error
-	for _, path := range []string{
-		filepath.Join(homeDir, configDirName, "cmdshape"),
-		filepath.Join(homeDir, product.ProjectDir),
-	} {
+	for _, path := range []string{product.HomeConfigPath(homeDir)} {
 		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
 			errs = append(errs, fmt.Errorf("remove %q: %w", path, err))
 		}

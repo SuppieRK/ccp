@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"maps"
 	"os"
 	"os/exec"
@@ -50,6 +51,16 @@ type ReplayResult struct {
 	Dispatch  string
 }
 
+// ReplayWriters receives replay artifacts as they are produced. Callers that
+// can persist replay output incrementally should use this instead of retaining
+// a ReplayResult for the lifetime of the invocation.
+type ReplayWriters struct {
+	Output    io.Writer
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Decisions io.Writer
+}
+
 type entrySink func([]engine.BufferEntry) (int, error)
 
 type executionAudit struct {
@@ -62,7 +73,29 @@ type executionAudit struct {
 type redactingWriter struct {
 	writer       io.Writer
 	confidential []string
-	buf          []byte
+	root         io.Writer
+	stages       []*streamingReplacer
+}
+
+type streamingReplacer struct {
+	dst     io.Writer
+	old     []byte
+	pending []byte
+}
+
+type streamOutput struct {
+	mu             sync.Mutex
+	stdoutRecorder *countingErrorWriter
+	stderrRecorder *countingErrorWriter
+	stdout         *redactingWriter
+	stderr         *redactingWriter
+}
+
+type countingErrorWriter struct {
+	writer  io.Writer
+	name    string
+	err     error
+	written int
 }
 
 var terminalDescriptorAttached = func() bool {
@@ -70,16 +103,21 @@ var terminalDescriptorAttached = func() bool {
 }
 
 func NewRunnerWithOptions(opts Options) *Runner {
+	projectRoot := currentProjectRoot()
 	metricsPath := opts.MetricsPath
 	if strings.TrimSpace(metricsPath) == "" {
-		metricsPath = defaultMetricsPath()
+		metricsPath = metrics.ProjectPath(projectRoot)
 	}
 	return &Runner{
 		sources:     filteryaml.DefaultSources(),
 		metricsPath: metricsPath,
-		workingDir:  currentWorkingDir(),
+		workingDir:  projectRoot,
 		opts:        opts,
 	}
+}
+
+func newConfidentialWriter(writer io.Writer, confidential []string) *redactingWriter {
+	return &redactingWriter{writer: writer, confidential: confidential}
 }
 
 func (r *Runner) Run(args []string) (int, error) {
@@ -141,20 +179,24 @@ func (r *Runner) run(parent context.Context, args []string) (int, error) {
 		return 127, err
 	}
 
+	output := newStreamOutput(r.opts.Confidential)
 	stdoutStats := &streamStats{}
 	stderrStats := &streamStats{}
 	stdoutWriteErr, stderrWriteErr := runConcurrently(
-		func() error { return r.drainStream(stdout, state.Stdout, stdoutStats, r.writeEntries) },
-		func() error { return r.drainStream(stderr, state.Stderr, stderrStats, r.writeEntries) },
+		func() error { return r.drainStream(stdout, state.Stdout, stdoutStats, output.writeEntries) },
+		func() error { return r.drainStream(stderr, state.Stderr, stderrStats, output.writeEntries) },
 	)
 
 	exitCode, err := waitExitCode(cmd)
-	exitWritten, exitWriteErr := r.writeEntries(state.Exit(exitCode))
-	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr, exitWriteErr)
+	_, exitWriteErr := output.writeEntries(state.Exit(exitCode))
+	flushErr := output.Flush()
+	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr, exitWriteErr, flushErr)
 	if code, runErr := filteredRunResult(ctx, err, outputErr, exitCode); runErr != nil {
 		return code, runErr
+	} else {
+		exitCode = code
 	}
-	keptBytes := stdoutStats.keptBytes + stderrStats.keptBytes + exitWritten
+	keptBytes := output.Written()
 	rawBytes := stdoutStats.rawBytes + stderrStats.rawBytes
 	r.maybeStoreRecovery(command, resolved, state, exitCode, rawBytes, keptBytes)
 	durationMS := execution.durationMS()
@@ -228,6 +270,9 @@ func (r *Runner) loadExecutionRegistry(auditCommand, tool string) (*engine.Regis
 }
 
 func filteredRunResult(ctx context.Context, waitErr, outputErr error, exitCode int) (int, error) {
+	if signalCode, ok := forwardedSignalResult(ctx, exitCode); ok {
+		return signalCode, outputErr
+	}
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return 1, errors.Join(ctxErr, outputErr)
 	}
@@ -275,6 +320,9 @@ func (r *Runner) runRaw(ctx context.Context, command contracts.Command, args []s
 
 	exitCode, err := waitExitCode(cmd)
 	outputErr := errors.Join(stdoutWriteErr, stderrWriteErr)
+	if signalCode, ok := forwardedSignalResult(ctx, exitCode); ok {
+		return signalCode, outputErr
+	}
 	if ctx.Err() != nil {
 		return 1, errors.Join(ctx.Err(), outputErr)
 	}
@@ -302,6 +350,9 @@ func (r *Runner) runAttached(ctx context.Context, command contracts.Command, exe
 		return 127, err
 	}
 	exitCode, waitErr := waitExitCode(cmd)
+	if signalCode, ok := forwardedSignalResult(ctx, exitCode); ok {
+		return signalCode, nil
+	}
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return 1, ctxErr
 	}
@@ -378,21 +429,72 @@ func (r *Runner) Verify(args []string, stdout, stderr io.Reader) (string, error)
 }
 
 func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (ReplayResult, error) {
-	command, err := ParseCommandArgs(args)
+	return r.ReplaySequenceWithExitCode(args, func(yield func(replay.Event, error) bool) {
+		for _, event := range events {
+			if !yield(event, nil) {
+				return
+			}
+		}
+	}, exitCode)
+}
+
+func (r *Runner) ReplaySequenceWithExitCode(args []string, events iter.Seq2[replay.Event, error], exitCode int) (ReplayResult, error) {
+	collector := &replayCollector{}
+	dispatch, err := r.replaySequenceWithExitCode(args, events, exitCode, collector)
 	if err != nil {
 		return ReplayResult{}, err
+	}
+	return ReplayResult{
+		Output:    collector.output.String(),
+		Stdout:    collector.stdout.String(),
+		Stderr:    collector.stderr.String(),
+		Decisions: collector.decisions.String(),
+		Dispatch:  dispatch,
+	}, nil
+}
+
+// ReplaySequenceToWritersWithExitCode replays an event sequence without
+// retaining the generated artifacts in memory. The existing ReplayResult APIs
+// remain available for callers that need an in-memory result.
+func (r *Runner) ReplaySequenceToWritersWithExitCode(
+	args []string,
+	events iter.Seq2[replay.Event, error],
+	exitCode int,
+	writers ReplayWriters,
+) (string, error) {
+	collector := newStreamingReplayCollector(writers, r.opts.Confidential)
+	dispatch, replayErr := r.replaySequenceWithExitCode(args, events, exitCode, collector)
+	return dispatch, errors.Join(replayErr, collector.Flush())
+}
+
+type replayRecorder interface {
+	recordInput(replay.Event, contracts.Action, []engine.BufferEntry)
+	recordExit(contracts.Action, []engine.BufferEntry)
+	Err() error
+	OutputBytes() int
+}
+
+func (r *Runner) replaySequenceWithExitCode(
+	args []string,
+	events iter.Seq2[replay.Event, error],
+	exitCode int,
+	collector replayRecorder,
+) (string, error) {
+	command, err := ParseCommandArgs(args)
+	if err != nil {
+		return "", err
 	}
 	auditCommand := r.auditCommand(command.RawInput)
 	if err := audit.Append("verify_start", map[string]any{
 		"command": auditCommand,
 		"tool":    command.Tool,
 	}); err != nil {
-		return ReplayResult{}, err
+		return "", err
 	}
 
 	registry, _, err := r.loadRegistryForTool(command.Tool)
 	if err != nil {
-		return ReplayResult{}, errors.Join(err, audit.Append("verify_registry_error", map[string]any{
+		return "", errors.Join(err, audit.Append("verify_registry_error", map[string]any{
 			"command": auditCommand,
 			"tool":    command.Tool,
 			"error":   err.Error(),
@@ -402,13 +504,15 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 	matchingArgs := slices.Clone(command.Args)
 	command, err = resolved.PrepareCommand(command)
 	if err != nil {
-		return ReplayResult{}, err
+		return "", err
 	}
 	command.MatchingArgs = matchingArgs
 	command.Dispatch = resolved.Dispatch(command)
 	state := engine.NewEngine(registry).StartResolved(command, resolved)
-	collector := &replayCollector{}
-	for _, event := range events {
+	for event, eventErr := range events {
+		if eventErr != nil {
+			return "", eventErr
+		}
 		var (
 			action  contracts.Action
 			entries []engine.BufferEntry
@@ -420,24 +524,24 @@ func (r *Runner) ReplayWithExitCode(args []string, events []replay.Event, exitCo
 			action, entries = state.StdoutAction(event.Line)
 		}
 		collector.recordInput(event, action, entries)
+		if err := collector.Err(); err != nil {
+			return "", err
+		}
 	}
 	exitAction, exitEntries := state.ExitAction(exitCode)
 	collector.recordExit(exitAction, exitEntries)
+	if err := collector.Err(); err != nil {
+		return "", err
+	}
 	if err := audit.Append("verify_finish", map[string]any{
 		"command":      auditCommand,
 		"tool":         command.Tool,
 		"dispatch":     command.Dispatch,
-		"output_bytes": len(collector.output.String()),
+		"output_bytes": collector.OutputBytes(),
 	}); err != nil {
-		return ReplayResult{}, err
+		return "", err
 	}
-	return ReplayResult{
-		Output:    collector.output.String(),
-		Stdout:    collector.stdout.String(),
-		Stderr:    collector.stderr.String(),
-		Decisions: collector.decisions.String(),
-		Dispatch:  command.Dispatch,
-	}, nil
+	return command.Dispatch, nil
 }
 
 func (r *Runner) loadRegistry() (*engine.Registry, contracts.FilterRegistryBuildTiming, error) {
@@ -466,14 +570,6 @@ func (r *Runner) loadRegistryForTool(tool string) (*engine.Registry, contracts.F
 	return registry, timing, nil
 }
 
-func defaultMetricsPath() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	return metrics.ProjectPath(cwd)
-}
-
 type streamStats struct {
 	rawBytes  int
 	keptBytes int
@@ -495,6 +591,9 @@ func (r *Runner) drainStream(src io.Reader, consume func(string) []engine.Buffer
 			r.recordSinkResult(stats, written, writeErr, &sinkErr)
 		}
 		if err != nil {
+			if errors.Is(err, replay.ErrStreamRecordLimit) {
+				continue
+			}
 			return errors.Join(sinkErr, wrapStreamReadError(err))
 		}
 	}
@@ -530,12 +629,59 @@ func (r *Runner) writeEntries(entries []engine.BufferEntry) (int, error) {
 	return written, nil
 }
 
+func newStreamOutput(confidential []string) *streamOutput {
+	stdoutRecorder := &countingErrorWriter{writer: os.Stdout, name: "stdout"}
+	stderrRecorder := &countingErrorWriter{writer: os.Stderr, name: "stderr"}
+	return &streamOutput{
+		stdoutRecorder: stdoutRecorder,
+		stderrRecorder: stderrRecorder,
+		stdout:         &redactingWriter{writer: stdoutRecorder, confidential: confidential},
+		stderr:         &redactingWriter{writer: stderrRecorder, confidential: confidential},
+	}
+}
+
+func (o *streamOutput) writeEntries(entries []engine.BufferEntry) (int, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	before := o.writtenLocked()
+	for _, entry := range entries {
+		writer := o.stdout
+		if entry.Stream == contracts.StreamStderr {
+			writer = o.stderr
+		}
+		if _, err := writer.Write([]byte(entry.Line)); err != nil {
+			return o.writtenLocked() - before, err
+		}
+	}
+	return o.writtenLocked() - before, nil
+}
+
+func (o *streamOutput) Flush() error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return errors.Join(o.stdout.Flush(), o.stderr.Flush(), o.stdoutRecorder.err, o.stderrRecorder.err)
+}
+
+func (o *streamOutput) Written() int {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.writtenLocked()
+}
+
+func (o *streamOutput) writtenLocked() int {
+	return o.stdoutRecorder.written + o.stderrRecorder.written
+}
+
 type replayCollector struct {
 	output    bytes.Buffer
 	stdout    bytes.Buffer
 	stderr    bytes.Buffer
 	decisions bytes.Buffer
 }
+
+func (c *replayCollector) Err() error { return nil }
+
+func (c *replayCollector) OutputBytes() int { return c.output.Len() }
 
 func (c *replayCollector) writeEntries(entries []engine.BufferEntry) int {
 	written := 0
@@ -577,6 +723,85 @@ func (c *replayCollector) writeDecision(label, line string) {
 	}
 }
 
+type streamingReplayCollector struct {
+	output      *redactingWriter
+	stdout      *redactingWriter
+	stderr      *redactingWriter
+	decisions   *redactingWriter
+	outputBytes int
+	err         error
+}
+
+func newStreamingReplayCollector(writers ReplayWriters, confidential []string) *streamingReplayCollector {
+	writerOrDiscard := func(writer io.Writer) io.Writer {
+		if writer == nil {
+			return io.Discard
+		}
+		return writer
+	}
+	return &streamingReplayCollector{
+		output:    newConfidentialWriter(writerOrDiscard(writers.Output), confidential),
+		stdout:    newConfidentialWriter(writerOrDiscard(writers.Stdout), confidential),
+		stderr:    newConfidentialWriter(writerOrDiscard(writers.Stderr), confidential),
+		decisions: newConfidentialWriter(writerOrDiscard(writers.Decisions), confidential),
+	}
+}
+
+func (c *streamingReplayCollector) Err() error { return c.err }
+
+func (c *streamingReplayCollector) OutputBytes() int { return c.outputBytes }
+
+func (c *streamingReplayCollector) recordInput(event replay.Event, action contracts.Action, emitted []engine.BufferEntry) {
+	c.writeDecision(labelForInputAction(action), event.Line)
+	c.writeEntries(emitted)
+	if action.Kind == contracts.ActionReplace {
+		for _, entry := range emitted {
+			c.writeDecision("<emit>", entry.Line)
+		}
+	}
+}
+
+func (c *streamingReplayCollector) recordExit(_ contracts.Action, emitted []engine.BufferEntry) {
+	c.writeEntries(emitted)
+}
+
+func (c *streamingReplayCollector) writeEntries(entries []engine.BufferEntry) {
+	for _, entry := range entries {
+		if c.err != nil {
+			return
+		}
+		c.outputBytes += len(entry.Line)
+		c.writeString(c.output, entry.Line)
+		switch entry.Stream {
+		case contracts.StreamStderr:
+			c.writeString(c.stderr, entry.Line)
+		default:
+			c.writeString(c.stdout, entry.Line)
+		}
+	}
+}
+
+func (c *streamingReplayCollector) writeDecision(label, line string) {
+	for _, part := range splitDecisionLines(line) {
+		if c.err != nil {
+			return
+		}
+		text := strings.TrimSuffix(part, "\n")
+		c.writeString(c.decisions, fmt.Sprintf("%-10s| %s\n", label, text))
+	}
+}
+
+func (c *streamingReplayCollector) writeString(writer io.Writer, value string) {
+	if c.err != nil {
+		return
+	}
+	_, c.err = io.WriteString(writer, value)
+}
+
+func (c *streamingReplayCollector) Flush() error {
+	return errors.Join(c.err, c.output.Flush(), c.stdout.Flush(), c.stderr.Flush(), c.decisions.Flush())
+}
+
 func labelForInputAction(action contracts.Action) string {
 	switch action.Kind {
 	case contracts.ActionIgnore:
@@ -611,12 +836,35 @@ func closePipes(stdout, stderr io.ReadCloser) {
 
 func waitExitCode(cmd *exec.Cmd) (int, error) {
 	if err := cmd.Wait(); err != nil {
+		if cmd.ProcessState != nil && cmd.ProcessState.Success() {
+			return 0, nil
+		}
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-			return exitErr.ExitCode(), nil
+			if code, ok := nativeExitCode(exitErr); ok {
+				return code, nil
+			}
+			return 1, err
 		}
 		return 1, err
 	}
 	return 0, nil
+}
+
+func forwardedSignalResult(ctx context.Context, exitCode int) (int, bool) {
+	cause, ok := errors.AsType[executionSignal](context.Cause(ctx))
+	if !ok {
+		return 0, false
+	}
+	if isHardKillExitCode(exitCode) {
+		return executionSignalExitCode(cause.signal), true
+	}
+	return exitCode, true
+}
+
+// ForwardedSignalExitCode returns the native shell code for an OS signal
+// forwarded by cmdshape. Ordinary context cancellation is not a signal.
+func ForwardedSignalExitCode(ctx context.Context, exitCode int) (int, bool) {
+	return forwardedSignalResult(ctx, exitCode)
 }
 
 type commandPassthroughReporter interface {
@@ -756,6 +1004,18 @@ func currentWorkingDir() string {
 	return cwd
 }
 
+func currentProjectRoot() string {
+	cwd := currentWorkingDir()
+	if cwd == "" {
+		return ""
+	}
+	root, err := projectfiles.ResolveProjectRoot(cwd)
+	if err != nil {
+		return ""
+	}
+	return root
+}
+
 func (r *Runner) writeRedacted(dst *os.File, line string) (int, error) {
 	redacted := redactConfidential(line, r.opts.Confidential)
 	if _, err := io.WriteString(dst, redacted); err != nil {
@@ -815,6 +1075,22 @@ func (w *errorRecordingWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func (w *countingErrorWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 || w.writer == nil || w.err != nil {
+		return len(p), nil
+	}
+	written, err := w.writer.Write(p)
+	w.written += written
+	if err != nil {
+		w.err = fmt.Errorf("write %s: %w", w.name, err)
+		return len(p), nil
+	}
+	if written != len(p) {
+		w.err = fmt.Errorf("write %s: %w", w.name, io.ErrShortWrite)
+	}
+	return len(p), nil
+}
+
 func outputName(dst *os.File) string {
 	if dst == os.Stderr {
 		return "stderr"
@@ -840,33 +1116,95 @@ func (w *redactingWriter) Write(p []byte) (int, error) {
 	if len(p) == 0 || w.writer == nil {
 		return len(p), nil
 	}
-	w.buf = append(w.buf, p...)
-	for {
-		idx := bytes.IndexByte(w.buf, '\n')
-		if idx < 0 {
-			break
-		}
-		line := w.buf[:idx+1]
-		if err := w.writeRedactedLine(line); err != nil {
-			return len(p), err
-		}
-		w.buf = w.buf[idx+1:]
+	w.initialize()
+	if _, err := w.root.Write(p); err != nil {
+		return len(p), err
 	}
 	return len(p), nil
 }
 
 func (w *redactingWriter) Flush() error {
-	if len(w.buf) == 0 || w.writer == nil {
+	if w.writer == nil {
 		return nil
 	}
-	if err := w.writeRedactedLine(w.buf); err != nil {
-		return err
+	w.initialize()
+	for _, stage := range w.stages {
+		if err := stage.Flush(); err != nil {
+			return err
+		}
 	}
-	w.buf = nil
 	return nil
 }
 
-func (w *redactingWriter) writeRedactedLine(line []byte) error {
-	_, err := io.WriteString(w.writer, redactConfidential(string(line), w.confidential))
-	return err
+func (w *redactingWriter) initialize() {
+	if w.root != nil {
+		return
+	}
+	w.root = w.writer
+	valid := make([]string, 0, len(w.confidential))
+	for _, token := range w.confidential {
+		if token != "" {
+			valid = append(valid, token)
+		}
+	}
+	w.stages = make([]*streamingReplacer, len(valid))
+	for index := len(valid) - 1; index >= 0; index-- {
+		stage := &streamingReplacer{dst: w.root, old: []byte(valid[index])}
+		w.stages[index] = stage
+		w.root = stage
+	}
+}
+
+func (w *streamingReplacer) Write(p []byte) (int, error) {
+	w.pending = append(w.pending, p...)
+	if err := w.drain(false); err != nil {
+		return len(p), err
+	}
+	return len(p), nil
+}
+
+func (w *streamingReplacer) Flush() error {
+	return w.drain(true)
+}
+
+func (w *streamingReplacer) drain(final bool) error {
+	for {
+		if index := bytes.Index(w.pending, w.old); index >= 0 {
+			if err := writeAll(w.dst, w.pending[:index]); err != nil {
+				return err
+			}
+			if err := writeAll(w.dst, []byte("***")); err != nil {
+				return err
+			}
+			w.pending = w.pending[index+len(w.old):]
+			continue
+		}
+		keep := len(w.old) - 1
+		if final {
+			keep = 0
+		}
+		flush := len(w.pending) - min(len(w.pending), keep)
+		if flush == 0 {
+			return nil
+		}
+		if err := writeAll(w.dst, w.pending[:flush]); err != nil {
+			return err
+		}
+		w.pending = bytes.Clone(w.pending[flush:])
+		return nil
+	}
+}
+
+func writeAll(dst io.Writer, p []byte) error {
+	for len(p) > 0 {
+		written, err := dst.Write(p)
+		if err != nil {
+			return err
+		}
+		if written == 0 {
+			return io.ErrShortWrite
+		}
+		p = p[written:]
+	}
+	return nil
 }

@@ -3,7 +3,9 @@ package lifecycle
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"iter"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,20 +29,67 @@ import (
 )
 
 type stubCaptureRunner struct {
-	gotArgs     []string
-	gotEvents   []replay.Event
-	gotExitCode int
-	output      string
-	stdout      string
-	stderr      string
-	err         error
+	gotArgs      []string
+	gotEvents    []replay.Event
+	gotExitCode  int
+	output       string
+	stdout       string
+	stderr       string
+	decisions    string
+	dispatch     string
+	confidential []string
+	err          error
 }
 
-func (s *stubCaptureRunner) ReplayWithExitCode(args []string, events []replay.Event, exitCode int) (core.ReplayResult, error) {
+type streamingPassthroughCaptureRunner struct {
+	events   int
+	maxEvent int
+}
+
+func (s *streamingPassthroughCaptureRunner) ReplaySequenceToWritersWithExitCode(_ []string, events iter.Seq2[replay.Event, error], _ int, writers core.ReplayWriters) (string, error) {
+	for event, err := range events {
+		if err != nil {
+			return "", err
+		}
+		s.events++
+		s.maxEvent = max(s.maxEvent, len(event.Line))
+		if _, err := io.WriteString(writers.Output, event.Line); err != nil {
+			return "", err
+		}
+		streamWriter := writers.Stdout
+		if event.Stream == contracts.StreamStderr {
+			streamWriter = writers.Stderr
+		}
+		if _, err := io.WriteString(streamWriter, event.Line); err != nil {
+			return "", err
+		}
+	}
+	return "passthrough", nil
+}
+
+func (s *stubCaptureRunner) ReplaySequenceToWritersWithExitCode(args []string, events iter.Seq2[replay.Event, error], exitCode int, writers core.ReplayWriters) (string, error) {
 	s.gotArgs = append([]string(nil), args...)
-	s.gotEvents = append([]replay.Event(nil), events...)
+	for event, err := range events {
+		if err != nil {
+			return "", err
+		}
+		s.gotEvents = append(s.gotEvents, event)
+	}
 	s.gotExitCode = exitCode
-	return core.ReplayResult{Output: s.output, Stdout: s.stdout, Stderr: s.stderr}, s.err
+	for _, artifact := range []struct {
+		writer   io.Writer
+		contents string
+	}{
+		{writers.Output, s.output},
+		{writers.Stdout, s.stdout},
+		{writers.Stderr, s.stderr},
+		{writers.Decisions, s.decisions},
+	} {
+		if _, err := io.WriteString(artifact.writer, redactCaptureText(artifact.contents, s.confidential)); err != nil {
+			return "", err
+		}
+	}
+	return s.dispatch, s.err
 }
 
 var _ = Describe("capture", func() {
@@ -67,9 +116,8 @@ var _ = Describe("capture", func() {
 	It("writes command, sequenced streams, and cmdshape output artifacts", func() {
 		tmp := GinkgoT().TempDir()
 		stub := &stubCaptureRunner{
-			output: "proxy output\n",
-			stdout: "proxy stdout\n",
-			stderr: "proxy stderr\n",
+			output: "proxy output\n", stdout: "proxy stdout\n", stderr: "proxy stderr\n",
+			decisions: "kept line\n", dispatch: "demo|default",
 		}
 		prev := newCaptureRunner
 		newCaptureRunner = func([]string) captureVerifier { return stub }
@@ -102,6 +150,13 @@ var _ = Describe("capture", func() {
 		outputStderrData, err := os.ReadFile(filepath.Join(tmp, captureOutputStderrFileName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(outputStderrData)).To(Equal("proxy stderr\n"))
+		decisionsData, err := os.ReadFile(filepath.Join(tmp, replay.DecisionsFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(decisionsData)).To(Equal("kept line\n"))
+		dispatchData, err := os.ReadFile(filepath.Join(tmp, replay.VerifyDispatchFileName))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(dispatchData)).To(Equal("demo|default\n"))
+		Expect(filepath.Join(tmp, replay.DispatchFileName)).NotTo(BeAnExistingFile())
 		Expect(stub.gotArgs).To(Equal(commandArgs))
 		Expect(stub.gotExitCode).To(BeZero())
 		Expect(replay.ValidateSequence(stub.gotEvents)).To(Succeed())
@@ -156,6 +211,7 @@ var _ = Describe("capture", func() {
 		prev := newCaptureRunner
 		newCaptureRunner = func(confidential []string) captureVerifier {
 			gotConfidential = slices.Clone(confidential)
+			stub.confidential = slices.Clone(confidential)
 			return stub
 		}
 		DeferCleanup(func() { newCaptureRunner = prev })
@@ -195,6 +251,107 @@ var _ = Describe("capture", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(auditData)).NotTo(ContainSubstring(secret))
 		Expect(string(auditData)).To(ContainSubstring(`"command":"sh -c printf ***"`))
+	})
+
+	It("redacts confidential values split across capture records", func() {
+		tmp := GinkgoT().TempDir()
+		stdoutSrcPath := filepath.Join(tmp, "staged-stdout.txt")
+		stderrSrcPath := filepath.Join(tmp, "staged-stderr.txt")
+		stdoutDstPath := filepath.Join(tmp, replay.StdoutFileName)
+		stderrDstPath := filepath.Join(tmp, replay.StderrFileName)
+		prefix := strings.Repeat("x", replay.StreamRecordLimit-len("SE"))
+		stdoutSrc, err := os.Create(stdoutSrcPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(replay.WriteSequencedEvent(stdoutSrc, replay.Event{Sequence: 0, Stream: contracts.StreamStdout, Line: prefix + "SE"})).To(Succeed())
+		Expect(replay.WriteSequencedEvent(stdoutSrc, replay.Event{Sequence: 1, Stream: contracts.StreamStdout, Line: "CRET suffix"})).To(Succeed())
+		Expect(stdoutSrc.Close()).To(Succeed())
+		Expect(os.WriteFile(stderrSrcPath, nil, 0o600)).To(Succeed())
+
+		Expect(writeCapturedStreams(stdoutSrcPath, stderrSrcPath, stdoutDstPath, stderrDstPath, []string{"SECRET"})).To(Succeed())
+		events, err := replay.ReadEvents(stdoutDstPath, stderrDstPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(events).To(HaveLen(2))
+		Expect(events[0].Sequence).To(Equal(0))
+		Expect(events[1].Sequence).To(Equal(1))
+		Expect(replay.CombinedInput(events)).To(Equal(prefix + "*** suffix"))
+	})
+
+	DescribeTable("redacts globally ordered confidential values across streams",
+		func(events []replay.Event, confidential []string, expected string, replacementStream contracts.Stream) {
+			tmp := GinkgoT().TempDir()
+			stdoutSrcPath := filepath.Join(tmp, "staged-stdout.txt")
+			stderrSrcPath := filepath.Join(tmp, "staged-stderr.txt")
+			stdoutDstPath := filepath.Join(tmp, replay.StdoutFileName)
+			stderrDstPath := filepath.Join(tmp, replay.StderrFileName)
+			Expect(replay.WriteSequencedEventsMode(stdoutSrcPath, events, contracts.StreamStdout, 0o600)).To(Succeed())
+			Expect(replay.WriteSequencedEventsMode(stderrSrcPath, events, contracts.StreamStderr, 0o600)).To(Succeed())
+
+			Expect(writeCapturedStreams(stdoutSrcPath, stderrSrcPath, stdoutDstPath, stderrDstPath, confidential)).To(Succeed())
+
+			redacted, err := replay.ReadEvents(stdoutDstPath, stderrDstPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(redacted).To(HaveLen(len(events)))
+			for index := range events {
+				Expect(redacted[index].Sequence).To(Equal(events[index].Sequence))
+				Expect(redacted[index].Stream).To(Equal(events[index].Stream))
+			}
+			Expect(replay.CombinedInput(redacted)).To(Equal(expected))
+			var replacementOutput strings.Builder
+			for _, event := range redacted {
+				if event.Stream == replacementStream {
+					replacementOutput.WriteString(event.Line)
+				}
+			}
+			Expect(replacementOutput.String()).To(ContainSubstring("***"))
+		},
+		Entry("assigns a cross-stream replacement to its first contributing stream",
+			[]replay.Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "prefix SE"},
+				{Sequence: 1, Stream: contracts.StreamStderr, Line: "CRET suffix"},
+			},
+			[]string{"SECRET"},
+			"prefix *** suffix",
+			contracts.StreamStdout,
+		),
+		Entry("preserves ordered nested ReplaceAll semantics across streams",
+			[]replay.Event{
+				{Sequence: 0, Stream: contracts.StreamStderr, Line: "ab"},
+				{Sequence: 1, Stream: contracts.StreamStdout, Line: "cab"},
+			},
+			[]string{"abc", "***ab"},
+			"***",
+			contracts.StreamStderr,
+		),
+		Entry("preserves non-overlapping ReplaceAll semantics for overlapping matches",
+			[]replay.Event{
+				{Sequence: 0, Stream: contracts.StreamStdout, Line: "ab"},
+				{Sequence: 1, Stream: contracts.StreamStderr, Line: "aba"},
+			},
+			[]string{"aba", "bab"},
+			"***ba",
+			contracts.StreamStdout,
+		),
+	)
+
+	It("keeps confidential replacement state bounded by the longest secret", func() {
+		sink := &countingAttributedCaptureWriter{}
+		root, stages := newAttributedCaptureWriter(sink, []string{"SECRET", "***-TOKEN"})
+
+		for index := range 10_000 {
+			stream := contracts.StreamStdout
+			if index%2 == 1 {
+				stream = contracts.StreamStderr
+			}
+			attribution := captureAttribution{sequence: index, stream: stream}
+			Expect(root.WriteAttributed(attribution, []byte("noise"))).To(Succeed())
+			for _, stage := range stages {
+				Expect(len(stage.pending) - stage.head).To(BeNumerically("<=", len(stage.old)-1))
+			}
+		}
+		for _, stage := range stages {
+			Expect(stage.Flush()).To(Succeed())
+		}
+		Expect(sink.bytes).To(Equal(10_000 * len("noise")))
 	})
 
 	It("does not change permissions on an existing capture directory", func() {
@@ -298,6 +455,56 @@ var _ = Describe("capture", func() {
 			{Sequence: 2, Stream: contracts.StreamStdout, Line: "step 2\r"},
 			{Sequence: 3, Stream: contracts.StreamStdout, Line: "done\n"},
 		}))
+	})
+
+	It("stages large newline-free native output on disk", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses POSIX stream utilities")
+		}
+		recording, exitCode, err := runNativeCaptureStaged([]string{
+			"sh", "-c", fmt.Sprintf("head -c %d /dev/zero | tr '\\0' x", replay.StreamRecordLimit+17),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(recording.cleanup)
+		Expect(exitCode).To(BeZero())
+		Expect(recording.stdoutBytes).To(Equal(replay.StreamRecordLimit + 17))
+		Expect(recording.stderrBytes).To(BeZero())
+		Expect(recording.stdoutPath).To(BeAnExistingFile())
+	})
+
+	It("streams large capture artifacts to disk and preserves a nonzero exit", func() {
+		if runtime.GOOS == "windows" {
+			Skip("uses POSIX stream utilities")
+		}
+		tmp := GinkgoT().TempDir()
+		streaming := &streamingPassthroughCaptureRunner{}
+		previous := newCaptureRunner
+		newCaptureRunner = func([]string) captureVerifier { return streaming }
+		DeferCleanup(func() { newCaptureRunner = previous })
+		size := replay.StreamRecordLimit + 17
+
+		err := executeCapture([]string{
+			"sh", "-c", fmt.Sprintf("head -c %d /dev/zero | tr '\\0' x; exit 7", size),
+		}, tmp, nil)
+
+		exitErr, ok := errors.AsType[captureExitError](err)
+		Expect(ok).To(BeTrue())
+		Expect(exitErr.ExitCode()).To(Equal(7))
+		for _, name := range []string{replay.OutputFileName, replay.OutputStdoutFileName} {
+			info, statErr := os.Stat(filepath.Join(tmp, name))
+			Expect(statErr).NotTo(HaveOccurred())
+			Expect(info.Size()).To(Equal(int64(size)))
+		}
+		stderrInfo, statErr := os.Stat(filepath.Join(tmp, replay.OutputStderrFileName))
+		Expect(statErr).NotTo(HaveOccurred())
+		Expect(stderrInfo.Size()).To(BeZero())
+		Expect(streaming.events).To(Equal(2))
+		Expect(streaming.maxEvent).To(Equal(replay.StreamRecordLimit))
+		entries, readErr := os.ReadDir(tmp)
+		Expect(readErr).NotTo(HaveOccurred())
+		Expect(slices.ContainsFunc(entries, func(entry os.DirEntry) bool {
+			return strings.HasPrefix(entry.Name(), ".cmdshape-capture-output-")
+		})).To(BeFalse())
 	})
 
 	It("returns startup errors from native capture immediately", func() {
@@ -561,6 +768,17 @@ func TestCaptureManagedDescendantHelper(t *testing.T) {
 type scriptedCaptureReader struct {
 	steps chan scriptedCaptureStep
 }
+
+type countingAttributedCaptureWriter struct {
+	bytes int
+}
+
+func (w *countingAttributedCaptureWriter) WriteAttributed(_ captureAttribution, payload []byte) error {
+	w.bytes += len(payload)
+	return nil
+}
+
+func (w *countingAttributedCaptureWriter) Flush() error { return nil }
 
 type scriptedCaptureStep struct {
 	data []byte

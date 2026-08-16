@@ -18,11 +18,15 @@ type BufferEntry struct {
 
 type OrderedBuffer struct {
 	entries      []BufferEntry
+	counts       map[contracts.Stream]int
 	nextSequence uint64
 }
 
 func NewOrderedBuffer() *OrderedBuffer {
-	return &OrderedBuffer{entries: make([]BufferEntry, 0, 64)}
+	return &OrderedBuffer{
+		entries: make([]BufferEntry, 0, 64),
+		counts:  make(map[contracts.Stream]int, 2),
+	}
 }
 
 func (b *OrderedBuffer) Add(stream contracts.Stream, line string) bool {
@@ -34,6 +38,7 @@ func (b *OrderedBuffer) Add(stream contracts.Stream, line string) bool {
 func (b *OrderedBuffer) AddAt(sequence uint64, stream contracts.Stream, original, transformed []byte) {
 	entry := newBufferEntry(sequence, stream, original, transformed)
 	b.entries = append(b.entries, entry)
+	b.counts[stream]++
 	b.nextSequence = max(b.nextSequence, sequence+1)
 }
 
@@ -58,16 +63,26 @@ func (b *OrderedBuffer) RemoveLastEntries(stream contracts.Stream, count int) []
 	if count <= 0 || len(b.entries) == 0 {
 		return nil
 	}
-	removed := make([]BufferEntry, 0, count)
+	remove := make([]bool, len(b.entries))
+	removed := make([]BufferEntry, 0, min(count, len(b.entries)))
 	for i := len(b.entries) - 1; i >= 0 && len(removed) < count; i-- {
 		entry := b.entries[i]
 		if stream != contracts.StreamCombined && entry.Stream != stream {
 			continue
 		}
 		removed = append(removed, entry)
-		b.entries = append(b.entries[:i], b.entries[i+1:]...)
+		remove[i] = true
+		b.counts[entry.Stream]--
 	}
 	slices.Reverse(removed)
+	kept := b.entries[:0]
+	for i := range b.entries {
+		if !remove[i] {
+			kept = append(kept, b.entries[i])
+		}
+	}
+	clear(b.entries[len(kept):])
+	b.entries = kept
 	return removed
 }
 
@@ -105,13 +120,7 @@ func (b *OrderedBuffer) Count(stream contracts.Stream) int {
 	if stream == contracts.StreamCombined {
 		return len(b.entries)
 	}
-	count := 0
-	for _, entry := range b.entries {
-		if entry.Stream == stream {
-			count++
-		}
-	}
-	return count
+	return b.counts[stream]
 }
 
 func (b *OrderedBuffer) Joined(stream contracts.Stream) string {
@@ -129,6 +138,8 @@ func (b *OrderedBuffer) Len() int {
 }
 
 func (b *OrderedBuffer) Clear() {
+	clear(b.entries)
 	b.entries = b.entries[:0]
+	clear(b.counts)
 	b.nextSequence = 0
 }

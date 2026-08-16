@@ -82,6 +82,7 @@ var _ = Describe("OrderedBuffer", func() {
 
 		buffer.Clear()
 		Expect(buffer.Joined(contracts.StreamStdout)).To(BeEmpty())
+		Expect(buffer.Count(contracts.StreamCombined)).To(BeZero())
 	})
 
 	It("removes the last matching entries from a single stream", func() {
@@ -92,6 +93,9 @@ var _ = Describe("OrderedBuffer", func() {
 
 		Expect(buffer.RemoveLast(contracts.StreamStdout, 1)).To(Equal(1))
 		Expect(buffer.Lines(contracts.StreamCombined)).To(Equal([]string{"out-1\n", "err-1\n"}))
+		Expect(buffer.Count(contracts.StreamStdout)).To(Equal(1))
+		Expect(buffer.Count(contracts.StreamStderr)).To(Equal(1))
+		Expect(buffer.Count(contracts.StreamCombined)).To(Equal(2))
 	})
 
 	It("removes entries across streams for the combined stream and re-enables re-adding", func() {

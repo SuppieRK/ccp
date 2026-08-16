@@ -3,6 +3,7 @@
 package core
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +18,7 @@ var _ = Describe("windows process control", func() {
 		It("configures a new process group and cancel hook", func() {
 			cmd := &exec.Cmd{}
 
-			configureManagedCommand(cmd)
+			configureManagedCommand(cmd, context.Background())
 
 			Expect(cmd.SysProcAttr).NotTo(BeNil())
 			Expect(cmd.SysProcAttr.CreationFlags).To(Equal(uint32(syscall.CREATE_NEW_PROCESS_GROUP)))
@@ -26,7 +27,7 @@ var _ = Describe("windows process control", func() {
 
 		It("returns nil when cancellation runs before a process starts", func() {
 			cmd := &exec.Cmd{}
-			configureManagedCommand(cmd)
+			configureManagedCommand(cmd, context.Background())
 
 			Expect(cmd.Cancel()).To(Succeed())
 		})

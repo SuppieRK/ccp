@@ -2,12 +2,12 @@ package metrics
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -165,17 +165,15 @@ var _ = Describe("metrics storage", func() {
 			var wg sync.WaitGroup
 			errs := make(chan error, 100)
 			for index := range 100 {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					errs <- AppendProject(project, path, RunMetric{
 						Timestamp: time.Now().UTC(),
-						Command:   "go test ./pkg/" + fmt.Sprint(index),
+						Command:   "go test ./pkg/" + strconv.Itoa(index),
 						Tool:      "go",
 						RawBytes:  10,
 						KeptBytes: 5,
 					})
-				}()
+				})
 			}
 			wg.Wait()
 			close(errs)
@@ -343,6 +341,21 @@ var _ = Describe("metrics storage", func() {
 		})
 
 		Expect(db.NoSync).To(BeFalse())
+	})
+
+	It("aborts queries when a stored run record is corrupt", func() {
+		path := filepath.Join(tempDir, "metrics.db")
+		Expect(Append(path, RunMetric{Tool: "go", Command: "valid", RawBytes: 1, KeptBytes: 1})).To(Succeed())
+		db, err := openDB(path, false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket(runsBucket).Put([]byte("corrupt-key"), []byte{1, 2, 3})
+		})).To(Succeed())
+		Expect(db.Close()).To(Succeed())
+
+		rows, err := QuerySummaryRows(path, QueryOptions{})
+		Expect(err).To(MatchError(ContainSubstring("decode run record")))
+		Expect(rows).To(BeNil())
 	})
 
 	It("repairs an existing database missing the metrics bucket", func() {
@@ -1256,7 +1269,7 @@ var _ = Describe("metrics storage", func() {
 			),
 		)
 
-		It("treats malformed encoded records as empty records", func() {
+		It("rejects malformed encoded records", func() {
 			shortRecord := make([]byte, 8+4+4+4+8+8+8+8)
 
 			truncatedCommand := make([]byte, 12)
@@ -1280,7 +1293,8 @@ var _ = Describe("metrics storage", func() {
 			putU32(truncatedTail[16:20], 0)
 
 			for _, encoded := range [][]byte{shortRecord, truncatedCommand, truncatedTool, truncatedDispatch, truncatedTail} {
-				Expect(decodeRunRecord(encoded)).To(Equal(runRecord{}))
+				_, err := decodeRunRecord(encoded)
+				Expect(err).To(HaveOccurred())
 			}
 		})
 
@@ -1298,7 +1312,8 @@ var _ = Describe("metrics storage", func() {
 					Passthrough:   true,
 				})
 
-				Expect(decodeRunRecord(encoded[:len(encoded)-chop])).To(Equal(runRecord{}))
+				_, err := decodeRunRecord(encoded[:len(encoded)-chop])
+				Expect(err).To(HaveOccurred())
 			},
 			Entry("when the command payload is short by one byte", 1+8+8+8+8+1+len("go:test")+4+len("go")+4),
 			Entry("when the tool payload is short by one byte", 1+8+8+8+8+1+len("go:test")+4),
@@ -1364,7 +1379,8 @@ var _ = Describe("metrics storage", func() {
 				},
 			}
 
-			got := decodeRunRecord(encodeRunRecord(rec))
+			got, err := decodeRunRecord(encodeRunRecord(rec))
+			Expect(err).NotTo(HaveOccurred())
 			Expect(got.TimestampUnix).To(Equal(rec.TimestampUnix))
 			Expect(got.Command).To(Equal(rec.Command))
 			Expect(got.Tool).To(Equal("unknown"))
@@ -1399,7 +1415,8 @@ var _ = Describe("metrics storage", func() {
 			encoded := encodeRunRecord(rec)
 			legacyEncoded := encoded[:len(encoded)-12]
 
-			got := decodeRunRecord(legacyEncoded)
+			got, err := decodeRunRecord(legacyEncoded)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(got.TimestampUnix).To(Equal(rec.TimestampUnix))
 			Expect(got.Command).To(Equal(rec.Command))
@@ -1411,6 +1428,21 @@ var _ = Describe("metrics storage", func() {
 			Expect(got.FilterSourceKind).To(BeEmpty())
 			Expect(got.FilterPath).To(BeEmpty())
 			Expect(got.FilterHash).To(BeEmpty())
+		})
+
+		It("rejects invalid booleans and trailing bytes", func() {
+			encoded := encodeRunRecord(runRecord{Command: "cmd", Tool: "go"})
+			encoded[len(encoded)-13] = 2
+			_, err := decodeRunRecord(encoded)
+			Expect(err).To(HaveOccurred())
+
+			encoded = append(encodeRunRecord(runRecord{
+				Command:               "cmd",
+				Tool:                  "go",
+				RegistryBuildRecorded: true,
+			}), 0)
+			_, err = decodeRunRecord(encoded)
+			Expect(err).To(MatchError("trailing record bytes"))
 		})
 	})
 })
@@ -1441,7 +1473,7 @@ func metricsGitCheckIgnore(root string, paths ...string) []string {
 	cmd := exec.Command("git", args...)
 	out, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() == 1 {
 			return nil
 		}
 		Expect(err).NotTo(HaveOccurred())

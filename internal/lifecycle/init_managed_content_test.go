@@ -67,7 +67,7 @@ var _ = Describe("init managed content and integrations", func() {
 
 		It("replaces only the managed region", func() {
 			Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
-			Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nold content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 			Expect(RunInit([]string{initToolsFlag, "github-copilot"})).To(Succeed())
 
 			updated, err := os.ReadFile(path)
@@ -117,7 +117,7 @@ var _ = Describe("init managed content and integrations", func() {
 
 		It("replaces only the managed region", func() {
 			Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
-			Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nold content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 			Expect(RunInit([]string{initToolsFlag, "gemini"})).To(Succeed())
 
 			updated, err := os.ReadFile(path)
@@ -151,7 +151,7 @@ var _ = Describe("init managed content and integrations", func() {
 			text := string(body)
 			Expect(text).To(ContainSubstring("alwaysApply: true"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
-			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
+			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
 		})
 
 		It("keeps reruns stable", func() {
@@ -191,7 +191,7 @@ var _ = Describe("init managed content and integrations", func() {
 			text := string(body)
 			Expect(text).To(ContainSubstring("## cmdshape Integration (Managed)"))
 			Expect(text).To(ContainSubstring(initRawEscapeHatch))
-			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CCP MANAGED BLOCK -->"))
+			Expect(text).NotTo(ContainSubstring("<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"))
 		},
 		Entry("cline", "cline", initClineDir, filepath.Join(initClineDir, initClineRuleName)),
 		Entry("windsurf", "windsurf", initWindsurfDir, filepath.Join(initWindsurfDir, "rules", initWindsurfRuleName)),
@@ -224,7 +224,7 @@ var _ = Describe("init managed content and integrations", func() {
 		Expect(os.MkdirAll(filepath.Join(ws.home, ".config", "crush"), 0o755)).To(Succeed())
 
 		agentsPath := filepath.Join(ws.home, ".config", "crush", "CRUSH.md")
-		Expect(os.WriteFile(agentsPath, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(agentsPath, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nold content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 
 		configPath := filepath.Join(ws.home, ".config", "crush", "crush.json")
 		Expect(os.WriteFile(configPath, []byte("{\n  \"theme\": \"dark\"\n}\n"), 0o644)).To(Succeed())

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,19 +11,20 @@ import (
 	"github.com/SuppieRK/cmdshape/internal/cli"
 	"github.com/SuppieRK/cmdshape/internal/lifecycle"
 	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"github.com/SuppieRK/cmdshape/internal/version"
 )
 
-var lifecycleDispatch = runLifecycleCommand
+var (
+	lifecycleDispatch      = runLifecycleCommand
+	startupFilterBootstrap = lifecycle.RunFilterBootstrap
+)
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
-	if err := lifecycle.RunBrandMigrationAuto(); err != nil {
-		return writeErr(stderr, 1, err)
-	}
 	// Audit is intentionally best-effort: startup must never fail before argument parsing
 	// or command execution just because the audit log path is blocked or unwritable.
 	_ = audit.ConfigureDefault()
@@ -43,6 +45,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if len(opts.CommandArgs) == 0 {
 		return writeMsg(stderr, 2, usageText())
 	}
+	if !cli.IsManagedArgs(opts.CommandArgs) || opts.CommandArgs[0] == "filter" {
+		if err := startupFilterBootstrap(); err != nil {
+			audit.MustAppend("filter_bootstrap_error", map[string]any{"error": err.Error()})
+		}
+	}
 
 	if handled, exitCode, err := runInvocation(opts); handled {
 		if err != nil {
@@ -57,6 +64,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 func runInvocation(opts cli.Options) (handled bool, exitCode int, err error) {
 	if handled, err := lifecycleDispatch(opts.CommandArgs); handled {
 		if err != nil {
+			if coded, ok := errors.AsType[interface {
+				error
+				ExitCode() int
+			}](err); ok {
+				return true, coded.ExitCode(), err
+			}
 			return true, 1, err
 		}
 		return true, 0, nil
@@ -93,8 +106,6 @@ func runLifecycleCommand(args []string) (bool, error) {
 		return true, lifecycle.RunUninstall(tail)
 	case "repair":
 		return true, lifecycle.RunRepair(tail)
-	case "migrate":
-		return true, lifecycle.RunBrandMigration(tail)
 	case "filter":
 		return true, lifecycle.RunFilterWithMetrics(tail, defaultMetricsPath())
 	default:
@@ -129,11 +140,11 @@ func writeMsg(w io.Writer, code int, msg string) int {
 }
 
 func defaultMetricsPath() string {
-	cwd, err := os.Getwd()
+	root, err := projectfiles.ResolveProjectRoot("")
 	if err != nil {
 		return ""
 	}
-	return metrics.ProjectPath(cwd)
+	return metrics.ProjectPath(root)
 }
 
 func usageText() string {
@@ -156,7 +167,6 @@ Lifecycle commands:
   filter                YAML filter authoring helpers
   history               Show recorded command history (--global supported)
   recovery              Manage opt-in bounded raw failure recovery
-  migrate               Inspect or retry previous-installation cleanup
   repair                Rewrite managed cmdshape home state to canonical shipped content
   verify                Replay one fixture directory through the current filter
   upgrade               Upgrade cmdshape

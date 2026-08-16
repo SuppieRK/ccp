@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,7 +14,7 @@ import (
 func scheduleExecutableRemoval(exePath string) error {
 	exePath = filepath.Clean(exePath)
 	if exePath == "" || exePath == "." {
-		return fmt.Errorf("resolve executable path for uninstall")
+		return errors.New("resolve executable path for uninstall")
 	}
 
 	scriptPath, body, err := uninstallRemovalScript(exePath)

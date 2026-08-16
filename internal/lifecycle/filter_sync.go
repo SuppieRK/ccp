@@ -1,14 +1,13 @@
 package lifecycle
 
 import (
-	"bytes"
-	"fmt"
+	"errors"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
+	"github.com/SuppieRK/cmdshape/internal/filtermappings"
 	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 
 	"gopkg.in/yaml.v3"
@@ -35,11 +34,19 @@ func syncMissingPackagedFilters(homeDir string) error {
 		return err
 	}
 	for _, entry := range entries {
+		if entry.Name() == ".mappings.yaml" {
+			continue
+		}
 		if err := syncMissingPackagedFilterEntry(tmpDir, dstDir, entry); err != nil {
 			return err
 		}
 	}
-	return nil
+	for _, entry := range entries {
+		if entry.Name() == ".mappings.yaml" {
+			return syncMissingPackagedFilterEntry(tmpDir, dstDir, entry)
+		}
+	}
+	return errors.New("shipped filters are missing .mappings.yaml")
 }
 
 func materializedPackagedFiltersDir() (string, error) {
@@ -106,12 +113,6 @@ func mergeMissingMappings(srcPath, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	if current.Version == 0 {
-		current.Version = 1
-	}
-	if current.Map == nil {
-		current.Map = map[string]string{}
-	}
 	for alias, target := range source.Map {
 		if _, ok := current.Map[alias]; ok {
 			continue
@@ -130,26 +131,11 @@ func readLifecycleMappings(path string) (lifecycleMappingsFile, error) {
 	if err != nil {
 		return lifecycleMappingsFile{}, err
 	}
-	dec := yaml.NewDecoder(bytes.NewReader(raw))
-	dec.KnownFields(true)
-	var payload lifecycleMappingsFile
-	if err := dec.Decode(&payload); err != nil {
-		return lifecycleMappingsFile{}, fmt.Errorf("decode mappings %q: %w", path, err)
+	mappings, err := filtermappings.Decode(path, raw)
+	if err != nil {
+		return lifecycleMappingsFile{}, err
 	}
-	if payload.Version == 0 {
-		payload.Version = 1
-	}
-	if payload.Map == nil {
-		payload.Map = map[string]string{}
-	}
-	for alias, target := range payload.Map {
-		alias = strings.TrimSpace(alias)
-		target = strings.TrimSpace(target)
-		if alias == "" || target == "" {
-			return lifecycleMappingsFile{}, fmt.Errorf("decode mappings %q: mapping keys and values must be non-empty", path)
-		}
-	}
-	return payload, nil
+	return lifecycleMappingsFile{Version: 1, Map: mappings}, nil
 }
 
 func marshalLifecycleMappings(payload lifecycleMappingsFile) ([]byte, error) {

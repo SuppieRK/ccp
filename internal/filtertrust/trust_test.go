@@ -106,6 +106,22 @@ var _ = Describe("project filter trust", func() {
 		Expect(decision.Root).To(Equal(canonicalProject))
 	})
 
+	It("uses the repository root for implicit trust from a subdirectory", func() {
+		nested := filepath.Join(project, "src", "feature")
+		Expect(os.MkdirAll(filepath.Join(project, ".git"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(nested, 0o755)).To(Succeed())
+		previousCWD, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(nested)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
+
+		decision, err := Trust("")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(decision.Root).To(Equal(canonicalTestRoot(project)))
+		Expect(decision.State).To(Equal(StateTrusted))
+	})
+
 	It("rejects symlinked project filter sources and files", func() {
 		outside := GinkgoT().TempDir()
 		Expect(os.WriteFile(filepath.Join(outside, "git.yaml"), []byte("version: 1\nfilter: git\n"), 0o644)).To(Succeed())
@@ -219,3 +235,9 @@ var _ = Describe("project filter trust", func() {
 		Expect(err).To(MatchError(ContainSubstring("refuse unsafe filter trust path")))
 	})
 })
+
+func canonicalTestRoot(path string) string {
+	canonical, err := CanonicalRoot(path)
+	Expect(err).NotTo(HaveOccurred())
+	return canonical
+}

@@ -22,23 +22,6 @@ var (
 	materializeHomeFilters = shippedfilters.MaterializeShipped
 )
 
-func RunStartupMaintenance() error {
-	lockPath, err := startupMaintenanceLockPath()
-	if err != nil {
-		return nil
-	}
-	release, err := acquireStartupMaintenanceLock(lockPath)
-	if err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return nil
-		}
-		return err
-	}
-	defer release()
-
-	return reconcileManagedHomeLayout()
-}
-
 func startupMaintenanceLockPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -109,23 +92,8 @@ func syncCanonicalHomeLayout() error {
 	return syncPackagedFilters(homeDir)
 }
 
-func reconcileManagedHomeLayout() error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil
-	}
-	if err := cleanupManagedConfigDirPreservingFilters(homeDir); err != nil {
-		return err
-	}
-	return syncMissingPackagedFilters(homeDir)
-}
-
 func cleanupManagedConfigDir(homeDir string) error {
 	return cleanupManagedConfigDirWithPolicy(homeDir, false)
-}
-
-func cleanupManagedConfigDirPreservingFilters(homeDir string) error {
-	return cleanupManagedConfigDirWithPolicy(homeDir, true)
 }
 
 func cleanupManagedConfigDirWithPolicy(homeDir string, preserveFilters bool) error {
@@ -145,18 +113,21 @@ func cleanupManagedConfigDirWithPolicy(homeDir string, preserveFilters bool) err
 		return err
 	}
 
-	legacyDir := filepath.Join(homeDir, ".ccp")
-	if err := os.RemoveAll(legacyDir); err != nil && !os.IsNotExist(err) {
-		return err
-	}
 	return nil
 }
 
 func removeAllChildrenExcept(dir string, keep ...string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		_, statErr := os.Lstat(dir)
+		if errors.Is(statErr, os.ErrNotExist) {
 			return nil
+		}
+		if statErr != nil {
+			return errors.Join(err, statErr)
 		}
 		return err
 	}

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,6 +16,11 @@ import (
 	"github.com/SuppieRK/cmdshape/internal/cli"
 	"github.com/SuppieRK/cmdshape/internal/version"
 )
+
+type testExitError struct{ code int }
+
+func (e testExitError) Error() string { return "coded failure" }
+func (e testExitError) ExitCode() int { return e.code }
 
 var _ = Describe("cmdshape main", func() {
 	Describe("buildRuntime", func() {
@@ -55,6 +62,18 @@ var _ = Describe("cmdshape main", func() {
 				Expect(err).To(MatchError("lifecycle boom"))
 				Expect(handled).To(BeTrue())
 				Expect(exitCode).To(Equal(1))
+			})
+
+			It("preserves lifecycle errors with native exit codes", func() {
+				previous := lifecycleDispatch
+				lifecycleDispatch = func([]string) (bool, error) { return true, testExitError{code: 143} }
+				DeferCleanup(func() { lifecycleDispatch = previous })
+
+				handled, exitCode, err := runInvocation(cli.Options{CommandArgs: []string{"capture", "--", "demo"}})
+
+				Expect(err).To(MatchError("coded failure"))
+				Expect(handled).To(BeTrue())
+				Expect(exitCode).To(Equal(143))
 			})
 		})
 
@@ -220,6 +239,38 @@ var _ = Describe("cmdshape main", func() {
 			})
 		})
 
+		Context("when migrate resolves to a native executable", func() {
+			It("forwards argv, streams, and the native exit code", func() {
+				binDir := GinkgoT().TempDir()
+				currentExe, err := os.Executable()
+				Expect(err).NotTo(HaveOccurred())
+				body, err := os.ReadFile(currentExe)
+				Expect(err).NotTo(HaveOccurred())
+				name := "migrate"
+				if runtime.GOOS == "windows" {
+					name += ".exe"
+				}
+				Expect(os.WriteFile(filepath.Join(binDir, name), body, 0o755)).To(Succeed())
+
+				cmd = exec.Command(os.Args[0], "-test.run=TestCmdshape", "--", "native-migrate")
+				cmd.Env = append(os.Environ(),
+					"CMDSHAPE_MAIN_TEST_NATIVE_PROXY=1",
+					"CMDSHAPE_NATIVE_MIGRATE_TEST=1",
+					"PATH="+binDir+string(os.PathListSeparator)+os.Getenv("PATH"),
+					"HOME="+GinkgoT().TempDir(),
+				)
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+
+				err = cmd.Run()
+				exitErr, ok := errors.AsType[*exec.ExitError](err)
+				Expect(ok).To(BeTrue())
+				Expect(exitErr.ExitCode()).To(Equal(23))
+				Expect(stdout.String()).To(Equal("argv=alpha|two words\n"))
+				Expect(stderr.String()).To(Equal("native-stderr\n"))
+			})
+		})
+
 		Context("when audit setup is blocked", func() {
 			It("still reaches the installed entrypoint smoke command", func() {
 				home := GinkgoT().TempDir()
@@ -276,6 +327,7 @@ var _ = Describe("cmdshape main", func() {
 		Entry("repair command", []string{"repair"}, true),
 		Entry("filter command", []string{"filter", "new", "demo"}, true),
 		Entry("uninstall command", []string{"uninstall"}, true),
+		Entry("native migrate command", []string{"migrate", "status"}, false),
 		Entry("pwd execution", []string{"pwd"}, false),
 		Entry("echo execution", []string{"echo", "hi"}, false),
 		Entry("nil args", nil, false),
@@ -299,12 +351,31 @@ var _ = Describe("cmdshape main", func() {
 })
 
 func init() {
+	runNativeMigrateExecutableIfRequested()
 	runMainUsageHelperIfRequested()
 	runMainHelpHelperIfRequested()
 	runMainVersionHelperIfRequested()
 	runMainSmokeHelperIfRequested()
 	runExitWithErrHelperIfRequested()
 	runExitWithNilErrHelperIfRequested()
+	runMainNativeProxyHelperIfRequested()
+}
+
+func runNativeMigrateExecutableIfRequested() {
+	name := strings.TrimSuffix(strings.ToLower(filepath.Base(os.Args[0])), ".exe")
+	if os.Getenv("CMDSHAPE_NATIVE_MIGRATE_TEST") != "1" || name != "migrate" {
+		return
+	}
+	_, _ = fmt.Printf("argv=%s\n", strings.Join(os.Args[1:], "|"))
+	_, _ = fmt.Fprintln(os.Stderr, "native-stderr")
+	os.Exit(23)
+}
+func runMainNativeProxyHelperIfRequested() {
+	if os.Getenv("CMDSHAPE_MAIN_TEST_NATIVE_PROXY") != "1" {
+		return
+	}
+	os.Args = []string{"cmdshape", "migrate", "alpha", "two words"}
+	main()
 }
 
 func runMainUsageHelperIfRequested() {
@@ -345,7 +416,7 @@ func runMainVersionHelperIfRequested() {
 		return
 	}
 
-	version.Version = fmt.Sprint(os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_VERSION_VALUE"))
+	version.Version = os.Getenv("CMDSHAPE_MAIN_TEST_HELPER_VERSION_VALUE")
 	os.Args = []string{"cmdshape", "--version"}
 	main()
 	os.Exit(0)

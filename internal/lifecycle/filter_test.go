@@ -160,7 +160,7 @@ var _ = Describe("filter", func() {
 				"Usage:",
 				"Flags:",
 				"Notes:",
-				"./.cmdshape/filters/<name>.yaml",
+				"<project-root>/.cmdshape/filters/<name>.yaml",
 				".mappings.yaml",
 			} {
 				Expect(out).To(ContainSubstring(part))
@@ -193,6 +193,22 @@ var _ = Describe("filter", func() {
 			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
 		})
 
+		It("writes the scaffold at the repository root when invoked from a subdirectory", func() {
+			root := GinkgoT().TempDir()
+			nested := filepath.Join(root, "src", "feature")
+			Expect(os.MkdirAll(filepath.Join(root, ".git"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(nested, 0o755)).To(Succeed())
+			prev, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(nested)).To(Succeed())
+			DeferCleanup(func() { _ = os.Chdir(prev) })
+
+			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
+
+			Expect(filepath.Join(root, ".cmdshape", "filters", "demo-tool.yaml")).To(BeAnExistingFile())
+			Expect(filepath.Join(nested, ".cmdshape")).NotTo(BeAnExistingFile())
+		})
+
 		It("preserves existing mappings and appends the new identity entry", func() {
 			tmp := GinkgoT().TempDir()
 			prev, err := os.Getwd()
@@ -211,7 +227,7 @@ var _ = Describe("filter", func() {
 			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
 		})
 
-		It("repairs blank identity mappings instead of leaving them unusable", func() {
+		It("rejects blank mapping targets instead of coercing current schema", func() {
 			tmp := GinkgoT().TempDir()
 			prev, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
@@ -221,14 +237,12 @@ var _ = Describe("filter", func() {
 			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"), []byte("version: 1\nmap:\n  demo-tool: \"   \"\n"), 0o644)).To(Succeed())
 
-			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
+			err = RunFilter([]string{"new", "demo-tool"})
 
-			mappings, err := os.ReadFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
+			Expect(err).To(MatchError(ContainSubstring("mapping keys and values must be non-empty")))
 		})
 
-		It("normalizes legacy mappings that omit the version field", func() {
+		It("rejects mappings that omit the required version", func() {
 			tmp := GinkgoT().TempDir()
 			prev, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
@@ -238,13 +252,9 @@ var _ = Describe("filter", func() {
 			Expect(os.MkdirAll(filepath.Join(tmp, ".cmdshape", "filters"), 0o755)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"), []byte("map:\n  npm: npm\n"), 0o644)).To(Succeed())
 
-			Expect(RunFilter([]string{"new", "demo-tool"})).To(Succeed())
+			err = RunFilter([]string{"new", "demo-tool"})
 
-			mappings, err := os.ReadFile(filepath.Join(tmp, ".cmdshape", "filters", ".mappings.yaml"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(mappings)).To(HavePrefix("version: 1\n"))
-			Expect(string(mappings)).To(ContainSubstring("npm: npm"))
-			Expect(string(mappings)).To(ContainSubstring("demo-tool: demo-tool"))
+			Expect(err).To(MatchError(ContainSubstring("version must be exactly 1")))
 		})
 
 		It("rejects invalid filter names", func() {
@@ -264,17 +274,13 @@ var _ = Describe("filter", func() {
 			Expect(RunFilter([]string{"new", "demo-tool"})).To(MatchError(ContainSubstring("already exists")))
 		})
 
-		It("normalizes legacy mappings that omit the version field when ensuring identities", func() {
+		It("rejects mappings without a version when ensuring identities", func() {
 			path := filepath.Join(GinkgoT().TempDir(), ".mappings.yaml")
 			Expect(os.WriteFile(path, []byte("map:\n  npm: npm\n"), 0o644)).To(Succeed())
 
-			Expect(ensureIdentityFilterMapping(path, "demo-tool")).To(Succeed())
+			err := ensureIdentityFilterMapping(path, "demo-tool")
 
-			body, err := os.ReadFile(path)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(body)).To(HavePrefix("version: 1\n"))
-			Expect(string(body)).To(ContainSubstring("npm: npm"))
-			Expect(string(body)).To(ContainSubstring("demo-tool: demo-tool"))
+			Expect(err).To(MatchError(ContainSubstring("version must be exactly 1")))
 		})
 
 		It("surfaces malformed mappings files when ensuring identities", func() {
@@ -465,7 +471,7 @@ var _ = Describe("filter", func() {
 				"Notes:",
 				"cmdshape filter prompt [name]",
 				"embedded in the cmdshape binary",
-				"copy global filters into ./.cmdshape/filters before editing",
+				"copy global filters into the resolved project root's .cmdshape/filters before editing",
 			} {
 				Expect(out).To(ContainSubstring(part))
 			}

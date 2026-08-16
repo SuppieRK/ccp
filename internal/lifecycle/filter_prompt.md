@@ -21,6 +21,11 @@ cmdshape ships useful defaults, but we do not pretend to know your domain. A
 project-local filter is a good fit for repository scripts, generated logs, and
 failure output that needs local context.
 
+The project root is the nearest enclosing Git worktree root. Outside a Git
+repository, it is the current directory. Every project-local `./.cmdshape`
+path below is relative to that resolved root, even when cmdshape is invoked
+from a subdirectory.
+
 ## Safety rules
 
 - Start by working in the project-local filter directory: `./.cmdshape/filters`.

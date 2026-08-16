@@ -2,10 +2,11 @@ package agents
 
 import (
 	"fmt"
-	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 )
 
 type ClaudeAdapter struct{}
@@ -124,10 +125,8 @@ func claudeRoot(ctx Context) string {
 func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	root := claudeRoot(ctx)
 	hookPath := filepath.Join(root, "hooks", claudeHookScriptName)
-	legacyHookPath := filepath.Join(root, "hooks", legacyHookName)
 	settingsPath := filepath.Join(root, claudeSettingsName)
 	awarenessPath := filepath.Join(root, claudeAwarenessName)
-	legacyAwarenessPath := filepath.Join(root, "CCP.md")
 	guidePath := filepath.Join(root, claudeGuideName)
 
 	var res InstallResult
@@ -136,20 +135,6 @@ func (a ClaudeAdapter) Uninstall(ctx Context) (InstallResult, error) {
 	}
 	if err := uninstallClaudeSettings(&res, settingsPath, hookPath); err != nil {
 		return res, err
-	}
-	if err := uninstallClaudeSettings(&res, settingsPath, legacyHookPath); err != nil {
-		return res, err
-	}
-	for _, legacy := range []struct {
-		path      string
-		signature string
-	}{
-		{path: legacyHookPath, signature: legacyHookSignature},
-		{path: legacyAwarenessPath, signature: legacyAwarenessSignature},
-	} {
-		if err := removeOwnedLegacyFile(legacy.path, legacy.signature); err != nil {
-			return res, err
-		}
 	}
 	if err := uninstallClaudeGuide(&res, guidePath); err != nil {
 		return res, err

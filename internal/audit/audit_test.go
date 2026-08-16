@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -195,6 +196,19 @@ var _ = Describe("audit logging", func() {
 			Expect(currentHandler).To(BeNil())
 			Expect(currentWriter).To(BeNil())
 		})
+	})
+
+	It("serializes configuration failure with concurrent appends", func() {
+		previousHome := userHomeDir
+		userHomeDir = func() (string, error) { return "", errors.New("home unavailable") }
+		DeferCleanup(func() { userHomeDir = previousHome })
+
+		var wait sync.WaitGroup
+		for range 100 {
+			wait.Go(func() { _ = ConfigureDefault() })
+			wait.Go(func() { _ = Append("concurrent", nil) })
+		}
+		wait.Wait()
 	})
 })
 

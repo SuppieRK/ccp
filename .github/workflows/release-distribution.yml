@@ -11,6 +11,13 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   preflight:
     permissions:
@@ -28,13 +35,17 @@ jobs:
 
       - name: Resolve and validate existing release tag
         id: resolve-tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="$DISPATCH_TAG"
           else
-            TAG="${{ github.ref_name }}"
+            TAG="$REF_NAME"
           fi
           if [[ -z "${TAG}" ]]; then
             echo "release tag is required" >&2
@@ -48,6 +59,17 @@ jobs:
             echo "release tag must match X.Y.Z exactly: ${TAG}" >&2
             exit 1
           fi
+          IFS='.' read -r major minor patch <<< "${TAG}"
+          for component in "$major" "$minor" "$patch"; do
+            if [[ ${#component} -gt 1 && "$component" == 0* ]]; then
+              echo "release tag components must not contain leading zeros: ${TAG}" >&2
+              exit 1
+            fi
+            if [[ ${#component} -gt 20 || (${#component} -eq 20 && "$component" > "18446744073709551615") ]]; then
+              echo "release tag component is out of range: ${TAG}" >&2
+              exit 1
+            fi
+          done
           git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
           TAG_OID="$(git rev-parse "refs/cmdshape-release-tags/${TAG}")"
           SOURCE_SHA="$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")"
@@ -82,8 +104,41 @@ jobs:
             exit 1
           fi
 
-  build-artifacts:
+  validate-source:
     needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.preflight.outputs.source_sha }}
+          fetch-depth: 1
+      - name: Verify checkout and tag identity
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+          EXPECTED_SHA: ${{ needs.preflight.outputs.source_sha }}
+          EXPECTED_TAG_OID: ${{ needs.preflight.outputs.tag_oid }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          git fetch --no-tags origin "+refs/tags/${TAG}:refs/cmdshape-release-tags/${TAG}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}")" = "${EXPECTED_TAG_OID}"
+          test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: 'go.mod'
+      - name: Validate release source
+        shell: bash
+        run: ./scripts/validate.sh
+
+  build-artifacts:
+    needs: [preflight, validate-source]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -258,8 +313,6 @@ jobs:
 
   smoke-draft:
     needs: [preflight, create-draft]
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:

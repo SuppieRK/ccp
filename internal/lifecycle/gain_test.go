@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/SuppieRK/cmdshape/internal/engine"
 	"github.com/SuppieRK/cmdshape/internal/metrics"
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
@@ -84,6 +85,44 @@ var _ = Describe("RunGain", func() {
 			out := runGain("--json")
 			Expect(out).To(ContainSubstring(`"dataset": "summary"`))
 			Expect(out).To(ContainSubstring(`"total"`))
+		})
+
+		It("renders the default exact-byte summary and insight lines", func() {
+			plain := engine.StripANSI(runGain())
+
+			Expect(plain).To(ContainSubstring("2 cmds · 1.7 KiB source → 900 B emitted (47.1% net reduction)"))
+			Expect(plain).To(ContainSubstring("Most net reduction : go (800 B / 66.7%)"))
+			Expect(plain).To(ContainSubstring("Low reduction      : git (0 B / 0.0%)"))
+			Expect(plain).To(ContainSubstring("Trend              : insufficient data"))
+		})
+
+		It("renders the compact exact-byte gain table", func() {
+			out := runGain(flagTable)
+
+			Expect(out).NotTo(ContainSubstring("\x1b["))
+			Expect(out).To(ContainSubstring("SOURCE"))
+			Expect(out).To(ContainSubstring("EMITTED"))
+			Expect(out).To(ContainSubstring("NET REDUCTION"))
+			Expect(out).To(ContainSubstring("showing 2 of 2 tools"))
+		})
+
+		It("weights global trend windows by routed byte volume", func() {
+			home := GinkgoT().TempDir()
+			restore := workspaces.WithTestConfig(home, nil)
+			DeferCleanup(restore)
+			Expect(os.Remove(path)).To(Succeed())
+			now := time.Now().UTC()
+			referenceDay := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+			appendGlobalWorkspaceMetrics(home, filepath.Join(tmpDir, "weighted-trend"), []metrics.RunMetric{
+				{Timestamp: referenceDay.AddDate(0, 0, -13), Tool: "go", Command: "go test ./...", RawBytes: 400, KeptBytes: 200},
+				{Timestamp: referenceDay.AddDate(0, 0, -12), Tool: "go", Command: "go test ./...", RawBytes: 4, KeptBytes: 0},
+				{Timestamp: referenceDay.AddDate(0, 0, -6), Tool: "go", Command: "go test ./...", RawBytes: 400, KeptBytes: 100},
+				{Timestamp: referenceDay.AddDate(0, 0, -5), Tool: "go", Command: "go test ./...", RawBytes: 4, KeptBytes: 4},
+			})
+
+			plain := engine.StripANSI(runGain(flagGlobal))
+
+			Expect(plain).To(ContainSubstring("Trend              : ↑ +23.8 pts week over week (50.5% → 74.3%)"))
 		})
 
 		It("clamps anomalous global kept bytes to canonical derived totals", func() {
@@ -296,6 +335,24 @@ var _ = Describe("RunGain", func() {
 	})
 
 	Context("when rendering period summaries", func() {
+		It("renders text, table, JSON, and CSV period datasets", func() {
+			textOut := engine.StripANSI(runGain(flagPeriod, "day"))
+			Expect(textOut).To(ContainSubstring("[period=day]"))
+			Expect(textOut).To(ContainSubstring("Trend"))
+
+			tableOut := runGain(flagPeriod, "day", flagTable)
+			Expect(tableOut).To(ContainSubstring(gainHeaderText))
+			Expect(tableOut).To(ContainSubstring("BUCKET"))
+
+			jsonOut := runGain(flagPeriod, "week", flagFormat, "json")
+			Expect(jsonOut).To(ContainSubstring(`"dataset": "period"`))
+			Expect(jsonOut).To(ContainSubstring(`"period": "week"`))
+
+			csvOut := runGain(flagPeriod, "week", flagFormat, "csv")
+			Expect(csvOut).To(ContainSubstring("dataset,period,since,tool_filter,failed_filter,bucket"))
+			Expect(csvOut).To(ContainSubstring("period,week"))
+		})
+
 		It("applies the text limit to local period tables", func() {
 			Expect(os.Remove(path)).To(Succeed())
 			now := time.Now().UTC()

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,6 +43,13 @@ var _ = Describe("release distribution workflow", func() {
 			Expect(workflow).To(ContainSubstring(snippet))
 		}
 		Expect(strings.Count(workflow, `test "$(git rev-parse "refs/cmdshape-release-tags/${TAG}^{commit}")" = "${EXPECTED_SHA}"`)).To(BeNumerically(">=", 3))
+		Expect(workflow).To(ContainSubstring("  validate-source:"))
+		Expect(workflow).To(ContainSubstring("os: [ubuntu-latest, macos-latest, windows-latest]"))
+		Expect(workflow).To(ContainSubstring("needs: [preflight, validate-source]"))
+		Expect(workflow).To(ContainSubstring("run: ./scripts/validate.sh"))
+		Expect(workflow).To(ContainSubstring("cancel-in-progress: false"))
+		Expect(workflow).To(ContainSubstring("DISPATCH_TAG: ${{ inputs.tag }}"))
+		Expect(workflow).NotTo(ContainSubstring(`TAG="${{ github.event.inputs.tag }}`))
 	})
 
 	It("validates cmdshape-only artifacts before draft smoke and publication", func() {
@@ -75,10 +81,6 @@ var _ = Describe("release distribution workflow", func() {
 			Expect(workflow).To(ContainSubstring(snippet))
 		}
 		for _, forbidden := range []string{
-			"ccp_checksums.txt",
-			"distributions+=(ccp)",
-			`$distributions += "ccp"`,
-			`legacy_bin="ccp"`,
 			"\n          GOOS: ${{ matrix.goos }}",
 			"\n          GOARCH: ${{ matrix.goarch }}",
 		} {
@@ -91,50 +93,41 @@ var _ = Describe("release distribution workflow", func() {
 		Expect(draft).To(BeNumerically(">", 0))
 		Expect(smoke).To(BeNumerically(">", draft))
 		Expect(publish).To(BeNumerically(">", smoke))
-		Expect(workflow[smoke:publish]).To(ContainSubstring("permissions:\n      contents: write"))
+		Expect(workflow[smoke:publish]).NotTo(ContainSubstring("permissions:\n      contents: write"))
 	})
 })
 
-var _ = Describe("hard cutover surfaces", func() {
-	It("keeps the active product and distribution free of the retired identity", func() {
-		repositoryRoot := filepath.Join("..", "..")
-		legacyIdentity := regexp.MustCompile(`(?i)(^|[^a-z0-9_])ccp([^a-z0-9_]|$)|CCP_`)
-		for _, name := range []string{
-			"README.md",
-			"AGENTS.md",
-			"ARCHITECTURE.md",
-			filepath.Join("docs", "agent-rules", "RELEASE.md"),
-			filepath.Join("scripts", "install.sh"),
-			filepath.Join(".github", "workflows", "release-distribution.yml"),
-			filepath.Join("internal", "product", "identity.go"),
-			filepath.Join("internal", "lifecycle", "upgrade.go"),
-			filepath.Join("internal", "filtertrust", "trust.go"),
-			filepath.Join("internal", "replay", "fixture.go"),
-			filepath.Join("schemas", "cmdshape-filter.schema.json"),
-		} {
-			raw, err := os.ReadFile(filepath.Join(repositoryRoot, name))
-			Expect(err).NotTo(HaveOccurred(), name)
-			Expect(string(raw)).NotTo(MatchRegexp(legacyIdentity.String()), name)
-		}
-
-		for _, name := range []string{
-			filepath.Join("cmd", "ccp"),
-			filepath.Join("cmd", "ccp-ci"),
-			filepath.Join("cmd", "ccp-docgen"),
-		} {
-			entries, err := os.ReadDir(filepath.Join(repositoryRoot, name))
-			if errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			Expect(err).NotTo(HaveOccurred(), name)
-			Expect(entries).To(BeEmpty(), name)
-		}
-		_, err := os.Stat(filepath.Join(repositoryRoot, "schemas", "ccp-filter.schema.json"))
-		Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
-	})
+var _ = Describe("workflow security contracts", func() {
+	entries, err := filepath.Glob(filepath.Join("..", "..", ".github", "workflows", "*.yml"))
+	Expect(err).NotTo(HaveOccurred())
+	for _, path := range entries {
+		It("pins external actions and parses "+filepath.Base(path), func() {
+			raw, err := os.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			var document map[string]any
+			Expect(yaml.Unmarshal(raw, &document)).To(Succeed())
+			workflow := string(raw)
+			uses := regexp.MustCompile(`(?m)^\s*uses:\s+.*$`).FindAllString(workflow, -1)
+			pinned := regexp.MustCompile(`(?m)^\s*uses:\s+[^@\s]+@[0-9a-f]{40}(?:\s+#.*)?$`).FindAllString(workflow, -1)
+			Expect(pinned).To(HaveLen(len(uses)))
+			Expect(workflow).To(ContainSubstring("permissions:\n  contents: read"))
+		})
+	}
 })
 
 var _ = Describe("validation workflow dependencies", func() {
+	DescribeTable("allows the change planner to classify embedded Markdown",
+		func(name string) {
+			raw, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", name))
+			Expect(err).NotTo(HaveOccurred())
+
+			workflow := string(raw)
+			Expect(workflow).NotTo(ContainSubstring("paths-ignore:\n      - '**/*.md'"))
+		},
+		Entry("main validation", "main-validation.yml"),
+		Entry("pull-request validation", "pr-validation.yml"),
+	)
+
 	DescribeTable("using the Go module lock for validation tools",
 		func(name string) {
 			raw, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", name))

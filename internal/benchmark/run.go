@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -300,7 +301,7 @@ func compareRequired(expectedPath, actualPath, label string) string {
 		return fmt.Sprintf("read verify %s: %v", label, err)
 	}
 	if string(expected) != string(actual) {
-		return fmt.Sprintf("%s mismatch", label)
+		return label + " mismatch"
 	}
 	return ""
 }
@@ -348,6 +349,20 @@ func FailureSummary(report RunReport) []string {
 			continue
 		}
 		lines = append(lines, fmt.Sprintf("%s/%s: %s", result.Tool, result.Case, strings.Join(result.Warnings, "; ")))
+	}
+	return lines
+}
+
+func CorrectnessFailureSummary(report RunReport) []string {
+	lines := make([]string, 0, len(report.Results))
+	for _, result := range report.Results {
+		failures := slices.DeleteFunc(slices.Clone(result.Warnings), func(warning string) bool {
+			return strings.HasPrefix(warning, "net byte reduction dropped ")
+		})
+		failures = append(failures, result.Unasserted...)
+		if len(failures) > 0 {
+			lines = append(lines, fmt.Sprintf("%s/%s: %s", result.Tool, result.Case, strings.Join(failures, "; ")))
+		}
 	}
 	return lines
 }
@@ -544,7 +559,7 @@ func comparisonKey(tool, name string) string {
 
 func HashInput(events []replay.Event) string {
 	sum := sha256.Sum256([]byte(replay.CombinedInput(events)))
-	return fmt.Sprintf("%x", sum[:])
+	return hex.EncodeToString(sum[:])
 }
 
 func fixtureInputHash(command replay.CommandSpec, events []replay.Event) string {
@@ -557,5 +572,5 @@ func fixtureInputHash(command replay.CommandSpec, events []replay.Event) string 
 	b.WriteByte(0)
 	b.WriteString(replay.CombinedInput(events))
 	sum := sha256.Sum256([]byte(b.String()))
-	return fmt.Sprintf("%x", sum[:])
+	return hex.EncodeToString(sum[:])
 }

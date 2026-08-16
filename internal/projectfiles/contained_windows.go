@@ -107,7 +107,7 @@ func openWindowsContainedParent(root, relative string) (windows.Handle, string, 
 		parts = append(parts, part)
 	}
 	if len(parts) == 0 {
-		return windows.InvalidHandle, "", fmt.Errorf("contained path has no file component")
+		return windows.InvalidHandle, "", errors.New("contained path has no file component")
 	}
 
 	rootPath, err := windows.UTF16PtrFromString(root)
@@ -303,7 +303,7 @@ func createWindowsContainedTemporary(parent windows.Handle, base string) (string
 			return "", windows.InvalidHandle, fmt.Errorf("create contained temporary file: %w", err)
 		}
 	}
-	return "", windows.InvalidHandle, fmt.Errorf("create contained temporary file: exhausted name attempts")
+	return "", windows.InvalidHandle, errors.New("create contained temporary file: exhausted name attempts")
 }
 
 func renameWindowsRelative(handle, parent windows.Handle, destination string) error {

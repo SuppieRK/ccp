@@ -1,1 +1,1 @@
-1 issue found. (ran in 4.9s)
+flutter analyze: 1 issue(s)

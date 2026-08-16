@@ -9,8 +9,6 @@ import (
 const (
 	cmdshapeManagedBlockStart = "<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->"
 	cmdshapeManagedBlockEnd   = "<!-- END: CMDSHAPE MANAGED BLOCK -->"
-	legacyManagedBlockStart   = "<!-- BEGIN: CCP MANAGED BLOCK -->"
-	legacyManagedBlockEnd     = "<!-- END: CCP MANAGED BLOCK -->"
 	cmdshapeRawEscapeHatch    = "If output seems corrupted, malformed, or unusable for the task, retry the command with `cmdshape --raw` as an escape hatch."
 	cmdshapeFilterPromptHint  = "When asked to create or improve cmdshape YAML filters, run `cmdshape filter prompt` for the embedded self-service workflow."
 )
@@ -99,18 +97,12 @@ func removeManagedContextBlock(path string) (updated string, changed bool, remov
 }
 
 func managedBlockBounds(existing string) (int, int, bool) {
-	for _, markers := range [][2]string{
-		{cmdshapeManagedBlockStart, cmdshapeManagedBlockEnd},
-		{legacyManagedBlockStart, legacyManagedBlockEnd},
-	} {
-		start := strings.Index(existing, markers[0])
-		end := strings.Index(existing, markers[1])
-		if start < 0 || end < start {
-			continue
-		}
-		return start, end + len(markers[1]), true
+	start := strings.Index(existing, cmdshapeManagedBlockStart)
+	end := strings.Index(existing, cmdshapeManagedBlockEnd)
+	if start < 0 || end < start {
+		return 0, 0, false
 	}
-	return 0, 0, false
+	return start, end + len(cmdshapeManagedBlockEnd), true
 }
 
 func normalizeManagedFile(in string) string {

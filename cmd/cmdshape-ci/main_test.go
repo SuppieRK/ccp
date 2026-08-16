@@ -134,6 +134,30 @@ var _ = Describe("cmdshape-ci", func() {
 			Expect(code).To(Equal(1))
 			Expect(stderr.String()).To(ContainSubstring("case failed"))
 		})
+
+		It("fails required fixture verification on exact-byte expansion", func() {
+			runBenchmarks = func(opts benchmark.RunOptions) (benchmark.RunReport, error) {
+				return benchmark.RunReport{Failed: true, Results: []benchmark.CaseResult{{
+					Tool: "grep", Case: "large", Warnings: []string{"output expansion: native=1 bytes proxy=2 bytes"},
+				}}}, nil
+			}
+			writeBenchmarkSummary = func(benchmark.RunReport) error { return nil }
+
+			var stderr bytes.Buffer
+			Expect(run([]string{"-fixture-correctness"}, &stderr)).To(Equal(1))
+			Expect(stderr.String()).To(ContainSubstring("output expansion"))
+		})
+
+		It("fails required fixture verification when a selected tool has no cases", func() {
+			runBenchmarks = func(benchmark.RunOptions) (benchmark.RunReport, error) {
+				return benchmark.RunReport{}, nil
+			}
+			writeBenchmarkSummary = func(benchmark.RunReport) error { return nil }
+
+			var stderr bytes.Buffer
+			Expect(run([]string{"-fixture-correctness", "-tool", "deleted-tool"}, &stderr)).To(Equal(1))
+			Expect(stderr.String()).To(ContainSubstring(`no fixtures found for selected tool "deleted-tool"`))
+		})
 	})
 
 	Describe("fatal", func() {

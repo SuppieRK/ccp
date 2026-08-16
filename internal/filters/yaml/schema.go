@@ -175,7 +175,7 @@ func consumeTrailingYAMLDocuments(dec *yaml.Decoder) error {
 	if tail.Kind == 0 {
 		return nil
 	}
-	return fmt.Errorf("unexpected additional YAML document")
+	return errors.New("unexpected additional YAML document")
 }
 
 func ValidateDefinition(spec *FilterDefinition) error {

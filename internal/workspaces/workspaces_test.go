@@ -2,7 +2,6 @@ package workspaces
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -151,27 +150,6 @@ var _ = Describe("workspace registry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
 		Expect(entries[0].MetricsPath).To(Equal(metricsPath))
-	})
-
-	It("rewrites legacy metrics paths once and leaves later retries byte-stable", func() {
-		base := GinkgoT().TempDir()
-		registryPath := filepath.Join(base, "workspaces.db")
-		cwd := filepath.Join(base, "repo")
-		legacyMetricsPath := filepath.Join(cwd, ".ccp", "gain.db")
-
-		Expect(UpsertPath(registryPath, cwd, legacyMetricsPath)).To(Succeed())
-		Expect(RewriteProjectStateDir(registryPath, ".ccp", ".cmdshape")).To(Succeed())
-		entries, err := ListPath(registryPath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(entries).To(HaveLen(1))
-		Expect(entries[0].MetricsPath).To(Equal(filepath.Join(cwd, ".cmdshape", "gain.db")))
-		afterFirstRewrite, err := os.ReadFile(registryPath)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(RewriteProjectStateDir(registryPath, ".ccp", ".cmdshape")).To(Succeed())
-		afterRetry, err := os.ReadFile(registryPath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(afterRetry).To(Equal(afterFirstRewrite))
 	})
 
 	It("returns an error when a stored workspace entry is malformed", func() {

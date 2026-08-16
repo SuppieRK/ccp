@@ -44,7 +44,7 @@ matters.
 Install the latest release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh
+curl --proto "=https" --tlsv1.2 -sSfL https://raw.githubusercontent.com/SuppieRK/cmdshape/main/scripts/install.sh | sh
 ```
 
 Then initialize the integrations you want:
@@ -125,6 +125,11 @@ Ask your coding agent:
 > Do not trust the project filter until I have reviewed its complete source.
 
 The agent workflow is deliberately reviewable:
+
+`cmdshape` treats the nearest enclosing Git worktree root as the project root;
+outside Git repositories, it uses the current directory. Project-local
+`.cmdshape` paths below refer to that resolved root even when the command runs
+from a subdirectory.
 
 1. Inspect the active filter and copy it into `./.cmdshape/filters`, or scaffold
    a new one with `cmdshape filter new <tool>`.

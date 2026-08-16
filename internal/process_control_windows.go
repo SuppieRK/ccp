@@ -3,6 +3,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -11,7 +12,7 @@ import (
 	"syscall"
 )
 
-func configureManagedCommand(cmd *exec.Cmd) {
+func configureManagedCommand(cmd *exec.Cmd, _ context.Context) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {
@@ -39,3 +40,10 @@ func taskkillExecutablePath() string {
 	}
 	return filepath.Join(systemRoot, "System32", "taskkill.exe")
 }
+
+func nativeExitCode(exitErr *exec.ExitError) (int, bool) {
+	code := exitErr.ExitCode()
+	return code, code >= 0
+}
+
+func isHardKillExitCode(int) bool { return false }

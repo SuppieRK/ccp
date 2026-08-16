@@ -39,7 +39,6 @@ var _ = Describe("Parse", func() {
 		Entry("raw for init", "--raw", "init"),
 		Entry("raw for gain", "--raw", "gain"),
 		Entry("raw for history", "--raw", "history"),
-		Entry("raw for migrate", "--raw", "migrate"),
 		Entry("raw for upgrade", "--raw", "upgrade"),
 		Entry("raw for uninstall", "--raw", "uninstall"),
 		Entry("raw for capture", "--raw", "capture"),
@@ -56,7 +55,6 @@ var _ = Describe("Parse", func() {
 		Entry("capture", "capture"),
 		Entry("gain", "gain"),
 		Entry("history", "history"),
-		Entry("migrate", "migrate"),
 		Entry("upgrade", "upgrade"),
 		Entry("uninstall", "uninstall"),
 		Entry("verify", "verify"),
@@ -78,6 +76,8 @@ var _ = Describe("Parse", func() {
 		},
 		Entry("raw", []string{"--raw", "ls"}),
 		Entry("confidential", []string{"--confidential", "secret", "ls"}),
+		Entry("raw native migrate", []string{"--raw", "migrate", "status"}),
+		Entry("confidential native migrate", []string{"--confidential", "secret", "migrate", "status"}),
 	)
 
 	It("treats bare double-dash as the end of cmdshape option parsing", func() {
@@ -131,7 +131,6 @@ var _ = Describe("Parse", func() {
 			Entry("init", "init"),
 			Entry("gain", "gain"),
 			Entry("history", "history"),
-			Entry("migrate", "migrate"),
 			Entry("verify", "verify"),
 			Entry("upgrade", "upgrade"),
 			Entry("uninstall", "uninstall"),
@@ -146,6 +145,7 @@ var _ = Describe("Parse", func() {
 			Entry("empty", ""),
 			Entry("pwd", "pwd"),
 			Entry("bash", "bash"),
+			Entry("native migrate", "migrate"),
 		)
 
 		DescribeTable("classifying managed argument slices",

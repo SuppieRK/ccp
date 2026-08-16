@@ -21,6 +21,7 @@ type hookRewriteConformanceCase struct {
 
 var hookRewriteConformanceCases = []hookRewriteConformanceCase{
 	{name: "simple external", command: "git status", expected: "cmdshape git status"},
+	{name: "relative executable", command: "./gradlew --version", expected: "cmdshape ./gradlew --version"},
 	{name: "safe and chain", command: "git status && ls", expected: "cmdshape git status && cmdshape ls"},
 	{name: "safe or and semicolon chain", command: "git status || ls; date", expected: "cmdshape git status || cmdshape ls ; cmdshape date"},
 	{name: "quoted and operator", command: `git commit -m "a && b"`, expected: `cmdshape git commit -m "a && b"`},

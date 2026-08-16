@@ -43,8 +43,12 @@ collect_go_files() {
 }
 
 run_validation() {
-  local summary_out go_files go_file_count
+	local summary_out go_files go_file_count tracked_before tracked_after unformatted
   cd "$ROOT_DIR"
+	tracked_before="$(mktemp)"
+	tracked_after="$(mktemp)"
+	trap 'rm -f "$tracked_before" "$tracked_after"' RETURN
+	git diff --binary --no-ext-diff HEAD -- . > "$tracked_before"
   export GOCACHE="${GOCACHE:-$ROOT_DIR/.gocache}"
   export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$ROOT_DIR/.cache}"
   mkdir -p "$GOCACHE" "$XDG_CACHE_HOME"
@@ -53,17 +57,17 @@ run_validation() {
   go_files="$(collect_go_files)"
   if [[ -n "$go_files" ]]; then
     go_file_count="$(printf '%s\n' "$go_files" | wc -l | tr -d '[:space:]')"
-    echo "[validate] gofmt -w ${go_file_count} files"
-    while IFS= read -r go_file; do
-      [[ -z "$go_file" ]] && continue
-      gofmt -w "$go_file"
-    done <<EOF
-$go_files
-EOF
+		echo "[validate] gofmt check ${go_file_count} files"
+		unformatted="$(gofmt -l $go_files)"
+		if [[ -n "$unformatted" ]]; then
+			printf '%s\n' "$unformatted" >&2
+			gofmt -d $go_files >&2
+			return 1
+		fi
   fi
 
-  echo "[validate] go mod tidy"
-  go mod tidy
+	echo "[validate] go mod tidy -diff"
+	go mod tidy -diff
 
   echo "[validate] bash ./scripts/test-benchmark-discover.sh"
   bash ./scripts/test-benchmark-discover.sh
@@ -106,6 +110,14 @@ EOF
 
   echo "[validate] go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module github.com/SuppieRK/cmdshape -internal-prefix internal/ -threshold 80 -summary-out ${summary_out}"
   go run ./cmd/coverage-gate -coverprofile .artifacts/coverage/internal.cover -module github.com/SuppieRK/cmdshape -internal-prefix internal/ -threshold 80 -summary-out "$summary_out"
+	git diff --binary --no-ext-diff HEAD -- . > "$tracked_after"
+	if ! cmp -s "$tracked_before" "$tracked_after"; then
+		echo "[validate] validation modified tracked files" >&2
+		diff -u "$tracked_before" "$tracked_after" >&2 || true
+		return 1
+	fi
+	rm -f "$tracked_before" "$tracked_after"
+	trap - RETURN
   return 0
 }
 

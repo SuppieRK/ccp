@@ -1,5 +1,1 @@
-
-> ccp-npm-benchmark-basic@1.0.0 warning-actionable
-> node scripts/warning_actionable.js
-
 Checked 1 file

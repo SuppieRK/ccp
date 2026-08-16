@@ -395,6 +395,7 @@ var _ = ginkgo.Describe("Claude hook script execution", func() {
 		ginkgo.Entry("whitespace command remains untouched", hookCase{name: "whitespace command remains untouched", input: `{"tool_input":{"command":"   "}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
 		ginkgo.Entry("already prefixed command", hookCase{name: "already prefixed command", input: `{"tool_input":{"command":"cmdshape pwd"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
 		ginkgo.Entry("malformed chain remains untouched", hookCase{name: "malformed chain remains untouched", input: `{"tool_input":{"command":"git status &&"}}`, withCmdshape: true, wantLog: "skip-no-change", wantNoOutput: true}),
+		ginkgo.Entry("relative executable rewrite", hookCase{name: "relative executable rewrite", input: `{"tool_input":{"command":"./gradlew --version"}}`, withCmdshape: true, wantCommand: "cmdshape ./gradlew --version"}),
 		ginkgo.Entry("simple chained rewrite", hookCase{name: "simple chained rewrite", input: `{"tool_input":{"command":"git status && ls"}}`, withCmdshape: true, wantCommand: "cmdshape git status && cmdshape ls"}),
 		ginkgo.Entry("double quoted rewrite", hookCase{name: "double quoted rewrite", input: `{"tool_input":{"command":"git commit -m \"test\""}}`, withCmdshape: true, wantCommand: `cmdshape git commit -m "test"`}),
 		ginkgo.Entry("single quoted rewrite", hookCase{name: "single quoted rewrite", input: `{"tool_input":{"command":"git commit -m 'test'"}}`, withCmdshape: true, wantCommand: `cmdshape git commit -m 'test'`}),

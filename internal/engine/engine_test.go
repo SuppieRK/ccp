@@ -103,9 +103,17 @@ type scriptedFilter struct {
 	stdoutAction contracts.Action
 	stderrAction contracts.Action
 	exitAction   contracts.Action
+	stdoutCalls  int
+	stderrCalls  int
+	exitCalls    int
 }
 
 type interleavingFilter struct{}
+
+type combinedNoopExitFilter struct {
+	interleavingFilter
+	exitKind contracts.ActionKind
+}
 
 func (f *interleavingFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
 	return command, nil
@@ -134,6 +142,10 @@ func (f *interleavingFilter) OnStdoutExit(contracts.Context) contracts.Action {
 	return contracts.Action{Kind: contracts.ActionKeep}
 }
 
+func (f *combinedNoopExitFilter) OnStdoutExit(contracts.Context) contracts.Action {
+	return contracts.Action{Kind: f.exitKind, Stream: contracts.StreamCombined}
+}
+
 func (f *scriptedFilter) PrepareCommand(command contracts.Command) (contracts.Command, error) {
 	return command, nil
 }
@@ -143,14 +155,17 @@ func (f *scriptedFilter) Dispatch(command contracts.Command) string {
 }
 
 func (f *scriptedFilter) OnStdout(string, contracts.Context) contracts.Action {
+	f.stdoutCalls++
 	return f.stdoutAction
 }
 
 func (f *scriptedFilter) OnStderr(string, contracts.Context) contracts.Action {
+	f.stderrCalls++
 	return f.stderrAction
 }
 
 func (f *scriptedFilter) OnStdoutExit(contracts.Context) contracts.Action {
+	f.exitCalls++
 	return f.exitAction
 }
 
@@ -301,7 +316,59 @@ var _ = Describe("Engine integration", func() {
 		})
 	})
 
+	Context("when candidate buffering crosses its byte limit", func() {
+		It("flushes raw records without invoking filters for the crossing record", func() {
+			filter := &scriptedFilter{
+				stdoutAction: contracts.Action{Kind: contracts.ActionKeep},
+				stderrAction: contracts.Action{Kind: contracts.ActionKeep},
+				exitAction:   contracts.Action{Kind: contracts.ActionKeep},
+			}
+			state := newStateWithLimit(contracts.Command{Args: []string{"bounded"}, Tool: "bounded"}, filter, 5)
+
+			Expect(state.Stdout("abc")).To(BeNil())
+			entries := state.Stderr("def")
+			Expect(entryLines(entries)).To(Equal([]string{"abc", "def"}))
+			Expect(entryStreams(entries)).To(Equal([]contracts.Stream{
+				contracts.StreamStdout,
+				contracts.StreamStderr,
+			}))
+			Expect(state.Passthrough()).To(BeTrue())
+
+			entries = state.Stdout("ghi")
+			Expect(entryLines(entries)).To(Equal([]string{"ghi"}))
+			Expect(entries[0].Original).To(Equal([]byte("ghi")))
+			Expect(entries[0].Transformed).To(Equal([]byte("ghi")))
+			Expect(state.Exit(0)).To(BeNil())
+			Expect(filter.stdoutCalls).To(Equal(1))
+			Expect(filter.stderrCalls).To(BeZero())
+			Expect(filter.exitCalls).To(BeZero())
+		})
+	})
+
 	Context("when exit handling targets the combined stream", func() {
+		DescribeTable("preserves shaped mixed-stream output for no-op actions",
+			func(kind contracts.ActionKind) {
+				state := newState(
+					contracts.Command{Args: []string{"combined-noop"}, Tool: "combined-noop"},
+					&combinedNoopExitFilter{exitKind: kind},
+				)
+
+				Expect(state.Stdout("out-1\n")).To(BeEmpty())
+				Expect(state.Stderr("err-1\n")).To(BeEmpty())
+				Expect(state.Stderr("drop noise\n")).To(BeEmpty())
+
+				entries := state.Exit(0)
+				Expect(entryLines(entries)).To(Equal([]string{"out-1\n", "err-1\n"}))
+				Expect(entryStreams(entries)).To(Equal([]contracts.Stream{
+					contracts.StreamStdout,
+					contracts.StreamStderr,
+				}))
+				Expect(state.Passthrough()).To(BeFalse())
+			},
+			Entry("keep", contracts.ActionKeep),
+			Entry("emit", contracts.ActionEmit),
+		)
+
 		It("falls back to raw ordered output when both native streams contributed", func() {
 			registry := NewRegistry()
 			registry.Register("combined", &combinedExitFilter{})
@@ -463,30 +530,6 @@ var _ = Describe("Engine integration", func() {
 			Expect(state.BufferedLines(contracts.StreamStdout)).To(Equal([]string{"x\n"}))
 			Expect(entryLines(state.Exit(0))).To(Equal([]string{"x\n"}))
 		})
-	})
-
-	It("flushes raw ordered records and switches permanently to passthrough at the candidate cap", func() {
-		filter := &scriptedFilter{
-			stdoutAction: contracts.Action{Kind: contracts.ActionKeep},
-			stderrAction: contracts.Action{Kind: contracts.ActionKeep},
-			exitAction:   contracts.Action{Kind: contracts.ActionKeep},
-		}
-		state := newStateWithLimit(contracts.Command{Args: []string{"bounded"}, Tool: "bounded"}, filter, 5)
-
-		Expect(state.Stdout("abc")).To(BeNil())
-		entries := state.Stderr("def")
-		Expect(entryLines(entries)).To(Equal([]string{"abc", "def"}))
-		Expect(entryStreams(entries)).To(Equal([]contracts.Stream{
-			contracts.StreamStdout,
-			contracts.StreamStderr,
-		}))
-		Expect(state.Passthrough()).To(BeTrue())
-
-		entries = state.Stdout("ghi")
-		Expect(entryLines(entries)).To(Equal([]string{"ghi"}))
-		Expect(entries[0].Original).To(Equal([]byte("ghi")))
-		Expect(entries[0].Transformed).To(Equal([]byte("ghi")))
-		Expect(state.Exit(0)).To(BeNil())
 	})
 
 	It("honors an explicit stderr exit target", func() {

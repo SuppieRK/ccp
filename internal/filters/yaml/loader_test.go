@@ -387,6 +387,37 @@ var _ = Describe("DefaultSources", func() {
 		}))
 	})
 
+	It("loads the trusted repository source when invoked from a subdirectory", func() {
+		prevVersion := version.Version
+		version.Version = "1.2.3"
+		DeferCleanup(func() { version.Version = prevVersion })
+		project := GinkgoT().TempDir()
+		nested := filepath.Join(project, "src", "feature")
+		home := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(project, ".git"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(project, ".cmdshape", "filters"), 0o755)).To(Succeed())
+		Expect(os.MkdirAll(nested, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(project, ".cmdshape", "filters", "git.yaml"), []byte(validLoaderStatusFilterYAML("git")), 0o644)).To(Succeed())
+		previousCWD, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(nested)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previousCWD) })
+		setLoaderTestHome(home)
+		restoreTrust := filtertrust.WithTestHome(home)
+		DeferCleanup(restoreTrust)
+		_, err = filtertrust.Trust(project)
+		Expect(err).NotTo(HaveOccurred())
+		canonicalProject, err := filtertrust.CanonicalRoot(project)
+		Expect(err).NotTo(HaveOccurred())
+
+		sources := DefaultSources()
+
+		Expect(sources).To(Equal([]v2filters.FilterSource{
+			v2filters.ProjectSource(canonicalProject),
+			v2filters.HomeSource(home),
+		}))
+	})
+
 	It("falls open to the home filter when project filter bytes are untrusted", func() {
 		prevVersion := version.Version
 		version.Version = "1.2.3"
@@ -790,6 +821,10 @@ var _ = Describe("readMappingsFile", func() {
 			Expect(err.Error()).To(ContainSubstring(expected))
 		},
 		Entry("unsupported versions", "version: 2\nmap:\n  demo: target\n", "version must be exactly 1"),
+		Entry("missing version", "map:\n  demo: target\n", "version must be exactly 1"),
+		Entry("unknown fields", "version: 1\nunknown: true\n", "field unknown not found"),
+		Entry("multiple documents", "version: 1\n---\nversion: 1\n", "multiple YAML documents"),
+		Entry("duplicate normalized aliases", "version: 1\nmap:\n  demo: one\n  \" demo \": two\n", "duplicate normalized mapping"),
 		Entry("blank aliases after trimming", "version: 1\nmap:\n  \"  \": target\n", "mapping keys and values must be non-empty"),
 		Entry("blank targets after trimming", "version: 1\nmap:\n  demo: \"   \"\n", "mapping keys and values must be non-empty"),
 	)

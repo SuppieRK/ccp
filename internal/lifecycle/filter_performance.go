@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"cmp"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -157,7 +158,7 @@ func parseFilterPerformanceFlags(args []string) (filterPerformanceFlags, bool, e
 		return filterPerformanceFlags{}, false, fmt.Errorf("invalid --limit %d (expected -1, 0, or a positive integer)", out.limit)
 	}
 	if fs.NArg() != 0 {
-		return filterPerformanceFlags{}, false, fmt.Errorf("filter performance does not accept positional arguments")
+		return filterPerformanceFlags{}, false, errors.New("filter performance does not accept positional arguments")
 	}
 	return out, false, nil
 }

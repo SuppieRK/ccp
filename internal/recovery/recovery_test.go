@@ -105,16 +105,14 @@ var _ = Describe("recovery storage", func() {
 		var wait sync.WaitGroup
 		errs := make(chan error, maxArtifacts+10)
 		for index := range maxArtifacts + 10 {
-			wait.Add(1)
-			go func() {
-				defer wait.Done()
+			wait.Go(func() {
 				_, err := Store(
 					[]string{"demo"},
 					[]Event{{Sequence: 0, Stream: contracts.StreamStdout, Data: []byte("event\n")}},
 					index+1,
 				)
 				errs <- err
-			}()
+			})
 		}
 		wait.Wait()
 		close(errs)
@@ -129,11 +127,19 @@ var _ = Describe("recovery storage", func() {
 	It("rejects a symlinked recovery root", func() {
 		outside := filepath.Join(root, "outside")
 		Expect(os.Mkdir(outside, 0o700)).To(Succeed())
+		outsideArtifact := filepath.Join(outside, "expired")
+		Expect(os.Mkdir(outsideArtifact, 0o700)).To(Succeed())
+		old := time.Now().Add(-maxArtifactAge - time.Hour)
+		Expect(os.Chtimes(outsideArtifact, old, old)).To(Succeed())
 		recoveryRoot := filepath.Join(root, "cmdshape", "recovery")
 		Expect(os.MkdirAll(filepath.Dir(recoveryRoot), 0o700)).To(Succeed())
 		if err := os.Symlink(outside, recoveryRoot); err != nil {
 			Skip("symlink creation unavailable: " + err.Error())
 		}
+		_, err := List()
+		Expect(err).To(HaveOccurred())
+		_, statErr := os.Stat(outsideArtifact)
+		Expect(statErr).NotTo(HaveOccurred())
 
 		artifact, err := Store(
 			[]string{"demo"},
@@ -142,9 +148,8 @@ var _ = Describe("recovery storage", func() {
 		)
 		Expect(err).To(HaveOccurred())
 		Expect(artifact).To(BeNil())
-		entries, readErr := os.ReadDir(outside)
-		Expect(readErr).NotTo(HaveOccurred())
-		Expect(entries).To(BeEmpty())
+		_, statErr = os.Stat(outsideArtifact)
+		Expect(statErr).NotTo(HaveOccurred())
 	})
 
 	It("handles missing stores and malformed preferences", func() {

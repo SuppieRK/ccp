@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
-	"github.com/SuppieRK/cmdshape/internal/projectfiles"
-	"github.com/SuppieRK/cmdshape/internal/workspaces"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 type toolState struct {
@@ -27,7 +28,7 @@ func RunInit(args []string) error {
 		"install or update supported agent integrations",
 		[]string{"cmdshape init [--tools <tool,tool,...>]"},
 		"When --tools is omitted, cmdshape auto-detects supported tools from the current repository.",
-		"cmdshape refreshes the fully managed ~/.config/cmdshape directory, including ~/.config/cmdshape/filters, from shipped resources embedded in the binary.",
+		"cmdshape init installs agent integrations; shipped home filters are added on native or filter use and restored explicitly by cmdshape repair.",
 		"Repository markers drive detection only; each integration manages its own canonical install target.",
 		"Agent adapters may install into home-scoped locations when that is the supported integration surface.",
 	)
@@ -134,7 +135,6 @@ func applyAdapters(scope agents.Context, tools []string, adapters map[string]age
 			states = append(states, toolState{Tool: tool, Status: "failed", Reason: err.Error()})
 			return states, err
 		}
-
 		status := "applied"
 		reason := fmt.Sprintf("applied=%d noop=%d", applied, noops)
 		if applied == 0 && noops > 0 {

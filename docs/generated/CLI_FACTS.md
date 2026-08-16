@@ -17,7 +17,6 @@ This file is generated from runtime command and integration metadata. Run `go ru
 - `gain`
 - `history`
 - `init`
-- `migrate`
 - `recovery`
 - `repair`
 - `uninstall`

@@ -26,6 +26,10 @@ func (c registryContext) BufferedLines(stream contracts.Stream) []string {
 	return nil
 }
 
+func (c registryContext) BufferedCount(stream contracts.Stream) int {
+	return len(c.BufferedLines(stream))
+}
+
 func (c registryContext) ExitCode() int {
 	return c.exitCode
 }

@@ -186,6 +186,9 @@ func List() ([]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateRecoveryRoot(root); err != nil {
+		return nil, err
+	}
 	if err := rotate(root); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -238,7 +241,7 @@ func Purge() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err := projectfiles.RejectSymlinkPath(root); err != nil {
+	if err := validateRecoveryRoot(root); err != nil {
 		return 0, err
 	}
 	entries, err := os.ReadDir(root)
@@ -320,13 +323,17 @@ func removeOverflowRecoveryArtifacts(root string, items []recoveryCandidate) err
 }
 
 func ensurePrivateDirectory(path string) error {
-	if err := projectfiles.RejectSymlinkPath(path); err != nil {
+	if err := validateRecoveryRoot(path); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(path, 0o700); err != nil {
 		return err
 	}
 	return os.Chmod(path, 0o700)
+}
+
+func validateRecoveryRoot(path string) error {
+	return projectfiles.RejectSymlinkPath(path)
 }
 
 func artifactID() (string, error) {

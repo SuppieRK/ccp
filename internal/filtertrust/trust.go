@@ -72,7 +72,7 @@ func CanonicalRoot(root string) (string, error) {
 	root = strings.TrimSpace(root)
 	if root == "" {
 		var err error
-		root, err = os.Getwd()
+		root, err = projectfiles.ResolveProjectRoot("")
 		if err != nil {
 			return "", err
 		}
@@ -199,26 +199,6 @@ func sourceDigest(root string) (string, bool, error) {
 	return sourceFilesDigest(root, files), true, nil
 }
 
-// ProjectDigestForDomain returns the digest of the current project filter
-// bytes under an explicitly supplied domain. Lifecycle migration uses it to
-// validate an approval before translating that approval to the current domain.
-func ProjectDigestForDomain(root, domain string) (canonical, digest string, present bool, err error) {
-	canonical, err = CanonicalRoot(root)
-	if err != nil {
-		return "", "", false, err
-	}
-	files, present, err := readSourceFiles(canonical)
-	if err != nil || !present {
-		return canonical, "", present, err
-	}
-	return canonical, sourceFilesDigestWithDomain(canonical, files, domain), true, nil
-}
-
-// ProjectDigest returns the current-domain digest of the project filter bytes.
-func ProjectDigest(root string) (canonical, digest string, present bool, err error) {
-	return ProjectDigestForDomain(root, digestDomain)
-}
-
 func readSourceFiles(root string) ([]SourceFile, bool, error) {
 	filtersDir := filepath.Join(root, ".cmdshape", "filters")
 	if err := projectfiles.RejectSymlinkPath(filtersDir); err != nil {
@@ -250,12 +230,8 @@ func readSourceFiles(root string) ([]SourceFile, bool, error) {
 }
 
 func sourceFilesDigest(root string, files []SourceFile) string {
-	return sourceFilesDigestWithDomain(root, files, digestDomain)
-}
-
-func sourceFilesDigestWithDomain(root string, files []SourceFile, domain string) string {
 	hash := sha256.New()
-	writeDigestPart(hash, domain)
+	writeDigestPart(hash, digestDomain)
 	writeDigestPart(hash, filepath.ToSlash(root))
 	for _, file := range files {
 		writeDigestPart(hash, filepath.ToSlash(file.Name))

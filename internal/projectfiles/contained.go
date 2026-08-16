@@ -1,6 +1,7 @@
 package projectfiles
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,7 +57,7 @@ func containedPath(root, path string) (string, string, error) {
 	root = strings.TrimSpace(root)
 	path = strings.TrimSpace(path)
 	if root == "" || path == "" {
-		return "", "", fmt.Errorf("contained root and path must not be empty")
+		return "", "", errors.New("contained root and path must not be empty")
 	}
 	absRoot, err := filepath.Abs(filepath.Clean(root))
 	if err != nil {

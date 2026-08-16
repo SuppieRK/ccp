@@ -2,9 +2,10 @@ name: PR Validation
 
 on:
   pull_request:
-    paths-ignore:
-      - '**/*.md'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   plan:
@@ -15,10 +16,11 @@ jobs:
       has_tools: ${{ steps.plan.outputs.has_tools }}
       run_validate: ${{ steps.plan.outputs.run_validate }}
       run_benchmarks: ${{ steps.plan.outputs.run_benchmarks }}
+      run_fixture_verify: ${{ steps.plan.outputs.run_fixture_verify }}
       change_class: ${{ steps.plan.outputs.change_class }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -46,16 +48,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
           cache: true
 
       - name: Cache validation tool builds and lint state
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             .gocache
@@ -93,10 +95,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -132,10 +134,10 @@ jobs:
         include: ${{ fromJson(needs.plan.outputs.benchmark_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
 
@@ -147,7 +149,7 @@ jobs:
           echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
 
       - name: Restore benchmark history cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .artifacts/benchmark-history/${{ matrix.tool }}
           key: benchmark-report-main-${{ matrix.tool }}-v2-
@@ -176,10 +178,37 @@ jobs:
 
       - name: Upload benchmark artifacts
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: proxy-benchmark-pr-${{ matrix.tool }}
           path: .artifacts/benchmark/${{ matrix.tool }}
+
+  fixture-correctness:
+    name: Fixture Correctness / ${{ matrix.tool }}
+    needs: plan
+    if: needs.plan.outputs.run_fixture_verify == 'true' && needs.plan.outputs.has_tools == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.benchmark_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: 'go.mod'
+      - name: Build cmdshape binary
+        shell: bash
+        run: |
+          mkdir -p .bin
+          go build -o .bin/cmdshape ./cmd/cmdshape
+          echo "${GITHUB_WORKSPACE}/.bin" >> "$GITHUB_PATH"
+      - name: Verify fixture correctness
+        shell: bash
+        run: |
+          go run ./cmd/cmdshape-ci -fixture-correctness -tool "${{ matrix.tool }}"
 
   sonarqube-scan:
     name: SonarQube Scan (informational)
@@ -191,12 +220,12 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
 

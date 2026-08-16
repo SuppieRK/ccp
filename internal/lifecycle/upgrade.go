@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"archive/zip"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,9 +24,14 @@ import (
 const (
 	defaultUpgradeRepo    = "SuppieRK/cmdshape"
 	releaseChecksumsAsset = "cmdshape_checksums.txt"
+	maxReleaseBytes       = 1 << 20
+	maxChecksumBytes      = 1 << 20
+	maxArchiveBytes       = 128 << 20
+	maxUpgradeBinaryBytes = 64 << 20
+	maxUpgradeRedirects   = 5
 )
 
-const privateExecutableMode os.FileMode = 0o700
+const installedExecutableMode os.FileMode = 0o755
 
 type upgradeAssets struct {
 	archiveName string
@@ -68,7 +74,7 @@ func RunUpgrade(args []string) error {
 		"When --version is omitted, the latest release is selected.",
 		"Upgrade always resolves releases from the canonical repository.",
 		"After replacement, the old binary immediately executes the new binary's rewrite repair path.",
-		"Forward upgrades may run guarded current-repository cmdshape migrations; downgrades are rejected and require reinstalling the older version explicitly.",
+		"Downgrades are rejected and require reinstalling the older version explicitly.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -110,7 +116,7 @@ func RunUpgrade(args []string) error {
 }
 
 func resolveUpgradeVersion(repoName, requested, manualURL string) (string, version.Semantic, error) {
-	tag := strings.TrimSpace(requested)
+	tag := requested
 	if tag == "" {
 		latest, err := latestReleaseTag(repoName)
 		if err != nil {
@@ -229,7 +235,7 @@ func ensureUpgradeExecutablePermissions(exePath string) error {
 	if upgradeRuntimeOS() == "windows" {
 		return nil
 	}
-	return os.Chmod(exePath, privateExecutableMode)
+	return os.Chmod(exePath, installedExecutableMode)
 }
 
 func printUpgradeSuccess(exePath, assetName, tag string) error {
@@ -243,7 +249,7 @@ func rejectDowngrade(currentVersion string, target version.Semantic) error {
 		return nil
 	}
 	if target.Less(current) {
-		return fmt.Errorf("cmdshape upgrade: refusing downgrade from %s to %s; forward migrations are not reversible. To install an older version, uninstall cmdshape and install that version explicitly", current.String(), target.String())
+		return fmt.Errorf("cmdshape upgrade: refusing downgrade from %s to %s; uninstall cmdshape and install the older version explicitly", current.String(), target.String())
 	}
 	return nil
 }
@@ -254,20 +260,23 @@ func latestReleaseTag(repo string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(rel.TagName) == "" {
+	if rel.TagName == "" {
 		return "", errors.New("latest release has empty tag_name")
 	}
 	return rel.TagName, nil
 }
 
 func fetchRelease(endpoint string) (rel githubRelease, err error) {
+	if err := validateUpgradeURL(endpoint); err != nil {
+		return githubRelease{}, err
+	}
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return githubRelease{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	resp, err := upgradeHTTPClient.Do(req)
+	resp, err := upgradeClient().Do(req)
 	if err != nil {
 		return githubRelease{}, err
 	}
@@ -276,10 +285,66 @@ func fetchRelease(endpoint string) (rel githubRelease, err error) {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return githubRelease{}, fmt.Errorf("github api %s returned %d: %s", endpoint, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+	decoder := json.NewDecoder(io.LimitReader(resp.Body, maxReleaseBytes+1))
+	if err := decoder.Decode(&rel); err != nil {
 		return githubRelease{}, err
 	}
 	return rel, nil
+}
+
+func upgradeClient() *http.Client {
+	client := *upgradeHTTPClient
+	originalCheck := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= maxUpgradeRedirects {
+			return errors.New("too many upgrade redirects")
+		}
+		if err := validateUpgradeURL(req.URL.String()); err != nil {
+			return err
+		}
+		if originalCheck != nil {
+			return originalCheck(req, via)
+		}
+		return nil
+	}
+	return &client
+}
+
+func validateUpgradeURL(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid upgrade URL: %w", err)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if parsed.User != nil {
+		return fmt.Errorf("upgrade URL must not contain credentials: %s", raw)
+	}
+	if parsed.Port() != "" && parsed.Port() != "443" {
+		return fmt.Errorf("upgrade URL must use the default HTTPS port: %s", raw)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("upgrade URL must use HTTPS: %s", raw)
+	}
+	if host != "github.com" && host != "api.github.com" && !strings.HasSuffix(host, ".githubusercontent.com") {
+		return fmt.Errorf("upgrade URL host is not allowed: %s", host)
+	}
+	return nil
+}
+
+func readBoundedFile(path string, limit int64) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	body, err := io.ReadAll(io.LimitReader(file, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > limit {
+		return nil, fmt.Errorf("file exceeds %d-byte limit", limit)
+	}
+	return body, nil
 }
 
 func releaseAssetName(tag, goos, goarch string) (asset string, binary string, err error) {
@@ -302,10 +367,20 @@ func releaseAssetName(tag, goos, goarch string) (asset string, binary string, er
 }
 
 func selectAssetURL(rel githubRelease, assetName string) (string, error) {
+	selected := ""
 	for _, a := range rel.Assets {
 		if a.Name == assetName && strings.TrimSpace(a.BrowserDownloadURL) != "" {
-			return a.BrowserDownloadURL, nil
+			if selected != "" {
+				return "", fmt.Errorf("duplicate asset %q", assetName)
+			}
+			if err := validateUpgradeURL(a.BrowserDownloadURL); err != nil {
+				return "", err
+			}
+			selected = a.BrowserDownloadURL
 		}
+	}
+	if selected != "" {
+		return selected, nil
 	}
 	return "", fmt.Errorf("asset %q not found", assetName)
 }
@@ -318,11 +393,11 @@ func downloadAndExtractUpgradeBinary(assetURL, checksumURL, checksumsAsset, asse
 	cleanup = func() { _ = os.RemoveAll(tmpDir) }
 
 	zipPath := filepath.Join(tmpDir, "asset.zip")
-	if err := downloadFile(assetURL, zipPath); err != nil {
+	if err := downloadFile(assetURL, zipPath, maxArchiveBytes); err != nil {
 		return "", cleanup, err
 	}
 	checksumsPath := filepath.Join(tmpDir, checksumsAsset)
-	if err := downloadFile(checksumURL, checksumsPath); err != nil {
+	if err := downloadFile(checksumURL, checksumsPath, maxChecksumBytes); err != nil {
 		return "", cleanup, err
 	}
 	if err := verifyDownloadedAssetChecksum(checksumsPath, zipPath, assetName); err != nil {
@@ -345,7 +420,7 @@ func downloadAndExtractUpgradeBinary(assetURL, checksumURL, checksumsAsset, asse
 }
 
 func verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName string) error {
-	body, err := os.ReadFile(checksumsPath)
+	body, err := readBoundedFile(checksumsPath, maxChecksumBytes)
 	if err != nil {
 		return err
 	}
@@ -364,17 +439,30 @@ func verifyDownloadedAssetChecksum(checksumsPath, assetPath, assetName string) e
 }
 
 func checksumForAsset(contents, assetName string) (string, error) {
+	var match string
 	for line := range strings.SplitSeq(contents, "\n") {
 		fields := strings.Fields(strings.TrimSpace(line))
-		if len(fields) < 2 {
+		if len(fields) != 2 {
 			continue
 		}
 		name := strings.TrimPrefix(fields[1], "*")
 		name = strings.TrimPrefix(name, "./")
-		if filepath.Base(name) != assetName {
+		if name != assetName {
 			continue
 		}
-		return fields[0], nil
+		if len(fields[0]) != sha256.Size*2 {
+			return "", fmt.Errorf("checksum for asset %q must contain exactly 64 hex digits", assetName)
+		}
+		if _, err := hex.DecodeString(fields[0]); err != nil {
+			return "", fmt.Errorf("checksum for asset %q is not hexadecimal: %w", assetName, err)
+		}
+		if match != "" {
+			return "", fmt.Errorf("duplicate checksum for asset %q", assetName)
+		}
+		match = fields[0]
+	}
+	if match != "" {
+		return match, nil
 	}
 	return "", fmt.Errorf("checksum for asset %q not found", assetName)
 }
@@ -389,16 +477,19 @@ func fileSHA256(path string) (string, error) {
 	if _, err := io.Copy(h, f); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func downloadFile(url, dst string) (err error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+func downloadFile(rawURL, dst string, limit int64) (err error) {
+	if err := validateUpgradeURL(rawURL); err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	resp, err := upgradeHTTPClient.Do(req)
+	resp, err := upgradeClient().Do(req)
 	if err != nil {
 		return err
 	}
@@ -412,8 +503,14 @@ func downloadFile(url, dst string) (err error) {
 		return err
 	}
 	defer closeWithErr(f, &err)
-	_, err = io.Copy(f, resp.Body)
-	return err
+	written, err := io.Copy(f, io.LimitReader(resp.Body, limit+1))
+	if err != nil {
+		return err
+	}
+	if written > limit {
+		return fmt.Errorf("download exceeds %d-byte limit", limit)
+	}
+	return f.Sync()
 }
 
 func replaceBinary(dest, src string) (err error) {
@@ -428,12 +525,11 @@ func replaceBinary(dest, src string) (err error) {
 		return err
 	}
 
-	tmp := dest + ".new"
-	_ = os.Remove(tmp)
-	df, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
+	df, err := os.CreateTemp(filepath.Dir(dest), "."+filepath.Base(dest)+".new-*")
 	if err != nil {
 		return err
 	}
+	tmp := df.Name()
 	dfClosed := false
 	defer func() {
 		if !dfClosed {
@@ -487,15 +583,8 @@ func closeWithErr(c io.Closer, retErr *error) {
 func extractBinaryFromZip(files []*zip.File, binaryName, tmpDir string) (string, error) {
 	var selected *zip.File
 	for _, f := range files {
-		name := filepath.ToSlash(f.Name)
-		if filepath.IsAbs(f.Name) || strings.HasPrefix(name, "/") || strings.Contains(name, "../") || strings.Contains(name, `\`) {
-			return "", fmt.Errorf("unsafe archive entry %q", f.Name)
-		}
-		if f.Mode()&os.ModeSymlink != 0 || (!f.FileInfo().Mode().IsRegular() && !f.FileInfo().IsDir()) {
-			return "", fmt.Errorf("archive entry %q is not a regular file", f.Name)
-		}
-		if name != binaryName {
-			continue
+		if err := validateUpgradeArchiveEntry(f, binaryName); err != nil {
+			return "", err
 		}
 		if selected != nil {
 			return "", fmt.Errorf("archive contains duplicate binary entry %q", binaryName)
@@ -515,6 +604,26 @@ func extractBinaryFromZip(files []*zip.File, binaryName, tmpDir string) (string,
 	return dstPath, nil
 }
 
+func validateUpgradeArchiveEntry(f *zip.File, binaryName string) error {
+	name := filepath.ToSlash(f.Name)
+	if filepath.IsAbs(f.Name) || strings.HasPrefix(name, "/") || strings.Contains(name, "../") || strings.Contains(name, `\`) {
+		return fmt.Errorf("unsafe archive entry %q", f.Name)
+	}
+	if f.Mode()&os.ModeSymlink != 0 || (!f.FileInfo().Mode().IsRegular() && !f.FileInfo().IsDir()) {
+		return fmt.Errorf("archive entry %q is not a regular file", f.Name)
+	}
+	if !f.FileInfo().Mode().IsRegular() {
+		return fmt.Errorf("unexpected archive entry %q", f.Name)
+	}
+	if name != binaryName {
+		return fmt.Errorf("binary %s not found in archive: unexpected archive entry %q", binaryName, f.Name)
+	}
+	if f.UncompressedSize64 > maxUpgradeBinaryBytes {
+		return fmt.Errorf("archive binary exceeds %d-byte limit", maxUpgradeBinaryBytes)
+	}
+	return nil
+}
+
 func copyZipFileToPath(f *zip.File, dstPath string) (err error) {
 	rc, err := f.Open()
 	if err != nil {
@@ -522,21 +631,27 @@ func copyZipFileToPath(f *zip.File, dstPath string) (err error) {
 	}
 	defer closeWithErr(rc, &err)
 
-	df, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, privateExecutableMode)
+	df, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, installedExecutableMode)
 	if err != nil {
 		return err
 	}
 	defer closeWithErr(df, &err)
 
-	_, err = io.Copy(df, rc)
-	return err
+	written, err := io.Copy(df, io.LimitReader(rc, maxUpgradeBinaryBytes+1))
+	if err != nil {
+		return err
+	}
+	if written != int64(f.UncompressedSize64) || written > maxUpgradeBinaryBytes {
+		return errors.New("archive binary size mismatch")
+	}
+	return df.Sync()
 }
 
 func ensureExecutableIfNeeded(path string) error {
 	if upgradeRuntimeOS() == "windows" {
 		return nil
 	}
-	return os.Chmod(path, privateExecutableMode)
+	return os.Chmod(path, installedExecutableMode)
 }
 
 func backupBinaryPath(exePath string) string {
@@ -551,9 +666,8 @@ func validateStagedBinaryVersion(path, expected string) error {
 	if err != nil {
 		return fmt.Errorf("run staged --version: %w", err)
 	}
-	actual := strings.TrimSpace(string(output))
-	if actual != expected {
-		return fmt.Errorf("staged version %q does not match requested %q", actual, expected)
+	if string(output) != expected+"\n" {
+		return fmt.Errorf("staged version %q does not match requested %q followed by one LF", string(output), expected)
 	}
 	return nil
 }
