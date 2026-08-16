@@ -58,10 +58,10 @@ type blockStat struct {
 
 func ParseProfile(r io.Reader, modulePath, internalPrefix string, threshold float64) (Report, error) {
 	if strings.TrimSpace(modulePath) == "" {
-		return Report{}, fmt.Errorf("module path is required")
+		return Report{}, errors.New("module path is required")
 	}
 	if strings.TrimSpace(internalPrefix) == "" {
-		return Report{}, fmt.Errorf("internal prefix is required")
+		return Report{}, errors.New("internal prefix is required")
 	}
 
 	profiles, err := parseProfiles(r)
@@ -83,7 +83,7 @@ func parseProfiles(r io.Reader) ([]*cover.Profile, error) {
 	files := make([]string, 0, 128)
 	for lineNo := 2; ; lineNo++ {
 		line, readErr := readProfileLine(reader)
-		if readErr != nil && readErr != io.EOF {
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
 			return nil, readErr
 		}
 		if line != "" {
@@ -91,7 +91,7 @@ func parseProfiles(r io.Reader) ([]*cover.Profile, error) {
 				return nil, fmt.Errorf("line %d: %w", lineNo, err)
 			}
 		}
-		if readErr == io.EOF {
+		if errors.Is(readErr, io.EOF) {
 			break
 		}
 	}
@@ -138,7 +138,7 @@ func readProfileMode(reader *bufio.Reader) (string, error) {
 	}
 	mode = strings.TrimSpace(mode)
 	if mode == "" {
-		return "", fmt.Errorf("coverage mode is required")
+		return "", errors.New("coverage mode is required")
 	}
 	return mode, nil
 }

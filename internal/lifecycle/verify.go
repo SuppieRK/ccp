@@ -2,7 +2,6 @@ package lifecycle
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,7 +52,7 @@ func RunVerify(args []string) error {
 		})
 	}
 	if len(fs.Args()) > 0 {
-		return recordFailure("", "validate_flags", fmt.Errorf("verify does not accept command arguments; use command.yaml in the fixture directory"))
+		return recordFailure("", "validate_flags", errors.New("verify does not accept command arguments; use command.yaml in the fixture directory"))
 	}
 
 	dir, err := resolveVerifyDir(strings.TrimSpace(*dirFlag))

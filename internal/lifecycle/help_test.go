@@ -96,17 +96,6 @@ var _ = Describe("lifecycle help", func() {
 				"output.txt",
 			},
 		}),
-		Entry("init", helpCase{
-			command: "init",
-			parts: []string{
-				"cmdshape init - install or update supported agent integrations",
-				"Usage:",
-				"Flags:",
-				"Notes:",
-				"--tools",
-				"~/.config/cmdshape/filters",
-			},
-		}),
 		Entry("history", helpCase{
 			command: "history",
 			parts: []string{
@@ -138,7 +127,7 @@ var _ = Describe("lifecycle help", func() {
 				"Flags:",
 				"Notes:",
 				"agents should prefer 'cmdshape filter prompt <name>' first",
-				"./.cmdshape/filters/<name>.yaml",
+				"<project-root>/.cmdshape/filters/<name>.yaml",
 				".mappings.yaml",
 			},
 		}),
@@ -172,7 +161,7 @@ var _ = Describe("lifecycle help", func() {
 				"Notes:",
 				"--version",
 				"rewrite repair",
-				"downgrades are rejected",
+				"Downgrades are rejected",
 			},
 		}),
 		Entry("repair", helpCase{
@@ -185,7 +174,6 @@ var _ = Describe("lifecycle help", func() {
 				"--yes",
 				"--no",
 				"~/.config/cmdshape",
-				"current-repository cmdshape migrations",
 				"without mutating repository files",
 			},
 		}),
@@ -202,6 +190,23 @@ var _ = Describe("lifecycle help", func() {
 			},
 		}),
 	)
+
+	It("describes init as integration-only lifecycle work", func() {
+		out := captureStderr(func() error { return RunInit([]string{"--help"}) })
+
+		for _, part := range []string{
+			"cmdshape init - install or update supported agent integrations",
+			"Usage:",
+			"Flags:",
+			"Notes:",
+			"--tools",
+			"installs agent integrations",
+			"restored explicitly by cmdshape repair",
+		} {
+			Expect(out).To(ContainSubstring(part))
+		}
+		Expect(out).NotTo(ContainSubstring("cmdshape refreshes the fully managed"))
+	})
 
 	DescribeTable("help requests do not emit report output",
 		func(command string) {

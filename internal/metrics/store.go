@@ -447,8 +447,11 @@ func scanRunRecords(path string, opts QueryOptions, visit func(runRecord) error)
 		if bucket == nil {
 			return nil
 		}
-		return bucket.ForEach(func(_, value []byte) error {
-			record := decodeRunRecord(value)
+		return bucket.ForEach(func(key, value []byte) error {
+			record, err := decodeRunRecord(value)
+			if err != nil {
+				return fmt.Errorf("decode run record %x: %w", key, err)
+			}
 			if !matchesOptions(record, opts, threshold) {
 				return nil
 			}
@@ -993,40 +996,43 @@ func encodeRunRecord(rec runRecord) []byte {
 	return out
 }
 
-func decodeRunRecord(b []byte) runRecord {
+func decodeRunRecord(b []byte) (runRecord, error) {
 	decoder := runRecordDecoder{raw: b}
 	rec, ok := decoder.requiredFields()
 	if !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed required fields")
 	}
 	if rec.Tool == "" {
 		rec.Tool = "unknown"
 	}
 	if decoder.atEnd() {
-		return rec
+		return rec, nil
 	}
 	if rec.FilterSourceKind, ok = decoder.string(); !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed filter source kind")
 	}
 	if rec.FilterPath, ok = decoder.string(); !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed filter path")
 	}
 	if rec.FilterHash, ok = decoder.string(); !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed filter hash")
 	}
 	if decoder.atEnd() {
-		return rec
+		return rec, nil
 	}
 	if rec.RegistryBuildMS, ok = decoder.nonNegativeInt64(); !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed registry build duration")
 	}
 	rec.RegistryBuildRecorded = true
 	rawSources, ok := decoder.string()
 	if !ok {
-		return runRecord{}
+		return runRecord{}, errors.New("malformed registry sources")
+	}
+	if !decoder.atEnd() {
+		return runRecord{}, errors.New("trailing record bytes")
 	}
 	rec.RegistrySources = decodeRegistrySources(rawSources)
-	return rec
+	return rec, nil
 }
 
 type runRecordDecoder struct {
@@ -1098,6 +1104,9 @@ func (d *runRecordDecoder) signedInt() (int, bool) {
 func (d *runRecordDecoder) boolean() (bool, bool) {
 	value, ok := d.take(1)
 	if !ok {
+		return false, false
+	}
+	if value[0] > 1 {
 		return false, false
 	}
 	return value[0] == 1, true

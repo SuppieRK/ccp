@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("generated CLI facts", func() {
 	It("uses the runtime command and integration inventories", func() {
-		Expect(cli.LifecycleCommands()).To(ContainElements("capture", "filter", "history", "migrate", "recovery", "upgrade", "verify"))
+		Expect(cli.LifecycleCommands()).To(ContainElements("capture", "filter", "history", "recovery", "upgrade", "verify"))
 		adapters, err := agents.NewBuiltInAdapters()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(agents.SupportedTools(adapters)).NotTo(BeEmpty())

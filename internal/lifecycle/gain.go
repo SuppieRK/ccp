@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -185,17 +186,17 @@ func parseHistoryPurgeRequest(args []string) (historyPurgeRequest, bool, error) 
 		return historyPurgeRequest{}, true, nil
 	}
 	if len(fs.Args()) != 0 {
-		return historyPurgeRequest{}, false, fmt.Errorf("history purge does not accept positional arguments")
+		return historyPurgeRequest{}, false, errors.New("history purge does not accept positional arguments")
 	}
 	if strings.TrimSpace(*before) == "" {
-		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --before <duration>")
+		return historyPurgeRequest{}, false, errors.New("history purge requires --before <duration>")
 	}
 	duration, err := parseSince(*before)
 	if err != nil || duration <= 0 {
 		return historyPurgeRequest{}, false, fmt.Errorf("invalid --before %q", *before)
 	}
 	if !*yes {
-		return historyPurgeRequest{}, false, fmt.Errorf("history purge requires --yes")
+		return historyPurgeRequest{}, false, errors.New("history purge requires --yes")
 	}
 	return historyPurgeRequest{
 		cutoff: gainNow().Add(-duration),
@@ -297,7 +298,7 @@ func parseReportFlags(name string, args []string) (reportFlags, bool, error) {
 		return reportFlags{}, false, err
 	}
 	if name == "history" && out.table {
-		return reportFlags{}, false, fmt.Errorf("--table is only valid for gain")
+		return reportFlags{}, false, errors.New("--table is only valid for gain")
 	}
 	if out.limit < -1 {
 		return reportFlags{}, false, fmt.Errorf("invalid --limit %d (expected -1, 0, or a positive integer)", out.limit)
@@ -307,7 +308,7 @@ func parseReportFlags(name string, args []string) (reportFlags, bool, error) {
 
 func validateGainFlags(flags reportFlags) error {
 	if flags.table && flags.format != "text" {
-		return fmt.Errorf("--table is only valid with text output")
+		return errors.New("--table is only valid with text output")
 	}
 	return nil
 }
@@ -535,7 +536,7 @@ func validateReportFormat(format string) error {
 
 func validateReportPeriod(commandName, period string) error {
 	if commandName == "history" && period != "" {
-		return fmt.Errorf("--period is only valid for gain")
+		return errors.New("--period is only valid for gain")
 	}
 	if period == "" {
 		return nil

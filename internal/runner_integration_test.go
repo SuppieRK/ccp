@@ -17,6 +17,7 @@ import (
 	corefilters "github.com/SuppieRK/cmdshape/internal/filters"
 	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
 	"github.com/SuppieRK/cmdshape/internal/metrics"
+	"github.com/SuppieRK/cmdshape/internal/workspaces"
 )
 
 var _ = Describe("nested and chained cmdshape execution", Ordered, func() {
@@ -49,7 +50,9 @@ var _ = Describe("nested and chained cmdshape execution", Ordered, func() {
 		Expect(os.WriteFile(filepath.Join(root, "src", "alpha.txt"), []byte("alpha v2\nalpha done\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(root, "src", "beta.txt"), []byte("beta v2\nbeta v2 again\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(root, ".git", "ignored.txt"), []byte("ignored v2\n"), 0o644)).To(Succeed())
-		return root
+		canonical, err := filepath.EvalSymlinks(root)
+		Expect(err).NotTo(HaveOccurred())
+		return canonical
 	}
 
 	runCmdshape := func(workdir string, args ...string) (string, string, error) {
@@ -139,6 +142,23 @@ printf 'internal/metrics/store.go:90:1: too many errors\n' >&2`
 			Expect(history[0].EstimatedInputTokens).To(BeNumerically("<", 256))
 			Expect(history[0].EstimatedOutputTokens).To(BeNumerically("<", 256))
 			Expect(history[0].Passthrough).To(BeTrue())
+		})
+	})
+
+	Context("when invoked below the repository root", func() {
+		It("stores and registers metrics only at the repository root", func() {
+			root := newWorkspace()
+			nested := filepath.Join(root, "src")
+
+			stdout := expectSuccessfulRun(nested, "printf", "nested-ok\n")
+
+			Expect(stdout).To(Equal("nested-ok\n"))
+			Expect(filepath.Join(root, ".cmdshape", "gain.db")).To(BeAnExistingFile())
+			Expect(filepath.Join(nested, ".cmdshape")).NotTo(BeAnExistingFile())
+			entries, err := workspaces.ListPath(workspaces.PathForHome(nested))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(HaveLen(1))
+			Expect(entries[0].CWD).To(Equal(root))
 		})
 	})
 })

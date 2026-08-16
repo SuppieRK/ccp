@@ -140,8 +140,8 @@ var _ = Describe("Runner", func() {
 				}
 
 				Expect(filteryaml.DefaultSources()).To(BeNil())
-				Expect(defaultMetricsPath()).To(BeEmpty())
 				Expect(currentWorkingDir()).To(BeEmpty())
+				Expect(currentProjectRoot()).To(BeEmpty())
 
 				runner := NewRunnerWithOptions(Options{})
 				Expect(runner.metricsPath).To(BeEmpty())
@@ -350,6 +350,46 @@ var _ = Describe("Runner", func() {
 	})
 
 	Context("when executing real commands", Label("live-smoke"), func() {
+		It("filters mixed-stream output from an explicitly wrapped Gradle executable", func() {
+			if runtime.GOOS == "windows" {
+				Skip("uses an executable Unix Gradle wrapper script")
+			}
+
+			root := GinkgoT().TempDir()
+			gradlewPath := filepath.Join(root, "gradlew")
+			Expect(os.WriteFile(gradlewPath, []byte(`#!/bin/sh
+printf '%s\n' 'WARNING: A restricted method in java.lang.System has been called' >&2
+printf '\n' >&2
+printf '%s\n' '> Configure project :app'
+printf '%s\n' '> Task :compileJava'
+printf '%s\n' 'BUILD SUCCESSFUL in 1s'
+`), 0o755)).To(Succeed())
+
+			previousCWD, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chdir(root)).To(Succeed())
+			DeferCleanup(func() { Expect(os.Chdir(previousCWD)).To(Succeed()) })
+
+			previousTerminalCheck := terminalDescriptorAttached
+			terminalDescriptorAttached = func() bool { return false }
+			DeferCleanup(func() { terminalDescriptorAttached = previousTerminalCheck })
+
+			runner := &Runner{
+				sources: []corefilters.FilterSource{
+					corefilters.RepositorySource(filteryaml.ProjectRootFromSource()),
+				},
+				metricsPath: filepath.Join(root, ".cmdshape", "gain.db"),
+				workingDir:  root,
+			}
+
+			code, err := runner.Run([]string{"./gradlew", "--version"})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(BeZero())
+			Expect(closeAndRead(stdoutReader, stdoutWriter)).To(Equal(":compileJava: ok\nBUILD SUCCESSFUL in 1s\n"))
+			Expect(closeAndRead(stderrReader, stderrWriter)).To(Equal("\n"))
+		})
+
 		It("executes a real command and preserves piped stdin on unix", func() {
 			if runtime.GOOS == "windows" {
 				Skip("unix stdin integration uses cat")
@@ -1025,9 +1065,27 @@ var _ = Describe("Runner", func() {
 			n, err := writer.Write([]byte("secret\ntrail-secret"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(len("secret\ntrail-secret")))
-			Expect(buffer.String()).To(Equal("***\n"))
+			Expect(buffer.String()).To(Equal("***\ntrail-***"))
 			Expect(writer.Flush()).To(Succeed())
 			Expect(buffer.String()).To(Equal("***\ntrail-***"))
+
+			buffer.Reset()
+			writer = &redactingWriter{writer: buffer, confidential: []string{"secret", "*** value"}}
+			_, err = writer.Write([]byte("sec"))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = writer.Write([]byte("ret value"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writer.Flush()).To(Succeed())
+			Expect(buffer.String()).To(Equal("***"))
+
+			buffer.Reset()
+			writer = &redactingWriter{writer: buffer, confidential: []string{"aba", "bab"}}
+			_, err = writer.Write([]byte("ab"))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = writer.Write([]byte("aba"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writer.Flush()).To(Succeed())
+			Expect(buffer.String()).To(Equal("***ba"))
 
 			writer = &redactingWriter{}
 			n, err = writer.Write([]byte("ignored"))
@@ -1039,7 +1097,9 @@ var _ = Describe("Runner", func() {
 			_, err = writer.Write([]byte("secret\n"))
 			Expect(err).To(MatchError("flush boom"))
 
-			writer = &redactingWriter{writer: failingWriter{err: errors.New("flush tail boom")}, confidential: []string{"secret"}, buf: []byte("secret")}
+			writer = &redactingWriter{writer: failingWriter{err: errors.New("flush tail boom")}, confidential: []string{"secret"}}
+			_, err = writer.Write([]byte("secre"))
+			Expect(err).NotTo(HaveOccurred())
 			Expect(writer.Flush()).To(MatchError("flush tail boom"))
 		})
 

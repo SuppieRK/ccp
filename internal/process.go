@@ -8,11 +8,28 @@ import (
 	"os/signal"
 )
 
+type executionSignal struct{ signal os.Signal }
+
+func (e executionSignal) Error() string { return e.signal.String() }
+
 func DefaultExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		parent = context.Background()
 	}
-	return signal.NotifyContext(parent, defaultExecutionSignals()...)
+	ctx, cancelCause := context.WithCancelCause(parent)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, defaultExecutionSignals()...)
+	go func() {
+		select {
+		case received := <-signals:
+			cancelCause(executionSignal{signal: received})
+		case <-ctx.Done():
+		}
+	}()
+	return ctx, func() {
+		signal.Stop(signals)
+		cancelCause(context.Canceled)
+	}
 }
 
 func runnerContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -28,7 +45,7 @@ func CommandWithPipesContext(ctx context.Context, name string, args []string) (*
 	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdin = os.Stdin
-	configureManagedCommand(cmd)
+	configureManagedCommand(cmd, ctx)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, nil, nil, err
@@ -49,6 +66,6 @@ func CommandAttachedContext(ctx context.Context, name string, args []string) *ex
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	configureManagedCommand(cmd)
+	configureManagedCommand(cmd, ctx)
 	return cmd
 }

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -25,7 +26,6 @@ var lifecycleCommands = map[string]struct{}{
 	"init":      {},
 	"gain":      {},
 	"history":   {},
-	"migrate":   {},
 	"recovery":  {},
 	"verify":    {},
 	"upgrade":   {},
@@ -122,10 +122,10 @@ func validateExecutionFlagScope(opts Options) error {
 		return nil
 	}
 	if opts.Raw {
-		return fmt.Errorf("--raw is only valid for execution commands")
+		return errors.New("--raw is only valid for execution commands")
 	}
 	if len(opts.ConfidentialRedactions) > 0 {
-		return fmt.Errorf("--confidential is only valid for execution commands")
+		return errors.New("--confidential is only valid for execution commands")
 	}
 	return nil
 }

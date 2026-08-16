@@ -45,7 +45,9 @@ func ConfigureDefault() error {
 	if err != nil {
 		// Audit logging is best-effort only. cmdshape must preserve command execution even when
 		// the audit home cannot be resolved on a particular machine or runner.
+		mu.Lock()
 		disableLockedState()
+		mu.Unlock()
 		return nil
 	}
 	return ConfigurePath(path, maxSizeMB, maxBackups)

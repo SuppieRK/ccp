@@ -1,30 +1,23 @@
 package lifecycle
 
 import (
+	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/SuppieRK/cmdshape/internal/audit"
 	"github.com/SuppieRK/cmdshape/internal/engine"
+	"github.com/SuppieRK/cmdshape/internal/filtermappings"
 	filteryaml "github.com/SuppieRK/cmdshape/internal/filters/yaml"
 	"github.com/SuppieRK/cmdshape/internal/filtertrust"
 	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"github.com/SuppieRK/cmdshape/internal/version"
-
-	"gopkg.in/yaml.v3"
 )
 
 var filterIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
-
-type filterMappingsFile struct {
-	Version int               `yaml:"version"`
-	Map     map[string]string `yaml:"map"`
-}
 
 func RunFilter(args []string) error {
 	return RunFilterWithMetrics(args, "")
@@ -32,7 +25,7 @@ func RunFilter(args []string) error {
 
 func RunFilterWithMetrics(args []string, metricsPath string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("missing filter subcommand")
+		return errors.New("missing filter subcommand")
 	}
 	if args[0] == "--help" || args[0] == "-h" {
 		fs := newLifecycleFlagSet("filter")
@@ -78,7 +71,7 @@ func RunFilterPrompt(args []string) error {
 		[]string{"cmdshape filter prompt [name]"},
 		"name is optional and must be a lowercase filter id using letters, digits, and hyphens only.",
 		"the prompt is embedded in the cmdshape binary and does not depend on repository-local docs.",
-		"the prompt instructs agents to copy global filters into ./.cmdshape/filters before editing.",
+		"the prompt instructs agents to copy global filters into the resolved project root's .cmdshape/filters before editing.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
 	if err != nil {
@@ -88,7 +81,7 @@ func RunFilterPrompt(args []string) error {
 		return nil
 	}
 	if fs.NArg() > 1 {
-		return fmt.Errorf("expected at most one filter name")
+		return errors.New("expected at most one filter name")
 	}
 
 	filterID := ""
@@ -122,7 +115,7 @@ func RunFilterStatus(args []string) error {
 		return nil
 	}
 	if fs.NArg() != 0 {
-		return fmt.Errorf("filter status does not accept positional arguments")
+		return errors.New("filter status does not accept positional arguments")
 	}
 
 	sources := filteryaml.StatusSources()
@@ -187,7 +180,7 @@ func RunFilterTrust(args []string) error {
 		fs,
 		"approve the exact current project filter source",
 		[]string{"cmdshape filter trust"},
-		"the current canonical working directory is the only implicit project target.",
+		"the nearest enclosing Git worktree root is the implicit project target; outside Git, the current directory is used.",
 		"approval covers every project YAML filter and .mappings.yaml by path and exact bytes.",
 		"any addition, removal, rename, mapping change, or content change requires approval again.",
 	)
@@ -199,7 +192,7 @@ func RunFilterTrust(args []string) error {
 		return nil
 	}
 	if fs.NArg() != 0 {
-		return fmt.Errorf("filter trust does not accept positional arguments")
+		return errors.New("filter trust does not accept positional arguments")
 	}
 	decision, err := filtertrust.Trust("")
 	if err != nil {
@@ -220,7 +213,7 @@ func RunFilterUntrust(args []string) error {
 		fs,
 		"remove approval for the current project filter source",
 		[]string{"cmdshape filter untrust"},
-		"the current canonical working directory is the only implicit project target.",
+		"the nearest enclosing Git worktree root is the implicit project target; outside Git, the current directory is used.",
 		"project filters remain on disk but are ignored until explicitly trusted again.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -231,7 +224,7 @@ func RunFilterUntrust(args []string) error {
 		return nil
 	}
 	if fs.NArg() != 0 {
-		return fmt.Errorf("filter untrust does not accept positional arguments")
+		return errors.New("filter untrust does not accept positional arguments")
 	}
 	decision, err := filtertrust.Untrust("")
 	if err != nil {
@@ -257,8 +250,8 @@ func RunFilterNew(args []string) error {
 		[]string{"cmdshape filter new <name>"},
 		"name must be a lowercase filter id using letters, digits, and hyphens only.",
 		"agents should prefer 'cmdshape filter prompt <name>' first when creating or improving filters.",
-		"cmdshape writes the scaffold to ./.cmdshape/filters/<name>.yaml relative to the current working directory.",
-		"cmdshape also ensures ./.cmdshape/filters/.mappings.yaml contains an identity mapping for the new filter id.",
+		"cmdshape writes the scaffold to <project-root>/.cmdshape/filters/<name>.yaml; the project root is the nearest enclosing Git worktree root or the current directory outside Git.",
+		"cmdshape also ensures <project-root>/.cmdshape/filters/.mappings.yaml contains an identity mapping for the new filter id.",
 		"the generated scaffold is valid YAML and starts in safe passthrough mode until you author real behavior.",
 	)
 	handled, err := parseLifecycleFlags(fs, args)
@@ -269,7 +262,7 @@ func RunFilterNew(args []string) error {
 		return nil
 	}
 	if fs.NArg() != 1 {
-		return fmt.Errorf("expected exactly one filter name")
+		return errors.New("expected exactly one filter name")
 	}
 
 	filterID, err := normalizeNewFilterID(fs.Arg(0))
@@ -277,7 +270,7 @@ func RunFilterNew(args []string) error {
 		return err
 	}
 
-	root, err := os.Getwd()
+	root, err := projectfiles.ResolveProjectRoot("")
 	if err != nil {
 		return err
 	}
@@ -309,7 +302,7 @@ func RunFilterNew(args []string) error {
 func normalizeNewFilterID(input string) (string, error) {
 	filterID := strings.TrimSpace(strings.ToLower(input))
 	if filterID == "" {
-		return "", fmt.Errorf("filter name must not be empty")
+		return "", errors.New("filter name must not be empty")
 	}
 	if !filterIDPattern.MatchString(filterID) {
 		return "", fmt.Errorf("invalid filter name %q: use lowercase letters, digits, and hyphens only", input)
@@ -318,20 +311,13 @@ func normalizeNewFilterID(input string) (string, error) {
 }
 
 func ensureIdentityFilterMapping(path, filterID string) error {
-	mappings := filterMappingsFile{
-		Version: 1,
-		Map:     map[string]string{},
-	}
+	mappings := lifecycleMappingsFile{Version: 1, Map: map[string]string{}}
 	if raw, err := os.ReadFile(path); err == nil {
-		if err := yaml.Unmarshal(raw, &mappings); err != nil {
+		decoded, err := filtermappings.Decode(path, raw)
+		if err != nil {
 			return fmt.Errorf("read mappings file: %w", err)
 		}
-		if mappings.Version == 0 {
-			mappings.Version = 1
-		}
-		if mappings.Map == nil {
-			mappings.Map = map[string]string{}
-		}
+		mappings.Map = decoded
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("read mappings file: %w", err)
 	}
@@ -340,16 +326,11 @@ func ensureIdentityFilterMapping(path, filterID string) error {
 		return nil
 	}
 	mappings.Map[filterID] = filterID
-
-	ordered := slices.Sorted(maps.Keys(mappings.Map))
-
-	var b strings.Builder
-	b.WriteString("version: 1\n")
-	b.WriteString("map:\n")
-	for _, key := range ordered {
-		_, _ = fmt.Fprintf(&b, "  %s: %s\n", key, mappings.Map[key])
+	body, err := marshalLifecycleMappings(mappings)
+	if err != nil {
+		return fmt.Errorf("write mappings file: %w", err)
 	}
-	if err := projectfiles.AtomicWriteFile(path, []byte(b.String()), 0o644); err != nil {
+	if err := projectfiles.AtomicWriteFile(path, body, 0o644); err != nil {
 		return fmt.Errorf("write mappings file: %w", err)
 	}
 	return nil

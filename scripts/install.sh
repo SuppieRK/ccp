@@ -23,10 +23,25 @@ CMDSHAPE_REQUESTED_INSTALL_DIR="${CMDSHAPE_INSTALL_DIR:-}"
 REQUESTED_INSTALL_DIR="$CMDSHAPE_REQUESTED_INSTALL_DIR"
 BIN_NAME="cmdshape"
 PROFILE_NOTE="# added by cmdshape installer"
-REPAIR_CUTOFF_VERSION="0.5.1"
+MAX_RELEASE_BYTES=1048576
+MAX_CHECKSUM_BYTES=1048576
+MAX_ARCHIVE_BYTES=134217728
+MAX_BINARY_BYTES=67108864
 curl_secure() {
   curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-all-errors -sSfL "$@"
   return 0
+}
+
+download_bounded() {
+  url="$1"
+  destination="$2"
+  limit="$3"
+  curl_secure --max-filesize "$limit" "$url" -o "$destination"
+  size="$(wc -c < "$destination" | tr -d ' ')"
+  if [ "$size" -gt "$limit" ]; then
+    echo "download exceeds ${limit} bytes: $url" >&2
+    exit 1
+  fi
 }
 
 sha256_file() {
@@ -48,15 +63,33 @@ verify_download_checksum() {
   asset_name="$2"
   asset_path="$3"
   expected=""
+	matches=0
 
-  while IFS= read -r line; do
+  while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] || continue
     hash="$(printf '%s' "$line" | awk '{print $1}')"
-    name="$(printf '%s' "$line" | sed -E 's/^[0-9a-fA-F]+[[:space:]]+\*?//')"
+		name="$(printf '%s' "$line" | awk '{print $2}')"
+		name="${name#\*}"
     name="${name#./}"
     if [ "$name" = "$asset_name" ]; then
+			field_count="$(printf '%s' "$line" | awk '{print NF}')"
+			if [ "$field_count" -ne 2 ]; then
+				echo "malformed checksum entry for asset: $asset_name" >&2
+				exit 1
+			fi
+			if [ "${#hash}" -ne 64 ]; then
+				echo "checksum for asset must contain exactly 64 hex digits: $asset_name" >&2
+				exit 1
+			fi
+			case "$hash" in
+				*[!0-9a-fA-F]*) echo "checksum for asset is not hexadecimal: $asset_name" >&2; exit 1 ;;
+			esac
+			matches=$((matches + 1))
+			if [ "$matches" -gt 1 ]; then
+				echo "duplicate checksum for asset: $asset_name" >&2
+				exit 1
+			fi
       expected="$hash"
-      break
     fi
   done < "$checksums_file"
 
@@ -66,7 +99,8 @@ verify_download_checksum() {
   fi
 
   actual="$(sha256_file "$asset_path")"
-  if [ "$actual" != "$expected" ]; then
+	normalized_expected="$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')"
+	if [ "$actual" != "$normalized_expected" ]; then
     echo "checksum mismatch for $asset_name" >&2
     exit 1
   fi
@@ -105,16 +139,30 @@ EOF
     echo "archive entry is not a regular binary: $expected" >&2
     exit 1
   fi
+  entry_size="$(unzip -Z -l "$archive" "$expected" | awk '$1 ~ /^-/ {print $4; exit}')"
+  case "$entry_size" in
+    ""|*[!0-9]*) echo "failed to inspect archive binary size" >&2; exit 1 ;;
+  esac
+  if [ "${#entry_size}" -gt "${#MAX_BINARY_BYTES}" ] || \
+    { [ "${#entry_size}" -eq "${#MAX_BINARY_BYTES}" ] && [ "$entry_size" -gt "$MAX_BINARY_BYTES" ]; }; then
+    echo "archive binary exceeds ${MAX_BINARY_BYTES} bytes: $expected" >&2
+    exit 1
+  fi
 }
 
 validate_staged_binary() {
   candidate="$1"
   expected="$2"
-  actual="$("$candidate" --version 2>/dev/null | tr -d '\r\n')" || {
+	version_output="$TMP_DIR/staged-version.txt"
+  "$candidate" --version > "$version_output" 2>/dev/null || {
     echo "staged binary failed --version" >&2
     exit 1
   }
-  if [ "$actual" != "$expected" ]; then
+	actual_with_marker="$(cat "$version_output"; printf x)"
+	actual="${actual_with_marker%x}"
+	line_feed='
+'
+	if [ "$actual" != "$expected$line_feed" ]; then
     echo "staged binary version mismatch: expected $expected, got $actual" >&2
     exit 1
   fi
@@ -134,8 +182,9 @@ need_cmd curl
 need_cmd unzip
 
 parse_release_version() {
-  parsed_version="$(printf '%s' "$1" | tr -d '\r\n')"
-  parsed_remainder="${parsed_version#*.}"
+	parsed_version="$1"
+	[ "$(printf '%s' "$parsed_version" | tr -d '\r\n')" = "$parsed_version" ] || return 1
+	parsed_remainder="${parsed_version#*.}"
   [ "$parsed_remainder" != "$parsed_version" ] || return 1
   parsed_major="${parsed_version%%.*}"
 
@@ -143,11 +192,18 @@ parse_release_version() {
   [ "$parsed_patch" != "$parsed_remainder" ] || return 1
   parsed_minor="${parsed_remainder%%.*}"
 
-  case "$parsed_major:$parsed_minor:$parsed_patch" in
-    :*|*::*|*:) return 1 ;;
-    *[!0-9:]*) return 1 ;;
-  esac
-  return 0
+	for component in "$parsed_major" "$parsed_minor" "$parsed_patch"; do
+		case "$component" in
+			""|*[!0-9]*) return 1 ;;
+			0|[1-9]|[1-9][0-9]*) ;;
+			*) return 1 ;;
+		esac
+		component_length="${#component}"
+		[ "$component_length" -lt 20 ] && continue
+		[ "$component_length" -eq 20 ] || return 1
+		awk -v value="$component" 'BEGIN { exit !("x" value <= "x18446744073709551615") }' || return 1
+	done
+	return 0
 }
 
 validate_release_version() {
@@ -155,91 +211,106 @@ validate_release_version() {
   printf '%s' "$parsed_version"
 }
 
-version_lt() {
-  parse_release_version "$1" || return 1
-  ver_major="$parsed_major" ver_minor="$parsed_minor" ver_patch="$parsed_patch"
-  parse_release_version "$2" || return 1
-  cutoff_major="$parsed_major" cutoff_minor="$parsed_minor" cutoff_patch="$parsed_patch"
-
-  if [ "$ver_major" -lt "$cutoff_major" ]; then
-    return 0
+validate_install_dir() {
+  install_dir="$1"
+  case "$install_dir" in
+    /*) ;;
+    *) echo "install directory must resolve to an absolute path" >&2; exit 1 ;;
+  esac
+  if [ "$(printf '%s' "$install_dir" | tr -d '\r\n')" != "$install_dir" ]; then
+    echo "install directory must not contain CR or LF" >&2
+    exit 1
   fi
-  if [ "$ver_major" -gt "$cutoff_major" ]; then
-    return 1
-  fi
-  if [ "$ver_minor" -lt "$cutoff_minor" ]; then
-    return 0
-  fi
-  if [ "$ver_minor" -gt "$cutoff_minor" ]; then
-    return 1
-  fi
-  if [ "$ver_patch" -lt "$cutoff_patch" ]; then
-    return 0
-  fi
-  return 1
+  case "$install_dir" in
+    *:*) echo "install directory cannot be represented safely in PATH" >&2; exit 1 ;;
+  esac
+  [ -d "$install_dir" ] && [ -w "$install_dir" ] || {
+    echo "install directory is not writable: $install_dir" >&2
+    exit 1
+  }
 }
 
-version_lt_cutoff() {
-  version_lt "$1" "$REPAIR_CUTOFF_VERSION"
-}
-
-probe_installed_version() {
-  candidate="$1"
-  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
-    "$candidate" --version 2>/dev/null || true
-    return 0
-  fi
-  return 1
+normalize_requested_install_dir() {
+	requested="$1"
+	if [ "$(printf '%s' "$requested" | tr -d '\r\n')" != "$requested" ]; then
+		echo "CMDSHAPE_INSTALL_DIR must not contain CR or LF" >&2
+		exit 1
+	fi
+	case "$OS:$requested" in
+		windows:[A-Za-z]:[\\/]*)
+			command -v cygpath >/dev/null 2>&1 || {
+				echo "cygpath is required for a native Windows CMDSHAPE_INSTALL_DIR" >&2
+				exit 1
+			}
+			cygpath -u -- "$requested"
+			;;
+		*) printf '%s\n' "$requested" ;;
+	esac
 }
 
 choose_install_dir() {
-  if [ -n "$REQUESTED_INSTALL_DIR" ]; then
-    if [ -d "$REQUESTED_INSTALL_DIR" ] || mkdir -p "$REQUESTED_INSTALL_DIR" 2>/dev/null; then
-      echo "$REQUESTED_INSTALL_DIR"
-      return 0
-    fi
-    echo "install directory is not writable: $REQUESTED_INSTALL_DIR" >&2
-    exit 1
+	if [ -n "$REQUESTED_INSTALL_DIR" ]; then
+		normalized_install_dir="$(normalize_requested_install_dir "$REQUESTED_INSTALL_DIR")"
+		case "$normalized_install_dir" in
+			/*) ;;
+			*) echo "CMDSHAPE_INSTALL_DIR must be an absolute path" >&2; exit 1 ;;
+		esac
+		mkdir -p "$normalized_install_dir" 2>/dev/null || {
+			echo "install directory is not writable: $normalized_install_dir" >&2
+			exit 1
+		}
+		[ -w "$normalized_install_dir" ] || {
+			echo "install directory is not writable: $normalized_install_dir" >&2
+			exit 1
+		}
+		resolved_install_dir="$(cd "$normalized_install_dir" && pwd -P)"
+		validate_install_dir "$resolved_install_dir"
+		printf '%s\n' "$resolved_install_dir"
+		return 0
   fi
   if [ -w "/usr/local/bin" ]; then
-    echo "/usr/local/bin"
+	(cd "/usr/local/bin" && pwd -P)
     return 0
   fi
   if [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin" 2>/dev/null; then
-    echo "$HOME/.local/bin"
+	resolved_install_dir="$(cd "$HOME/.local/bin" && pwd -P)"
+	validate_install_dir "$resolved_install_dir"
+	printf '%s\n' "$resolved_install_dir"
     return 0
   fi
   if [ -d "./bin" ] || mkdir -p "./bin" 2>/dev/null; then
     # Keep fallback deterministic and local to current directory.
-    echo "$(pwd)/bin"
+	(cd "./bin" && pwd -P)
     return 0
   fi
   echo "failed to determine writable install directory" >&2
   exit 1
 }
 
-path_contains_dir() {
+path_starts_with_dir() {
   dir="$1"
-  case ":$PATH:" in
-    *":$dir:"*) return 0 ;;
+	case "$PATH" in
+		"$dir"|"$dir":*) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 append_path_export_once() {
-  conf_file="$1"
-  install_dir="$2"
-  if [ -f "$conf_file" ] && grep -Fqs "$install_dir" "$conf_file"; then
-    echo "PATH already configured in $conf_file"
+	conf_file="$1"
+	install_dir="$2"
+	quoted_install_dir="'$(printf '%s' "$install_dir" | sed "s/'/'\\\\''/g")'"
+	path_entry="export PATH=${quoted_install_dir}:\"\$PATH\""
+	if [ -f "$conf_file" ] && grep -Fqx -e "$path_entry" "$conf_file"; then
+		echo "PATH already configured in $conf_file"
     return 0
   fi
   if [ ! -f "$conf_file" ]; then
     : > "$conf_file"
   fi
-  {
-    echo ""
-    echo "$PROFILE_NOTE"
-    echo "export PATH=\"\$PATH:$install_dir\""
+	{
+		echo ""
+		echo "$PROFILE_NOTE"
+		printf '%s\n' "$path_entry"
   } >> "$conf_file"
   echo "Added $install_dir to $conf_file"
   return 0
@@ -249,11 +320,7 @@ update_path_if_needed() {
   install_dir="$1"
   shell_name=""
   conf_file=""
-  case "$install_dir" in
-    /usr/local/bin) return 0 ;;
-    *) ;;
-  esac
-  if path_contains_dir "$install_dir"; then
+	if path_starts_with_dir "$install_dir"; then
     return 0
   fi
 
@@ -273,8 +340,8 @@ update_path_if_needed() {
       echo "Run: source \"$conf_file\""
       ;;
     */fish)
-      if command -v fish >/dev/null 2>&1; then
-        fish -c "fish_add_path '$install_dir'" >/dev/null 2>&1 || true
+		if command -v fish >/dev/null 2>&1; then
+			fish -c 'fish_add_path --move --prepend -- $argv[1]' "$install_dir" >/dev/null 2>&1 || true
         echo "Added $install_dir to fish PATH configuration"
       fi
       ;;
@@ -308,9 +375,19 @@ case "$OS" in
     ;;
 esac
 
+INSTALL_DIR="$(choose_install_dir)"
+validate_install_dir "$INSTALL_DIR"
+STAGED_DST="$(mktemp "$INSTALL_DIR/.${BIN_NAME}.new.XXXXXX")" || {
+	echo "install directory is not writable: $INSTALL_DIR" >&2
+	exit 1
+}
+TMP_DIR="$(mktemp -d)"
+trap 'if [ -n "$STAGED_DST" ]; then rm -f "$STAGED_DST"; fi; if [ -n "$TMP_DIR" ]; then rm -rf "$TMP_DIR"; fi' EXIT INT TERM
+
 if [ "$VERSION" = "latest" ]; then
   API_URL="https://api.github.com/repos/$REPO/releases/latest"
-  VERSION="$(curl_secure "$API_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n1)"
+  download_bounded "$API_URL" "$TMP_DIR/latest.json" "$MAX_RELEASE_BYTES"
+  VERSION="$(grep '"tag_name":' "$TMP_DIR/latest.json" | sed -E 's/.*"([^"]+)".*/\1/' | head -n1)"
   if [ -z "$VERSION" ]; then
     echo "failed to resolve latest version from $API_URL" >&2
     exit 1
@@ -323,87 +400,36 @@ RESOLVED_VERSION="$(validate_release_version "$VERSION")" || {
 }
 VERSION="$RESOLVED_VERSION"
 
-TMP_DIR="$(mktemp -d)"
-STAGED_DST=""
-trap 'if [ -n "$STAGED_DST" ]; then rm -f "$STAGED_DST"; fi; rm -rf "$TMP_DIR"' EXIT INT TERM
-
 ASSET="${BIN_NAME}_${VERSION}_${OS}_${ARCH}.zip"
 URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET"
 CHECKSUMS_ASSET="cmdshape_checksums.txt"
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/$VERSION/$CHECKSUMS_ASSET"
 
 echo "Downloading $URL"
-curl_secure "$URL" -o "$TMP_DIR/$ASSET"
-curl_secure "$CHECKSUMS_URL" -o "$TMP_DIR/$CHECKSUMS_ASSET"
+download_bounded "$URL" "$TMP_DIR/$ASSET" "$MAX_ARCHIVE_BYTES"
+download_bounded "$CHECKSUMS_URL" "$TMP_DIR/$CHECKSUMS_ASSET" "$MAX_CHECKSUM_BYTES"
 verify_download_checksum "$TMP_DIR/$CHECKSUMS_ASSET" "$ASSET" "$TMP_DIR/$ASSET"
 
 if [ "$OS" = "windows" ]; then
-  ARCHIVE_BINARY="${BIN_NAME}.exe"
-  INSTALL_DIR="$(choose_install_dir)"
-  DST="$INSTALL_DIR/${BIN_NAME}.exe"
+	ARCHIVE_BINARY="${BIN_NAME}.exe"
+	DST="$INSTALL_DIR/${BIN_NAME}.exe"
 else
-  ARCHIVE_BINARY="$BIN_NAME"
-  INSTALL_DIR="$(choose_install_dir)"
-  DST="$INSTALL_DIR/$BIN_NAME"
+	ARCHIVE_BINARY="$BIN_NAME"
+	DST="$INSTALL_DIR/$BIN_NAME"
 fi
-SRC="$TMP_DIR/$ARCHIVE_BINARY"
 inspect_archive "$TMP_DIR/$ASSET" "$ARCHIVE_BINARY"
-unzip -p "$TMP_DIR/$ASSET" "$ARCHIVE_BINARY" > "$SRC"
-
-PREVIOUS_VERSION=""
-if [ -x "$DST" ]; then
-  PREVIOUS_VERSION="$(probe_installed_version "$DST" || true)"
-else
-  EXISTING_BIN="$(command -v "$BIN_NAME" 2>/dev/null || true)"
-  PREVIOUS_VERSION="$(probe_installed_version "$EXISTING_BIN" || true)"
-fi
-
-if [ ! -f "$SRC" ]; then
-  echo "archive did not contain expected binary: $SRC" >&2
-  exit 1
+unzip -p "$TMP_DIR/$ASSET" "$ARCHIVE_BINARY" > "$STAGED_DST"
+staged_size="$(wc -c < "$STAGED_DST" | tr -d ' ')"
+if [ "$staged_size" -gt "$MAX_BINARY_BYTES" ]; then
+	echo "staged binary exceeds ${MAX_BINARY_BYTES} bytes" >&2
+	exit 1
 fi
 
 if [ "$OS" != "windows" ]; then
-  chmod +x "$SRC"
-fi
-validate_staged_binary "$SRC" "$VERSION"
-
-if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
-  echo "install directory is not writable: $INSTALL_DIR" >&2
-  exit 1
-fi
-
-STAGED_DST="$INSTALL_DIR/.${BIN_NAME}.new.$$"
-cp "$SRC" "$STAGED_DST"
-if [ "$OS" != "windows" ]; then
-  chmod 0755 "$STAGED_DST"
+	chmod 0755 "$STAGED_DST"
 fi
 validate_staged_binary "$STAGED_DST" "$VERSION"
 mv -f "$STAGED_DST" "$DST"
 STAGED_DST=""
 update_path_if_needed "$INSTALL_DIR"
 echo "Installed binary $BIN_NAME $VERSION to $DST"
-
-if MIGRATION_OUTPUT="$("$DST" migrate retry 2>&1)"; then
-  printf '%s\n' "$MIGRATION_OUTPUT"
-else
-  printf '%s\n' "$MIGRATION_OUTPUT" >&2
-  echo "Previous installation cleanup needs attention; installation succeeded. Run: $DST migrate retry" >&2
-fi
-
-if version_lt_cutoff "$PREVIOUS_VERSION"; then
-  if REPAIR_OUTPUT="$("$DST" repair --yes 2>&1)"; then
-    printf '%s\n' "$REPAIR_OUTPUT"
-  else
-    case "$REPAIR_OUTPUT" in
-      *"executable file not found"*|*"not found"*|*"Usage:"*)
-        echo "Installed binary does not support 'cmdshape repair'; skipping managed state rewrite"
-        ;;
-      *)
-        printf '%s\n' "$REPAIR_OUTPUT" >&2
-        echo "Managed-state repair failed after binary installation; the new binary remains installed" >&2
-        exit 1
-        ;;
-    esac
-  fi
-fi

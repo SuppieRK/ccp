@@ -226,15 +226,15 @@ var _ = Describe("uninstall", func() {
 		}),
 	)
 
-	DescribeTable("preserving non-CCP content",
+	DescribeTable("preserving user-authored content",
 		func(tc uninstallPreserveCase) {
 			ws := newUninstallWorkspace(tc.scope)
 			tc.setup(ws)
 			Expect(RunUninstall(toolsArgs(tc.tool))).To(Succeed())
 			tc.assert(ws)
 		},
-		Entry("claude preserves non-CCP hooks", uninstallPreserveCase{
-			name:  "claude preserves non-CCP hooks",
+		Entry("claude preserves user-authored hooks", uninstallPreserveCase{
+			name:  "claude preserves user-authored hooks",
 			tool:  "claude",
 			scope: "work",
 			setup: func(ws lifecycleWorkspace) {
@@ -286,31 +286,17 @@ var _ = Describe("uninstall", func() {
 			Expect(os.MkdirAll(filepath.Join(ws.home, ".gemini"), 0o755)).To(Succeed())
 			return filepath.Join(ws.home, ".gemini", "GEMINI.md")
 		})),
-		Entry("pi preserves non-CCP append-system content", uninstallPreserveCase{
-			name:  "pi preserves non-CCP append-system content",
+		Entry("pi preserves user-authored append-system content", uninstallPreserveCase{
+			name:  "pi preserves user-authored append-system content",
 			tool:  "pi",
 			scope: "root",
 			setup: func(ws lifecycleWorkspace) {
 				path := filepath.Join(ws.root, ".pi", "APPEND_SYSTEM.md")
 				Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
-				Expect(os.WriteFile(path, []byte("team notes\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(path, []byte("team notes\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nmanaged content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
 			},
 			assert: func(ws lifecycleWorkspace) {
 				got, err := os.ReadFile(filepath.Join(ws.root, ".pi", "APPEND_SYSTEM.md"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(strings.TrimSpace(string(got))).To(Equal("team notes"))
-			},
-		}),
-		Entry("pi removes legacy root AGENTS managed block", uninstallPreserveCase{
-			name:  "pi removes legacy root AGENTS managed block",
-			tool:  "pi",
-			scope: "root",
-			setup: func(ws lifecycleWorkspace) {
-				Expect(os.MkdirAll(filepath.Join(ws.root, ".pi"), 0o755)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(ws.root, "AGENTS.md"), []byte("team notes\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
-			},
-			assert: func(ws lifecycleWorkspace) {
-				got, err := os.ReadFile(filepath.Join(ws.root, "AGENTS.md"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(got))).To(Equal("team notes"))
 			},
@@ -323,7 +309,7 @@ var _ = Describe("uninstall", func() {
 				configPath := filepath.Join(ws.home, ".aider.conf.yml")
 				rulesPath := filepath.Join(ws.home, ".aider.rules.md")
 				Expect(os.WriteFile(configPath, []byte("read:\n  - CONVENTIONS.md\nmodel: sonnet\n"), 0o644)).To(Succeed())
-				Expect(os.WriteFile(rulesPath, []byte("# User Notes\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(rulesPath, []byte("# User Notes\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nmanaged content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n"), 0o644)).To(Succeed())
 				Expect(RunInit(toolsArgs("aider"))).To(Succeed())
 			},
 			assert: func(ws lifecycleWorkspace) {
@@ -343,8 +329,8 @@ var _ = Describe("uninstall", func() {
 				Expect(string(rulesBytes)).To(ContainSubstring("# User Notes"))
 			},
 		}),
-		Entry("qwen preserves non-CCP content", uninstallPreserveCase{
-			name:  "qwen preserves non-CCP content",
+		Entry("qwen preserves user-authored content", uninstallPreserveCase{
+			name:  "qwen preserves user-authored content",
 			tool:  "qwen",
 			scope: "root",
 			setup: func(ws lifecycleWorkspace) {
@@ -353,7 +339,7 @@ var _ = Describe("uninstall", func() {
 				agentsPath := filepath.Join(ws.home, ".qwen", "AGENTS.md")
 				Expect(os.MkdirAll(filepath.Dir(agentsPath), 0o755)).To(Succeed())
 
-				content := "# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"
+				content := "# User Content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nmanaged content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"
 				Expect(os.WriteFile(agentsPath, []byte(content), 0o644)).To(Succeed())
 
 				settingsPath := filepath.Join(ws.home, ".qwen", "settings.json")
@@ -376,8 +362,8 @@ var _ = Describe("uninstall", func() {
 				Expect(string(settingsBytes)).NotTo(ContainSubstring(`"fileName": "AGENTS.md"`))
 			},
 		}),
-		Entry("crush preserves non-CCP content", uninstallPreserveCase{
-			name:  "crush preserves non-CCP content",
+		Entry("crush preserves user-authored content", uninstallPreserveCase{
+			name:  "crush preserves user-authored content",
 			tool:  "crush",
 			scope: "root",
 			setup: func(ws lifecycleWorkspace) {
@@ -385,7 +371,7 @@ var _ = Describe("uninstall", func() {
 				Expect(os.MkdirAll(filepath.Join(ws.home, ".config", "crush"), 0o755)).To(Succeed())
 
 				agentsPath := filepath.Join(ws.home, ".config", "crush", "CRUSH.md")
-				Expect(os.WriteFile(agentsPath, []byte("# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+				Expect(os.WriteFile(agentsPath, []byte("# User Content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nmanaged content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 
 				configPath := filepath.Join(ws.home, ".config", "crush", "crush.json")
 				contextRef := strings.ReplaceAll(agentsPath, "\\", "\\\\")
@@ -580,7 +566,7 @@ var _ = Describe("uninstall", func() {
 		),
 	)
 
-	It("removes only CCP-owned workspace state helpers", func() {
+	It("removes only cmdshape-owned workspace state helpers", func() {
 		ws := newUninstallWorkspace("root")
 		currentCmdshape := filepath.Join(ws.root, ".cmdshape")
 		otherScope := filepath.Join(ws.root, "other")
@@ -599,7 +585,7 @@ var _ = Describe("uninstall", func() {
 		Expect(os.WriteFile(filepath.Join(otherCmdshape, "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(externalMetrics, []byte("metrics"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(ws.home, ".config", "cmdshape", "audit", "audit.log"), []byte("audit"), 0o644)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(ws.home, ".cmdshape", "legacy.txt"), []byte("legacy"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".cmdshape", "workspace.txt"), []byte("workspace"), 0o644)).To(Succeed())
 
 		Expect(removeWorkspaceState([]string{ws.root, otherScope}, []workspaces.Workspace{
 			{MetricsPath: externalMetrics},
@@ -613,7 +599,7 @@ var _ = Describe("uninstall", func() {
 
 		Expect(removeGlobalCmdshapeState(ws.home)).To(Succeed())
 		expectMissingPath(filepath.Join(ws.home, ".config", "cmdshape"))
-		expectMissingPath(filepath.Join(ws.home, ".cmdshape"))
+		Expect(filepath.Join(ws.home, ".cmdshape", "workspace.txt")).To(BeAnExistingFile())
 	})
 
 	It("surfaces errors when removing canonical metrics paths fails", func() {
@@ -864,6 +850,8 @@ var _ = Describe("uninstall", func() {
 		Expect(os.MkdirAll(filepath.Join(ws.root, ".cmdshape", "filters"), 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(ws.root, ".cmdshape", "gain.db"), []byte("metrics"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(ws.root, ".cmdshape", "filters", "local.yaml"), []byte("version: 1\n"), 0o644)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(ws.home, ".cmdshape"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(ws.home, ".cmdshape", "workspace.txt"), []byte("workspace"), 0o644)).To(Succeed())
 
 		otherScope := filepath.Join(ws.root, "other")
 		Expect(os.MkdirAll(filepath.Join(otherScope, ".cursor"), 0o755)).To(Succeed())
@@ -882,7 +870,7 @@ var _ = Describe("uninstall", func() {
 		expectMissingPath(filepath.Join(ws.root, ".cmdshape", "gain.db"))
 		Expect(filepath.Join(ws.root, ".cmdshape", "filters", "local.yaml")).To(BeAnExistingFile())
 		expectMissingPath(filepath.Join(ws.home, ".config", "cmdshape"))
-		expectMissingPath(filepath.Join(ws.home, ".cmdshape"))
+		Expect(filepath.Join(ws.home, ".cmdshape", "workspace.txt")).To(BeAnExistingFile())
 		Expect(*scheduled).To(Equal([]string{filepath.Join(ws.root, "bin", "cmdshape")}))
 	})
 
@@ -1014,13 +1002,13 @@ func existingPath(path string) bool {
 
 func blockPreserveCase(tool string, scope string, pathFn func(lifecycleWorkspace) string) uninstallPreserveCase {
 	return uninstallPreserveCase{
-		name:  tool + " preserves non-CCP content",
+		name:  tool + " preserves user-authored content",
 		tool:  tool,
 		scope: scope,
 		setup: func(ws lifecycleWorkspace) {
 			path := pathFn(ws)
 			Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
-			Expect(os.WriteFile(path, []byte("# User Content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nmanaged content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(path, []byte("# User Content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nmanaged content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 		},
 		assert: func(ws lifecycleWorkspace) {
 			path := pathFn(ws)

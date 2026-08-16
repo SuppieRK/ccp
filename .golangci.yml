@@ -1,0 +1,13 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - modernize
+    - perfsprint
+    - staticcheck
+    - unused

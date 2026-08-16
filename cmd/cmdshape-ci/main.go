@@ -23,10 +23,11 @@ func main() {
 }
 
 type config struct {
-	fixturesRoot   string
-	artifactsDir   string
-	tool           string
-	previousReport string
+	fixturesRoot       string
+	artifactsDir       string
+	tool               string
+	previousReport     string
+	fixtureCorrectness bool
 }
 
 func run(args []string, stderr io.Writer) int {
@@ -51,8 +52,15 @@ func run(args []string, stderr io.Writer) int {
 	if err := writeBenchmarkSummary(report); err != nil {
 		return writeFailure(stderr, 1, "%v", err)
 	}
-	if report.Failed {
-		for _, line := range benchmarkFailureReport(report) {
+	if cfg.fixtureCorrectness && cfg.tool != "" && len(report.Results) == 0 {
+		return writeFailure(stderr, 1, "no fixtures found for selected tool %q", cfg.tool)
+	}
+	failures := benchmarkFailureReport(report)
+	if cfg.fixtureCorrectness {
+		failures = benchmark.CorrectnessFailureSummary(report)
+	}
+	if len(failures) > 0 {
+		for _, line := range failures {
 			_, _ = fmt.Fprintln(stderr, line)
 		}
 		return 1
@@ -65,20 +73,23 @@ func parseConfig(args []string) (config, int, error) {
 	var artifactsDir string
 	var tool string
 	var previousReport string
+	var fixtureCorrectness bool
 	flags := flag.NewFlagSet("cmdshape-ci", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.StringVar(&fixturesRoot, "fixtures-root", filepath.Join("testdata", "benchmarks"), "fixture root")
 	flags.StringVar(&artifactsDir, "artifacts-dir", filepath.Join(".artifacts", "benchmark"), "artifact output dir")
 	flags.StringVar(&tool, "tool", "", "optional tool directory to run")
 	flags.StringVar(&previousReport, "previous-report", "", "optional previous report.json for benchmark comparison")
+	flags.BoolVar(&fixtureCorrectness, "fixture-correctness", false, "fail only on fixture correctness errors")
 	if err := flags.Parse(args); err != nil {
 		return config{}, 2, err
 	}
 	return config{
-		fixturesRoot:   fixturesRoot,
-		artifactsDir:   artifactsDir,
-		tool:           tool,
-		previousReport: previousReport,
+		fixturesRoot:       fixturesRoot,
+		artifactsDir:       artifactsDir,
+		tool:               tool,
+		previousReport:     previousReport,
+		fixtureCorrectness: fixtureCorrectness,
 	}, 0, nil
 }
 

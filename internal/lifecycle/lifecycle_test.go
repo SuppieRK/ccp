@@ -6,11 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/SuppieRK/cmdshape/internal/lifecycle/agents"
+	"github.com/SuppieRK/cmdshape/internal/version"
 	"github.com/SuppieRK/cmdshape/internal/workspaces"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -250,286 +249,6 @@ var _ = Describe("Adapter application", func() {
 	})
 })
 
-var _ = Describe("Startup maintenance", func() {
-	var ws lifecycleWorkspace
-
-	BeforeEach(func() {
-		ws = newLifecycleWorkspaceSpec()
-	})
-
-	Context("when refreshing the managed home layout", func() {
-		BeforeEach(func() {
-			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "version: 1\nmap:\n  fake: fake\n",
-				"fake.yaml":      "version: 1\nfilter: fake\nabout: test\n",
-			})
-			Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "stale.txt"), []byte("stale"), 0o644)).To(Succeed())
-		})
-
-		It("replaces stale home files with the materialized filter set", func() {
-			Expect(RunStartupMaintenance()).To(Succeed())
-
-			_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
-			Expect(err).NotTo(HaveOccurred())
-			_, err = os.Stat(filepath.Join(ws.home, ".ccp", "stale.txt"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-		})
-
-		Context("and the maintenance lock is already held", func() {
-			BeforeEach(func() {
-				lockPath, err := startupMaintenanceLockPath()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
-				Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
-			})
-
-			It("skips the refresh", func() {
-				Expect(RunStartupMaintenance()).To(Succeed())
-
-				_, err := os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
-				Expect(err).To(MatchError(os.ErrNotExist))
-			})
-		})
-
-		Context("and the maintenance lock is stale", func() {
-			BeforeEach(func() {
-				lockPath, err := startupMaintenanceLockPath()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
-				Expect(os.WriteFile(lockPath, []byte(strconv.Itoa(os.Getpid())), 0o644)).To(Succeed())
-
-				staleTime := time.Now().Add(-startupMaintenanceLockMaxAge - time.Second)
-				Expect(os.Chtimes(lockPath, staleTime, staleTime)).To(Succeed())
-			})
-
-			It("reclaims the stale lock and refreshes filters", func() {
-				lockPath, err := startupMaintenanceLockPath()
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(RunStartupMaintenance()).To(Succeed())
-
-				_, err = os.Stat(lockPath)
-				Expect(err).To(MatchError(os.ErrNotExist))
-				_, err = os.Stat(filepath.Join(ws.home, ".config", "cmdshape", "filters", "fake.yaml"))
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-	})
-
-	Context("when cleaning filesystem state outside init reconciliation", func() {
-		It("uses the documented startup lock max age", func() {
-			Expect(startupMaintenanceLockMaxAge).To(Equal(10 * time.Second))
-		})
-
-		It("treats locks at the max age boundary as stale", func() {
-			lockPath := filepath.Join(ws.home, ".config", "cmdshape", startupMaintenanceLockName)
-			Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
-			Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
-
-			now := time.Date(2026, time.March, 26, 12, 0, 0, 0, time.UTC)
-			prevNow := startupMaintenanceNow
-			startupMaintenanceNow = func() time.Time { return now }
-			DeferCleanup(func() { startupMaintenanceNow = prevNow })
-			Expect(os.Chtimes(lockPath, now.Add(-startupMaintenanceLockMaxAge), now.Add(-startupMaintenanceLockMaxAge))).To(Succeed())
-
-			removed, err := removeStaleStartupMaintenanceLock(lockPath)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(removed).To(BeTrue())
-			_, err = os.Stat(lockPath)
-			Expect(err).To(MatchError(os.ErrNotExist))
-		})
-
-		It("leaves legacy project init state to repair migrations", func() {
-			cmdshapeDir := filepath.Join(ws.work, ".cmdshape")
-			Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
-
-			stale := filepath.Join(cmdshapeDir, initConfigFileName)
-			backup := stale + ".bak.123"
-			gainDB := filepath.Join(cmdshapeDir, "gain.db")
-			for _, file := range []string{stale, backup, gainDB} {
-				Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
-			}
-
-			Expect(RunStartupMaintenance()).To(Succeed())
-
-			for _, file := range []string{stale, backup, gainDB} {
-				_, err := os.Stat(file)
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
-		It("replaces managed config contents and refreshes home filters", func() {
-			configDir := filepath.Join(ws.home, ".config", "cmdshape")
-			customFilter := filepath.Join(configDir, "filters", "custom.yaml")
-			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
-
-			Expect(os.WriteFile(filepath.Join(configDir, "state.json"), []byte("stale"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Dir(customFilter), 0o755)).To(Succeed())
-			Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
-
-			oldHomeFilters := filepath.Join(ws.home, ".ccp", "filters")
-			Expect(os.MkdirAll(oldHomeFilters, 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(oldHomeFilters, ".mappings.yaml"), []byte("old: old\n"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(oldHomeFilters, "old.yaml"), []byte("old"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "backup.txt"), []byte("stale"), 0o644)).To(Succeed())
-
-			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "version: 1\nmap:\n  npm: npm\n",
-				"npm.yaml":       "version: 1\nfilter: npm\nabout: test\n",
-			})
-
-			Expect(RunStartupMaintenance()).To(Succeed())
-
-			for _, removed := range []string{
-				filepath.Join(configDir, "state.json"),
-				filepath.Join(configDir, "old.txt"),
-				filepath.Join(ws.home, ".ccp", "backup.txt"),
-				filepath.Join(ws.home, ".ccp", "filters", "old.yaml"),
-			} {
-				_, err := os.Stat(removed)
-				Expect(err).To(MatchError(os.ErrNotExist))
-			}
-
-			for _, copied := range []string{
-				filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml"),
-				filepath.Join(ws.home, ".config", "cmdshape", "filters", "npm.yaml"),
-				customFilter,
-			} {
-				_, err := os.Stat(copied)
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
-		It("preserves the global workspace registry during sync", func() {
-			configDir := filepath.Join(ws.home, ".config", "cmdshape")
-			Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
-			registryPath := workspaces.PathForHome(ws.home)
-			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".cmdshape", "gain.db"))).To(Succeed())
-
-			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "version: 1\nmap:\n  npm: npm\n",
-				"npm.yaml":       "version: 1\nfilter: npm\nabout: test\n",
-			})
-
-			Expect(syncCanonicalHomeLayout()).To(Succeed())
-
-			entries, err := workspaces.ListPath(registryPath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(entries).To(HaveLen(1))
-		})
-
-		It("keeps only documented managed-home entries during cleanup variants", func() {
-			configDir := filepath.Join(ws.home, ".config", "cmdshape")
-			registryPath := workspaces.PathForHome(ws.home)
-			lockPath := filepath.Join(configDir, startupMaintenanceLockName)
-			filtersDir := filepath.Join(configDir, "filters")
-			recoveryConfig := filepath.Join(configDir, "recovery.json")
-			recoveryDir := filepath.Join(configDir, "recovery")
-			Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
-			Expect(os.MkdirAll(recoveryDir, 0o700)).To(Succeed())
-			Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(recoveryConfig, []byte(`{"enabled":true}`), 0o600)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(recoveryDir, "failure.yaml"), []byte("retained"), 0o600)).To(Succeed())
-			Expect(workspaces.UpsertPath(registryPath, filepath.Join(ws.work, "repo"), filepath.Join(ws.work, "repo", ".cmdshape", "gain.db"))).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(configDir, "state.json"), []byte("stale"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(filtersDir, "custom.yaml"), []byte("custom"), 0o644)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Join(ws.home, ".ccp"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(ws.home, ".ccp", "legacy.txt"), []byte("legacy"), 0o644)).To(Succeed())
-
-			Expect(cleanupManagedConfigDirPreservingFilters(ws.home)).To(Succeed())
-			Expect(lockPath).To(BeAnExistingFile())
-			Expect(registryPath).To(BeAnExistingFile())
-			Expect(filepath.Join(filtersDir, "custom.yaml")).To(BeAnExistingFile())
-			Expect(recoveryConfig).To(BeAnExistingFile())
-			Expect(filepath.Join(recoveryDir, "failure.yaml")).To(BeAnExistingFile())
-			_, err := os.Stat(filepath.Join(configDir, "state.json"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-			_, err = os.Stat(filepath.Join(ws.home, ".ccp", "legacy.txt"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-
-			Expect(os.WriteFile(filepath.Join(configDir, "extra.json"), []byte("stale"), 0o644)).To(Succeed())
-			Expect(cleanupManagedConfigDir(ws.home)).To(Succeed())
-			Expect(lockPath).To(BeAnExistingFile())
-			Expect(registryPath).To(BeAnExistingFile())
-			Expect(recoveryConfig).To(BeAnExistingFile())
-			Expect(filepath.Join(recoveryDir, "failure.yaml")).To(BeAnExistingFile())
-			_, err = os.Stat(filtersDir)
-			Expect(err).To(MatchError(os.ErrNotExist))
-			_, err = os.Stat(filepath.Join(configDir, "extra.json"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-		})
-
-		It("preserves only the named children when cleaning a managed config directory", func() {
-			configDir := filepath.Join(ws.home, ".config", "cmdshape")
-			Expect(os.MkdirAll(filepath.Join(configDir, "keep-dir"), 0o755)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(configDir, "keep-file"), []byte("keep"), 0o644)).To(Succeed())
-			Expect(os.WriteFile(filepath.Join(configDir, "drop-file"), []byte("drop"), 0o644)).To(Succeed())
-			Expect(os.MkdirAll(filepath.Join(configDir, "drop-dir"), 0o755)).To(Succeed())
-
-			Expect(removeAllChildrenExcept(configDir, "keep-dir", "keep-file")).To(Succeed())
-
-			Expect(filepath.Join(configDir, "keep-dir")).To(BeADirectory())
-			Expect(filepath.Join(configDir, "keep-file")).To(BeAnExistingFile())
-			_, err := os.Stat(filepath.Join(configDir, "drop-file"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-			_, err = os.Stat(filepath.Join(configDir, "drop-dir"))
-			Expect(err).To(MatchError(os.ErrNotExist))
-		})
-
-		It("treats missing managed config directories as already clean", func() {
-			Expect(removeAllChildrenExcept(filepath.Join(ws.home, ".config", "cmdshape"))).To(Succeed())
-		})
-
-		DescribeTable("surfaces config directory read failures during managed-home cleanup",
-			func(cleanup func(string) error) {
-				configDir := filepath.Join(ws.home, ".config", "cmdshape")
-				Expect(os.MkdirAll(filepath.Dir(configDir), 0o755)).To(Succeed())
-				Expect(os.WriteFile(configDir, []byte("not a directory"), 0o644)).To(Succeed())
-
-				err := cleanup(ws.home)
-
-				if runtime.GOOS == "windows" {
-					Expect(err).NotTo(HaveOccurred())
-					return
-				}
-				Expect(err).To(HaveOccurred())
-			},
-			Entry("for full cleanup", cleanupManagedConfigDir),
-			Entry("for filter-preserving cleanup", cleanupManagedConfigDirPreservingFilters),
-		)
-	})
-
-	It("rewrites managed state with embedded shipped filters on repair", func() {
-		ws := newLifecycleWorkspaceSpec()
-		configDir := filepath.Join(ws.home, ".config", "cmdshape")
-		customFilter := filepath.Join(configDir, "filters", "custom.yaml")
-		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(configDir, "old.txt"), []byte("stale"), 0o644)).To(Succeed())
-		Expect(os.MkdirAll(filepath.Dir(customFilter), 0o755)).To(Succeed())
-		Expect(os.WriteFile(customFilter, []byte("version: 1\nfilter: custom\nabout: user\n"), 0o644)).To(Succeed())
-
-		Expect(RunRepair([]string{"--yes"})).To(Succeed())
-
-		_, err := os.Stat(filepath.Join(configDir, "old.txt"))
-		Expect(err).To(MatchError(os.ErrNotExist))
-		_, err = os.Stat(filepath.Join(ws.home, ".config", "cmdshape", initConfigFileName))
-		Expect(err).To(MatchError(os.ErrNotExist))
-		for _, path := range []string{
-			filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml"),
-			filepath.Join(ws.home, ".config", "cmdshape", "filters", "git.yaml"),
-			filepath.Join(ws.home, ".config", "cmdshape", "filters", "npm.yaml"),
-		} {
-			_, err := os.Stat(path)
-			Expect(err).NotTo(HaveOccurred(), path)
-		}
-		_, err = os.Stat(customFilter)
-		Expect(err).To(MatchError(os.ErrNotExist))
-	})
-})
-
 var _ = Describe("repair", func() {
 	var ws lifecycleWorkspace
 
@@ -567,125 +286,6 @@ var _ = Describe("repair", func() {
 		entries, err := workspaces.ListPath(registryPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(HaveLen(1))
-	})
-
-	It("runs the built-in legacy project init cleanup migration during rewrite repair", func() {
-		cmdshapeDir := filepath.Join(ws.work, ".cmdshape")
-		Expect(os.MkdirAll(cmdshapeDir, 0o755)).To(Succeed())
-		stale := filepath.Join(cmdshapeDir, initConfigFileName)
-		backup := stale + ".bak.123"
-		gainDB := filepath.Join(cmdshapeDir, "gain.db")
-		for _, file := range []string{stale, backup, gainDB} {
-			Expect(os.WriteFile(file, []byte("x"), 0o644)).To(Succeed())
-		}
-		stubMaterializeHomeFiltersForSpec(map[string]string{
-			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
-			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
-		})
-
-		Expect(RunRepair([]string{"--yes"})).To(Succeed())
-
-		Expect(stale).NotTo(BeAnExistingFile())
-		Expect(backup).NotTo(BeAnExistingFile())
-		Expect(gainDB).To(BeAnExistingFile())
-	})
-
-	DescribeTable("runs repo migrations during rewrite repair",
-		func(args []string, stdin string, expectedMode repairMode) {
-			prevIn := repairStdin
-			prevOut := repairStdout
-			repairStdin = strings.NewReader(stdin)
-			repairStdout = io.Discard
-			DeferCleanup(func() {
-				repairStdin = prevIn
-				repairStdout = prevOut
-			})
-
-			marker := filepath.Join(ws.work, "migration-ran")
-			stubBuiltInMigrationsForSpec([]migration{
-				{
-					id:      "mark-repair",
-					surface: migrationSurfaceRepo,
-					version: "0.1.0",
-					run: func(ctx migrationContext) error {
-						Expect(resolvedPath(ctx.homeDir)).To(Equal(resolvedPath(ws.home)))
-						Expect(resolvedPath(ctx.cwd)).To(Equal(resolvedPath(ws.work)))
-						Expect(ctx.mode).To(Equal(expectedMode))
-						return os.WriteFile(marker, []byte("ok"), 0o644)
-					},
-				},
-			})
-			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "version: 1\nmap:\n  git: git\n",
-				"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
-			})
-
-			Expect(RunRepair(args)).To(Succeed())
-
-			Expect(marker).To(BeAnExistingFile())
-		},
-		Entry("with --yes", []string{"--yes"}, "", repairModeRewrite),
-		Entry("after accepting the interactive prompt", nil, "y\n", repairModeRewrite),
-	)
-
-	DescribeTable("skips repo migrations during preserve repair",
-		func(args []string, stdin string) {
-			prevIn := repairStdin
-			prevOut := repairStdout
-			repairStdin = strings.NewReader(stdin)
-			repairStdout = io.Discard
-			DeferCleanup(func() {
-				repairStdin = prevIn
-				repairStdout = prevOut
-			})
-
-			marker := filepath.Join(ws.work, "migration-ran")
-			stubBuiltInMigrationsForSpec([]migration{
-				{
-					id:      "mark-repair",
-					surface: migrationSurfaceRepo,
-					version: "0.1.0",
-					run: func(migrationContext) error {
-						return os.WriteFile(marker, []byte("ok"), 0o644)
-					},
-				},
-			})
-			stubMaterializeHomeFiltersForSpec(map[string]string{
-				".mappings.yaml": "version: 1\nmap:\n  git: git\n",
-				"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
-			})
-
-			Expect(RunRepair(args)).To(Succeed())
-
-			Expect(marker).NotTo(BeAnExistingFile())
-		},
-		Entry("with --no", []string{"--no"}, ""),
-		Entry("after declining the interactive prompt", nil, "n\n"),
-	)
-
-	It("aborts repair when a migration fails without printing success output", func() {
-		var out strings.Builder
-		prevOut := repairStdout
-		repairStdout = &out
-		DeferCleanup(func() { repairStdout = prevOut })
-
-		materializeCalled := false
-		prevMaterialize := materializeHomeFilters
-		materializeHomeFilters = func(string) error {
-			materializeCalled = true
-			return nil
-		}
-		DeferCleanup(func() { materializeHomeFilters = prevMaterialize })
-
-		stubBuiltInMigrationsForSpec([]migration{
-			{id: "broken", surface: migrationSurfaceRepo, version: "0.1.0", run: func(migrationContext) error { return errors.New("boom") }},
-		})
-
-		err := RunRepair([]string{"--yes"})
-
-		Expect(err).To(MatchError(ContainSubstring("migration broken: boom")))
-		Expect(materializeCalled).To(BeFalse())
-		Expect(out.String()).NotTo(ContainSubstring("cmdshape repair:"))
 	})
 
 	DescribeTable("uses the lifecycle lock for repair modes",
@@ -803,18 +403,30 @@ var _ = Describe("repair", func() {
 		Expect(string(mappingsBody)).To(ContainSubstring("npm: npm"))
 	})
 
-	It("normalizes zero-version mappings when reading lifecycle mappings", func() {
+	It("rejects mappings that omit the required version", func() {
 		path := filepath.Join(GinkgoT().TempDir(), ".mappings.yaml")
 		Expect(os.WriteFile(path, []byte("map:\n  npm: npm\n"), 0o644)).To(Succeed())
+
+		_, err := readLifecycleMappings(path)
+
+		Expect(err).To(MatchError(ContainSubstring("version must be exactly 1")))
+	})
+
+	It("returns normalized mappings without mutating source bytes", func() {
+		path := filepath.Join(GinkgoT().TempDir(), ".mappings.yaml")
+		original := []byte("version: 1\nmap:\n  \" npm \" : \" npm-target \"\n")
+		Expect(os.WriteFile(path, original, 0o644)).To(Succeed())
 
 		payload, err := readLifecycleMappings(path)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Version).To(Equal(1))
-		Expect(payload.Map).To(Equal(map[string]string{"npm": "npm"}))
+		Expect(payload).To(Equal(lifecycleMappingsFile{Version: 1, Map: map[string]string{"npm": "npm-target"}}))
+		body, err := os.ReadFile(path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(body).To(Equal(original))
 	})
 
-	It("normalizes zero-version destination mappings before merging missing aliases", func() {
+	It("rejects zero-version destination mappings before merging missing aliases", func() {
 		srcDir := GinkgoT().TempDir()
 		srcPath := filepath.Join(srcDir, ".mappings.yaml")
 		dstPath := filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml")
@@ -822,13 +434,9 @@ var _ = Describe("repair", func() {
 		Expect(os.WriteFile(srcPath, []byte("version: 1\nmap:\n  git: git\n"), 0o644)).To(Succeed())
 		Expect(os.WriteFile(dstPath, []byte("map:\n  custom: custom\n"), 0o644)).To(Succeed())
 
-		Expect(mergeMissingMappings(srcPath, dstPath)).To(Succeed())
+		err := mergeMissingMappings(srcPath, dstPath)
 
-		body, err := os.ReadFile(dstPath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(body)).To(HavePrefix("version: 1\n"))
-		Expect(string(body)).To(ContainSubstring("custom: custom"))
-		Expect(string(body)).To(ContainSubstring("git: git"))
+		Expect(err).To(MatchError(ContainSubstring("version must be exactly 1")))
 	})
 
 	It("preserves invalid user mappings when add-missing mode encounters parse errors", func() {
@@ -905,6 +513,64 @@ var _ = Describe("repair", func() {
 		Entry("propagates prompt write failures", strings.NewReader("y\n"), &failingRepairWriter{failAt: 2, err: errors.New("prompt failed")}, false, "prompt failed"),
 		Entry("propagates non-EOF read failures", failingRepairReader{err: errors.New("read failed")}, io.Discard, false, "read failed"),
 	)
+})
+
+var _ = Describe("release filter bootstrap", func() {
+	var ws lifecycleWorkspace
+
+	BeforeEach(func() {
+		ws = newLifecycleWorkspaceSpec()
+		previous := version.Version
+		version.Version = "1.0.0"
+		DeferCleanup(func() { version.Version = previous })
+	})
+
+	It("adds shipped filters on first use", func() {
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+		})
+
+		Expect(RunFilterBootstrap()).To(Succeed())
+
+		filtersDir := filepath.Join(ws.home, ".config", "cmdshape", "filters")
+		Expect(filepath.Join(filtersDir, "git.yaml")).To(BeAnExistingFile())
+		Expect(filepath.Join(filtersDir, ".mappings.yaml")).To(BeAnExistingFile())
+	})
+
+	It("adds newly shipped filters and aliases to existing current state", func() {
+		filtersDir := filepath.Join(ws.home, ".config", "cmdshape", "filters")
+		Expect(os.MkdirAll(filtersDir, 0o755)).To(Succeed())
+		mappingsPath := filepath.Join(filtersDir, ".mappings.yaml")
+		customPath := filepath.Join(filtersDir, "custom.yaml")
+		Expect(os.WriteFile(mappingsPath, []byte("version: 1\nmap:\n  custom: custom\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(customPath, []byte("user-authored\n"), 0o644)).To(Succeed())
+		stubMaterializeHomeFiltersForSpec(map[string]string{
+			"git.yaml":       "version: 1\nfilter: git\nabout: test\n",
+			".mappings.yaml": "version: 1\nmap:\n  git: git\n",
+		})
+
+		Expect(RunFilterBootstrap()).To(Succeed())
+
+		body, err := os.ReadFile(customPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(Equal("user-authored\n"))
+		Expect(filepath.Join(filtersDir, "git.yaml")).To(BeAnExistingFile())
+		body, err = os.ReadFile(mappingsPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(body)).To(ContainSubstring("custom: custom"))
+		Expect(string(body)).To(ContainSubstring("git: git"))
+	})
+
+	It("does not block execution while another process holds the lifecycle lock", func() {
+		lockPath, err := startupMaintenanceLockPath()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.MkdirAll(filepath.Dir(lockPath), 0o755)).To(Succeed())
+		Expect(os.WriteFile(lockPath, []byte("held"), 0o644)).To(Succeed())
+
+		Expect(RunFilterBootstrap()).To(Succeed())
+		Expect(filepath.Join(ws.home, ".config", "cmdshape", "filters", ".mappings.yaml")).NotTo(BeAnExistingFile())
+	})
 })
 
 type failingRepairWriter struct {

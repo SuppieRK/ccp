@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 
 func RunRecovery(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: cmdshape recovery enable|disable|list|purge")
+		return errors.New("usage: cmdshape recovery enable|disable|list|purge")
 	}
 	action := strings.TrimSpace(args[0])
 	if action == "--help" || action == "-h" || action == "help" {

@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"testing"
 
 	"github.com/SuppieRK/cmdshape/internal/contracts"
 
@@ -18,6 +19,23 @@ type yamlFilterContext struct {
 	combined []string
 	exitCode int
 }
+
+type countingYamlContext struct {
+	count      int
+	countCalls int
+	lineCalls  int
+}
+
+func (c *countingYamlContext) Args() []string { return []string{"demo"} }
+func (c *countingYamlContext) BufferedCount(contracts.Stream) int {
+	c.countCalls++
+	return c.count
+}
+func (c *countingYamlContext) BufferedLines(contracts.Stream) []string {
+	c.lineCalls++
+	return nil
+}
+func (*countingYamlContext) ExitCode() int { return 0 }
 
 func (c yamlFilterContext) Args() []string {
 	return c.args
@@ -39,8 +57,41 @@ func (c yamlFilterContext) BufferedLines(stream contracts.Stream) []string {
 	}
 }
 
+func (c yamlFilterContext) BufferedCount(stream contracts.Stream) int {
+	return len(c.BufferedLines(stream))
+}
+
 func (c yamlFilterContext) ExitCode() int {
 	return c.exitCode
+}
+
+func benchmarkYamlFilter() (*YamlFilter, error) {
+	return NewFilter(&FilterDefinition{
+		Version: 1,
+		Filter:  "demo",
+		Cases: []CaseClause{{
+			ID: "default",
+			CompressOutput: &OutputShape{Stdout: &OutputScope{Lines: &OutputLines{
+				Skip: []SkipOrKeepRule{{StartsWith: "noise:"}},
+			}}},
+		}},
+	})
+}
+
+func BenchmarkYamlFilterTenThousandLines(b *testing.B) {
+	filter, err := benchmarkYamlFilter()
+	if err != nil {
+		b.Fatal(err)
+	}
+	context := &countingYamlContext{}
+	b.ReportAllocs()
+	for b.Loop() {
+		context.count = 0
+		for range 10_000 {
+			filter.OnStdout("value\n", context)
+			context.count++
+		}
+	}
 }
 
 var _ = Describe("YamlFilter", func() {
@@ -301,6 +352,72 @@ var _ = Describe("YamlFilter", func() {
 		Entry("marks stdout exit replacements explicitly", "summary\n", contracts.StreamStdout, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamStdout, Output: "summary\n"}),
 		Entry("marks combined exit replacements explicitly", "summary\n", contracts.StreamCombined, contracts.Action{Kind: contracts.ActionReplace, Stream: contracts.StreamCombined, Output: "summary\n"}),
 	)
+
+	It("returns a no-op exit action when combined rendering preserves buffered output", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{{
+				ID: "default",
+				CompressOutput: &OutputShape{
+					Combined: &OutputScope{Lines: &OutputLines{}},
+				},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		exitAction := filter.OnStdoutExit(yamlFilterContext{
+			args:     []string{"demo"},
+			combined: []string{"out-1\n", "err-1\n"},
+		})
+		Expect(exitAction).To(Equal(contracts.Action{Kind: contracts.ActionKeep}))
+	})
+
+	It("matches one native record delimiter while preserving replacement bytes", func() {
+		filter, err := NewFilter(&FilterDefinition{
+			Version: 1,
+			Filter:  "demo",
+			Cases: []CaseClause{{
+				ID: "default",
+				CompressOutput: &OutputShape{Combined: &OutputScope{
+					Lines: &OutputLines{
+						Keep:    []SkipOrKeepRule{{Regex: "^KEEP$"}},
+						Skip:    []SkipOrKeepRule{{Regex: "^SKIP$"}},
+						Replace: []ReplaceRule{{Regex: "^REPLACE$", To: stringPtr("DONE")}},
+					},
+					Groups: []OutputGroup{{
+						ID: "group", MatchesRegex: "^(?P<value>GROUP)$",
+						Variables: []Variable{{Name: "value", Type: "string", RegexGroup: "value"}},
+						GroupBy:   "{{value}}",
+						Initially: &OnExit{Print: "{{value}}"},
+					}},
+				}},
+			}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		context := yamlFilterContext{args: []string{"demo"}}
+
+		for _, delimiter := range []string{"\n", "\r", "\r\n"} {
+			Expect(filter.OnStdout("KEEP"+delimiter, context).Kind).To(Equal(contracts.ActionKeep))
+			Expect(filter.OnStdout("SKIP"+delimiter, context).Kind).To(Equal(contracts.ActionIgnore))
+			Expect(filter.OnStdout("REPLACE"+delimiter, context)).To(Equal(contracts.Action{
+				Kind: contracts.ActionReplace, Output: "DONE" + delimiter, ReplaceCount: 1,
+			}))
+			Expect(filter.OnStdout("GROUP"+delimiter, context).Kind).To(Equal(contracts.ActionIgnore))
+		}
+	})
+
+	It("does not materialize buffered lines while filtering records", func() {
+		filter, err := benchmarkYamlFilter()
+		Expect(err).NotTo(HaveOccurred())
+		context := &countingYamlContext{}
+		for range 10_000 {
+			filter.OnStdout("value\n", context)
+			context.count++
+		}
+		Expect(context.countCalls).To(Equal(10_000))
+		Expect(context.lineCalls).To(BeZero())
+	})
 
 	DescribeTable("appends scope max overflow only when needed",
 		func(output string, hidden int, expected string) {
@@ -898,30 +1015,6 @@ var _ = Describe("YamlFilter", func() {
 		Expect(exitAction.Output).To(ContainSubstring("failed tests:\n"))
 		Expect(exitAction.Output).To(ContainSubstring("- tests/test_app.py::test_fail - AssertionError: assert {'ok': False} ==...\n"))
 		Expect(strings.Index(exitAction.Output, "failure details:\n")).To(BeNumerically("<", strings.Index(exitAction.Output, "failed tests:\n")))
-	})
-
-	It("uses combined buffered lines for combined exit output", func() {
-		filter, err := NewFilter(&FilterDefinition{
-			Version: 1,
-			Filter:  "demo",
-			Cases: []CaseClause{{
-				ID: "default",
-				CompressOutput: &OutputShape{
-					Combined: &OutputScope{Lines: &OutputLines{}},
-				},
-			}},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		exitAction := filter.OnStdoutExit(yamlFilterContext{
-			args:     []string{"demo"},
-			combined: []string{"out-1\n", "err-1\n"},
-		})
-		Expect(exitAction).To(Equal(contracts.Action{
-			Kind:   contracts.ActionReplace,
-			Stream: contracts.StreamCombined,
-			Output: "out-1\nerr-1\n",
-		}))
 	})
 
 	It("groups matched find file paths by parent directory at exit", func() {

@@ -142,7 +142,7 @@ var _ = Describe("init additional integration coverage", func() {
 			}
 			targetPath := filepath.Join(base, tc.targetRel)
 			Expect(os.MkdirAll(filepath.Dir(targetPath), 0o755)).To(Succeed())
-			Expect(os.WriteFile(targetPath, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(targetPath, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nold content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 
 			Expect(RunInit([]string{initToolsFlag, tc.tool})).To(Succeed())
 
@@ -274,7 +274,7 @@ var _ = Describe("init additional integration coverage", func() {
 
 		path := filepath.Join(ws.home, initQwenDir, initAgentsFileName)
 		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
-		Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CCP MANAGED BLOCK -->\nold content\n<!-- END: CCP MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(path, []byte("# User Header\n\ncustom content\n\n<!-- BEGIN: CMDSHAPE MANAGED BLOCK -->\nold content\n<!-- END: CMDSHAPE MANAGED BLOCK -->\n\n# Tail\n"), 0o644)).To(Succeed())
 		Expect(RunInit([]string{initToolsFlag, "qwen"})).To(Succeed())
 
 		updated, err := os.ReadFile(path)

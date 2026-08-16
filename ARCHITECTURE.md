@@ -66,6 +66,10 @@ package.
 
 ## Filter sources and safety
 
+The project root is the nearest enclosing Git worktree root, or the current
+directory outside Git repositories. Project-local `.cmdshape` state is anchored
+there rather than in the invocation subdirectory.
+
 Release builds use this precedence:
 
 1. trusted project-local `./.cmdshape/filters/*.yaml`;
@@ -81,9 +85,9 @@ untrusted, changed, or unsafe; `cmdshape filter trust` approves the exact
 current project bytes and every later edit requires approval again.
 
 Development builds load the repository `filters/` directory directly. Release
-builds materialize embedded shipped filters into the managed home directory
-through startup maintenance and `cmdshape repair`; `cmdshape init` installs
-agent integrations but does not own filter materialization.
+builds add embedded shipped filters to the managed home directory on first
+native or `filter` use; `cmdshape repair` can restore them explicitly.
+`cmdshape init` installs agent integrations but does not own filter materialization.
 
 The execution hot path prepares only relevant sources and resolves the invoked
 command. Administrative commands such as `filter status` and `repair` may scan
@@ -134,7 +138,7 @@ contract, argv is passed to the native executable as supplied. This exception
 is documented in the filter schema and is covered by command-shape tests.
 
 Lifecycle commands such as `capture`, `verify`, `filter`, `gain`, `history`,
-`init`, `repair`, `recovery`, `migrate`, `upgrade`, and `uninstall` are handled
+`init`, `repair`, `recovery`, `upgrade`, and `uninstall` are handled
 by `internal/lifecycle` rather than the execution hot path.
 
 ## Lifecycle ownership
@@ -149,7 +153,6 @@ by `internal/lifecycle` rather than the execution hot path.
   context files through registered adapters.
 - `repair` authoritatively refreshes cmdshape-managed home state while leaving
   project filters untouched.
-- `migrate` reports or retries guarded cleanup of previous-installation state.
 - `upgrade` verifies the downloaded release and then runs rewrite repair
   through the installed binary.
 - `gain`, `history`, and `recovery` manage local reporting and bounded failure

@@ -520,6 +520,17 @@ var _ = Describe("benchmark replay runner", func() {
 			}
 
 			Expect(FailureSummary(report)).To(Equal([]string{"grep/bad: output mismatch"}))
+			correctnessReport := RunReport{Results: []CaseResult{{
+				Tool: "grep", Case: "large", Warnings: []string{
+					"output expansion: native=1 bytes proxy=2 bytes",
+					"net byte reduction dropped from 50.00% to 40.00%",
+				},
+				Unasserted: []string{"dispatch expectation missing"},
+			}}}
+			Expect(CorrectnessFailureSummary(correctnessReport)).To(Equal([]string{
+				"grep/large: output expansion: native=1 bytes proxy=2 bytes; dispatch expectation missing",
+			}))
+			Expect(CorrectnessFailureSummary(report)).To(Equal([]string{"grep/bad: output mismatch"}))
 			Expect(HashInput(nil)).To(HaveLen(64))
 			Expect(estimateTokens("")).To(BeZero())
 			Expect(estimateTokens("abcd")).To(Equal(1))

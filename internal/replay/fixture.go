@@ -3,10 +3,12 @@ package replay
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,7 +36,12 @@ const (
 	VerifyDecisionsFileName = "verify-decisions.txt"
 	VerifyDispatchFileName  = "verify-dispatch.txt"
 	encodedPayloadPrefix    = "@cmdshape/base64:"
+	// StreamRecordLimit bounds live logical-record buffering before callers
+	// switch the invocation to byte-preserving passthrough.
+	StreamRecordLimit = 8 * 1024 * 1024
 )
+
+var ErrStreamRecordLimit = errors.New("stream record exceeded buffer limit")
 
 type CommandSpec struct {
 	Argv             []string `yaml:"argv"`
@@ -145,7 +152,7 @@ func ReadCommand(path string) (CommandSpec, error) {
 	}
 	spec.ExitCodeAsserted = mappingHasKey(&document, "exit_code")
 	if len(spec.Argv) == 0 {
-		return CommandSpec{}, fmt.Errorf("parse command fixture: argv is required")
+		return CommandSpec{}, errors.New("parse command fixture: argv is required")
 	}
 	for idx, arg := range spec.Argv {
 		if strings.TrimSpace(arg) == "" {
@@ -162,7 +169,7 @@ func WriteSequenced(path string, events []Event) error {
 func WriteSequencedMode(path string, events []Event, mode os.FileMode) error {
 	sorted := slices.Clone(events)
 	slices.SortFunc(sorted, func(a, b Event) int {
-		return a.Sequence - b.Sequence
+		return cmp.Compare(a.Sequence, b.Sequence)
 	})
 	var buf strings.Builder
 	for _, event := range sorted {
@@ -197,6 +204,111 @@ func WriteSequencedEventsMode(path string, events []Event, stream contracts.Stre
 		}
 	}
 	return WriteSequencedMode(path, selected, mode)
+}
+
+func WriteSequencedEvent(w io.Writer, event Event) error {
+	if _, err := fmt.Fprintf(w, "%05d|", event.Sequence); err != nil {
+		return err
+	}
+	if replayPayloadNeedsEncoding(event.Line) {
+		_, err := fmt.Fprintf(w, "%s%s\n", encodedPayloadPrefix, base64.StdEncoding.EncodeToString([]byte(event.Line)))
+		return err
+	}
+	_, err := io.WriteString(w, event.Line)
+	return err
+}
+
+func ReadMergedEventReaders(stdout, stderr io.Reader) iter.Seq2[Event, error] {
+	return func(yield func(Event, error) bool) {
+		left := newEventReader(stdout, contracts.StreamStdout)
+		right := newEventReader(stderr, contracts.StreamStderr)
+		leftEvent, leftOK, err := left.next()
+		if err != nil {
+			yield(Event{}, err)
+			return
+		}
+		rightEvent, rightOK, err := right.next()
+		if err != nil {
+			yield(Event{}, err)
+			return
+		}
+		expected := 0
+		for leftOK || rightOK {
+			useLeft := leftOK && (!rightOK || leftEvent.Sequence < rightEvent.Sequence)
+			current := rightEvent
+			if useLeft {
+				current = leftEvent
+			}
+			if current.Sequence != expected {
+				yield(Event{}, fmt.Errorf("replay sequence break: expected %05d, got %05d", expected, current.Sequence))
+				return
+			}
+			expected++
+			if !yield(current, nil) {
+				return
+			}
+			if useLeft {
+				leftEvent, leftOK, err = left.next()
+			} else {
+				rightEvent, rightOK, err = right.next()
+			}
+			if err != nil {
+				yield(Event{}, err)
+				return
+			}
+		}
+	}
+}
+
+func ReadEventReader(reader io.Reader, stream contracts.Stream) iter.Seq2[Event, error] {
+	return func(yield func(Event, error) bool) {
+		streamReader := newEventReader(reader, stream)
+		for {
+			event, ok, err := streamReader.next()
+			if err != nil {
+				yield(Event{}, err)
+				return
+			}
+			if !ok || !yield(event, nil) {
+				return
+			}
+		}
+	}
+}
+
+type eventReader struct {
+	reader *bufio.Reader
+	stream contracts.Stream
+}
+
+func newEventReader(reader io.Reader, stream contracts.Stream) eventReader {
+	if reader == nil {
+		reader = strings.NewReader("")
+	}
+	return eventReader{reader: bufio.NewReader(reader), stream: stream}
+}
+
+func (r *eventReader) next() (Event, bool, error) {
+	line, err := readReplayLine(r.reader)
+	if errors.Is(err, io.EOF) && line == "" {
+		return Event{}, false, nil
+	}
+	if err != nil && !errors.Is(err, io.EOF) {
+		return Event{}, false, err
+	}
+	sep := strings.IndexByte(line, '|')
+	if sep <= 0 {
+		return Event{}, false, fmt.Errorf("invalid replay prefix %q", line)
+	}
+	sequence, parseErr := strconv.Atoi(line[:sep])
+	if parseErr != nil {
+		return Event{}, false, fmt.Errorf("invalid replay sequence %q: %w", line[:sep], parseErr)
+	}
+	payload, decodeErr := decodeReplayPayload(line[sep+1:])
+	if decodeErr != nil {
+		return Event{}, false, decodeErr
+	}
+	return Event{Sequence: sequence, Stream: r.stream, Line: payload}, true, nil
 }
 
 func ReadSequenced(path string, stream contracts.Stream) ([]Event, error) {
@@ -278,7 +390,7 @@ func MergeAndValidate(stdout, stderr []Event) ([]Event, error) {
 	events = append(events, stdout...)
 	events = append(events, stderr...)
 	slices.SortFunc(events, func(a, b Event) int {
-		return a.Sequence - b.Sequence
+		return cmp.Compare(a.Sequence, b.Sequence)
 	})
 	if err := ValidateSequence(events); err != nil {
 		return nil, err
@@ -382,6 +494,9 @@ func CompleteStreamRecord(reader *bufio.Reader, first byte) ([]byte, error) {
 				record = append(record, newline)
 			}
 			return record, nil
+		}
+		if len(record) >= StreamRecordLimit {
+			return record, ErrStreamRecordLimit
 		}
 
 		next, err := reader.ReadByte()

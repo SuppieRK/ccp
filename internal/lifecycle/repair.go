@@ -35,8 +35,6 @@ func RunRepair(args []string) error {
 		[]string{"cmdshape repair [--yes|--no]"},
 		"Repair rewrites managed ~/.config/cmdshape state and restores ~/.config/cmdshape/filters from shipped content embedded in the binary.",
 		"Project filter approvals in ~/.config/cmdshape/filter-trust.json are preserved.",
-		"Repair also removes obsolete managed ~/.cmdshape remnants.",
-		"Rewrite repair also runs guarded current-repository cmdshape migrations, including repo-local .cmdshape ignore migration.",
 		"Repair is interactive by default; declining the prompt adds only missing shipped filters and mappings without mutating repository files.",
 		"Use --yes for destructive rewrite automation; use --no for additive preserve-existing automation.",
 	)
@@ -79,34 +77,12 @@ func executeRepair(mode repairMode) error {
 			mode = repairModeRewrite
 		}
 	}
-	ctx, err := newMigrationContext(mode)
-	if err != nil {
-		return err
-	}
 	return withLifecycleLock(func() error {
 		if mode == repairModePreserve {
 			return addMissingPackagedFilters()
 		}
-		if err := runMigrations(migrationSurfaceRepo, "", ctx); err != nil {
-			return err
-		}
-		if err := runMigrations(migrationSurfaceHome, "", ctx); err != nil {
-			return err
-		}
 		return rewriteManagedRepairStateLocked()
 	})
-}
-
-func newMigrationContext(mode repairMode) (migrationContext, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return migrationContext{}, err
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return migrationContext{}, err
-	}
-	return migrationContext{homeDir: homeDir, cwd: cwd, mode: mode}, nil
 }
 
 func addMissingPackagedFilters() error {
@@ -151,7 +127,7 @@ func withLifecycleLock(fn func() error) error {
 }
 
 func confirmRepair() (bool, error) {
-	_, err := fmt.Fprintln(repairStdout, "cmdshape repair will rewrite the fully managed ~/.config/cmdshape state and remove obsolete managed ~/.cmdshape files.")
+	_, err := fmt.Fprintln(repairStdout, "cmdshape repair will rewrite the fully managed ~/.config/cmdshape state.")
 	if err != nil {
 		return false, err
 	}

@@ -20,6 +20,7 @@ const (
 	kiroSteeringPath              = ".kiro/steering/AGENTS.md"
 	factoryAgentsPath             = ".factory/AGENTS.md"
 	auggieAgentsPath              = "AGENTS.md"
+	piAppendSystemPath            = ".pi/APPEND_SYSTEM.md"
 )
 
 type managedRuleFileAdapterSpec struct {
@@ -166,6 +167,14 @@ var (
 		MissingFmt:     "missing kiro steering file: %s",
 		MarkersFmt:     "missing kiro managed block markers in %s",
 	}
+	piContextSpec = ManagedContextFileAdapterSpec{
+		ID:             AgentPi,
+		DetectRootPath: ".pi",
+		TargetRelPath:  piAppendSystemPath,
+		TargetScope:    managedContextTargetRepo,
+		MissingFmt:     "missing pi append system file: %s",
+		MarkersFmt:     "missing pi managed block markers in %s",
+	}
 	qoderContextSpec = ManagedContextFileAdapterSpec{
 		ID:             AgentQoder,
 		DetectRootPath: ".qoder",
@@ -184,6 +193,7 @@ var simpleContextAdapterSpecs = []ManagedContextFileAdapterSpec{
 	geminiContextSpec,
 	githubCopilotContextSpec,
 	kiroContextSpec,
+	piContextSpec,
 	qoderContextSpec,
 }
 
@@ -462,7 +472,6 @@ func expectedRuleTarget(ctx Context, spec managedRuleFileAdapterSpec) string {
 var builtInAdapterCatalog = func() []BuiltInAdapterSpec {
 	catalog := []BuiltInAdapterSpec{
 		{ID: AgentClaude, New: func() Adapter { return ClaudeAdapter{} }},
-		{ID: AgentPi, New: func() Adapter { return PiAdapter{} }},
 	}
 	catalog = append(catalog, builtInRuleFileAdapterCatalog()...)
 	catalog = append(catalog, builtInHookSettingsAdapterCatalog()...)

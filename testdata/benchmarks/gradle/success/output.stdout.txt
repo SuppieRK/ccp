@@ -1,11 +1,3 @@
-> Task :compileJava NO-SOURCE
-> Task :processResources NO-SOURCE
-> Task :classes UP-TO-DATE
-> Task :compileTestJava UP-TO-DATE
-> Task :processTestResources NO-SOURCE
-> Task :testClasses UP-TO-DATE
-> Task :test UP-TO-DATE
 
 BUILD SUCCESSFUL in 641ms
 2 actionable tasks: 2 up-to-date
-Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.0/userguide/configuration_cache_enabling.html

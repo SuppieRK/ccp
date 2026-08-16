@@ -19,6 +19,8 @@ func (passthroughContext) BufferedLines(contracts.Stream) []string {
 	return nil
 }
 
+func (passthroughContext) BufferedCount(contracts.Stream) int { return 0 }
+
 func (passthroughContext) ExitCode() int {
 	return 0
 }

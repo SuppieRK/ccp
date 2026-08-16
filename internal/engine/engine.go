@@ -63,14 +63,14 @@ func (e *Engine) StartResolved(command contracts.Command, filter contracts.Filte
 func (s *State) Stdout(line string) []BufferEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, entries := s.applyAction(contracts.StreamStdout, line, s.filter.OnStdout(line, s))
+	_, entries := s.applyStream(contracts.StreamStdout, line, s.filter.OnStdout)
 	return entries
 }
 
 func (s *State) Stderr(line string) []BufferEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, entries := s.applyAction(contracts.StreamStderr, line, s.filter.OnStderr(line, s))
+	_, entries := s.applyStream(contracts.StreamStderr, line, s.filter.OnStderr)
 	return entries
 }
 
@@ -78,25 +78,31 @@ func (s *State) Exit(exitCode int) []BufferEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.exitCode = exitCode
+	if s.passthrough {
+		return nil
+	}
 	return s.applyExitActions(s.exitActions())
 }
 
 func (s *State) StdoutAction(line string) (contracts.Action, []BufferEntry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.applyAction(contracts.StreamStdout, line, s.filter.OnStdout(line, s))
+	return s.applyStream(contracts.StreamStdout, line, s.filter.OnStdout)
 }
 
 func (s *State) StderrAction(line string) (contracts.Action, []BufferEntry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.applyAction(contracts.StreamStderr, line, s.filter.OnStderr(line, s))
+	return s.applyStream(contracts.StreamStderr, line, s.filter.OnStderr)
 }
 
 func (s *State) ExitAction(exitCode int) (contracts.Action, []BufferEntry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.exitCode = exitCode
+	if s.passthrough {
+		return contracts.Action{Kind: contracts.ActionKeep}, nil
+	}
 	actions := s.exitActions()
 	action := contracts.Action{Kind: contracts.ActionKeep}
 	if len(actions) > 0 {
@@ -118,6 +124,9 @@ func (s *State) applyExitActions(actions []contracts.Action) []BufferEntry {
 	}
 	s.recovery = slices.Clone(s.rawEntries)
 	for _, action := range actions {
+		if action.Kind == contracts.ActionKeep || action.Kind == contracts.ActionEmit {
+			continue
+		}
 		target, safe := s.exitActionTarget(action.Stream)
 		if !safe {
 			s.passthrough = true
@@ -212,20 +221,27 @@ func joinOriginal(entries []BufferEntry) []byte {
 	return out.Bytes()
 }
 
-func (s *State) applyAction(stream contracts.Stream, line string, action contracts.Action) (contracts.Action, []BufferEntry) {
+func (s *State) applyStream(
+	stream contracts.Stream,
+	line string,
+	filterAction func(string, contracts.Context) contracts.Action,
+) (contracts.Action, []BufferEntry) {
+	if s.passthrough {
+		return contracts.Action{Kind: contracts.ActionKeep}, []BufferEntry{s.passthroughEntry(stream, line)}
+	}
+
 	sequence := s.next
 	s.next++
 	raw := newBufferEntry(sequence, stream, []byte(line), []byte(line))
-	if s.passthrough {
-		return action, []BufferEntry{raw}
-	}
 	s.rawEntries = append(s.rawEntries, raw)
 	s.rawBytes += len(raw.Original)
 	if s.bufferLimit > 0 && s.rawBytes > s.bufferLimit {
 		s.passthrough = true
 		s.buffer.Clear()
-		return action, s.takeRawEntries()
+		return contracts.Action{Kind: contracts.ActionKeep}, s.takeRawEntries()
 	}
+
+	action := filterAction(line, s)
 
 	switch action.Kind {
 	case contracts.ActionIgnore:
@@ -250,6 +266,12 @@ func (s *State) applyAction(stream contracts.Stream, line string, action contrac
 		s.buffer.AddAt(sequence, stream, raw.Original, raw.Original)
 	}
 	return action, nil
+}
+
+func (s *State) passthroughEntry(stream contracts.Stream, line string) BufferEntry {
+	entry := newBufferEntry(s.next, stream, []byte(line), []byte(line))
+	s.next++
+	return entry
 }
 
 func (s *State) takeRawEntries() []BufferEntry {
@@ -281,6 +303,10 @@ func (s *State) Args() []string {
 
 func (s *State) BufferedLines(stream contracts.Stream) []string {
 	return s.buffer.Lines(stream)
+}
+
+func (s *State) BufferedCount(stream contracts.Stream) int {
+	return s.buffer.Count(stream)
 }
 
 func (s *State) ExitCode() int {

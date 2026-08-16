@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -22,7 +23,7 @@ import (
 
 const (
 	newBinaryContent = "new-binary"
-	testDownloadURL  = "https://example/a.zip"
+	testDownloadURL  = "https://github.com/a.zip"
 	flagVersion      = "--version"
 )
 
@@ -237,6 +238,15 @@ var _ = Describe("selectAssetURL", func() {
 
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("rejects duplicate release assets", func() {
+		rel := githubRelease{Assets: []githubAssetInfo{
+			{Name: "a.zip", BrowserDownloadURL: testDownloadURL},
+			{Name: "a.zip", BrowserDownloadURL: testDownloadURL},
+		}}
+		_, err := selectAssetURL(rel, "a.zip")
+		Expect(err).To(MatchError(`duplicate asset "a.zip"`))
+	})
 })
 
 var _ = Describe("upgrade helper functions", func() {
@@ -261,10 +271,65 @@ var _ = Describe("upgrade helper functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sum).To(Equal(expected))
 		},
-		Entry("matches plain filenames", "abc123  cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "abc123"),
-		Entry("matches starred checksum entries", "def456 *cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "def456"),
-		Entry("matches dot-slash checksum entries", "fedcba  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "fedcba"),
-		Entry("ignores uppercase checksum text differences during later verification", "ABC123  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", "ABC123"),
+		Entry("matches plain filenames", strings.Repeat("a", 64)+"  cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", strings.Repeat("a", 64)),
+		Entry("matches starred checksum entries", strings.Repeat("b", 64)+" *cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", strings.Repeat("b", 64)),
+		Entry("matches dot-slash checksum entries", strings.Repeat("c", 64)+"  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", strings.Repeat("c", 64)),
+		Entry("ignores uppercase checksum text differences during later verification", strings.Repeat("A", 64)+"  ./cmdshape_1.2.3_linux_amd64.zip\n", "cmdshape_1.2.3_linux_amd64.zip", strings.Repeat("A", 64)),
+	)
+
+	DescribeTable("rejecting unsafe checksum entries",
+		func(contents, message string) {
+			_, err := checksumForAsset(contents, "a.zip")
+			Expect(err).To(MatchError(ContainSubstring(message)))
+		},
+		Entry("short digest", "abc  a.zip\n", "exactly 64 hex digits"),
+		Entry("non-hex digest", strings.Repeat("z", 64)+"  a.zip\n", "not hexadecimal"),
+		Entry("duplicate digest", strings.Repeat("a", 64)+"  a.zip\n"+strings.Repeat("b", 64)+"  a.zip\n", "duplicate checksum"),
+		Entry("basename-only mismatch", strings.Repeat("a", 64)+"  nested/a.zip\n", "not found"),
+	)
+
+	It("bounds downloads before writing oversized responses", func() {
+		prev := upgradeHTTPClient
+		upgradeHTTPClient = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return bytesHTTPResponse(http.StatusOK, "application/octet-stream", []byte("oversized")), nil
+		})}
+		DeferCleanup(func() { upgradeHTTPClient = prev })
+		path := filepath.Join(GinkgoT().TempDir(), "download")
+		Expect(downloadFile(testDownloadURL, path, 4)).To(MatchError(ContainSubstring("4-byte limit")))
+	})
+
+	DescribeTable("validating production download URLs",
+		func(raw string, valid bool) {
+			err := validateUpgradeURL(raw)
+			if valid {
+				Expect(err).NotTo(HaveOccurred())
+				return
+			}
+			Expect(err).To(HaveOccurred())
+		},
+		Entry("GitHub HTTPS", "https://github.com/SuppieRK/cmdshape", true),
+		Entry("GitHub asset redirect", "https://release-assets.githubusercontent.com/file", true),
+		Entry("GitHub default HTTPS port", "https://github.com:443/SuppieRK/cmdshape", true),
+		Entry("plain HTTP", "http://github.com/SuppieRK/cmdshape", false),
+		Entry("loopback HTTP", "http://127.0.0.1/file", false),
+		Entry("loopback HTTPS", "https://127.0.0.1/file", false),
+		Entry("non-default production port", "https://github.com:444/SuppieRK/cmdshape", false),
+		Entry("embedded credentials", "https://user@github.com/SuppieRK/cmdshape", false),
+		Entry("untrusted HTTPS host", "https://example.com/file", false),
+	)
+
+	DescribeTable("rejecting release versions that are not exact X.Y.Z",
+		func(requested string) {
+			_, _, err := resolveUpgradeVersion(defaultUpgradeRepo, requested, "https://github.com/SuppieRK/cmdshape/releases")
+			Expect(err).To(MatchError(ContainSubstring("invalid release version")))
+		},
+		Entry("leading space", " 1.2.3"),
+		Entry("trailing space", "1.2.3 "),
+		Entry("carriage return", "1.2.3\r"),
+		Entry("line feed", "1.2.3\n"),
+		Entry("leading zero", "01.2.3"),
+		Entry("suffix", "1.2.3-rc1"),
+		Entry("overflow", "18446744073709551616.2.3"),
 	)
 
 	It("returns an error when the archive does not contain the binary", func() {
@@ -295,18 +360,30 @@ var _ = Describe("upgrade helper functions", func() {
 		Entry("path traversal", []zipTestEntry{{name: "../cmdshape", body: "x"}}, "unsafe archive entry"),
 		Entry("absolute path", []zipTestEntry{{name: "/cmdshape", body: "x"}}, "unsafe archive entry"),
 		Entry("duplicate binaries", []zipTestEntry{{name: "cmdshape", body: "one"}, {name: "cmdshape", body: "two"}}, "duplicate binary"),
+		Entry("extra regular entry", []zipTestEntry{{name: "cmdshape", body: "one"}, {name: "README", body: "two"}}, "unexpected archive entry"),
 		Entry("symlink binary", []zipTestEntry{{name: "cmdshape", body: "target", mode: os.ModeSymlink | 0o777}}, "not a regular file"),
 	)
 
-	It("requires exact staged --version output", func() {
-		if runtime.GOOS == "windows" {
-			Skip("uses a unix shell script")
-		}
-		path := filepath.Join(GinkgoT().TempDir(), "cmdshape")
-		Expect(os.WriteFile(path, []byte("#!/bin/sh\nprintf '1.2.3\\n'\n"), 0o755)).To(Succeed())
-		Expect(validateStagedBinaryVersion(path, "1.2.3")).To(Succeed())
-		Expect(validateStagedBinaryVersion(path, "1.2.4")).To(MatchError(ContainSubstring("does not match requested")))
-	})
+	DescribeTable("requires exact staged --version output",
+		func(output string, accepted bool) {
+			if runtime.GOOS == "windows" {
+				Skip("uses a unix shell script")
+			}
+			path := filepath.Join(GinkgoT().TempDir(), "cmdshape")
+			Expect(os.WriteFile(path, fmt.Appendf(nil, "#!/bin/sh\nprintf %s %s\n", shellQuoteArg("%s"), shellQuoteArg(output)), 0o755)).To(Succeed())
+			err := validateStagedBinaryVersion(path, "1.2.3")
+			if accepted {
+				Expect(err).NotTo(HaveOccurred())
+				return
+			}
+			Expect(err).To(MatchError(ContainSubstring("does not match requested")))
+		},
+		Entry("accepts one line feed", "1.2.3\n", true),
+		Entry("rejects no delimiter", "1.2.3", false),
+		Entry("rejects CRLF", "1.2.3\r\n", false),
+		Entry("rejects surrounding space", " 1.2.3 \n", false),
+		Entry("rejects multiple delimiters", "1.2.3\n\n", false),
+	)
 
 	It("preserves an existing error when a closer also fails", func() {
 		baseErr := errors.New("base error")
@@ -396,8 +473,8 @@ var _ = Describe("verifyDownloadedAssetChecksum", func() {
 	)
 })
 
-var _ = Describe("upgrade permission helpers", func() {
-	DescribeTable("keeps permission changes platform-aware",
+var _ = Describe("upgrade executable permissions", func() {
+	DescribeTable("installs release binaries with distribution permissions",
 		func(osName string, ensure func(string) error, expectExecutable bool) {
 			if runtime.GOOS == "windows" && expectExecutable {
 				Skip("unix executable bits are not observable on Windows filesystems")
@@ -415,7 +492,7 @@ var _ = Describe("upgrade permission helpers", func() {
 			info, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
 			if expectExecutable {
-				Expect(info.Mode().Perm()).To(Equal(privateExecutableMode))
+				Expect(info.Mode().Perm()).To(Equal(installedExecutableMode))
 				return
 			}
 			Expect(info.Mode().IsRegular()).To(BeTrue())
@@ -632,12 +709,12 @@ var _ = Describe("RunUpgrade", func() {
 			args = []string{flagVersion, "1.2.3"}
 		})
 
-		It("sets executable permission bits on the installed binary", func() {
+		It("keeps the installed binary executable for every user", func() {
 			Expect(RunUpgrade(args)).To(Succeed())
 
 			info, err := os.Stat(dest)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(info.Mode().Perm()).To(Equal(privateExecutableMode))
+			Expect(info.Mode().Perm()).To(Equal(installedExecutableMode))
 		})
 	})
 
@@ -779,8 +856,8 @@ func mockUpgradeClientWithOptions(repo string, tag string, goos string, goarch s
 		u := req.URL.String()
 		latestURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 		tagURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, tag)
-		downloadURL := fmt.Sprintf("https://downloads.example/%s/%s", tag, asset)
-		checksumURL := fmt.Sprintf("https://downloads.example/%s/%s", tag, releaseChecksumsAsset)
+		downloadURL := fmt.Sprintf("https://objects.githubusercontent.com/%s/%s", tag, asset)
+		checksumURL := fmt.Sprintf("https://objects.githubusercontent.com/%s/%s", tag, releaseChecksumsAsset)
 
 		if failAPI && (u == latestURL || u == tagURL) {
 			return jsonHTTPResponse(http.StatusForbidden, `{"message":"forbidden"}`), nil
@@ -809,7 +886,7 @@ func mockUpgradeClientWithOptions(repo string, tag string, goos string, goarch s
 
 func checksumFixtureBody(asset string, zipBody []byte, mismatch bool) []byte {
 	sum := sha256.Sum256(zipBody)
-	value := fmt.Sprintf("%x", sum[:])
+	value := hex.EncodeToString(sum[:])
 	if mismatch {
 		value = strings.Repeat("0", 64)
 	}

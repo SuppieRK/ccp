@@ -1,9 +1,9 @@
 package yaml
 
 import (
-	"bytes"
 	"cmp"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"maps"
 	"os"
@@ -15,11 +15,11 @@ import (
 
 	"github.com/SuppieRK/cmdshape/internal/audit"
 	"github.com/SuppieRK/cmdshape/internal/contracts"
+	"github.com/SuppieRK/cmdshape/internal/filtermappings"
 	v2filters "github.com/SuppieRK/cmdshape/internal/filters"
 	"github.com/SuppieRK/cmdshape/internal/filtertrust"
+	"github.com/SuppieRK/cmdshape/internal/projectfiles"
 	"github.com/SuppieRK/cmdshape/internal/version"
-
-	"gopkg.in/yaml.v3"
 )
 
 const mappingsFileName = ".mappings.yaml"
@@ -28,11 +28,6 @@ type LoadedFilter struct {
 	Path string
 	Raw  []byte
 	Spec *FilterDefinition
-}
-
-type mappingsFile struct {
-	Version int               `yaml:"version"`
-	Map     map[string]string `yaml:"map"`
 }
 
 type RegistryStatusRow struct {
@@ -133,11 +128,15 @@ func DefaultSources() []v2filters.FilterSource {
 	if err != nil {
 		return nil
 	}
+	root, err := projectfiles.ResolveProjectRoot(cwd)
+	if err != nil {
+		return nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return trustedProjectSources(cwd, "")
+		return trustedProjectSources(root, "")
 	}
-	return trustedProjectSources(cwd, home)
+	return trustedProjectSources(root, home)
 }
 
 func StatusSources() []v2filters.FilterSource {
@@ -148,7 +147,11 @@ func StatusSources() []v2filters.FilterSource {
 	if err != nil {
 		return nil
 	}
-	sources := []v2filters.FilterSource{v2filters.ProjectSource(cwd)}
+	root, err := projectfiles.ResolveProjectRoot(cwd)
+	if err != nil {
+		return nil
+	}
+	sources := []v2filters.FilterSource{v2filters.ProjectSource(root)}
 	if home, homeErr := os.UserHomeDir(); homeErr == nil {
 		sources = append(sources, v2filters.HomeSource(home))
 	}
@@ -819,28 +822,7 @@ func (s preparedFilterSource) readMappingsFile(path string) (map[string]string, 
 }
 
 func parseMappingsFile(path string, raw []byte) (map[string]string, error) {
-	dec := yaml.NewDecoder(bytes.NewReader(raw))
-	dec.KnownFields(true)
-	var payload mappingsFile
-	if err := dec.Decode(&payload); err != nil {
-		return nil, fmt.Errorf("decode mappings %s: %w", path, err)
-	}
-	if payload.Version != 1 {
-		return nil, fmt.Errorf("decode mappings %s: version must be exactly 1", path)
-	}
-	if payload.Map == nil {
-		return map[string]string{}, nil
-	}
-	out := make(map[string]string, len(payload.Map))
-	for alias, target := range payload.Map {
-		alias = strings.TrimSpace(alias)
-		target = strings.TrimSpace(target)
-		if alias == "" || target == "" {
-			return nil, fmt.Errorf("decode mappings %s: mapping keys and values must be non-empty", path)
-		}
-		out[alias] = target
-	}
-	return out, nil
+	return filtermappings.Decode(path, raw)
 }
 
 func loadFilterDefinitionsFromDir(dir string) ([]LoadedFilter, error) {
@@ -885,7 +867,7 @@ func filterProvenance(source v2filters.FilterSource, path string, raw []byte) co
 	return contracts.FilterProvenance{
 		SourceKind: string(source.Kind),
 		Path:       path,
-		Hash:       fmt.Sprintf("%x", sum),
+		Hash:       hex.EncodeToString(sum[:]),
 	}
 }
 
