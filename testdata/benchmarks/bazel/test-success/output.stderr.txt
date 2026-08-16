@@ -1,13 +1,3 @@
-Computing main repo mapping: 
-Loading: 
-Loading: 0 packages loaded
-Analyzing: target //:ok_test (0 packages loaded, 0 targets configured)
-Analyzing: target //:ok_test (0 packages loaded, 0 targets configured)
-
-INFO: Analyzed target //:ok_test (1 packages loaded, 410 targets configured).
-INFO: Found 1 test target...
 Target //:ok_test up-to-date:
   bazel-bin/ok_test
-INFO: Elapsed time: 0.338s, Critical Path: 0.05s
-INFO: 7 processes: 6 internal, 2 linux-sandbox.
-INFO: Build completed successfully, 7 total actions
+bazel: ok

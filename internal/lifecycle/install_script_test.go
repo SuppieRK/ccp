@@ -303,7 +303,7 @@ case "$url" in *cmdshape_checksums.txt) cp %s "$out" ;; *) cp %s "$out" ;; esac
 			)
 
 			Expect(result.exitCode).To(BeZero(), result.stderr)
-			Expect(resolvedPath(strings.TrimPrefix(strings.TrimSpace(result.stdout), "resolved="))).To(Equal(resolvedPath(installDir)))
+			Expect(strings.TrimPrefix(strings.TrimSpace(result.stdout), "resolved=")).To(Equal(testShellPath(resolvedPath(installDir))))
 		})
 
 		DescribeTable("validating release versions",

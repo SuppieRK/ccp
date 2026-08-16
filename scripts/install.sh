@@ -211,7 +211,7 @@ validate_release_version() {
   printf '%s' "$parsed_version"
 }
 
-validate_install_dir() {
+validate_install_dir_path() {
   install_dir="$1"
   case "$install_dir" in
     /*) ;;
@@ -224,6 +224,11 @@ validate_install_dir() {
   case "$install_dir" in
     *:*) echo "install directory cannot be represented safely in PATH" >&2; exit 1 ;;
   esac
+}
+
+validate_install_dir() {
+  install_dir="$1"
+  validate_install_dir_path "$install_dir"
   [ -d "$install_dir" ] && [ -w "$install_dir" ] || {
     echo "install directory is not writable: $install_dir" >&2
     exit 1
@@ -255,6 +260,7 @@ choose_install_dir() {
 			/*) ;;
 			*) echo "CMDSHAPE_INSTALL_DIR must be an absolute path" >&2; exit 1 ;;
 		esac
+		validate_install_dir_path "$normalized_install_dir"
 		mkdir -p "$normalized_install_dir" 2>/dev/null || {
 			echo "install directory is not writable: $normalized_install_dir" >&2
 			exit 1

@@ -55,7 +55,7 @@ all_tools=()
 tool_known() {
   local expected="$1"
   local existing
-  for existing in "${all_tools[@]}"; do
+  for existing in "${all_tools[@]-}"; do
     [[ "$existing" == "$expected" ]] && return 0
   done
   return 1
@@ -79,7 +79,7 @@ if [[ -n "$base_sha" ]] && git cat-file -e "${base_sha}^{commit}" 2>/dev/null; t
     add_known_tool "$tool"
   done < <(git ls-tree -r --name-only "$base_sha" -- testdata/benchmarks)
 fi
-if [[ ${#all_tools[@]} -eq 0 ]]; then
+if [[ -z "${all_tools[*]-}" ]]; then
   echo "No benchmark tools found under benchmark roots" >&2
   exit 1
 fi
@@ -118,10 +118,10 @@ change_class="none"
 selected_contains() {
   local expected="$1"
   local existing
-  if [[ ${#selected_tools[*]} -eq 0 ]]; then
+  if [[ -z "${selected_tools[*]-}" ]]; then
     return 1
   fi
-  for existing in "${selected_tools[@]}"; do
+  for existing in "${selected_tools[@]-}"; do
     if [[ "$existing" == "$expected" ]]; then
       return 0
     fi
@@ -140,7 +140,7 @@ add_selected_tool() {
 add_prefix() {
   local prefix="$1"
   local t
-  for t in "${all_tools[@]}"; do
+  for t in "${all_tools[@]-}"; do
     if [[ "$t" == "$prefix" || "$t" == "$prefix"-* ]]; then
       add_selected_tool "$t"
     fi
@@ -151,7 +151,7 @@ add_prefix() {
 add_exact_if_exists() {
   local exact="$1"
   local t
-  for t in "${all_tools[@]}"; do
+  for t in "${all_tools[@]-}"; do
     if [[ "$t" == "$exact" ]]; then
       add_selected_tool "$t"
       return
@@ -160,8 +160,8 @@ add_exact_if_exists() {
 }
 
 load_changed_files() {
-  if [[ ${#changed_override[@]} -gt 0 ]]; then
-    changed=("${changed_override[@]}")
+  if [[ -n "${changed_override[*]-}" ]]; then
+    changed=("${changed_override[@]-}")
     return 0
   fi
 
@@ -191,12 +191,14 @@ mark_full_ci() {
 
 load_changed_files
 
-if [[ ${#changed[@]} -eq 0 ]]; then
+if [[ -z "${changed[*]-}" ]]; then
   mark_full_ci
 fi
 
-for path in "${changed[@]}"; do
+changed_count=0
+for path in "${changed[@]-}"; do
   [[ -z "$path" ]] && continue
+  changed_count=$((changed_count + 1))
   case "$path" in
     testdata/benchmarks/*)
       tool="${path#testdata/benchmarks/}"
@@ -231,15 +233,15 @@ for path in "${changed[@]}"; do
 done
 
 if [[ "$run_all" -eq 1 ]]; then
-  benchmark_matrix=$(build_matrix_json "${all_tools[@]}")
+  benchmark_matrix=$(build_matrix_json "${all_tools[@]-}")
   has_tools=true
-elif [[ ${#selected_tools[@]} -gt 0 ]]; then
+elif [[ -n "${selected_tools[*]-}" ]]; then
   sorted_tools=()
   while IFS= read -r tool; do
     sorted_tools+=("$tool")
-  done < <(printf "%s\n" "${selected_tools[@]}" | sort)
+  done < <(printf "%s\n" "${selected_tools[@]-}" | sort)
   selected_tools=("${sorted_tools[@]}")
-  benchmark_matrix=$(build_matrix_json "${selected_tools[@]}")
+  benchmark_matrix=$(build_matrix_json "${selected_tools[@]-}")
   has_tools=true
 else
   benchmark_matrix="[]"
@@ -270,7 +272,7 @@ if [[ -n "$summary_file" ]]; then
   {
     echo "## Validation Plan"
     echo ""
-    echo "- Changed files analyzed: ${#changed[@]}"
+    echo "- Changed files analyzed: ${changed_count}"
     echo "- Change class: \`${change_class}\`"
     echo "- Run validate: \`${run_validate}\`"
     echo "- Run benchmarks: \`${run_benchmarks}\`"

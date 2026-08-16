@@ -1,7 +1,3 @@
-
-> ccp-npm-benchmark-basic@1.0.0 warning-actionable
-> node scripts/warning_actionable.js
-
 Checked 1 file
 (node:158811) DeprecationWarning: normalizeName() is deprecated; migrate to normalizeUserName()
 (Use `node --trace-deprecation ...` to show where the warning was created)
