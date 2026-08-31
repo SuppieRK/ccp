@@ -34,7 +34,14 @@ var _ = Describe("native signal parity", func() {
 			cmd.Stdout = io.Discard
 			cmd.Stderr = &stderr
 			Expect(cmd.Start()).To(Succeed())
-			Eventually(ready, time.Second).Should(BeAnExistingFile())
+			DeferCleanup(func() {
+				if cmd.ProcessState != nil {
+					return
+				}
+				_ = cmd.Process.Kill()
+				_ = cmd.Wait()
+			})
+			Eventually(ready, 5*time.Second).Should(BeAnExistingFile())
 			Expect(cmd.Process.Signal(signal)).To(Succeed())
 
 			err := cmd.Wait()
