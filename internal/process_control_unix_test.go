@@ -120,17 +120,29 @@ var _ = Describe("unix process control", func() {
 				err  error
 			}
 			done := make(chan result, 1)
+			finished := false
+			DeferCleanup(func() {
+				if finished {
+					return
+				}
+				cancel(context.Canceled)
+				select {
+				case <-done:
+				case <-time.After(5 * time.Second):
+				}
+			})
 			go func() {
 				code, err := NewRunnerWithOptions(Options{MetricsPath: filepath.Join(root, "gain.db")}).RunContext(ctx, []string{
 					"sh", "-c", `trap 'exit 0' TERM; echo ready > "$1"; while :; do sleep .05; done`, "sh", ready,
 				})
 				done <- result{code: code, err: err}
 			}()
-			Eventually(ready).Should(BeAnExistingFile())
+			Eventually(ready, 5*time.Second).Should(BeAnExistingFile())
 			cancel(executionSignal{signal: syscall.SIGTERM})
 
 			var got result
-			Eventually(done).Should(Receive(&got))
+			Eventually(done, 5*time.Second).Should(Receive(&got))
+			finished = true
 			Expect(got.err).NotTo(HaveOccurred())
 			Expect(got.code).To(BeZero())
 		})
